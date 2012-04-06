@@ -1,49 +1,75 @@
+import argparse
+import sys
 
-def print_usage():
-    print "OPTIONS:"
-    print "-h\t\t prints this message"
-    print "-i <FILE.ltl>\t loads the LTL formula from the given input file"
-    print "-o <FILE.v>\t writes the verilog output to the given file"
-    print
-    return
+from interfaces.ltl_spec import LtlSpec
 
-def process_options():
-    """For command line options processing"""
-    import sys
-    import getopt
-    import os.path
-    
-    try: opts, args = getopt.getopt(sys.argv[1:], "hio:",
-                                    ["help", "input=", "output="])
-    except getopt.GetoptError:
-        print "Error: invalid arguments. See --help for valid options."
-        sys.exit(2)
-        pass
+from translation2uct.ltl2uct import ltl2uct
 
-    # options processing:
-    input = None
-    output = None
-    for o,a in opts:
-        if o in ("-h", "--help"): print_usage(); sys.exit()
-        if o in ("-i", "--input") and input is None: input = a
-        if o in ("-o", "--output") and output is None: output = a
-        pass
+from synthesis.model_searcher import search
 
-    if input and not os.path.isfile(input):
-        print "Error: input file '%s' not found"
-        sys.exit(1)
-        pass
-
-    return input,output
+from module_generation.verilog import to_verilog
 
 
-def main():
-    print "Welcome to BoSy!"
+def parse_ltl(text):
+    inputs = []
+    outputs = []
+    properties = []
+    for l in text.strip().split('\n'):
+        if 'INPUT:' in l:
+            i = l.replace('INPUT:', '').strip()
+            inputs.append(i)
+        elif 'OUTPUT:' in l:
+            o = l.replace('OUTPUT:', '').strip()
+            outputs.append(o)
+        elif 'PROPERTY:' in l:
+            p = l.replace('PROPERTY:', '').strip()
+            properties.append(p)
+        else:
+            assert False, 'unknown input line: ' + l
 
-    inputFile,outputFile = process_options()
-    print inputFile
-    print outputFile
-    
+    return LtlSpec(inputs, outputs, properties)
+
+
+def verilog_to_str(verilog_module):
+    print('verilog_to_str: i am stub!')
+    return 'stub verilog module!'
+
+
+def main(argv):
+    parser = argparse.ArgumentParser(description='A synthesizer of bounded systems from LTL')
+    parser.add_argument('ltl', metavar='ltl', type=argparse.FileType('r'),
+                        help='loads the LTL formula from the given input file')
+    parser.add_argument('verilog', metavar='verilog', type=argparse.FileType('w'),
+                        help='writes the verilog output to the given file')
+
+    args = parser.parse_args(argv)
+
+    ltl_spec = parse_ltl(args.ltl.read())
+    args.ltl.close()
+
+    uct = ltl2uct(ltl_spec)
+
+    model = search(uct)
+
+    if model is None:
+        print('The specification is unrealizable with input restrictions.')
+        return
+
+    verilog_module = to_verilog(model)
+
+    args.verilog.write(verilog_to_str(verilog_module))
+    args.verilog.close()
+
 
 if __name__ == "__main__":
-    main()
+    import random
+
+    hellos = ['Welcome to BoSy!', 'Hello!', 'Hallo!', 'Privet!', 'Haai!',
+              'Ciao!', 'Tere!', 'Salut!', 'Namaste!', 'Heus!', 'Goede dag!',
+              'Sveiki!', 'Selam!']
+    print(hellos[random.randint(0, len(hellos) - 1)])
+
+    main(sys.argv[1:])
+
+    byes = ['bye', 'wederdom', 'Poka', 'Doei', 'Sees', 'Chao', 'zai jian', 'Hasta La Vista', 'Yasou']
+    print(byes[random.randint(0, len(byes) - 1)] + '!')
