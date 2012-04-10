@@ -13,7 +13,7 @@ class LtlSpec:
         return self._outputs
 
     @property
-    def propertis(self):
+    def properties(self):
         return self._properties
 
     def __str__(self):
