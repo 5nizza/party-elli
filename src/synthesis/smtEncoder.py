@@ -5,13 +5,24 @@ class Encoder:
     uct=None
     inputs=None
     outputs=None
+    upsilon=None
     
     
     def __init__ (self, uct, inputs, outputs):
         self.uct=uct
         self.inputs=inputs
         self.outputs=outputs
+        self.upsilon = Upsilon(self.inputs)
+
+    def Func(self, function, args):
         
+        smtStr='('+function+' '
+        for arg in args:
+            smtStr += arg+' '
+        if len(args):
+            smtStr = smtStr[:-1]         
+        smtStr += ')'
+        return smtStr      
     
     def Assert(self, formula):
         smtStr = '(assert '+formula+')\n'
@@ -61,20 +72,24 @@ class Encoder:
     def Le(self, arg1, arg2):#is less than or equal to
         smtStr = '(<= ' + arg1 +' '+arg2+')'
         return smtStr
-    
+
+    def Not(self, argument):
+        smtStr = '(not '+argument+')'   
+        return smtStr
+   
     def And(self, arguments):
         smtStr = '(and '  
-        smtStr+=self.makeAndOrXorBody(arguments)     
+        smtStr+=self.makeAndOrXorBody(arguments)+')'    
         return smtStr
     
     def Or(self, arguments):
         smtStr = '(or '  
-        smtStr+=self.makeAndOrXorBody(arguments)     
+        smtStr+=self.makeAndOrXorBody(arguments)+')'     
         return smtStr
     
     def Xor(self, arguments):
         smtStr = '(xor '  
-        smtStr+=self.makeAndOrXorBody(arguments)     
+        smtStr+=self.makeAndOrXorBody(arguments)+')'     
         return smtStr
     
     def makeAndOrXorBody(self, arguments):
@@ -83,7 +98,6 @@ class Encoder:
             smtStr += arg + ' '
         if len(arguments):
             smtStr = smtStr[:-1] 
-        smtStr += ')'
         return smtStr
     
     
@@ -124,9 +138,8 @@ class Encoder:
         smtStr += self.Declare_sort("Upsilon", 0)    
         smtStr += self.Comment("constants of type Upsilon:") 
         
-        for i in self.inputs:
-            smtStr += self.Declare_fun("i_"+i,[],"Upsilon")
-            smtStr += self.Declare_fun("i_not_"+i,[],"Upsilon")        
+        for i in range (0, self.upsilon.getNumElement()):
+            smtStr += self.Declare_fun(self.upsilon.getElementStr(i),[],"Upsilon")      
         
         smtStr +='\n'
         return smtStr
@@ -138,30 +151,47 @@ class Encoder:
         smtStr += self.Declare_fun("tau", ["T","Upsilon"], "T")
         
         #declare output functions
-        for i in self.inputs:
-            smtStr += self.Declare_fun("fo_"+i,["T"],"Bool") 
-        for i in self.outputs:
-            smtStr += self.Declare_fun("fo_"+i,["T"],"Bool") 
+        for input in self.inputs:
+            smtStr += self.Declare_fun("fo_"+input,["T"],"Bool") 
+        for output in self.outputs:
+            smtStr += self.Declare_fun("fo_"+output,["T"],"Bool") 
             
         #declare annotations
         smtStr += self.Declare_fun("lambda_B", ["Q","T"], "Bool")
         smtStr += self.Declare_fun("lambda_sharp", ["Q","T"], "Int")
+        smtStr += '\n'
         
            
         return smtStr
     
-    def encodeUct(self, bound):
+    def makeInputPreservation(self, numImplStates):
+        smtStr = self.Comment("input preserving:")
+        elements = []
+        for input in self.inputs:
+            for v in range(0, self.upsilon.getNumElement()):
+                for t in range(1, numImplStates+1):
+                    tmpStr = self.Func("fo_"+input, [self.Func("tau", ["t_"+str(t), self.upsilon.getElementStr(v)])])                   
+                    
+                    if  (self.upsilon.isInputSet(v, input)==False):
+                        tmpStr = self.Not(tmpStr)
+                    elements.append(tmpStr)
+        
+        smtStr+=self.Assert(self.And(elements))
+    
+        return smtStr
+    
+    def encodeUct(self, numImplStates):
         """ outputs: list of strings """
         
         print ("smt file")
         print ("================================")
         
         smtStr =  self.makeStateDeclarations(2, "Q") #self.uct.states().size
-        smtStr += self.makeStateDeclarations(bound, "T")
+        smtStr += self.makeStateDeclarations(numImplStates, "T")
         smtStr += self.makeInputDeclarations()
         smtStr += self.makeOtherDeclarations()
-        
-         
+
+        smtStr += self.makeInputPreservation(numImplStates)
         smtStr += "\n"
         smtStr += self.CHECK_SAT
         smtStr += self.GET_MODEL
@@ -171,7 +201,45 @@ class Encoder:
         print ("================================")    
         return smtStr
     
-    """  
+class Upsilon:
+    
+    
+    m = []
+    inputs = None
+    
+    def __init__(self, inputs):
+        import itertools
+        self.inputs = inputs
+        self.m = list(itertools.product([False, True], repeat=len(inputs)))
+        
+    def getElementStr (self, num):
+        
+        line = 'i'
+        
+        lineLen = len(self.inputs)
+        
+        for i in range (0,lineLen):
+            value = self.m[num][i]
+            name = self.inputs[i]
+            if value == True:
+                line+= "_"+name    
+            else:
+                line+= "_not_"+name
+        
+        return line 
+        
+    def getNumElement(self):
+        return len(self.m)
+        
+    def isInputSet(self, num, input):       
+        pos = self.inputs.index(input)      
+        return self.m[num][pos]
+    
+        
+    
+        
+    
+        """  
     
         declarations = []
         for o in outputs:
@@ -197,6 +265,5 @@ class Encoder:
     
         smtStr = '(declare-const a Int)\n(declare-fun f (Int Bool) Int)\n(assert (> a 10))\n(assert (< (f a true) 100))\n(check-sat)\n(get-model)'"""
         
-    #Just for testing      
-        #smtStr = '(declare-sort Q 0)\n (declare-fun q_1 () Q)\n (declare-fun q_2 () Q)\n (assert (forall ((q Q)) (or (= q q_1) (= q q_2))))\n (declare-sort T 0)\n (declare-fun t_1 () T)\n (declare-fun t_2 () T)\n (assert (forall ((t T)) (or (= t t_1) (= t t_2))))\n (declare-sort Upsilon 0)\n (declare-fun i_R () Upsilon)\n (declare-fun i_not_R () Upsilon)\n (declare-fun tau (T Upsilon) T)\n (declare-fun fo_R (T) Bool)\n (declare-fun fo_G (T) Bool)\n (declare-fun lambda_B (Q T) Bool)\n (declare-fun lambda_sharp (Q T) Int)\n (assert (=> (lambda_B q_1 t_1) (and (lambda_B q_1 (tau t_1 i_R)) (>= (lambda_sharp q_1 (tau t_1 i_R)) (lambda_sharp q_1 t_1) ) )))\n (assert (=> (lambda_B q_1 t_2) (and (lambda_B q_1 (tau t_2 i_R)) (>= (lambda_sharp q_1 (tau t_2 i_R)) (lambda_sharp q_1 t_2) ) )))\n (assert (=> (lambda_B q_1 t_1) (and (lambda_B q_1 (tau t_1 i_not_R)) (>= (lambda_sharp q_1 (tau t_1 i_not_R)) (lambda_sharp q_1 t_1) ) )))\n (assert (=> (lambda_B q_1 t_2) (and (lambda_B q_1 (tau t_2 i_not_R)) (>= (lambda_sharp q_1 (tau t_2 i_not_R)) (lambda_sharp q_1 t_2) ) )))\n (assert (=> (and (lambda_B q_1 t_1) (or (and (fo_R t_1) (not (fo_G t_1) )) (and (not (fo_R t_1) ) (fo_G t_1)) )) (and (lambda_B q_2 (tau t_1 i_R)) (> (lambda_sharp q_2 (tau t_1 i_R)) (lambda_sharp q_1 t_1) ) )))\n (assert (=> (and (lambda_B q_1 t_2) (or (and (fo_R t_2) (not (fo_G t_2) )) (and (not (fo_R t_2) ) (fo_G t_2)) )) (and (lambda_B q_2 (tau t_2 i_R)) (> (lambda_sharp q_2 (tau t_2 i_R)) (lambda_sharp q_1 t_2) ) )))\n (assert (=> (and (lambda_B q_1 t_1) (or (and (fo_R t_1) (not (fo_G t_1) )) (and (not (fo_R t_1) ) (fo_G t_1)) )) (and (lambda_B q_2 (tau t_1 i_not_R)) (> (lambda_sharp q_2 (tau t_1 i_not_R)) (lambda_sharp q_1 t_1) ) )))\n (assert (=> (and (lambda_B q_1 t_2) (or (and (fo_R t_2) (not (fo_G t_2) )) (and (not (fo_R t_2) ) (fo_G t_2)) )) (and (lambda_B q_2 (tau t_2 i_not_R)) (> (lambda_sharp q_2 (tau t_2 i_not_R)) (lambda_sharp q_1 t_2) ) )))\n (assert (=> (lambda_B q_2 t_1) (and (lambda_B q_2 (tau t_1 i_R)) (> (lambda_sharp q_2 (tau t_1 i_R)) (lambda_sharp q_2 t_1) ) )))\n (assert (=> (lambda_B q_2 t_2) (and (lambda_B q_2 (tau t_2 i_R)) (> (lambda_sharp q_2 (tau t_2 i_R)) (lambda_sharp q_2 t_2) ) )))\n (assert (=> (lambda_B q_2 t_1) (and (lambda_B q_2 (tau t_1 i_not_R)) (> (lambda_sharp q_2 (tau t_1 i_not_R)) (lambda_sharp q_2 t_1) ) )))\n (assert (=> (lambda_B q_2 t_2) (and (lambda_B q_2 (tau t_2 i_not_R)) (> (lambda_sharp q_2 (tau t_2 i_not_R)) (lambda_sharp q_2 t_2) ) )))\n (assert (lambda_B q_1 t_1))\n (assert (and (fo_R (tau t_1 i_R)) (not (fo_R (tau t_1 i_not_R))) (fo_R (tau t_2 i_R)) (not (fo_R (tau t_2 i_not_R)))))\n (check-sat)\n (get-model)'
-
+  
+  
