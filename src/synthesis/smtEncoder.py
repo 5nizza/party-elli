@@ -1,3 +1,6 @@
+from interfaces.uct import UCT, UCTNode
+import itertools
+
 class Encoder:
 
     CHECK_SAT = "(check-sat)\n"
@@ -9,7 +12,7 @@ class Encoder:
     
     
     def __init__ (self, uct, inputs, outputs):
-        self.uct=uct
+        self.uct=UCT()   #HACK, BAD.        
         self.inputs=inputs
         self.outputs=outputs
         self.upsilon = Upsilon(self.inputs)
@@ -164,6 +167,21 @@ class Encoder:
            
         return smtStr
     
+    def makeRootCondition(self):
+        
+        smtStr = self.Comment("the root node of the run graph is labelled by a natural number:")
+        
+        elements = []
+        for state in self.uct.initial_states():
+            elements.append(self.Func("lambda_B", ["q_"+str(state),"t_1"]))
+            
+        if (len(elements)>1):
+            smtStr += self.Assert(self.And(elements))
+        else:
+            smtStr += self.Assert(elements[0])
+        
+        return smtStr
+    
     def makeInputPreservation(self, numImplStates):
         smtStr = self.Comment("input preserving:")
         elements = []
@@ -180,35 +198,61 @@ class Encoder:
     
         return smtStr
     
+    
+    def makeMainAssertions(self, numImplStates):
+        smtStr=self.Comment("main assertions")
+        for q in range (0, self.uct.num_states()):
+            state = self.uct.states()[q]
+            transition = state.transitions()
+           
+            for qn in range (0, len(transition)): #number of next nodes
+                for v in range (0, self.upsilon.getNumElement()):
+                    for t in range (0, numImplStates):
+                        smtStr+=self.Comment("q=q_"+str(q)+" (q',v)=(q_"+str(qn)+","+self.upsilon.getElementStr(v)+"), t=t_"+str(t))
+                        implL1 = self.Func("lambda_B", ["q_"+str(q), "t_"+str(t)])
+                        
+                        arg = self.Func("tau", ["t_"+str(t), self.upsilon.getElementStr(v)])
+                        implR1 = self.Func("lambda_B", ["q_"+str(qn), arg])
+                        
+                        gt1 = self.Func("lambda_sharp", ["q_"+str(qn), arg])
+                        gt2 = self.Func("lambda_B", ["q_"+str(q), "t_"+str(t)])
+                        
+                        implR2 = self.Gt(gt1, gt2)
+                        implR = self.And([implR1, implR2])
+                        
+                        smtStr += self.Assert(self.Implies(implL1, implR))
+
+        return smtStr
+    
     def encodeUct(self, numImplStates):
         """ outputs: list of strings """
         
         print ("smt file")
         print ("================================")
         
-        smtStr =  self.makeStateDeclarations(2, "Q") #self.uct.states().size
+        smtStr =  self.makeStateDeclarations(self.uct.num_states(), "Q") 
         smtStr += self.makeStateDeclarations(numImplStates, "T")
         smtStr += self.makeInputDeclarations()
         smtStr += self.makeOtherDeclarations()
+        
+        smtStr += self.makeMainAssertions(numImplStates)
 
+        smtStr += self.makeRootCondition()
         smtStr += self.makeInputPreservation(numImplStates)
         smtStr += "\n"
         smtStr += self.CHECK_SAT
         smtStr += self.GET_MODEL
-        
-    
+          
         print (smtStr)
         print ("================================")    
+                        
         return smtStr
     
-class Upsilon:
-    
-    
+class Upsilon:   
     m = []
     inputs = None
     
     def __init__(self, inputs):
-        import itertools
         self.inputs = inputs
         self.m = list(itertools.product([False, True], repeat=len(inputs)))
         

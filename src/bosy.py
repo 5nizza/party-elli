@@ -49,7 +49,8 @@ def main(argv):
 
     uct = ltl2uct(ltl_spec)
 
-    model = search(uct, ["r1", "r2"], ["g1","g2","g3"], 3)
+    bound = 3
+    model = search(uct, ["R"], ["G"], bound)
 
     if model is None:
         print('The specification is unrealizable with input restrictions.')
