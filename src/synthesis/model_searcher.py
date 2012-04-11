@@ -1,5 +1,5 @@
 from interfaces.smt_model import SmtModel
-from smtEncoder import encodeUct
+from smtEncoder import Encoder
 from synthesis.z3 import z3
 
 
@@ -8,9 +8,9 @@ def search(uct, inputs, outputs, bound):
     
     model = None 
     solver = z3()
-    
+    encoder = Encoder(uct, inputs, outputs)
     for cbound in range(2,bound):   
-        smtstr = encodeUct(uct, inputs, outputs, cbound) 
+        smtstr = encoder.encodeUct(cbound) 
         solver.solve(smtstr)
                
         if (solver.getState() == z3.SAT):
