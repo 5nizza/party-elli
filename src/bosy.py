@@ -49,7 +49,7 @@ def main(argv):
 
     uct = ltl2uct(ltl_spec)
 
-    model = search(uct, 10)
+    model = search(uct, "r", "g", 3)
 
     if model is None:
         print('The specification is unrealizable with input restrictions.')

@@ -3,14 +3,14 @@ from smtEncoder import encodeUct
 from synthesis.z3 import z3
 
 
-def search(uct, bound):
+def search(uct, inputs, outputs, bound):
     print "searching smt model..."
     
     model = None 
     solver = z3()
     
     for cbound in range(2,bound):   
-        smtstr = encodeUct(uct, cbound) 
+        smtstr = encodeUct(uct, inputs, outputs, cbound) 
         solver.solve(smtstr)
                
         if (solver.getState() == z3.SAT):
