@@ -1,12 +1,7 @@
-import os
-import tempfile
-from subprocess import Popen, PIPE, STDOUT
+from helpers.shell import execute_shell
 
 
-class z3():
-    '''
-    classdocs
-    '''     
+class z3:
     SAT = 0
     UNSAT = 1
     UNKNOWN = 2
@@ -14,7 +9,10 @@ class z3():
     
     current_state = UNDEFINIED 
     modelStr = None
-        
+
+    def __init__(self, path):
+        self._path = path
+
     def getState(self):
         return self.current_state
     
@@ -22,44 +20,29 @@ class z3():
         return self.modelStr
     
     def solve(self, smtstr):
-        filename=None
-        
-        #write temp input file for z3
-        f = tempfile.NamedTemporaryFile(delete=False)
-        try:
-            f.write(smtstr)  
-            filename = f.name       
-        finally:
-            f.close()
-
-        #call z3
-        cmd = 'lib/z3/bin/z3 -smt2 -m '+filename
-        p = Popen(cmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
-        exit_code = os.waitpid(p.pid, 0) #wait for process termination, before reading
-        output = p.stdout.read()
-        #error = p.stderr.read()
+        #'/in' flag (Windows) causes Z3 to read stdin
+        rc, output, err = execute_shell(self._path + ' /smt2 /in', smtstr)
+        if err:
+            print("\nWARNING(Z3 err is not empty)\nZ3: returned:{0}\noutput: '{1}'\nerror:'{2}'\n".format(rc, output, err))
 
         #parse results
         self.current_state = z3.UNKNOWN
-        for line in output.strip().split('\n'):
-            if line == 'sat':
-                self.current_state= z3.SAT
-                break
-            if line == 'unsat':
-                self.current_state= z3.UNSAT
-                break
-            
-        #parse model if present
-        if (self.current_state == z3.SAT):
+        output_lines = [x.strip() for x in output.split('\n')]
+
+        if 'unsat' in output_lines:
+            self.current_state= z3.UNSAT
+        elif 'sat' in output_lines:
+            self.current_state= z3.SAT
+
+            #parse model
             parse= False
             self.modelStr = ''
-            for line in output.strip().split('\n'):
+            for line in output_lines:
                 if line == ')':
                     parse = False         
-                if parse == True:
+                if parse is True:
                     self.modelStr+=line+"\n"     
-                if line == '(model ':
+                if line == '(model':
                     parse = True
-    
-        #delete temp file
-        os.unlink(filename)    
+        else:
+            assert False, 'unknown Z3 state: ' + output

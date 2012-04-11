@@ -3,7 +3,8 @@ import itertools
 class Encoder:
 
     CHECK_SAT = "(check-sat)\n"
-    GET_MODEL = "(get-model)\n"    
+    GET_MODEL = "(get-model)\n"
+    EXIT_CALL = "(exit)\n"
     
     def __init__ (self, uct, inputs, outputs):
         self.uct=uct        
@@ -106,27 +107,26 @@ class Encoder:
         return smtStr
     
     
-    def makeStateDeclarations(self, numStates, name):
-        
-        lowername = name.lower()
-        
-        smtStr=self.Comment("define a new type "+name+":")
-        smtStr+=self.Declare_sort(name,0)
-        smtStr+=self.Comment("constants of type "+name+":") 
-        
-        for i in range(1,numStates+1): 
-            smtStr+=self.Declare_fun(lowername+"_"+ str(i), [], name)
-        
+    def makeStateDeclarations(self, state_names, sort_name):
+        lowername = sort_name.lower()
+
+        smtStr=self.Comment("define a new type "+sort_name+":")
+        smtStr+=self.Declare_sort(sort_name,0)
+        smtStr+=self.Comment("constants of type "+sort_name+":")
+
+        for n in state_names:
+            smtStr+=self.Declare_fun(lowername+"_"+ n, [], sort_name)
+
         smtStr+=self.Comment("cardinality constraints:")
-        
+
         expList = []
-        for i in range(1,numStates+1): 
-            expList.append(self.Eq(lowername,lowername+"_"+ str(i)))   
+        for n in state_names:
+            expList.append(self.Eq(lowername,lowername+"_"+ n))
         expression =  " " + self.Or(expList)
-            
-        smtStr+= self.Assert(self.Forall([[lowername,name]],expression))  
+
+        smtStr+= self.Assert(self.Forall([[lowername,sort_name]],expression))
         smtStr+='\n'
-        
+
         return smtStr
     
     def makeInputDeclarations(self):
@@ -167,9 +167,9 @@ class Encoder:
         
         elements = []
         for state in self.uct.initial_states:
-            elements.append(self.Func("lambda_B", ["q_"+str(state),"t_1"]))
+            elements.append(self.Func("lambda_B", ["q_"+state.name,"t_0"]))
             
-        if (len(elements)>1):
+        if len(elements)>1:
             smtStr += self.Assert(self.And(elements))
         else:
             smtStr += self.Assert(elements[0])
@@ -181,10 +181,10 @@ class Encoder:
         elements = []
         for input in self.inputs:
             for v in range(0, self.upsilon.getNumElement()):
-                for t in range(1, numImplStates+1):
+                for t in range(0, numImplStates):
                     tmpStr = self.Func("fo_"+input, [self.Func("tau", ["t_"+str(t), self.upsilon.getElementStr(v)])])                   
                     
-                    if  (self.upsilon.isInputSet(v, input)==False):
+                    if self.upsilon.isInputSet(v, input) is False:
                         tmpStr = self.Not(tmpStr)
                     elements.append(tmpStr)
         
@@ -195,62 +195,59 @@ class Encoder:
     
     def makeTransCondition(self, q, qn, t):
         smtStr=''
-        varList = self.inputs+self.outputs        
-        state = self.uct.states[q]
-        transition = state.transitions 
+        varList = self.inputs + self.outputs
+        state = q
+        transition = state.transitions
         for trans in transition:
-            if (qn==trans[0]):
+            if qn==trans[0]:
                 labels = trans[1]               
                 orArgs = []
-                for label in labels:                    
-                    andArgs = []
-                    for var in varList:  #for all inputs and outputs                                      
-                        if (str(label[var])=="True"):
-                            andArgs.append(self.Func("fo_"+var, ["t_"+str(t)]))                         
-                        elif (str(label[var])=="False"):
-                            andArgs.append(self.Not(self.Func("fo_"+var, ["t_"+str(t)])))
-                        elif (str(label[var])=='*'):
-                            pass
-                        else:
-                            print("Error!!!!!! Variable in label has wrong value")      
-                    if (len(andArgs)>1):
-                        orArgs.append(self.And(andArgs))
-                    elif (len(andArgs)==1):
-                        orArgs.append(andArgs[0])
+                andArgs = []
+                for var in varList:  #for all inputs and outputs
+                    if var in labels and labels[var] is True:
+                        andArgs.append(self.Func("fo_"+var, ["t_"+str(t)]))
+                    elif var in labels and labels[var] is False:
+                        andArgs.append(self.Not(self.Func("fo_"+var, ["t_"+str(t)])))
+                    elif var not in labels:
+                        pass
+                    else:
+                        assert False, "Error!!!!!! Variable in label has wrong value: " + labels[var]
+                if len(andArgs)>1:
+                    orArgs.append(self.And(andArgs))
+                elif len(andArgs)==1:
+                    orArgs.append(andArgs[0])
 
-                if (len(orArgs)>1):        
+                if len(orArgs)>1:
                     smtStr = self.Or(orArgs)
-                elif (len(orArgs)==1):
+                elif len(orArgs)==1:
                     smtStr = orArgs[0]
                             
         return smtStr 
     
     def makeMainAssertions(self, numImplStates):
         smtStr=self.Comment("main assertions")
-        for q in range (0, self.uct.num_states):
-            state = self.uct.states[q]
-            transition = state.transitions         
-            for trans in transition: #number of next nodes
+        for q in self.uct.states:
+            for trans in q.transitions: #number of next nodes
                 qn = trans[0]
                 for v in range (0, self.upsilon.getNumElement()):
                     for t in range (0, numImplStates):
-                        smtStr+=self.Comment("q=q_"+str(q)+" (q',v)=(q_"+str(qn)+","+self.upsilon.getElementStr(v)+"), t=t_"+str(t))  
+                        smtStr+=self.Comment('q=q_'+q.name+" (q',v)=(q_"+qn.name+","+self.upsilon.getElementStr(v)+"), t=t_"+str(t))
                         
-                        implL1 = self.Func("lambda_B", ["q_"+str(q), "t_"+str(t)])
+                        implL1 = self.Func("lambda_B", ["q_"+q.name, "t_"+str(t)])
                         implL2 = self.makeTransCondition(q, qn, t)
-                        if (len(implL2)>0):
+                        if len(implL2)>0:
                             implL = self.And([implL1, implL2])
                         else:
                             implL = implL1
-                        
+
                         arg = self.Func("tau", ["t_"+str(t), self.upsilon.getElementStr(v)])
-                        implR1 = self.Func("lambda_B", ["q_"+str(qn), arg])                                                
-                    
-                        gt1 = self.Func("lambda_sharp", ["q_"+str(qn), arg])
-                        gt2 = self.Func("lambda_B", ["q_"+str(q), "t_"+str(t)])
-                        
-                        
-                        if (self.uct.rejecting_states.count(qn)==0):  #next state is not a rejecting state
+                        implR1 = self.Func("lambda_B", ["q_"+qn.name, arg])
+
+                        gt1 = self.Func("lambda_sharp", ["q_"+qn.name, arg])
+                        gt2 = self.Func("lambda_sharp", ["q_"+q.name, "t_"+str(t)])
+
+
+                        if not qn.is_rejecting: #next state is not a rejecting state
                             implR2 = self.Ge(gt1, gt2)
                         else:
                             implR2 = self.Gt(gt1, gt2)    
@@ -266,9 +263,12 @@ class Encoder:
         
         print ("smt file")
         print ("================================")
-        
-        smtStr =  self.makeStateDeclarations(self.uct.num_states, "Q") 
-        smtStr += self.makeStateDeclarations(numImplStates, "T")
+
+        smtStr = self.makeHeaders()
+
+        smtStr += self.makeSetLogic('UFLIA')
+        smtStr += self.makeStateDeclarations([x.name for x in self.uct.states], "Q")
+        smtStr += self.makeStateDeclarations([str(x) for x in range(0, numImplStates)], "T")
         smtStr += self.makeInputDeclarations()
         smtStr += self.makeOtherDeclarations()
         
@@ -279,12 +279,18 @@ class Encoder:
         smtStr += "\n"
         smtStr += self.CHECK_SAT
         smtStr += self.GET_MODEL
+        smtStr += self.EXIT_CALL
           
         print (smtStr)
         print ("================================")    
                         
         return smtStr
-    
+
+    def makeSetLogic(self, logic):
+        return '(set-logic {0})\n'.format(logic)
+    def makeHeaders(self):
+        return '(set-option :ematching false)\n(set-option :produce-models true)\n'
+
 class Upsilon:   
     m = []
     inputs = None
@@ -302,7 +308,7 @@ class Upsilon:
         for i in range (0,lineLen):
             value = self.m[num][i]
             name = self.inputs[i]
-            if value == True:
+            if value is True:
                 line+= "_"+name    
             else:
                 line+= "_not_"+name

@@ -13,8 +13,8 @@ class LtlSpec:
         return self._outputs
 
     @property
-    def propertis(self):
+    def property(self):
         return self._properties
 
     def __str__(self):
-        return 'inputs:{0}, outputs:{1}, properties:{2}'.format(self._inputs, self._outputs, self._properties)
+        return 'inputs:{0}, outputs:{1}, property:{2}'.format(self._inputs, self._outputs, self._property)
