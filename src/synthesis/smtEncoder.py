@@ -1,18 +1,12 @@
-from interfaces.uct import UCT, UCTNode
 import itertools
 
 class Encoder:
 
     CHECK_SAT = "(check-sat)\n"
-    GET_MODEL = "(get-model)\n"
-    uct=None
-    inputs=None
-    outputs=None
-    upsilon=None
-    
+    GET_MODEL = "(get-model)\n"    
     
     def __init__ (self, uct, inputs, outputs):
-        self.uct=UCT()   #HACK, BAD.        
+        self.uct=uct        
         self.inputs=inputs
         self.outputs=outputs
         self.upsilon = Upsilon(self.inputs)
@@ -172,7 +166,7 @@ class Encoder:
         smtStr = self.Comment("the root node of the run graph is labelled by a natural number:")
         
         elements = []
-        for state in self.uct.initial_states():
+        for state in self.uct.initial_states:
             elements.append(self.Func("lambda_B", ["q_"+str(state),"t_1"]))
             
         if (len(elements)>1):
@@ -199,28 +193,71 @@ class Encoder:
         return smtStr
     
     
+    def makeTransCondition(self, q, qn, t):
+        smtStr=''
+        varList = self.inputs+self.outputs        
+        state = self.uct.states[q]
+        transition = state.transitions 
+        for trans in transition:
+            if (qn==trans[0]):
+                labels = trans[1]               
+                orArgs = []
+                for label in labels:                    
+                    andArgs = []
+                    for var in varList:  #for all inputs and outputs                                      
+                        if (str(label[var])=="True"):
+                            andArgs.append(self.Func("fo_"+var, ["t_"+str(t)]))                         
+                        elif (str(label[var])=="False"):
+                            andArgs.append(self.Not(self.Func("fo_"+var, ["t_"+str(t)])))
+                        elif (str(label[var])=='*'):
+                            pass
+                        else:
+                            print("Error!!!!!! Variable in label has wrong value")      
+                    if (len(andArgs)>1):
+                        orArgs.append(self.And(andArgs))
+                    elif (len(andArgs)==1):
+                        orArgs.append(andArgs[0])
+
+                if (len(orArgs)>1):        
+                    smtStr = self.Or(orArgs)
+                elif (len(orArgs)==1):
+                    smtStr = orArgs[0]
+                            
+        return smtStr 
+    
     def makeMainAssertions(self, numImplStates):
         smtStr=self.Comment("main assertions")
-        for q in range (0, self.uct.num_states()):
-            state = self.uct.states()[q]
-            transition = state.transitions()
-           
-            for qn in range (0, len(transition)): #number of next nodes
+        for q in range (0, self.uct.num_states):
+            state = self.uct.states[q]
+            transition = state.transitions         
+            for trans in transition: #number of next nodes
+                qn = trans[0]
                 for v in range (0, self.upsilon.getNumElement()):
                     for t in range (0, numImplStates):
-                        smtStr+=self.Comment("q=q_"+str(q)+" (q',v)=(q_"+str(qn)+","+self.upsilon.getElementStr(v)+"), t=t_"+str(t))
+                        smtStr+=self.Comment("q=q_"+str(q)+" (q',v)=(q_"+str(qn)+","+self.upsilon.getElementStr(v)+"), t=t_"+str(t))  
+                        
                         implL1 = self.Func("lambda_B", ["q_"+str(q), "t_"+str(t)])
+                        implL2 = self.makeTransCondition(q, qn, t)
+                        if (len(implL2)>0):
+                            implL = self.And([implL1, implL2])
+                        else:
+                            implL = implL1
                         
                         arg = self.Func("tau", ["t_"+str(t), self.upsilon.getElementStr(v)])
-                        implR1 = self.Func("lambda_B", ["q_"+str(qn), arg])
-                        
+                        implR1 = self.Func("lambda_B", ["q_"+str(qn), arg])                                                
+                    
                         gt1 = self.Func("lambda_sharp", ["q_"+str(qn), arg])
                         gt2 = self.Func("lambda_B", ["q_"+str(q), "t_"+str(t)])
                         
-                        implR2 = self.Gt(gt1, gt2)
+                        
+                        if (self.uct.rejecting_states.count(qn)==0):  #next state is not a rejecting state
+                            implR2 = self.Ge(gt1, gt2)
+                        else:
+                            implR2 = self.Gt(gt1, gt2)    
+                        
                         implR = self.And([implR1, implR2])
                         
-                        smtStr += self.Assert(self.Implies(implL1, implR))
+                        smtStr += self.Assert(self.Implies(implL, implR))
 
         return smtStr
     
@@ -230,7 +267,7 @@ class Encoder:
         print ("smt file")
         print ("================================")
         
-        smtStr =  self.makeStateDeclarations(self.uct.num_states(), "Q") 
+        smtStr =  self.makeStateDeclarations(self.uct.num_states, "Q") 
         smtStr += self.makeStateDeclarations(numImplStates, "T")
         smtStr += self.makeInputDeclarations()
         smtStr += self.makeOtherDeclarations()
@@ -278,36 +315,3 @@ class Upsilon:
     def isInputSet(self, num, input):       
         pos = self.inputs.index(input)      
         return self.m[num][pos]
-    
-        
-    
-        
-    
-        """  
-    
-        declarations = []
-        for o in outputs:
-            declarations.append(declare_output(o))
-    
-        bound_asserts = ['; bounding', bound_assert(bound)]
-    
-        initial_asserts = ['; initial states']
-        for s in uct.initial_state:
-            initial.append(initial_assert(s))
-    
-        main_asserts = ['; main asserts']
-        for s in uct.states:
-            for label, dst in s.transitions:
-                if is_rejecting(dst):
-                    a = main_assert(s, inputs, label, dst, True)
-                else:
-                    a = main_assert(s, inputs, label, dst, False)
-                main_asserts.append(a)
-    
-        smt = '\n'.join([head] + declarations + bound_asserts + initial_asserts + main_asserts + [tail])
-        return smt
-    
-        smtStr = '(declare-const a Int)\n(declare-fun f (Int Bool) Int)\n(assert (> a 10))\n(assert (< (f a true) 100))\n(check-sat)\n(get-model)'"""
-        
-  
-  
