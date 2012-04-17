@@ -1,24 +1,23 @@
 from interfaces.smt_model import SmtModel
 from synthesis.smtEncoder import Encoder
-from synthesis.z3 import z3
+from synthesis.z3 import Z3
 
-
-def search(uct, inputs, outputs, bound, z3path):
+#TODO: should it depend on solver and not on z3solver?
+def search(uct, inputs, outputs, bound, z3solver):
     print("searching the model of size <=", bound)
     
     model = None 
-    solver = z3(z3path)
     encoder = Encoder(uct, inputs, outputs)
     for cbound in range(1, bound+1):
         print('-- model_size = {0}'.format(cbound))
 
         smtstr = encoder.encodeUct(cbound)
-        solver.solve(smtstr)
+        z3solver.solve(smtstr)
 
-        if solver.getState() == z3.UNSAT:
+        if z3solver.getState() == Z3.UNSAT:
             print('unsat..')
-        if solver.getState() == z3.SAT:
-            model = SmtModel(solver.getModel())
+        if z3solver.getState() == Z3.SAT:
+            model = SmtModel(z3solver.getModel())
             print('sat! The model: \n', model.getModel())
             break
 

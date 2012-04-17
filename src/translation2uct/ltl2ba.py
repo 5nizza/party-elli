@@ -42,6 +42,8 @@ def _get_create(node_tok, name_to_node, initial_nodes):
 
 
 def parse_ltl2ba_output(text):
+    """ Parse ltl2ba output, return (initial_nodes:[UCTNode], nodes:[UCTNode]) """
+
     toks = text.split('\n')
     toks = [x.strip() for x in toks][1:-1]
     assert len(toks) > 1

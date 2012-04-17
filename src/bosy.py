@@ -1,10 +1,12 @@
 import argparse
 import sys
 import random
+import os
 
 from interfaces.ltl_spec import LtlSpec
-from translation2uct.ltl2uct import ltl2uct
+from translation2uct.ltl2uct import Ltl2Uct
 from synthesis.model_searcher import search
+from synthesis.z3 import Z3
 from module_generation.verilog import to_verilog
 
 
@@ -32,12 +34,12 @@ def verilog_to_str(verilog_module):
     return 'stub verilog module!'
 
 
-def main(ltl_file, bound, verilog_file, ltl2ba_path, z3path):
+def main(ltl_file, bound, verilog_file, ltl2uct, z3solver):
     ltl_spec = parse_ltl(ltl_file.read())
 
-    uct = ltl2uct(ltl_spec, ltl2ba_path)
+    uct = ltl2uct.convert(ltl_spec)
 
-    model = search(uct, ltl_spec.inputs, ltl_spec.outputs, bound, z3path)
+    model = search(uct, ltl_spec.inputs, ltl_spec.outputs, bound, z3solver)
 
     if model is None:
         print('The specification is unrealizable with input restrictions.')
@@ -65,6 +67,27 @@ def print_bye():
     print(byes[random.randint(0, len(byes) - 1)] + '!')
 
 
+def create_ltl2uct_z3():
+    """ Return ltl2uct converter, Z3 solver """
+
+    #make paths independent of current working directory
+    bosy_dir_toks = ['./'] + os.path.relpath(__file__).split(os.sep) #abspath returns 'windows' (not cygwin) path
+    root_dir = ('/'.join(bosy_dir_toks[:-1]) + '/..') #root dir is one level up compared to bosy.py
+
+    z3_path = root_dir + '/lib/z3/bin/z3'
+    ltl2ba_path = root_dir + '/lib/ltl2ba-1.1/ltl2ba'
+    #
+
+    import platform
+    flag = '-'
+    if 'windows' in platform.system().lower():
+        ltl2ba_path += '.exe'
+        z3_path = 'z3' #assume z3 bin directory is in the PATH
+        flag = '/'
+
+    return Ltl2Uct(ltl2ba_path), Z3(z3_path, flag)
+
+
 if __name__ == "__main__":
     print_hello()
 
@@ -78,11 +101,9 @@ if __name__ == "__main__":
 
     args = parser.parse_args(sys.argv[1:])
 
-    #TODO: use external config file?
-    ltl2ba_path = 'lib/ltl2ba-1.1/ltl2ba.exe'
-    z3_path = 'z3'
+    ltl2uct, z3solver = create_ltl2uct_z3()
 
-    main(args.ltl, args.bound, args.verilog, ltl2ba_path, z3_path)
+    main(args.ltl, args.bound, args.verilog, ltl2uct, z3solver)
 
     args.ltl.close()
     if args.verilog:

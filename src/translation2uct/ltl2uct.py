@@ -4,25 +4,31 @@ from interfaces.uct import UCT
 from translation2uct.ltl2ba import parse_ltl2ba_output
 
 
-def _shift_input(ltl_spec):
-    property = ltl_spec.property
-    for i in ltl_spec.inputs:
-        property = property.replace(i, '(X{0})'.format(i))
 
-    return LtlSpec(ltl_spec.inputs, ltl_spec.outputs, property)
+class Ltl2Uct:
+    def __init__(self, ltl2ba_path):
+        self._execute_cmd = ltl2ba_path +' -f'
 
 
-def _negate(ltl_spec):
-    return LtlSpec(ltl_spec.inputs, ltl_spec.outputs, '!({0})'.format(ltl_spec.property))
+    def convert(self, ltl_spec):
+        shifted_negated = self._shift_input(self._negate(ltl_spec))
+
+        rc, ba, err = execute_shell('{0} "{1}"'.format(self._execute_cmd, shifted_negated.property))
+        assert rc == 0, rc
+        assert (err == '') or err is None, err
+
+        initial_nodes, nodes = parse_ltl2ba_output(ba)
+
+        return UCT(initial_nodes, nodes)
 
 
-def ltl2uct(ltl_spec, ltl2ba_path):
-    shifted_negated = _shift_input(_negate(ltl_spec))
+    def _shift_input(self, ltl_spec):
+        property = ltl_spec.property
+        for i in ltl_spec.inputs:
+            property = property.replace(i, '(X{0})'.format(i))
 
-    rc, ba, err = execute_shell('{0} "{1}"'.format(ltl2ba_path +' -f', shifted_negated.property))
-    assert rc == 0, rc
-    assert (err == '') or err is None, err
+        return LtlSpec(ltl_spec.inputs, ltl_spec.outputs, property)
 
-    initial_nodes, nodes = parse_ltl2ba_output(ba)
 
-    return UCT(initial_nodes, nodes)
+    def _negate(self, ltl_spec):
+        return LtlSpec(ltl_spec.inputs, ltl_spec.outputs, '!({0})'.format(ltl_spec.property))
