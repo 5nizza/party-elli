@@ -1,0 +1,27 @@
+===== Install =====
+Requirements:
+python version 2.6, 2.7
+python packages: nosetests(for tests)
+
+The following libraries are downloaded automatically with setup-bosy.sh (Linux):
+ltl2ba
+z3 solver
+
+Linux
+Just run setup.sh to download z3, ltl2ba. If everything went OK then it is ready to use.
+
+OSX
+[TODO]
+
+Windows
+Under cygwin: run setup.sh, add correct Z3 path to PATH variable or hack bosy.py
+
+
+
+===== Test =====
+Run 'nosetests .' in the base directory.
+
+
+
+===== Run =====
+python src/bosy.py
