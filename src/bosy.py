@@ -80,7 +80,8 @@ def create_ltl2uct_z3():
 
     import platform
     flag = '-'
-    if 'windows' in platform.system().lower():
+    print(platform.system())
+    if 'windows' in platform.system().lower() or 'nt' in platform.system().lower():
         ltl2ba_path += '.exe'
         z3_path = 'z3' #assume z3 bin directory is in the PATH
         flag = '/'
