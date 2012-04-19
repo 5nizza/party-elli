@@ -95,9 +95,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='A synthesizer of bounded systems from LTL')
     parser.add_argument('ltl', metavar='ltl', type=argparse.FileType(),
         help='loads the LTL formula from the given input file')
-    parser.add_argument('-verilog', metavar='verilog', type=argparse.FileType('w'), required=False,
+    parser.add_argument('--verilog', metavar='verilog', type=argparse.FileType('w'), required=False,
         help='writes the verilog output to the given file')
-    parser.add_argument('-bound', metavar='bound', type=int, default=1, required=False,
+    parser.add_argument('--bound', metavar='bound', type=int, default=1, required=False,
         help='bound the maximal size of the system to synthesize(default: %(default)i)')
 
     args = parser.parse_args(sys.argv[1:])

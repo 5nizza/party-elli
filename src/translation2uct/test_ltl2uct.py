@@ -21,7 +21,6 @@ class Test(unittest.TestCase):
 
         assert len(initial_nodes) == 1, str(len(initial_nodes))
         assert len(nodes) == 2, str(nodes)
-        print('\n'.join([str(x) for x in nodes]))
 
         for n in nodes:
             if n.name == 'T0_init':
@@ -43,6 +42,33 @@ class Test(unittest.TestCase):
                     assert dst.name == 'accept_S2' and label == {'g':False}
             else:
                 assert False, 'unknown node: {0}'.format(str(n))
+
+
+    def test_parse_ltl2ba_output__skip(self):
+        text = """
+            never { /* F(r && !g) */
+            T0_init :    /* init */
+                if
+                :: (1) -> goto T0_init
+                :: (r && !g) -> goto accept_all
+                fi;
+            accept_all :    /* 1 */
+                skip
+            }"""
+
+        initial_nodes, nodes = parse_ltl2ba_output(text)
+
+        assert len(initial_nodes) == 1, str(len(initial_nodes))
+        assert len(nodes) == 2, str(nodes)
+
+        accept_all_node = [n for n in nodes if n.name == 'accept_all'][0]
+
+        assert accept_all_node.is_rejecting
+        assert len(accept_all_node.transitions) == 1
+
+        dst, label = accept_all_node.transitions[0]
+        assert dst == accept_all_node, str(dst)
+        assert label == {}, str(label)
 
 
 if __name__ == "__main__":

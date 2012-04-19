@@ -4,9 +4,11 @@ from synthesis.z3 import Z3
 
 #TODO: should it depend on solver and not on z3solver?
 def search(uct, inputs, outputs, bound, z3solver):
+    assert bound > 0
+
     print("searching the model of size <=", bound)
-    
-    model = None 
+
+    model = None
     encoder = Encoder(uct, inputs, outputs)
     for cbound in range(1, bound+1):
         print('-- model_size = {0}'.format(cbound))
@@ -18,7 +20,7 @@ def search(uct, inputs, outputs, bound, z3solver):
             print('unsat..')
         if z3solver.getState() == Z3.SAT:
             model = SmtModel(z3solver.getModel())
-            print('sat! The model: \n', model.getModel())
+            print 'sat! The model: \n', model.getModel()
             break
 
     return model

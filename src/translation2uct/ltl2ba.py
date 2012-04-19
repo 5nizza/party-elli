@@ -7,7 +7,7 @@ def _get_cases(toks):
     for i, t in enumerate(toks):
         if t.count(':') == 1:
             start = i
-        elif t.count(';') == 1:
+        elif t.count(';') == 1 or 'skip' in t:
             end = i
             blocks_indices.append((start, end+1))
     cases = ['\n'.join(toks[x[0]:x[1]]) for x in blocks_indices]
@@ -54,11 +54,14 @@ def parse_ltl2ba_output(text):
     # if
     # :: (!a && !g && r) || (g) -> goto accept_init
     # :: (1) -> goto T0_S2
-    # :: (1) -> goto accept_S3
-    # :: (1) -> goto accept_S4
     # fi;
+
+#    accept_all :    /* 1 */
+#    skip
+
     initial_nodes = set()
     name_to_node = {}
+
     for c in cases:
         lines = c.strip().split('\n')
 
@@ -66,6 +69,10 @@ def parse_ltl2ba_output(text):
         src = _get_create(src_tok, name_to_node, initial_nodes)
 
         trans_toks = [x.strip(':').strip() for x in lines[1:] if 'if' not in x and 'fi' not in x]
+
+        if trans_toks == ['skip']:
+            src.add_edge(src, {})
+            continue
 
         for trans in trans_toks:
             label_tok, dst_tok = [x.strip() for x in trans.split('-> goto')]

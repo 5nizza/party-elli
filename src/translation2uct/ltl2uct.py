@@ -4,7 +4,6 @@ from interfaces.uct import UCT
 from translation2uct.ltl2ba import parse_ltl2ba_output
 
 
-
 class Ltl2Uct:
     def __init__(self, ltl2ba_path):
         self._execute_cmd = ltl2ba_path +' -f'
