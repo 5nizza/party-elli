@@ -5,7 +5,7 @@ class UCT:
 
     @property
     def states(self):
-        return self._states       
+        return self._states
 
     @property
     def initial_states(self):
@@ -23,13 +23,6 @@ class UCTNode:
         self._is_rejecting = is_rejecting
         self._transitions = []
         self._name = name
-#        if (tmp==0):
-#            label0=  [[True ,True],[False,True],[False ,True],[False,False]]
-#            label1 = [[True ,False],[False,True]]
-#            self._transition=[[0, label0],[1, label1]]
-#        if (tmp==1):
-#            label0=  [[True ,True],[False,True],[False ,True],[False,False]]
-#            self._transition=[[1, label0]]
 
     @property
     def name(self):
@@ -37,11 +30,11 @@ class UCTNode:
 
     @property
     def transitions(self):
-        """ Return a list of pairs (destination:UCTNode, label:{letter:True/False})"""
+        """ Return a list of pairs (destination:UCTNode, label:{letter:True/False}) """
         return self._transitions
 
     @property
-    def is_rejecting(self):
+    def is_rejecting(self): #TODO: move to UCT
         return self._is_rejecting
 
 
