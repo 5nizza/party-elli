@@ -193,7 +193,7 @@ class Encoder:
         return smt_str
     
     
-    def _make_trans_condition(self, uct_state, uct_state_next, trans, impl_state):
+    def _make_trans_condition(self, trans, impl_state):
         smt_str=''
         input_output_list = self.inputs + self.outputs
         labels = trans[1]
@@ -230,7 +230,7 @@ class Encoder:
                         smt_str+=self._comment('q=q_' + uct_state.name + " (q',v)=(q_" + uct_state_next.name + "," + self.upsilon.get_element_str(input_value) + "), t=t_" + str(impl_state))
                         
                         implication_left_1 = self._func("lambda_B", ["q_" + uct_state.name, "t_" + str(impl_state)])
-                        implication_left_2 = self._make_trans_condition(uct_state, uct_state_next, trans, impl_state)
+                        implication_left_2 = self._make_trans_condition(trans, impl_state)
 
                         if len(implication_left_2)>0:
                             implication_left = self._and([implication_left_1, implication_left_2])
@@ -284,7 +284,7 @@ class Encoder:
         smt_str += self.GET_MODEL
         smt_str += self.EXIT_CALL
 
-#        print smt_str
+        print smt_str
         print ("================================")    
                         
         return smt_str
