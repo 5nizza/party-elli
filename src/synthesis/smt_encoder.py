@@ -282,7 +282,18 @@ class Encoder:
         smt_str += self._make_input_preservation(num_impl_states)
         smt_str += "\n"
         smt_str += self.CHECK_SAT
-        smt_str += self.GET_MODEL
+        for x in range (0, num_impl_states):
+            for y in range (0, self.upsilon.get_num_element()):
+                smt_str += "(get-value ((tau t_" + str(x) + " " + str(self.upsilon.get_element_str(y)) +")))\n"
+        for x in  range (0, num_impl_states):
+            smt_str += "(get-value (t_" + str(x) + "))\n"
+
+        for input in self.inputs:
+            for x in  range (0, num_impl_states):
+                smt_str += "(get-value ((fo_"+input +" t_" + str(x) +")))\n"
+        for output in self.outputs:
+            for x in  range (0, num_impl_states):
+                smt_str += "(get-value ((fo_"+output+" t_"+ str(x) +")))\n"
         smt_str += self.EXIT_CALL
           
         print (smt_str)
