@@ -11,13 +11,13 @@ class Z3:
     def __init__(self, path, flag='-'):
         self._cmd = path + ' {0}smt2 {0}in'.format(flag)
         self._current_state = self.UNDEFINIED
-        self._modelStr = None
+        self._model_str = None
 
-    def getState(self):
+    def get_state(self):
         return self._current_state
 
-    def getModel(self): #TODO: better to return an instance of SmtModel class?
-        return self._modelStr
+    def get_model(self): #TODO: better to return an instance of SmtModel class?
+        return self._model_str
     
     def solve(self, smtstr):
         rc, output, err = execute_shell(self._cmd, smtstr)
@@ -35,12 +35,12 @@ class Z3:
 
             #parse model
             parse= False
-            self._modelStr = ''
+            self._model_str = ''
             for line in output_lines:
                 if line == ')':
                     parse = False         
                 if parse is True:
-                    self._modelStr+=line+"\n"
+                    self._model_str+=line+"\n"
                 if line == '(model':
                     parse = True
         else:

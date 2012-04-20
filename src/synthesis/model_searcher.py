@@ -1,5 +1,5 @@
 from interfaces.smt_model import SmtModel
-from synthesis.smtEncoder import Encoder
+from synthesis.smt_encoder import Encoder
 from synthesis.z3 import Z3
 
 #TODO: should it depend on solver and not on z3solver?
@@ -8,17 +8,18 @@ def search(uct, inputs, outputs, bound, z3solver):
     
     model = None 
     encoder = Encoder(uct, inputs, outputs)
-    for cbound in range(1, bound+1):
-        print('-- model_size = {0}'.format(cbound))
+    for current_bound in range(1, bound+1):
+        
+        print('-- model_size = {0}'.format(current_bound))
+        smt_str = encoder.encode_uct(current_bound)
+        z3solver.solve(smt_str)
 
-        smtstr = encoder.encodeUct(cbound)
-        z3solver.solve(smtstr)
-
-        if z3solver.getState() == Z3.UNSAT:
+        if z3solver.get_state() == Z3.UNSAT:
             print('unsat..')
-        if z3solver.getState() == Z3.SAT:
-            model = SmtModel(z3solver.getModel())
-            print('sat! The model: \n', model.getModel())
+            
+        if z3solver.get_state() == Z3.SAT:
+            model = SmtModel(z3solver.get_model())
+            print('sat! The model: \n', model.get_model())
             break
 
     return model

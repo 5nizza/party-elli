@@ -4,5 +4,5 @@ class SmtModel:
     def __init__(self,modelStr):
         self.model = modelStr
         
-    def getModel(self):
+    def get_model(self):
         return self.model
