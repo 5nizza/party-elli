@@ -71,6 +71,33 @@ class Test(unittest.TestCase):
         assert label == {}, str(label)
 
 
+    def test_parse_ltl2ba_output__or(self):
+        text = """
+            never {
+            T0_init :    /* init */
+                if
+                :: (1) -> goto T0_init
+                :: (r) || (!g) -> goto accept_all
+                fi;
+            accept_all :    /* 1 */
+                skip
+            }"""
+
+        initial_nodes, nodes = parse_ltl2ba_output(text)
+
+        assert len(initial_nodes) == 1, str(len(initial_nodes))
+        assert len(nodes) == 2, str(nodes)
+
+        init_node = [n for n in nodes if n.name == 'T0_init'][0]
+
+        assert len(init_node.transitions) == 3, len(init_node.transitions)
+
+        for dst, label in init_node.transitions:
+            assert (label == {} and dst == init_node)\
+                    or (label == {'r':True} and dst != init_node)\
+                    or (label == {'g':False} and dst != init_node)
+
+
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
     unittest.main()
