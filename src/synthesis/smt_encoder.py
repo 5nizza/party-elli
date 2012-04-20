@@ -14,9 +14,9 @@ class Encoder:
 
     def _func(self, function, args):
         
-        smt_str='(' + function + ' '
+        smt_str = '(' + function + ' ' 
         for arg in args:
-            smt_str = arg+' '
+            smt_str += arg+' '
         if len(args):
             smt_str = smt_str[:-1]         
         smt_str += ')'
@@ -193,7 +193,7 @@ class Encoder:
         return smt_str
     
     
-    def _make_trans_condition(self, uct_state, uct_state_next, t):
+    def _make_trans_condition(self, uct_state, uct_state_next, impl_state):
         smt_str=''
         input_output_list = self.inputs + self.outputs
         transition = uct_state.transitions
@@ -204,9 +204,9 @@ class Encoder:
                 and_args = []
                 for var in input_output_list:  #for all inputs and outputs
                     if var in labels and labels[var] is True:
-                        and_args.append(self._func("fo_" + var, ["t_" + str(t)]))
+                        and_args.append(self._func("fo_" + var, ["t_" + str(impl_state)]))
                     elif var in labels and labels[var] is False:
-                        and_args.append(self._not(self._func("fo_" + var, ["t_" + str(t)])))
+                        and_args.append(self._not(self._func("fo_" + var, ["t_" + str(impl_state)])))
                     elif var not in labels:
                         pass
                     else:
@@ -256,12 +256,13 @@ class Encoder:
 
         return smt_str
     
+    
     def _make_set_logic(self, logic):
         return '(set-logic {0})\n'.format(logic)
     
     def _make_headers(self):
         return '(set-option :ematching false)\n(set-option :produce-models true)\n'
-    
+
     def encode_uct(self, num_impl_states):
         """ outputs: list of strings """
         
