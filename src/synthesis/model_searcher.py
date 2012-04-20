@@ -2,8 +2,8 @@ from interfaces.smt_model import SmtModel
 from synthesis.smt_encoder import Encoder
 from synthesis.z3 import Z3
 
-#TODO: should it depend on solver and not on z3solver?
 def search(uct, inputs, outputs, bound, z3solver):
+    
     assert bound > 0
 
     print("searching the model of size <=", bound)
