@@ -21,7 +21,8 @@ def search(uct, inputs, outputs, bound, z3solver):
    
         if z3solver.get_state() == Z3.SAT:
             model = SmtModel(z3solver.get_model())
-            print('sat! The model: \n', model.get_model())
+            print 'sat! The model:'
+            print model.get_model()
             break
 
     return model
