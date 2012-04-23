@@ -6,3 +6,6 @@ class SmtModel:
         
     def get_model(self):
         return self.model
+
+    def __str__(self):
+        return self.model

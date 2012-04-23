@@ -1,4 +1,5 @@
 import itertools
+import logging
 
 class Encoder:
 
@@ -11,6 +12,7 @@ class Encoder:
         self.inputs=inputs
         self.outputs=outputs
         self.upsilon = Upsilon(self.inputs)
+        self._logger = logging.getLogger(__name__)
 
     def _func(self, function, args):
         
@@ -262,11 +264,8 @@ class Encoder:
         return '(set-option :ematching false)\n(set-option :produce-models true)\n'
 
     def encode_uct(self, num_impl_states):
-        """ outputs: list of strings """
+        """ Return list of strings representing smt file. """
         
-        print ("smt file")
-        print ("================================")
-
         smt_str = self._make_headers()
 
         smt_str += self._make_set_logic('UFLIA')
@@ -295,9 +294,8 @@ class Encoder:
                 smt_str += "(get-value ((fo_"+output+" t_"+ str(x) +")))\n"
         smt_str += self.EXIT_CALL
 
-        print smt_str
-        print ("================================")    
-                        
+        self._logger.debug(smt_str)
+
         return smt_str
 
 

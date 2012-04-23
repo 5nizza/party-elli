@@ -1,13 +1,25 @@
+import logging
 import argparse
 import sys
 import random
 import os
 
 from interfaces.ltl_spec import LtlSpec
+from module_generation.dot import to_dot
 from translation2uct.ltl2uct import Ltl2Uct
 from synthesis.model_searcher import search
 from synthesis.z3 import Z3
 from module_generation.verilog import to_verilog
+
+
+_logger = None
+
+
+def get_logger():
+    global _logger
+    if _logger is None:
+        _logger = logging.getLogger(__name__)
+    return _logger
 
 
 def parse_ltl(text):
@@ -34,7 +46,8 @@ def verilog_to_str(verilog_module):
     return 'stub verilog module!'
 
 
-def main(ltl_file, bound, verilog_file, ltl2uct, z3solver):
+def main(ltl_file, bound, verilog_file, dot_file, ltl2uct, z3solver):
+    _logger = get_logger()
     ltl_spec = parse_ltl(ltl_file.read())
 
     uct = ltl2uct.convert(ltl_spec)
@@ -42,17 +55,21 @@ def main(ltl_file, bound, verilog_file, ltl2uct, z3solver):
     model = search(uct, ltl_spec.inputs, ltl_spec.outputs, bound, z3solver)
 
     if model is None:
-        print('The specification is unrealizable with input restrictions.')
+        _logger.info('The specification is unrealizable with input conditions.')
         return
 
-    verilog_module = to_verilog(model)
-
-    output = verilog_to_str(verilog_module)
+    output = str(model)
     if verilog_file is not None:
+        verilog_module = to_verilog(model)
+        output = verilog_to_str(verilog_module)
         verilog_file.write(output)
-    else:
-        print('-'*80)
-        print(output)
+
+    if dot_file is not None:
+        dot = to_dot(model)
+        dot_file.write(dot)
+
+    _logger.info('-'*80)
+    _logger.info(output)
 
 
 def print_hello():
@@ -88,6 +105,18 @@ def create_ltl2uct_z3():
     return Ltl2Uct(ltl2ba_path), Z3(z3_path, flag)
 
 
+def setup_logging(verbose):
+    level = None
+    if verbose is 0:
+        level = logging.INFO
+    elif verbose >= 1:
+        level = logging.DEBUG
+
+    logging.basicConfig(format="%(asctime)-10s%(message)s",
+                        datefmt="%H:%M:%S",
+                        level=level)
+
+
 if __name__ == "__main__":
     print_hello()
 
@@ -96,17 +125,25 @@ if __name__ == "__main__":
         help='loads the LTL formula from the given input file')
     parser.add_argument('--verilog', metavar='verilog', type=argparse.FileType('w'), required=False,
         help='writes the verilog output to the given file')
+    parser.add_argument('--dot', metavar='dot', type=argparse.FileType('w'), required=False,
+        help='writes the output into a dot graph file')
     parser.add_argument('--bound', metavar='bound', type=int, default=1, required=False,
         help='bound the maximal size of the system to synthesize(default: %(default)i)')
+    parser.add_argument('-v', '--verbose', action='count', default=0)
 
     args = parser.parse_args(sys.argv[1:])
 
+    setup_logging(args.verbose)
+
     ltl2uct, z3solver = create_ltl2uct_z3()
 
-    main(args.ltl, args.bound, args.verilog, ltl2uct, z3solver)
+    main(args.ltl, args.bound, args.verilog, args.dot, ltl2uct, z3solver)
 
     args.ltl.close()
     if args.verilog:
         args.verilog.close()
+
+    if args.dot:
+        args.dot.close()
 
     print_bye()
