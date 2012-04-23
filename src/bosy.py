@@ -47,7 +47,7 @@ def verilog_to_str(verilog_module):
 
 
 def main(ltl_file, bound, verilog_file, dot_file, ltl2uct, z3solver):
-    _logger = get_logger()
+    logger = get_logger()
     ltl_spec = parse_ltl(ltl_file.read())
 
     uct = ltl2uct.convert(ltl_spec)
@@ -55,7 +55,7 @@ def main(ltl_file, bound, verilog_file, dot_file, ltl2uct, z3solver):
     model = search(uct, ltl_spec.inputs, ltl_spec.outputs, bound, z3solver)
 
     if model is None:
-        _logger.info('The specification is unrealizable with input conditions.')
+        logger.info('The specification is unrealizable with input conditions.')
         return
 
     output = str(model)
@@ -68,8 +68,8 @@ def main(ltl_file, bound, verilog_file, dot_file, ltl2uct, z3solver):
         dot = to_dot(model)
         dot_file.write(dot)
 
-    _logger.info('-'*80)
-    _logger.info(output)
+    logger.info('-'*80)
+    logger.info(output)
 
 
 def print_hello():
