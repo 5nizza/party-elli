@@ -168,7 +168,7 @@ class Encoder:
         smt_str = self._comment("the root node of the run graph is labelled by a natural number:")
         
         elements = []
-        for state in self.uct.initial_states:
+        for state in self.uct.initial_nodes:
             elements.append(self._func("lambda_B", ["q_"+state.name,"t_0"]))
             
         if len(elements)>1:
@@ -224,7 +224,7 @@ class Encoder:
     
     def _make_main_assertions(self, num_impl_states):
         smt_str=self._comment("main assertions")
-        for uct_state in self.uct.states:
+        for uct_state in self.uct.nodes:
             for trans in uct_state.transitions: #number of next nodes
                 uct_state_next = trans[0]
                 for input_value in range (0, self.upsilon.get_num_element()):
@@ -245,7 +245,7 @@ class Encoder:
                         gt_arg_1 = self._func("lambda_sharp", ["q_" + uct_state_next.name, arg])
                         gt_arg_2 = self._func("lambda_sharp", ["q_" + uct_state.name, "t_" + str(impl_state)])
 
-                        if not uct_state_next.is_rejecting: #next state is not a rejecting state
+                        if uct_state_next not in self.uct.rejecting_nodes:
                             implication_right_2 = self._ge(gt_arg_1, gt_arg_2)
                         else:
                             implication_right_2 = self._gt(gt_arg_1, gt_arg_2)    
@@ -269,7 +269,7 @@ class Encoder:
         smt_str = self._make_headers()
 
         smt_str += self._make_set_logic('UFLIA')
-        smt_str += self._make_state_declarations([uct_state.name for uct_state in self.uct.states], "Q")
+        smt_str += self._make_state_declarations([uct_state.name for uct_state in self.uct.nodes], "Q")
         smt_str += self._make_state_declarations([str(impl_state) for impl_state in range(0, num_impl_states)], "T")
         smt_str += self._make_input_declarations()
         smt_str += self._make_other_declarations()

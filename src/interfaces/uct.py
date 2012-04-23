@@ -1,26 +1,31 @@
 class UCT:
-    def __init__(self, initial_nodes, nodes):
-        self._initial_states = initial_nodes
-        self._states = nodes
+    def __init__(self, initial_nodes, rejecting_nodes, nodes):
+        self._initial_nodes = initial_nodes
+        self._rejecting_nodes = rejecting_nodes
+        self._nodes = nodes
 
     @property
-    def states(self):
-        return self._states
+    def nodes(self):
+        return self._nodes
 
     @property
-    def initial_states(self):
-        return self._initial_states
+    def initial_nodes(self):
+        return self._initial_nodes
 
+    @property
+    def rejecting_nodes(self):
+        return self._rejecting_nodes
 
     def __str__(self):
-        return "\n".join([str(x) for x in self.states]) + \
-               "\ninitial states:\n" + \
-               "\n".join([str(x) for x in self.initial_states])
+        return "\n".join([str(x) for x in self._nodes]) +\
+               "\n initial nodes:\n" +\
+               "\n".join([str(x) for x in self._initial_nodes]) +\
+               "\n rejecting nodes:\n" + \
+               "\n".join([str(x) for x in self._rejecting_nodes])
 
 
 class UCTNode:
-    def __init__(self, name, is_rejecting):
-        self._is_rejecting = is_rejecting
+    def __init__(self, name):
         self._transitions = []
         self._name = name
 
@@ -33,14 +38,8 @@ class UCTNode:
         """ Return a list of pairs (destination:UCTNode, label:{letter:True/False}) """
         return self._transitions
 
-    @property
-    def is_rejecting(self): #TODO: move to UCT
-        return self._is_rejecting
-
-
     def add_edge(self, dst, label):
         self._transitions.append((dst, label))
-
 
     def __str__(self):
         return "name: {0}, transitions: {1}".format(self.name, [str(x[1]) + ' ' + str(x[0].name) for x in self.transitions])

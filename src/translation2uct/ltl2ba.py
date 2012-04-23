@@ -34,10 +34,14 @@ def _parse_label(label_tok):
     return labels
 
 
-def _get_create(node_tok, name_to_node, initial_nodes):
-    node = name_to_node[node_tok] = name_to_node.get(node_tok, UCTNode(node_tok, 'accept' in node_tok))
+def _get_create(node_tok, name_to_node, initial_nodes, rejecting_nodes):
+    node = name_to_node[node_tok] = name_to_node.get(node_tok, UCTNode(node_tok))
+
     if 'init' in node_tok:
         initial_nodes.add(node)
+    if 'accept' in node_tok:
+        rejecting_nodes.add(node)
+
     return node
 
 
@@ -60,13 +64,14 @@ def parse_ltl2ba_output(text):
 #    skip
 
     initial_nodes = set()
+    rejecting_nodes = set()
     name_to_node = {}
 
     for c in cases:
         lines = c.strip().split('\n')
 
         src_tok = lines[0].split(':')[0].strip()
-        src = _get_create(src_tok, name_to_node, initial_nodes)
+        src = _get_create(src_tok, name_to_node, initial_nodes, rejecting_nodes)
 
         trans_toks = [x.strip(':').strip() for x in lines[1:] if 'if' not in x and 'fi' not in x]
 
@@ -80,10 +85,10 @@ def parse_ltl2ba_output(text):
             labels = _parse_label(label_tok)
 
             for l in labels:
-                dst = _get_create(dst_tok, name_to_node, initial_nodes)
+                dst = _get_create(dst_tok, name_to_node, initial_nodes, rejecting_nodes)
                 src.add_edge(dst, l)
 
-    return initial_nodes, list(name_to_node.values())
+    return initial_nodes, rejecting_nodes, list(name_to_node.values())
 
 
 #_tmp = """

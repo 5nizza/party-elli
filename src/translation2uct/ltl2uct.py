@@ -16,9 +16,9 @@ class Ltl2Uct:
         assert rc == 0, rc
         assert (err == '') or err is None, err
 
-        initial_nodes, nodes = parse_ltl2ba_output(ba)
+        initial_nodes, rejecting_nodes, nodes = parse_ltl2ba_output(ba)
 
-        return UCT(initial_nodes, nodes)
+        return UCT(initial_nodes, rejecting_nodes, nodes)
 
 
     def _shift_input(self, ltl_spec):

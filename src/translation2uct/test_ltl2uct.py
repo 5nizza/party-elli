@@ -17,14 +17,15 @@ class Test(unittest.TestCase):
                 fi;
             }"""
 
-        initial_nodes, nodes = parse_ltl2ba_output(text)
+        initial_nodes, rejecting_nodes, nodes = parse_ltl2ba_output(text)
 
         assert len(initial_nodes) == 1, str(len(initial_nodes))
+        assert len(rejecting_nodes) == 1, str(len(rejecting_nodes))
         assert len(nodes) == 2, str(nodes)
 
         for n in nodes:
             if n.name == 'T0_init':
-                assert not n.is_rejecting
+                assert not n in rejecting_nodes
                 assert n in initial_nodes
                 assert len(n.transitions) == 2
 
@@ -34,7 +35,7 @@ class Test(unittest.TestCase):
                             'unknown transition: {0} {1}'.format(label, str(dst))
 
             elif n.name == 'accept_S2':
-                assert n.is_rejecting
+                assert n in rejecting_nodes
                 assert not n in initial_nodes
                 assert len(n.transitions) == 1
 
@@ -56,14 +57,16 @@ class Test(unittest.TestCase):
                 skip
             }"""
 
-        initial_nodes, nodes = parse_ltl2ba_output(text)
+        initial_nodes, rejecting_nodes, nodes = parse_ltl2ba_output(text)
 
         assert len(initial_nodes) == 1, str(len(initial_nodes))
+        assert len(rejecting_nodes) == 1, str(len(rejecting_nodes))
         assert len(nodes) == 2, str(nodes)
 
         accept_all_node = [n for n in nodes if n.name == 'accept_all'][0]
 
-        assert accept_all_node.is_rejecting
+        assert rejecting_nodes == {accept_all_node}
+
         assert len(accept_all_node.transitions) == 1
 
         dst, label = accept_all_node.transitions[0]
@@ -83,9 +86,10 @@ class Test(unittest.TestCase):
                 skip
             }"""
 
-        initial_nodes, nodes = parse_ltl2ba_output(text)
+        initial_nodes, rejecting_nodes, nodes = parse_ltl2ba_output(text)
 
         assert len(initial_nodes) == 1, str(len(initial_nodes))
+        assert len(rejecting_nodes) == 1, str(len(rejecting_nodes))
         assert len(nodes) == 2, str(nodes)
 
         init_node = [n for n in nodes if n.name == 'T0_init'][0]
