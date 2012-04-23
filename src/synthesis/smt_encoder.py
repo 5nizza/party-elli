@@ -193,33 +193,30 @@ class Encoder:
         return smt_str
     
     
-    def _make_trans_condition(self, uct_state, uct_state_next, impl_state):
+    def _make_trans_condition(self, trans, impl_state):
         smt_str=''
         input_output_list = self.inputs + self.outputs
-        transition = uct_state.transitions
-        for trans in transition:
-            if uct_state_next==trans[0]:
-                labels = trans[1]               
-                or_args = []
-                and_args = []
-                for var in input_output_list:  #for all inputs and outputs
-                    if var in labels and labels[var] is True:
-                        and_args.append(self._func("fo_" + var, ["t_" + str(impl_state)]))
-                    elif var in labels and labels[var] is False:
-                        and_args.append(self._not(self._func("fo_" + var, ["t_" + str(impl_state)])))
-                    elif var not in labels:
-                        pass
-                    else:
-                        assert False, "Error: Variable in label has wrong value: " + labels[var]
-                if len(and_args)>1:
-                    or_args.append(self._and(and_args))
-                elif len(and_args)==1:
-                    or_args.append(and_args[0])
+        labels = trans[1]
+        or_args = []
+        and_args = []
+        for var in input_output_list:  #for all inputs and outputs
+            if (var in labels) and (labels[var] is True):
+                and_args.append(self._func("fo_" + var, ["t_" + str(impl_state)]))
+            elif (var in labels) and (labels[var] is False):
+                and_args.append(self._not(self._func("fo_" + var, ["t_" + str(impl_state)])))
+            elif var not in labels:
+                pass
+            else:
+                assert False, "Error: Variable in label has wrong value: " + labels[var]
+        if len(and_args)>1:
+            or_args.append(self._and(and_args))
+        elif len(and_args)==1:
+            or_args.append(and_args[0])
 
-                if len(or_args)>1:
-                    smt_str = self._or(or_args)
-                elif len(or_args)==1:
-                    smt_str = or_args[0]
+        if len(or_args)>1:
+            smt_str = self._or(or_args)
+        elif len(or_args)==1:
+            smt_str = or_args[0]
                             
         return smt_str 
     
@@ -233,7 +230,8 @@ class Encoder:
                         smt_str+=self._comment('q=q_' + uct_state.name + " (q',v)=(q_" + uct_state_next.name + "," + self.upsilon.get_element_str(input_value) + "), t=t_" + str(impl_state))
                         
                         implication_left_1 = self._func("lambda_B", ["q_" + uct_state.name, "t_" + str(impl_state)])
-                        implication_left_2 = self._make_trans_condition(uct_state, uct_state_next, impl_state)
+                        implication_left_2 = self._make_trans_condition(trans, impl_state)
+
                         if len(implication_left_2)>0:
                             implication_left = self._and([implication_left_1, implication_left_2])
                         else:
@@ -296,12 +294,11 @@ class Encoder:
             for x in  range (0, num_impl_states):
                 smt_str += "(get-value ((fo_"+output+" t_"+ str(x) +")))\n"
         smt_str += self.EXIT_CALL
-          
-        print (smt_str)
+
+        print smt_str
         print ("================================")    
                         
         return smt_str
-
 
 
 class Upsilon:   

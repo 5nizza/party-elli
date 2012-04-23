@@ -15,21 +15,21 @@ def _get_cases(toks):
 
 
 def _parse_label(label_tok):
-    """ returns {var_name : True/False} """
+    """ returns labels [{var_name : True/False}, ..] """
     # (!a && !g && r) || (g)
     # (1)
 
     if label_tok == '(1)':
-        return {}
+        return [{}]
 
-    labels = {}
+    labels = []
     toks = [x.strip(' ()') for x in label_tok.split('||')]
     for t in toks:
+        label = {}
         literals = [x.strip() for x in t.split('&&')]
         for l in literals:
-            labels[l.strip('!')] = ('!' not in l)
-
-    assert len(labels) > 0
+            label[l.strip('!')] = ('!' not in l)
+        labels.append(label)
 
     return labels
 
@@ -76,10 +76,12 @@ def parse_ltl2ba_output(text):
 
         for trans in trans_toks:
             label_tok, dst_tok = [x.strip() for x in trans.split('-> goto')]
-            label = _parse_label(label_tok)
-            dst = _get_create(dst_tok, name_to_node, initial_nodes)
 
-            src.add_edge(dst, label)
+            labels = _parse_label(label_tok)
+
+            for l in labels:
+                dst = _get_create(dst_tok, name_to_node, initial_nodes)
+                src.add_edge(dst, l)
 
     return initial_nodes, list(name_to_node.values())
 
