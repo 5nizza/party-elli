@@ -42,8 +42,7 @@ def parse_ltl(text):
 
 
 def verilog_to_str(verilog_module):
-    print('verilog_to_str: i am stub!')
-    return 'stub verilog module!'
+    return verilog_module
 
 
 def main(ltl_file, bound, verilog_file, dot_file, ltl2uct, z3solver):

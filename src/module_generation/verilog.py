@@ -63,6 +63,6 @@ def to_verilog(model):
 
     verilog += "\t end \n endmodule"
 
-    print(verilog)
+    #print(verilog)
 
     return verilog
