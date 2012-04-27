@@ -38,14 +38,9 @@ class Z3:
             i=i.replace(")","")
             i=i.replace("tau ","")
             parts=i.split(" ")
-
+            print(parts)
             parts[0]=parts[0].replace("t_","")
             parts[2]=parts[2].replace("t_","")
-            if "_not" in parts[1]:
-                parts[1]=parts[1].replace("_not","")
-                parts[1]+=" == 0"
-            else:
-                parts[1]+=" == 1"
             state.append(parts[0])
             input.append(parts[1])
             newState.append(parts[2])

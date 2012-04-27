@@ -8,7 +8,7 @@ class VerilogModule:
 def to_verilog(model):
     state_trans = model.get_model()[0]
     output_trans = model.get_model()[1]
-
+    print(state_trans.input)
     inputs=""
     for i in state_trans.input:
         i=i.replace(" == 0", "")
