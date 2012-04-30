@@ -113,7 +113,8 @@ def _setup_logging(verbose):
 
     logging.basicConfig(format="%(asctime)-10s%(message)s",
                         datefmt="%H:%M:%S",
-                        level=level)
+                        level=level,
+                        stream=sys.stdout)
 
 
 if __name__ == "__main__":
