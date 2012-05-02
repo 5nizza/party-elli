@@ -10,9 +10,6 @@ z3 solver
 Linux
 Just run setup.sh to download z3, ltl2ba. If everything went OK then it is ready to use.
 
-OSX
-[TODO]
-
 Windows
 Under cygwin: run setup.sh, add correct Z3 path to PATH variable or hack bosy.py
 
