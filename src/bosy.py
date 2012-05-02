@@ -15,14 +15,14 @@ from module_generation.verilog import to_verilog
 _logger = None
 
 
-def get_logger():
+def _get_logger():
     global _logger
     if _logger is None:
         _logger = logging.getLogger(__name__)
     return _logger
 
 
-def parse_ltl(text):
+def _parse_ltl(text):
     inputs = []
     outputs = []
     for l in text.strip().split('\n'):
@@ -41,13 +41,13 @@ def parse_ltl(text):
     return LtlSpec(inputs, outputs, property)
 
 
-def verilog_to_str(verilog_module):
+def _verilog_to_str(verilog_module):
     return verilog_module
 
 
 def main(ltl_file, bound, verilog_file, dot_file, ltl2uct, z3solver):
-    logger = get_logger()
-    ltl_spec = parse_ltl(ltl_file.read())
+    logger = _get_logger()
+    ltl_spec = _parse_ltl(ltl_file.read())
 
     uct = ltl2uct.convert(ltl_spec)
 
@@ -60,7 +60,7 @@ def main(ltl_file, bound, verilog_file, dot_file, ltl2uct, z3solver):
     output = str(model)
     if verilog_file is not None:
         verilog_module = to_verilog(model)
-        output = verilog_to_str(verilog_module)
+        output = _verilog_to_str(verilog_module)
         verilog_file.write(output)
 
     if dot_file is not None:
@@ -83,7 +83,7 @@ def print_bye():
     print(byes[random.randint(0, len(byes) - 1)] + '!')
 
 
-def create_ltl2uct_z3():
+def _create_ltl2uct_z3():
     """ Return ltl2uct converter, Z3 solver """
 
     #make paths independent of current working directory
@@ -104,7 +104,7 @@ def create_ltl2uct_z3():
     return Ltl2Uct(ltl2ba_path), Z3(z3_path, flag)
 
 
-def setup_logging(verbose):
+def _setup_logging(verbose):
     level = None
     if verbose is 0:
         level = logging.INFO
@@ -132,9 +132,9 @@ if __name__ == "__main__":
 
     args = parser.parse_args(sys.argv[1:])
 
-    setup_logging(args.verbose)
+    _setup_logging(args.verbose)
 
-    ltl2uct, z3solver = create_ltl2uct_z3()
+    ltl2uct, z3solver = _create_ltl2uct_z3()
 
     main(args.ltl, args.bound, args.verilog, args.dot, ltl2uct, z3solver)
 
