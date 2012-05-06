@@ -91,7 +91,7 @@ def _create_ltl2uct_z3():
     root_dir = ('/'.join(bosy_dir_toks[:-1]) + '/..') #root dir is one level up compared to bosy.py
 
     z3_path = root_dir + '/lib/z3/bin/z3'
-    ltl2ba_path = root_dir + '/lib/ltl2ba-1.1/ltl2ba'
+    ltl2ba_path = root_dir + '/lib/ltl3ba/ltl3ba-1.0/ltl3ba'
     #
 
     import platform
