@@ -1,6 +1,6 @@
 from helpers.shell import execute_shell
 from interfaces.ltl_spec import LtlSpec
-from interfaces.uct import UCT
+from interfaces.automata import UCT
 from translation2uct.ltl2ba import parse_ltl2ba_output
 
 

@@ -1,4 +1,4 @@
-from interfaces.uct import UCTNode
+from interfaces.automata import UCTNode
 
 
 def _get_cases(toks):
@@ -14,7 +14,7 @@ def _get_cases(toks):
     return cases
 
 
-def _parse_label(label_tok):
+def parse_label_tok(label_tok):
     """ returns labels [{var_name : True/False}, ..] """
     # (!a && !g && r) || (g)
     # (1)
@@ -46,7 +46,7 @@ def _get_create(node_tok, name_to_node, initial_nodes, rejecting_nodes):
 
 
 def parse_ltl2ba_output(text):
-    """ Parse ltl2ba output, return (initial_nodes:[UCTNode], nodes:[UCTNode]) """
+    """ Parse ltl2ba output, return (initial_nodes, rejecting nodes, nodes of UCTNode class) """
 
     toks = text.split('\n')
     toks = [x.strip() for x in toks][1:-1]
@@ -82,7 +82,7 @@ def parse_ltl2ba_output(text):
         for trans in trans_toks:
             label_tok, dst_tok = [x.strip() for x in trans.split('-> goto')]
 
-            labels = _parse_label(label_tok)
+            labels = parse_label_tok(label_tok)
 
             for l in labels:
                 dst = _get_create(dst_tok, name_to_node, initial_nodes, rejecting_nodes)
