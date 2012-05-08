@@ -1,7 +1,7 @@
 from helpers.shell import execute_shell
 from interfaces.ltl_spec import LtlSpec
-from interfaces.automata import UCT
-from translation2uct.ltl2ba import parse_ltl2ba_output
+from interfaces.automata import Automaton
+from translation2uct.ltl2ba import parse_ltl2ba_ba
 
 
 class Ltl2Uct:
@@ -16,9 +16,9 @@ class Ltl2Uct:
         assert rc == 0, rc
         assert (err == '') or err is None, err
 
-        initial_nodes, rejecting_nodes, nodes = parse_ltl2ba_output(ba)
+        initial_nodes, rejecting_nodes, nodes = parse_ltl2ba_ba(ba)
 
-        return UCT(initial_nodes, rejecting_nodes, nodes)
+        return Automaton(initial_nodes, rejecting_nodes, nodes)
 
 
     def _shift_input(self, ltl_spec):

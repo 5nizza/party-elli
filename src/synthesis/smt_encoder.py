@@ -8,7 +8,7 @@ class Encoder:
     EXIT_CALL = "(exit)\n"
     
     def __init__ (self, uct, inputs, outputs):
-        self.uct=uct        
+        self.uct=uct
         self.inputs=inputs
         self.outputs=outputs
         self.upsilon = Upsilon(self.inputs)
@@ -195,10 +195,9 @@ class Encoder:
         return smt_str
     
     
-    def _make_trans_condition(self, trans, impl_state):
+    def _make_trans_condition(self, labels, impl_state):
         smt_str=''
         input_output_list = self.inputs + self.outputs
-        labels = trans[1]
         or_args = []
         and_args = []
         for var in input_output_list:  #for all inputs and outputs
@@ -224,35 +223,40 @@ class Encoder:
     
     def _make_main_assertions(self, num_impl_states):
         smt_str=self._comment("main assertions")
+
         for uct_state in self.uct.nodes:
-            for trans in uct_state.transitions: #number of next nodes
-                uct_state_next = trans[0]
-                for input_value in range (0, self.upsilon.get_num_element()):
-                    for impl_state in range (0, num_impl_states):
-                        smt_str+=self._comment('q=q_' + uct_state.name + " (q',v)=(q_" + uct_state_next.name + "," + self.upsilon.get_element_str(input_value) + "), t=t_" + str(impl_state))
-                        
-                        implication_left_1 = self._func("lambda_B", ["q_" + uct_state.name, "t_" + str(impl_state)])
-                        implication_left_2 = self._make_trans_condition(trans, impl_state)
+            for label, dst_set_list in uct_state.transitions.items():
+                assert len(dst_set_list) == 1, 'unsupported: ' + str(dst_set_list)
 
-                        if len(implication_left_2)>0:
-                            implication_left = self._and([implication_left_1, implication_left_2])
-                        else:
-                            implication_left = implication_left_1
+                dst_set = dst_set_list[0]
+                for uct_state_next in dst_set:
+                    for input_value in range (0, self.upsilon.get_num_element()):
+                        for impl_state in range (0, num_impl_states):
+                            smt_str+=self._comment('q=q_' + uct_state.name + " (q',v)=(q_" + uct_state_next.name + "," +
+                                                   self.upsilon.get_element_str(input_value) + "), t=t_" + str(impl_state))
 
-                        arg = self._func("tau", ["t_" + str(impl_state), self.upsilon.get_element_str(input_value)])
-                        implication_right_1 = self._func("lambda_B", ["q_" + uct_state_next.name, arg])
+                            implication_left_1 = self._func("lambda_B", ["q_" + uct_state.name, "t_" + str(impl_state)])
+                            implication_left_2 = self._make_trans_condition(label, impl_state)
 
-                        gt_arg_1 = self._func("lambda_sharp", ["q_" + uct_state_next.name, arg])
-                        gt_arg_2 = self._func("lambda_sharp", ["q_" + uct_state.name, "t_" + str(impl_state)])
+                            if len(implication_left_2)>0:
+                                implication_left = self._and([implication_left_1, implication_left_2])
+                            else:
+                                implication_left = implication_left_1
 
-                        if uct_state_next not in self.uct.rejecting_nodes:
-                            implication_right_2 = self._ge(gt_arg_1, gt_arg_2)
-                        else:
-                            implication_right_2 = self._gt(gt_arg_1, gt_arg_2)    
-                        
-                        implication_right = self._and([implication_right_1, implication_right_2])
-                        
-                        smt_str += self._assert(self._implies(implication_left, implication_right))
+                            arg = self._func("tau", ["t_" + str(impl_state), self.upsilon.get_element_str(input_value)])
+                            implication_right_1 = self._func("lambda_B", ["q_" + uct_state_next.name, arg])
+
+                            gt_arg_1 = self._func("lambda_sharp", ["q_" + uct_state_next.name, arg])
+                            gt_arg_2 = self._func("lambda_sharp", ["q_" + uct_state.name, "t_" + str(impl_state)])
+
+                            if uct_state_next not in self.uct.rejecting_nodes:
+                                implication_right_2 = self._ge(gt_arg_1, gt_arg_2)
+                            else:
+                                implication_right_2 = self._gt(gt_arg_1, gt_arg_2)
+
+                            implication_right = self._and([implication_right_1, implication_right_2])
+
+                            smt_str += self._assert(self._implies(implication_left, implication_right))
 
         return smt_str
     

@@ -1,4 +1,7 @@
-class UCT:
+from helpers.hashable import HashableDict
+
+
+class Automaton:
     def __init__(self, initial_nodes, rejecting_nodes, nodes):
         self._initial_nodes = initial_nodes
         self._rejecting_nodes = rejecting_nodes
@@ -24,37 +27,11 @@ class UCT:
                "\n".join([str(x) for x in self._rejecting_nodes])
 
 
-class UCTNode:
-    def __init__(self, name):
-        self._transitions = []
-        self._name = name
-
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def transitions(self):
-        """ Return a list of pairs (destination:UCTNode, label:{letter:True/False}) """
-        return self._transitions
-
-    def add_edge(self, dst, label):
-        self._transitions.append((dst, label))
-
-    def __str__(self):
-        return "name: {0}, transitions: {1}".format(self.name, [str(x[1]) + ' ' + str(x[0].name) for x in self.transitions])
-
-
-class Label(dict):
+class Label(HashableDict):
     """
-    variable_name:True/False
+    hashable dict: variable_name -> True/False
     """
-    __slots__ = ('_hash',)
-    def __hash__(self):
-        rval = getattr(self, '_hash', None)
-        if rval is None:
-            rval = self._hash = hash(frozenset(self.iteritems()))
-        return rval
+    pass
 
 
 class Node:
@@ -72,7 +49,7 @@ class Node:
         return self._transitions
 
     def add_transition(self, label, dst_set):
-        """ Add universal transition:
+        """ Add transition:
             dst_set - set of destination nodes, singleton set if non-universal transition.
             Several calls with the same label are allowed - this means that transition is non-deterministic.
         """
@@ -95,4 +72,3 @@ class Node:
 
     def __repr__(self):
         return self.name
-
