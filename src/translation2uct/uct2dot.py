@@ -5,7 +5,7 @@ def colorize_node_dot_str(node, color='green'):
 def node_to_dot_str(node):
     res = ''
     src = node
-    for dst, label in node.transitions:
+    for dst, label in node.transitions: #todo
         res += ('"{0}" -> "{1}" [label="{2}"];\n').format(
             src.name,
             dst.name,

@@ -1,6 +1,6 @@
 import itertools
 from helpers.python_ext import get_add
-from interfaces.automata import Node, Label
+from interfaces.automata import Node, Label, Automaton
 
 def _get_cases(toks):
     start = None

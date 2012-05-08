@@ -112,24 +112,27 @@ class Encoder:
     def _make_state_declarations(self, state_names, sort_name):
         lowername = sort_name.lower()
 
-        smt_str = self._comment("define a new type " + sort_name + ":")
-        smt_str += self._declare_sort(sort_name,0)
-        smt_str += self._comment("constants of type " + sort_name + ":")
-
-        for name in state_names:
-            smt_str += self._declare_fun(lowername + "_" + name, [], sort_name)
-
-        smt_str += self._comment("cardinality constraints:")
-
-        expList = []
-        for name in state_names:
-            expList.append(self._eq(lowername,lowername + "_" + name))
-        expression =  " " + self._or(expList)
-
-        smt_str += self._assert(self._forall([[lowername,sort_name]], expression))
-        smt_str += '\n'
-
+        smt_str = '(declare-datatypes () (({0} {1})))\n'.format(sort_name, ' '.join([lowername + '_' + x for x in state_names]))
         return smt_str
+
+#        smt_str = self._comment("define a new type " + sort_name + ":")
+#        smt_str += self._declare_sort(sort_name,0)
+#        smt_str += self._comment("constants of type " + sort_name + ":")
+#
+#        for name in state_names:
+#            smt_str += self._declare_fun(lowername + "_" + name, [], sort_name)
+#
+#        smt_str += self._comment("cardinality constraints:")
+#
+#        expList = []
+#        for name in state_names:
+#            expList.append(self._eq(lowername,lowername + "_" + name))
+#        expression =  " " + self._or(expList)
+#
+#        smt_str += self._assert(self._forall([[lowername,sort_name]], expression))
+#        smt_str += '\n'
+#
+#        return smt_str
     
     def _make_input_declarations(self):
         

@@ -64,8 +64,8 @@ class Z3:
 
     def solve(self, smtstr):
         rc, output, err = execute_shell(self._cmd, smtstr)
-        if err:
-            print("\nWARNING(Z3 err is not empty)\nZ3: returned:{0}\noutput: '{1}'\nerror:'{2}'\n".format(rc, output, err))
+        if rc != 0 or err:
+            print("\nWARNING(Z3)\nZ3: returned: {0}\noutput:\n{1}\nerror:\n{2}\n".format(rc, output, err))
 
         #parse results
         self._current_state = Z3.UNKNOWN
