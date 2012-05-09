@@ -77,20 +77,21 @@ class Encoder:
 
     def _and(self, arguments):
         smt_str = '(and '
-        smt_str += self.make_and_or_xor_body(arguments) + ')'
+        smt_str += self._make_and_or_xor_body(arguments) + ')'
         return smt_str
 
     def _or(self, arguments):
         smt_str = '(or '
-        smt_str += self.make_and_or_xor_body(arguments) + ')'
+        smt_str += self._make_and_or_xor_body(arguments) + ')'
         return smt_str
 
     def _xor(self, arguments):
         smt_str = '(xor '
-        smt_str += self.make_and_or_xor_body(arguments) + ')'
+        smt_str += self._make_and_or_xor_body(arguments) + ')'
         return smt_str
 
-    def make_and_or_xor_body(self, arguments):
+
+    def _make_and_or_xor_body(self, arguments):
         smt_str = ''
         for arg in arguments:
             smt_str += arg + ' '
@@ -140,6 +141,7 @@ class Encoder:
 
         return smt_str
 
+
     def _make_root_condition(self):
         smt_str = self._comment("the root node of the run graph is labelled by a natural number:")
 
@@ -153,6 +155,7 @@ class Encoder:
             smt_str += self._assert(elements[0])
 
         return smt_str
+
 
     def _make_input_preservation(self, num_impl_states):
         smt_str = self._comment("input preserving:")
@@ -174,31 +177,27 @@ class Encoder:
         return smt_str
 
 
-    def _make_trans_condition(self, labels, impl_state):
-        smt_str = ''
+    def _make_trans_condition(self, label, impl_state):
         input_output_list = self._inputs + self._outputs
-        or_args = []
         and_args = []
-        for var in input_output_list:  #for all inputs and outputs
-            if (var in labels) and (labels[var] is True):
+        for var in input_output_list:
+            if (var in label) and (label[var] is True):
                 and_args.append(self._func("fo_" + var, ["t_" + str(impl_state)]))
-            elif (var in labels) and (labels[var] is False):
+            elif (var in label) and (label[var] is False):
                 and_args.append(self._not(self._func("fo_" + var, ["t_" + str(impl_state)])))
-            elif var not in labels:
+            elif var not in label:
                 pass
             else:
-                assert False, "Error: Variable in label has wrong value: " + labels[var]
-        if len(and_args) > 1:
-            or_args.append(self._and(and_args))
-        elif len(and_args) == 1:
-            or_args.append(and_args[0])
+                assert False, "Error: Variable in label has wrong value: " + label[var]
 
-        if len(or_args) > 1:
-            smt_str = self._or(or_args)
-        elif len(or_args) == 1:
-            smt_str = or_args[0]
+        smt_str = ' '
+        if len(and_args) > 1:
+            smt_str = self._and(and_args)
+        elif len(and_args) == 1:
+            smt_str = and_args[0]
 
         return smt_str
+
 
     def _make_main_assertions(self, num_impl_states):
         smt_str = self._comment("main assertions")
@@ -208,13 +207,12 @@ class Encoder:
                 assert len(dst_set_list) == 1, 'unsupported: ' + str(dst_set_list)
 
                 dst_set = dst_set_list[0]
-                for uct_state_next in dst_set:
-                #                    for input_value in range(0, self.upsilon.get_num_element()):
+                for uct_state_next in dst_set: #TODO: remov shift
                     for input_values in self._upsilon.enumerate_input_values():
                         for impl_state in range(0, num_impl_states):
-                            smt_str += self._comment(
-                                'q=q_' + uct_state.name + " (q',v)=(q_" + uct_state_next.name + "," +
-                                self._upsilon.make_input_values_str(input_values) + "), t=t_" + str(impl_state))
+    #                        smt_str += self._comment(
+    #                            'q=q_' + uct_state.name + " (q',v)=(q_" + uct_state_next.name + "," +
+    #                            self._upsilon.make_input_values_str(input_values) + "), t=t_" + str(impl_state))
 
                             implication_left_1 = self._func("lambda_B", ["q_" + uct_state.name, "t_" + str(impl_state)])
                             implication_left_2 = self._make_trans_condition(label, impl_state)
@@ -246,8 +244,10 @@ class Encoder:
     def _make_set_logic(self, logic):
         return '(set-logic {0})\n'.format(logic)
 
+
     def _make_headers(self):
         return '(set-option :produce-models true)\n'
+
 
     def encode_uct(self, num_impl_states):
         smt_str = self._make_headers()
