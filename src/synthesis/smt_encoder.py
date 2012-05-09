@@ -177,10 +177,9 @@ class Encoder:
         return smt_str
 
 
-    def _make_trans_condition(self, label, impl_state):
-        input_output_list = self._inputs + self._outputs
+    def _make_trans_condition_on_output_vars(self, label, impl_state):
         and_args = []
-        for var in input_output_list:
+        for var in self._outputs:
             if (var in label) and (label[var] is True):
                 and_args.append(self._func("fo_" + var, ["t_" + str(impl_state)]))
             elif (var in label) and (label[var] is False):
@@ -208,35 +207,39 @@ class Encoder:
 
                 dst_set = dst_set_list[0]
                 for uct_state_next in dst_set: #TODO: remov shift
-                    for input_values in self._upsilon.enumerate_input_values():
-                        for impl_state in range(0, num_impl_states):
-    #                        smt_str += self._comment(
-    #                            'q=q_' + uct_state.name + " (q',v)=(q_" + uct_state_next.name + "," +
-    #                            self._upsilon.make_input_values_str(input_values) + "), t=t_" + str(impl_state))
+#                    for input_values in self._upsilon.enumerate_input_values():
+                    for impl_state in range(0, num_impl_states):
+#                        smt_str += self._comment(
+#                            'q=q_' + uct_state.name + " (q',v)=(q_" + uct_state_next.name + "," +
+#                            self._upsilon.make_input_values_str(input_values) + "), t=t_" + str(impl_state))
 
-                            implication_left_1 = self._func("lambda_B", ["q_" + uct_state.name, "t_" + str(impl_state)])
-                            implication_left_2 = self._make_trans_condition(label, impl_state)
+                        implication_left_1 = self._func("lambda_B", ["q_" + uct_state.name, "t_" + str(impl_state)])
+                        implication_left_2 = self._make_trans_condition_on_output_vars(label, impl_state)
 
-                            if len(implication_left_2) > 0:
-                                implication_left = self._and([implication_left_1, implication_left_2])
-                            else:
-                                implication_left = implication_left_1
+                        if len(implication_left_2) > 0:
+                            implication_left = self._and([implication_left_1, implication_left_2])
+                        else:
+                            implication_left = implication_left_1
 
-                            arg = self._func("tau",
-                                ["t_" + str(impl_state), self._upsilon.make_input_values_str(input_values)])
-                            implication_right_1 = self._func("lambda_B", ["q_" + uct_state_next.name, arg])
+                        input_values = {}
+                        for input_var in self._inputs:
+                            input_values[input_var] = label[input_var]
 
-                            gt_arg_1 = self._func("lambda_sharp", ["q_" + uct_state_next.name, arg])
-                            gt_arg_2 = self._func("lambda_sharp", ["q_" + uct_state.name, "t_" + str(impl_state)])
+                        arg = self._func("tau",
+                            ["t_" + str(impl_state), self._upsilon.make_input_values_str(input_values)])
+                        implication_right_1 = self._func("lambda_B", ["q_" + uct_state_next.name, arg])
 
-                            if uct_state_next not in self._uct.rejecting_nodes:
-                                implication_right_2 = self._ge(gt_arg_1, gt_arg_2)
-                            else:
-                                implication_right_2 = self._gt(gt_arg_1, gt_arg_2)
+                        gt_arg_1 = self._func("lambda_sharp", ["q_" + uct_state_next.name, arg])
+                        gt_arg_2 = self._func("lambda_sharp", ["q_" + uct_state.name, "t_" + str(impl_state)])
 
-                            implication_right = self._and([implication_right_1, implication_right_2])
+                        if uct_state_next not in self._uct.rejecting_nodes:
+                            implication_right_2 = self._ge(gt_arg_1, gt_arg_2)
+                        else:
+                            implication_right_2 = self._gt(gt_arg_1, gt_arg_2)
 
-                            smt_str += self._assert(self._implies(implication_left, implication_right))
+                        implication_right = self._and([implication_right_1, implication_right_2])
+
+                        smt_str += self._assert(self._implies(implication_left, implication_right))
 
         return smt_str
 
@@ -263,7 +266,7 @@ class Encoder:
         smt_str += self._make_main_assertions(num_impl_states)
 
         smt_str += self._make_root_condition()
-        smt_str += self._make_input_preservation(num_impl_states)
+#        smt_str += self._make_input_preservation(num_impl_states)
         smt_str += "\n"
         smt_str += self.CHECK_SAT
 

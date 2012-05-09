@@ -10,7 +10,8 @@ class Ltl2Uct:
 
 
     def convert(self, ltl_spec):
-        shifted_negated = self._shift_input(self._negate(ltl_spec))
+#        shifted_negated = self._shift_input(self._negate(ltl_spec))
+        shifted_negated = self._negate(ltl_spec)
 
         rc, ba, err = execute_shell('{0} "{1}"'.format(self._execute_cmd, shifted_negated.property))
         assert rc == 0, rc
