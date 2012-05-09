@@ -45,13 +45,13 @@ def _verilog_to_str(verilog_module):
     return verilog_module
 
 
-def main(ltl_file, bound, verilog_file, dot_file, ltl2uct, z3solver):
+def main(ltl_file, size, bound, verilog_file, dot_file, ltl2uct, z3solver):
     logger = _get_logger()
     ltl_spec = _parse_ltl(ltl_file.read())
 
     uct = ltl2uct.convert(ltl_spec)
 
-    model = search(uct, ltl_spec.inputs, ltl_spec.outputs, bound, z3solver)
+    model = search(uct, ltl_spec.inputs, ltl_spec.outputs, size, bound, z3solver)
 
     if model is None:
         logger.info('The specification is unrealizable with input conditions.')
@@ -129,6 +129,8 @@ if __name__ == "__main__":
         help='writes the output into a dot graph file')
     parser.add_argument('--bound', metavar='bound', type=int, default=1, required=False,
         help='bound the maximal size of the system to synthesize(default: %(default)i)')
+    parser.add_argument('--size', metavar='size', type=int, default=None, required=False,
+        help='specify exact size of the model to synthesize(default: %(default)i)')
     parser.add_argument('-v', '--verbose', action='count', default=0)
 
     args = parser.parse_args(sys.argv[1:])
@@ -137,7 +139,7 @@ if __name__ == "__main__":
 
     ltl2uct, z3solver = _create_ltl2uct_z3()
 
-    main(args.ltl, args.bound, args.verilog, args.dot, ltl2uct, z3solver)
+    main(args.ltl, args.size, args.bound, args.verilog, args.dot, ltl2uct, z3solver)
 
     args.ltl.close()
     if args.verilog:

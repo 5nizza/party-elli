@@ -12,15 +12,16 @@ def _get_logger():
     return _logger
 
 
-def search(uct, inputs, outputs, bound, z3solver):
+def search(uct, inputs, outputs, size, bound, z3solver):
     assert bound > 0
 
     logger = _get_logger()
 
-    logger.info("searching the model of size <=%s", bound)
+    logger.info("searching the model of size {0}".format(('<='+str(bound)) if size is None else size))
 
     encoder = Encoder(uct, inputs, outputs)
-    for current_bound in range(1, bound+1):
+    model_sizes = range(1, bound+1) if size is None else range(size, size+1)
+    for current_bound in model_sizes:
         logger.info('trying model size = %i', current_bound)
 
         smt_str = encoder.encode_uct(current_bound)

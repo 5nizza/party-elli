@@ -3,7 +3,7 @@ from ltl2ba import parse_label_tok
 
 import re
 
-
+ 
 def _extract_aa_desc(text):
     return re.search('Alternating automaton after simplification(?:\n|\r\n?)(.+)(?:\n|\r\n?){2}',
         text,
