@@ -6,7 +6,7 @@ import os
 
 from interfaces.ltl_spec import LtlSpec
 from module_generation.dot import to_dot
-from translation2uct.ltl2uct import Ltl2Uct
+from translation2uct.ltl2automaton import Ltl2Uct, Ltl2ACW
 from synthesis.model_searcher import search
 from synthesis.z3 import Z3
 from module_generation.verilog import to_verilog
@@ -45,13 +45,13 @@ def _verilog_to_str(verilog_module):
     return verilog_module
 
 
-def main(ltl_file, size, bound, verilog_file, dot_file, ltl2uct, z3solver):
+def main(ltl_file, size, bound, verilog_file, dot_file, ltl2automaton, z3solver):
     logger = _get_logger()
     ltl_spec = _parse_ltl(ltl_file.read())
 
-    uct = ltl2uct.convert(ltl_spec)
+    automaton = ltl2automaton.convert(ltl_spec)
 
-    model = search(uct, ltl_spec.inputs, ltl_spec.outputs, size, bound, z3solver)
+    model = search(automaton, ltl_spec.inputs, ltl_spec.outputs, size, bound, z3solver)
 
     if model is None:
         logger.info('The specification is unrealizable with input conditions.')
@@ -83,8 +83,8 @@ def print_bye():
     print(byes[random.randint(0, len(byes) - 1)] + '!')
 
 
-def _create_ltl2uct_z3():
-    """ Return ltl2uct converter, Z3 solver """
+def _create_spec_converter_z3():
+    """ Return ltl to automaton converter, Z3 solver """
 
     #make paths independent of current working directory
     bosy_dir_toks = ['./'] + os.path.relpath(__file__).split(os.sep) #abspath returns 'windows' (not cygwin) path
@@ -95,13 +95,13 @@ def _create_ltl2uct_z3():
     #
 
     import platform
-    flag = '-'
+    flag_marker = '-'
     if 'windows' in platform.system().lower() or 'nt' in platform.system().lower():
         ltl2ba_path += '.exe'
         z3_path = 'z3' #assume z3 bin directory is in the PATH
-        flag = '/'
+        flag_marker = '/'
 
-    return Ltl2Uct(ltl2ba_path), Z3(z3_path, flag)
+    return Ltl2ACW(ltl2ba_path), Z3(z3_path, flag_marker)
 
 
 def _setup_logging(verbose):
@@ -137,9 +137,9 @@ if __name__ == "__main__":
 
     _setup_logging(args.verbose)
 
-    ltl2uct, z3solver = _create_ltl2uct_z3()
+    ltl2automaton, z3solver = _create_spec_converter_z3()
 
-    main(args.ltl, args.size, args.bound, args.verilog, args.dot, ltl2uct, z3solver)
+    main(args.ltl, args.size, args.bound, args.verilog, args.dot, ltl2automaton, z3solver)
 
     args.ltl.close()
     if args.verilog:

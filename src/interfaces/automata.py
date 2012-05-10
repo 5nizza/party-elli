@@ -2,8 +2,8 @@ from helpers.hashable import HashableDict
 
 
 class Automaton:
-    def __init__(self, initial_nodes, rejecting_nodes, nodes):
-        self._initial_nodes = initial_nodes
+    def __init__(self, init_sets_list, rejecting_nodes, nodes):
+        self._init_sets_list = init_sets_list
         self._rejecting_nodes = rejecting_nodes
         self._nodes = nodes
 
@@ -12,8 +12,9 @@ class Automaton:
         return self._nodes
 
     @property
-    def initial_nodes(self):
-        return self._initial_nodes
+    def initial_sets_list(self):
+        """ Return list of sets of initial nodes (non-deterministic) """
+        return self._init_sets_list
 
     @property
     def rejecting_nodes(self):
@@ -22,7 +23,7 @@ class Automaton:
     def __str__(self):
         return "\n".join([str(x) for x in self._nodes]) +\
                "\n initial nodes:\n" +\
-               "\n".join([str(x) for x in self._initial_nodes]) +\
+               "\n".join([str(x) for x in self._init_sets_list]) +\
                "\n rejecting nodes:\n" + \
                "\n".join([str(x) for x in self._rejecting_nodes])
 
@@ -38,6 +39,7 @@ class Node:
     def __init__(self, name):
         self._transitions = {} # label->[nodes, nodes, nodes]
         self._name = name
+        assert ',' not in name, name
 
     @property
     def name(self):

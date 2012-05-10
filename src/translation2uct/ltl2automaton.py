@@ -1,6 +1,8 @@
+import logging
 from helpers.shell import execute_shell
 from interfaces.ltl_spec import LtlSpec
 from interfaces.automata import Automaton
+from translation2uct.ltl2acw import parse_ltl3ba_aa
 from translation2uct.ltl2ba import parse_ltl2ba_ba
 
 
@@ -10,8 +12,7 @@ class Ltl2Uct:
 
 
     def convert(self, ltl_spec):
-#        shifted_negated = self._shift_input(self._negate(ltl_spec))
-        shifted_negated = self._negate(ltl_spec)
+        shifted_negated = self._shift_input(self._negate(ltl_spec))
 
         rc, ba, err = execute_shell('{0} "{1}"'.format(self._execute_cmd, shifted_negated.property))
         assert rc == 0, rc
@@ -32,3 +33,19 @@ class Ltl2Uct:
 
     def _negate(self, ltl_spec):
         return LtlSpec(ltl_spec.inputs, ltl_spec.outputs, '!({0})'.format(ltl_spec.property))
+
+
+class Ltl2ACW:
+    def __init__(self, ltl2ba_path):
+        self._execute_cmd = ltl2ba_path + ' -d -f'
+        self._logger = logging.getLogger(__name__)
+
+    def convert(self, ltl_spec):
+        rc, text, err = execute_shell('{0} "{1}"'.format(self._execute_cmd, ltl_spec.property))
+        self._logger.debug(text)
+        assert rc == 0, rc
+        assert (err == '') or err is None, err
+
+        init_sets_list, rejecting_nodes, nodes = parse_ltl3ba_aa(text)
+
+        return Automaton(init_sets_list, rejecting_nodes, nodes)

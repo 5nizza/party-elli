@@ -24,7 +24,7 @@ def search(uct, inputs, outputs, size, bound, z3solver):
     for current_bound in model_sizes:
         logger.info('trying model size = %i', current_bound)
 
-        smt_str = encoder.encode_uct(current_bound)
+        smt_str = encoder.encode(current_bound)
         z3solver.solve(smt_str)
 
         if z3solver.get_state() == Z3.UNSAT:

@@ -16,7 +16,7 @@ def _get_cases(toks):
 
 
 def parse_label_tok(label_tok):
-    """ returns labels [{var_name : True/False}, ..] """
+    """ Return maps of labels [{var_name : True/False}, ..] """
     # (!a && !g && r) || (g)
     # (1)
 

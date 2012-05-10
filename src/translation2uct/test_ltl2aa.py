@@ -1,6 +1,6 @@
 import unittest
 from interfaces.automata import Label
-from translation2uct.ltl2aa import parse_ltl3ba_aa
+from translation2uct.ltl2acw import parse_ltl3ba_aa
 
 
 class Test(unittest.TestCase):
