@@ -1,17 +1,68 @@
 import itertools
 import logging
+from math import log, ceil
 from helpers.ordered_set import OrderedSet
+
+class Logic:
+    def counters_type(self, max_counter_value):
+        pass
+    @property
+    def smt_name(self):
+        pass
+    @property
+    def gt(self):
+        pass
+    @property
+    def ge(self):
+        pass
+
+
+class UFBV(Logic):
+    def counters_type(self, max_counter_value):
+        width = int(ceil(log(max_counter_value, 2)))
+        return '(_ BitVec {0})'.format(width)
+
+    @property
+    def smt_name(self):
+        return 'UFBV'
+
+    @property
+    def gt(self):
+        return 'bvugt'
+
+    @property
+    def ge(self):
+        return 'bvuge'
+
+
+class UFLIA(Logic):
+    def counters_type(self, max_counter_value):
+        return 'Int'
+
+    @property
+    def smt_name(self):
+        return 'UFLIA'
+
+    @property
+    def gt(self):
+        return '>'
+
+    @property
+    def ge(self):
+        return '>='
+
 
 class Encoder:
     CHECK_SAT = "(check-sat)\n"
     GET_MODEL = "(get-model)\n"
     EXIT_CALL = "(exit)\n"
 
-    def __init__(self, automaton, inputs, outputs):
+    def __init__(self, automaton, inputs, outputs, logic):
         self._automaton = automaton
         self._upsilon = Upsilon(inputs)
         self._outputs = outputs
         self._logger = logging.getLogger(__name__)
+        self._logic = logic
 
     def _func(self, function, args):
         smt_str = '(' + function + ' '
@@ -56,20 +107,10 @@ class Encoder:
         return smt_str
 
     def _gt(self, arg1, arg2): #is greater than
-        smt_str = '(> ' + arg1 + ' ' + arg2 + ')'
-        return smt_str
+        return '({0} {1} {2})'.format(self._logic.gt, arg1, arg2)
 
     def _ge(self, arg1, arg2): #is greater than or equal to
-        smt_str = '(>= ' + arg1 + ' ' + arg2 + ')'
-        return smt_str
-
-    def _lt(self, arg1, arg2): #is less than
-        smt_str = '(< ' + arg1 + ' ' + arg2 + ')'
-        return smt_str
-
-    def _le(self, arg1, arg2):#is less than or equal to
-        smt_str = '(<= ' + arg1 + ' ' + arg2 + ')'
-        return smt_str
+        return '({0} {1} {2})'.format(self._logic.ge, arg1, arg2)
 
     def _not(self, argument):
         smt_str = '(not ' + argument + ')'
@@ -120,7 +161,7 @@ class Encoder:
         return smt_str
 
 
-    def _make_other_declarations(self):
+    def _make_func_declarations(self, nof_impl_states):
         smt_str = self._comment("Declarations for transition relation, output function and annotation")
         smt_str += self._declare_fun("tau", ["T"] + ['Bool'] * len(self._upsilon._inputs), "T")
 
@@ -128,7 +169,7 @@ class Encoder:
             smt_str += self._declare_fun("fo_" + output, ["T"], "Bool")
 
         smt_str += self._declare_fun("lambda_B", ["Q", "T"], "Bool")
-        smt_str += self._declare_fun("lambda_sharp", ["Q", "T"], "Int")
+        smt_str += self._declare_fun("lambda_sharp", ["Q", "T"], self._logic.counters_type(2))
         smt_str += '\n'
 
         return smt_str
@@ -217,8 +258,8 @@ class Encoder:
         return smt_str
 
 
-    def _make_set_logic(self, logic):
-        return '(set-logic {0})\n'.format(logic)
+    def _make_set_logic(self):
+        return ';(set-logic {0})\n'.format(self._logic.smt_name)
 
 
     def _make_headers(self):
@@ -248,7 +289,7 @@ class Encoder:
     def encode(self, num_impl_states):
         smt_str = self._make_headers()
         smt_str += "\n"
-        smt_str += self._make_set_logic('UFLIA')
+        smt_str += self._make_set_logic()
         smt_str += "\n"
         smt_str += self._make_state_declarations([node.name for node in self._automaton.nodes], "Q")
         smt_str += "\n"
@@ -256,7 +297,7 @@ class Encoder:
         smt_str += "\n"
         smt_str += self._make_input_declarations()
         smt_str += "\n"
-        smt_str += self._make_other_declarations()
+        smt_str += self._make_func_declarations(num_impl_states)
         smt_str += "\n"
         smt_str += self._make_main_assertions(num_impl_states)
         smt_str += "\n"

@@ -6,6 +6,7 @@ import os
 
 from interfaces.ltl_spec import LtlSpec
 from module_generation.dot import to_dot
+from synthesis.smt_encoder import UFLIA, UFBV
 from translation2uct.ltl2automaton import Ltl2UCW, Ltl2ACW
 from synthesis.model_searcher import search
 from synthesis.z3 import Z3
@@ -45,13 +46,13 @@ def _verilog_to_str(verilog_module):
     return verilog_module
 
 
-def main(ltl_file, size, bound, verilog_file, dot_file, ltl2automaton, z3solver):
+def main(ltl_file, size, bound, verilog_file, dot_file, ltl2automaton, z3solver, logic):
     logger = _get_logger()
     ltl_spec = _parse_ltl(ltl_file.read())
 
     automaton = ltl2automaton.convert(ltl_spec)
 
-    model = search(automaton, ltl_spec.inputs, ltl_spec.outputs, size, bound, z3solver)
+    model = search(automaton, ltl_spec.inputs, ltl_spec.outputs, size, bound, z3solver, logic)
 
     if model is None:
         logger.info('The specification is unrealizable with input conditions.')
@@ -102,8 +103,6 @@ def _create_spec_converter_z3(use_acw):
         flag_marker = '/'
 
     ltl2automaton = Ltl2ACW if use_acw else Ltl2UCW
-    print(use_acw)
-    print(ltl2automaton)
     return ltl2automaton(ltl2ba_path), Z3(z3_path, flag_marker)
 
 
@@ -119,6 +118,9 @@ def _setup_logging(verbose):
                         level=level,
                         stream=sys.stdout)
 
+
+def _get_logic(logic):
+    return {'uflia':UFLIA, 'ufbv':UFBV}[logic.lower()]()
 
 if __name__ == "__main__":
     print_hello()
@@ -136,6 +138,8 @@ if __name__ == "__main__":
         help='specify exact size of the model to synthesize(default: %(default)i)')
     parser.add_argument('--acw', default=False, action='store_true', required=False,
         help='use alternating very weak automaton as an input(default: %(default)i)')
+    parser.add_argument('--logic', metavar='logic', type=str, default='uflia', required=False,
+        help='logic of smt queries(uflia, ufbv)(default: %(default)i)')
     parser.add_argument('-v', '--verbose', action='count', default=0)
 
     args = parser.parse_args(sys.argv[1:])
@@ -143,8 +147,9 @@ if __name__ == "__main__":
     _setup_logging(args.verbose)
 
     ltl2automaton, z3solver = _create_spec_converter_z3(args.acw)
+    logic = _get_logic(args.logic)
 
-    main(args.ltl, args.size, args.bound, args.verilog, args.dot, ltl2automaton, z3solver)
+    main(args.ltl, args.size, args.bound, args.verilog, args.dot, ltl2automaton, z3solver, logic)
 
     args.ltl.close()
     if args.verilog:
