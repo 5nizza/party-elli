@@ -6,7 +6,7 @@ import os
 
 from interfaces.ltl_spec import LtlSpec
 from module_generation.dot import to_dot
-from translation2uct.ltl2automaton import Ltl2Uct, Ltl2ACW
+from translation2uct.ltl2automaton import Ltl2UCW, Ltl2ACW
 from synthesis.model_searcher import search
 from synthesis.z3 import Z3
 from module_generation.verilog import to_verilog
@@ -83,7 +83,7 @@ def print_bye():
     print(byes[random.randint(0, len(byes) - 1)] + '!')
 
 
-def _create_spec_converter_z3():
+def _create_spec_converter_z3(use_acw):
     """ Return ltl to automaton converter, Z3 solver """
 
     #make paths independent of current working directory
@@ -101,7 +101,10 @@ def _create_spec_converter_z3():
         z3_path = 'z3' #assume z3 bin directory is in the PATH
         flag_marker = '/'
 
-    return Ltl2ACW(ltl2ba_path), Z3(z3_path, flag_marker)
+    ltl2automaton = Ltl2ACW if use_acw else Ltl2UCW
+    print(use_acw)
+    print(ltl2automaton)
+    return ltl2automaton(ltl2ba_path), Z3(z3_path, flag_marker)
 
 
 def _setup_logging(verbose):
@@ -131,13 +134,15 @@ if __name__ == "__main__":
         help='bound the maximal size of the system to synthesize(default: %(default)i)')
     parser.add_argument('--size', metavar='size', type=int, default=None, required=False,
         help='specify exact size of the model to synthesize(default: %(default)i)')
+    parser.add_argument('--acw', default=False, action='store_true', required=False,
+        help='use alternating very weak automaton as an input(default: %(default)i)')
     parser.add_argument('-v', '--verbose', action='count', default=0)
 
     args = parser.parse_args(sys.argv[1:])
 
     _setup_logging(args.verbose)
 
-    ltl2automaton, z3solver = _create_spec_converter_z3()
+    ltl2automaton, z3solver = _create_spec_converter_z3(args.acw)
 
     main(args.ltl, args.size, args.bound, args.verilog, args.dot, ltl2automaton, z3solver)
 

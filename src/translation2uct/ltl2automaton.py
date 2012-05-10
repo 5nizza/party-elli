@@ -6,29 +6,23 @@ from translation2uct.ltl2acw import parse_ltl3ba_aa
 from translation2uct.ltl2ba import parse_ltl2ba_ba
 
 
-class Ltl2Uct:
+class Ltl2UCW:
     def __init__(self, ltl2ba_path):
         self._execute_cmd = ltl2ba_path +' -f'
+        self._logger = logging.getLogger(__name__)
 
 
     def convert(self, ltl_spec):
-        shifted_negated = self._shift_input(self._negate(ltl_spec))
+        negated = self._negate(ltl_spec)
 
-        rc, ba, err = execute_shell('{0} "{1}"'.format(self._execute_cmd, shifted_negated.property))
+        rc, ba, err = execute_shell('{0} "{1}"'.format(self._execute_cmd, negated.property))
         assert rc == 0, rc
         assert (err == '') or err is None, err
+        self._logger.debug(ba)
 
         initial_nodes, rejecting_nodes, nodes = parse_ltl2ba_ba(ba)
 
         return Automaton(initial_nodes, rejecting_nodes, nodes)
-
-
-    def _shift_input(self, ltl_spec):
-        property = ltl_spec.property
-        for i in ltl_spec.inputs:
-            property = property.replace(i, '(X{0})'.format(i))
-
-        return LtlSpec(ltl_spec.inputs, ltl_spec.outputs, property)
 
 
     def _negate(self, ltl_spec):
@@ -37,7 +31,7 @@ class Ltl2Uct:
 
 class Ltl2ACW:
     def __init__(self, ltl2ba_path):
-        self._execute_cmd = ltl2ba_path + ' -d -f'
+        self._execute_cmd = ltl2ba_path + ' -d -f' #TODO: -M?
         self._logger = logging.getLogger(__name__)
 
     def convert(self, ltl_spec):
