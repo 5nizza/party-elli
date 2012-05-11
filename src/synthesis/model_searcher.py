@@ -17,10 +17,10 @@ def search(uct, inputs, outputs, size, bound, z3solver, logic):
 
     logger = _get_logger()
 
-    logger.info("searching the model of size {0}".format(('<='+str(bound)) if size is None else size))
+    logger.info("searching the model of size {0}".format(('<=' + str(bound)) if size is None else size))
 
     encoder = Encoder(uct, inputs, outputs, logic)
-    model_sizes = range(1, bound+1) if size is None else range(size, size+1)
+    model_sizes = range(1, bound + 1) if size is None else range(size, size + 1)
     for current_bound in model_sizes:
         logger.info('trying model size = %i', current_bound)
 

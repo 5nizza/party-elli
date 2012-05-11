@@ -19,7 +19,7 @@ class Logic:
 
 class UFBV(Logic):
     def counters_type(self, max_counter_value):
-        width = int(ceil(log(max_counter_value, 2)))
+        width = int(ceil(log(max(max_counter_value, 2), 2)))
         return '(_ BitVec {0})'.format(width)
 
     @property
@@ -169,7 +169,7 @@ class Encoder:
             smt_str += self._declare_fun("fo_" + output, ["T"], "Bool")
 
         smt_str += self._declare_fun("lambda_B", ["Q", "T"], "Bool")
-        smt_str += self._declare_fun("lambda_sharp", ["Q", "T"], self._logic.counters_type(nof_impl_states * len(self._automaton.nodes)))
+        smt_str += self._declare_fun("lambda_sharp", ["Q", "T"], self._logic.counters_type(1))
         smt_str += '\n'
 
         return smt_str
@@ -299,9 +299,9 @@ class Encoder:
         smt_str += "\n"
         smt_str += self._make_func_declarations(num_impl_states)
         smt_str += "\n"
-        smt_str += self._make_main_assertions(num_impl_states)
-        smt_str += "\n"
         smt_str += self._make_initial_states_condition()
+        smt_str += "\n"
+        smt_str += self._make_main_assertions(num_impl_states)
         smt_str += "\n"
         smt_str += self.CHECK_SAT
         smt_str += "\n"

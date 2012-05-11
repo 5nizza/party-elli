@@ -8,7 +8,6 @@ class VerilogModule:
 def to_verilog(model):
     state_trans = model.get_model()[0]
     output_trans = model.get_model()[1]
-    print(state_trans.input)
     inputs=""
     for i in state_trans.input:
         i=i.replace(" == 0", "")
@@ -57,12 +56,10 @@ def to_verilog(model):
     for j in states:
         verilog += "\t if (state == " + j + ") \n \t\t begin \n"
         for i in range(len(output_trans.type)):
-            if (output_trans.state[i]==j):
+            if output_trans.state[i]==j:
                 verilog += "\t\t\t"+ output_trans.type[i] + " = " + str(output_trans.result[i])+"; \n"
 
 
     verilog += "\t end \n endmodule"
-
-    #print(verilog)
 
     return verilog
