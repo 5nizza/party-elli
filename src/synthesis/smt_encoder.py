@@ -169,7 +169,7 @@ class Encoder:
             smt_str += self._declare_fun("fo_" + output, ["T"], "Bool")
 
         smt_str += self._declare_fun("lambda_B", ["Q", "T"], "Bool")
-        smt_str += self._declare_fun("lambda_sharp", ["Q", "T"], self._logic.counters_type(2))
+        smt_str += self._declare_fun("lambda_sharp", ["Q", "T"], self._logic.counters_type(nof_impl_states * len(self._automaton.nodes)))
         smt_str += '\n'
 
         return smt_str
