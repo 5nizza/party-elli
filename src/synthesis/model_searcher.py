@@ -32,9 +32,8 @@ def search(uct, inputs, outputs, size, bound, z3solver, logic):
         elif z3solver.get_state() == Z3.SAT:
             logger.info('sat!')
             model = SmtModel(z3solver.get_model())
-            logger.debug(str(model))
             return model
         else:
             logger.warning('solver status is unknown')
 
-    return None
+    return 'model is not available'

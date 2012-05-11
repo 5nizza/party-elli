@@ -18,3 +18,4 @@ class OutputTransition:
             self.state.append(state[i])
             self.type.append(type[i])
             self.result.append(result[i])
+
