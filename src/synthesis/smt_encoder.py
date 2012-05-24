@@ -59,10 +59,22 @@ class Encoder:
 
     def __init__(self, automaton, inputs, outputs, logic):
         self._automaton = automaton
-        self._upsilon = Upsilon(inputs)
-        self._outputs = outputs
-        self._logger = logging.getLogger(__name__)
+        self._signals = Signals(inputs, outputs)
         self._logic = logic
+        self._logger = logging.getLogger(__name__)
+
+
+    def _lambdaB(self, spec_state, sys_state_expression):
+        return self._func("lambda_B", ['q_' + spec_state.name, sys_state_expression])
+
+
+    def _counter(self, spec_state, sys_state_expression):
+        return self._func("lambda_sharp", ['q_' + spec_state.name, sys_state_expression])
+
+
+    def _tau(self, sys_state, args_str):
+        return self._func("tau", [sys_state] + args_str)
+
 
     def _func(self, function, args):
         smt_str = '(' + function + ' '
@@ -73,9 +85,11 @@ class Encoder:
         smt_str += ')'
         return smt_str
 
+
     def _assert(self, formula):
         smt_str = '(assert ' + formula + ')\n'
         return smt_str
+
 
     def _comment(self, comment):
         smt_str = '; ' + comment + '\n'
@@ -106,10 +120,10 @@ class Encoder:
         smt_str = '(= ' + arg1 + ' ' + arg2 + ')'
         return smt_str
 
-    def _gt(self, arg1, arg2): #is greater than
+    def _gt(self, arg1, arg2):
         return '({0} {1} {2})'.format(self._logic.gt, arg1, arg2)
 
-    def _ge(self, arg1, arg2): #is greater than or equal to
+    def _ge(self, arg1, arg2):
         return '({0} {1} {2})'.format(self._logic.ge, arg1, arg2)
 
     def _not(self, argument):
@@ -118,6 +132,8 @@ class Encoder:
 
 
     def _make_and_or_xor(self, arguments, op):
+        assert len(arguments) > 0, 'invalid operation "{0}" args "{1}"'.format(str(op), str(arguments))
+
         if len(arguments) == 1:
             return ' ' + arguments[0] + ' '
 
@@ -153,9 +169,9 @@ class Encoder:
 
     def _make_input_declarations(self):
         smt_str = ''
-        for input_var in self._upsilon._inputs:
+        for input_var in self._signals._inputs:
             for value in [False, True]:
-                smt_str += self._declare_bool_const(self._upsilon.get_valued_var_name(input_var, value), value)
+                smt_str += self._declare_bool_const(self._signals.get_valued_var_name(input_var, value), value)
 
         smt_str += '\n'
         return smt_str
@@ -163,9 +179,9 @@ class Encoder:
 
     def _make_func_declarations(self, nof_impl_states):
         smt_str = self._comment("Declarations for transition relation, output function and annotation")
-        smt_str += self._declare_fun("tau", ["T"] + ['Bool'] * len(self._upsilon._inputs), "T")
+        smt_str += self._declare_fun("tau", ["T"] + ['Bool'] * len(self._signals._inputs), "T")
 
-        for output in self._outputs:
+        for output in self._signals.outputs:
             smt_str += self._declare_fun("fo_" + output, ["T"], "Bool")
 
         smt_str += self._declare_fun("lambda_B", ["Q", "T"], "Bool")
@@ -180,23 +196,23 @@ class Encoder:
         for initial_set in self._automaton.initial_sets_list:
             and_args = []
             for state in initial_set:
-                and_args.append(self._func("lambda_B", ["q_" + state.name, "t_0"]))
+                and_args.append(self._func("lambda_B", ["q_" + state.name, "t_0"])) #TODO: get rid off t_
             or_args.append(self._and(and_args))
 
         return self._assert(self._or(or_args))
 
 
-    def _make_trans_condition_on_output_vars(self, label, impl_state):
+    def _assert_out_values(self, label, sys_state):
         and_args = []
-        for var in self._outputs:
+        for var in self._signals.outputs:
             if (var in label) and (label[var] is True):
-                and_args.append(self._func("fo_" + var, ["t_" + str(impl_state)]))
+                and_args.append(self._func("fo_" + var, [sys_state])) #TODO: get rid off fo_
             elif (var in label) and (label[var] is False):
-                and_args.append(self._not(self._func("fo_" + var, ["t_" + str(impl_state)])))
+                and_args.append(self._not(self._func("fo_" + var, [sys_state])))
             elif var not in label:
                 pass
             else:
-                assert False, "Error: Variable in label has wrong value: " + label[var]
+                assert False, "Error: wrong variable value: " + label[var]
 
         smt_str = ' '
         if len(and_args) > 1:
@@ -207,55 +223,158 @@ class Encoder:
         return smt_str
 
 
-    def _make_main_assertions(self, num_impl_states):
-        smt_str = self._comment("main assertions")
+    def _get_input_values(self, label):
+        input_values = {}
+        for input_var in self._signals.inputs:
+            if input_var in label:
+                input_values[input_var] = label[input_var]
+
+        return input_values
+
+
+    def _is_end_node(self, spec_state):
+        return spec_state.name == '' #TODO: dirty hack!
+
+
+    def _get_guarantees(self, spec_state, sys_state):
+        labels = spec_state.transitions.keys()
+
+        output_ors = []
+        for out_values in self._signals.enumerate_out_values():
+            if self._signals.is_forbidden_label_values(out_values, labels):
+                continue #forbid outputs which are not in the spec graph by excluding them from top OR
+
+            inputs_ands = []
+            for in_values in self._signals.enumerate_input_values():
+                all_values = dict(in_values.items() + out_values.items())
+
+                if self._signals.is_forbidden_label_values(all_values, labels):
+                    continue #
+
+
+                dst_set_list = self._signals.get_relevant_edges(all_values, spec_state)
+
+                non_determinism = []
+                for dst_set in dst_set_list:
+
+                    universality = []
+                    for spec_next_state in dst_set:
+                        if self._is_end_node(spec_next_state):
+                            universality.append(self._true())
+                            continue
+
+                        tau_args, free_in_vars = self._signals.make_tau_arg_list(in_values)
+                        assert len(free_in_vars) == 0
+
+                        sys_next_state = self._tau(sys_state, tau_args)
+                        new_transition = self._and([self._lambdaB(spec_next_state, sys_next_state),
+                                                    self._counter_greater(spec_next_state, sys_next_state,
+                                                                          spec_state, sys_state)])
+                        universality.append(new_transition)
+
+                    non_determinism.append(self._and(universality))
+
+                inputs_ands.append(self._or(non_determinism))
+
+            output_ors.append(self._and([self._assert_out_values(out_values, sys_state)] + inputs_ands))
+
+        return self._or(output_ors)
+
+#
+#
+#
+#        or_guarantees = []
+#        for label, dst_set_list in spec_state.transitions.items():
+#            lbl_output_clause = self._assert_out_values(label, sys_state)
+#            and_guarantees = [lbl_output_clause]
+#
+#            input_values = self._get_input_values(label)
+#            tau_args, free_input_vars = self._signals.make_tau_arg_list(input_values)
+#
+#            sys_next_state = self._func("tau", ["t_" + str(sys_state)] + tau_args)
+#
+#            ors_of_edge = []
+#            for dst_set in dst_set_list:
+#                for spec_next_state in dst_set:
+#                    if self._is_end_node(spec_next_state):
+#                        and_guarantees.append(self._true())
+#                        continue
+#
+#                    guarantee_next_run_graph = self._func("lambda_B", ["q_" + spec_next_state.name, sys_next_state])
+#
+#                    greater_func = [self._ge, self._gt][spec_next_state in self._automaton.rejecting_nodes]
+#                    crt_sharp = self._func("lambda_sharp", ["q_" + spec_state.name, "t_" + str(sys_state)])
+#                    next_sharp = self._func("lambda_sharp", ["q_" + spec_next_state.name, sys_next_state])
+#                    guarantee_counters = greater_func(next_sharp, crt_sharp)
+#
+#                    guarantee = self._and([guarantee_next_run_graph, guarantee_counters])
+#                    and_guarantees.append(guarantee)
+#
+#                ors_of_edge.append(self._and(and_guarantees))
+#
+#            or_guarantees.append(self._forall(free_input_vars, self._or(ors_of_edge)))
+#
+#        return self._or(or_guarantees)
+
+
+    def _make_transition_assertions(self, num_impl_states):
+        smt_str = self._comment("transition assertions")
 
         for spec_state in self._automaton.nodes:
-            for label, dst_set_list in spec_state.transitions.items():
-                if not len(list(itertools.chain(*dst_set_list))): #TODO: why?
-                    continue
+            if self._is_end_node(spec_state):
+                continue
 
-                for impl_state in range(0, num_impl_states):
-#                    smt_str += self._comment()
-
-                    implication_left_1 = self._func("lambda_B", ["q_" + spec_state.name, "t_" + str(impl_state)])
-                    implication_left_2 = self._make_trans_condition_on_output_vars(label, impl_state)
-
-                    if len(implication_left_2) > 0:
-                        implication_left = self._and([implication_left_1, implication_left_2])
-                    else:
-                        implication_left = implication_left_1
-
-                    input_values = {}
-                    for input_var in self._upsilon.inputs:
-                        if input_var in label:
-                            input_values[input_var] = label[input_var]
-
-                    tau_args, free_input_vars = self._upsilon.make_tau_arg_list(input_values)
-                    sys_next_state = self._func("tau", ["t_" + str(impl_state)] + tau_args)
-
-                    or_args = []
-                    for dst_set in dst_set_list:
-                        and_args = []
-                        for spec_next_state in dst_set:
-                            implication_right_1 = self._func("lambda_B", ["q_" + spec_next_state.name, sys_next_state])
-
-                            crt_sharp = self._func("lambda_sharp", ["q_" + spec_state.name, "t_" + str(impl_state)])
-                            next_sharp = self._func("lambda_sharp", ["q_" + spec_next_state.name, sys_next_state])
-
-                            greater = [self._ge, self._gt][spec_next_state in self._automaton.rejecting_nodes]
-                            implication_right_2 = greater(next_sharp, crt_sharp)
-
-                            implication_right = self._and([implication_right_1, implication_right_2])
-                            and_args.append(implication_right)
-
-                        or_args.append(self._and(and_args))
-
-                    smt_addition = self._assert(self._implies(implication_left, self._forall(free_input_vars, self._or(or_args))))
-
-                    smt_str += smt_addition
+            for sys_state in ['t_' + str(x) for x in range(0, num_impl_states)]:
+                assumption = self._lambdaB(spec_state, sys_state)
+                guarantee = self._get_guarantees(spec_state, sys_state)
+                implication = self._implies(assumption, guarantee)
+                assertion = self._assert(implication)
+                smt_str += self._beautify(assertion) + '\n'
 
         return smt_str
+
+
+
+
+#
+#            for sys_state in range(0, num_impl_states):
+#
+#                assumption = self._func("lambda_B", ["q_" + spec_state.name, "t_" + str(sys_state)])
+#                transition_guarantees = []
+#
+#                for label, dst_set_list in spec_state.transitions.items():
+#                    input_values = {}
+#                    for input_var in self._upsilon.inputs:
+#                        if input_var in label:
+#                            input_values[input_var] = label[input_var]
+#
+#                    tau_args, free_input_vars = self._upsilon.make_tau_arg_list(input_values)
+#                    sys_next_state = self._func("tau", ["t_" + str(sys_state)] + tau_args)
+#
+#                    lbl_output_clause = self._make_trans_condition_on_output_vars(label, sys_state)
+#
+#                    or_guarantees = []
+#                    for dst_set in dst_set_list:
+#                        and_guarantees = [lbl_output_clause]
+#                        for spec_next_state in dst_set:
+#                            guarantee_run_graph = self._func("lambda_B", ["q_" + spec_next_state.name, sys_next_state])
+#
+#                            greater = [self._ge, self._gt][spec_next_state in self._automaton.rejecting_nodes]
+#                            crt_sharp = self._func("lambda_sharp", ["q_" + spec_state.name, "t_" + str(sys_state)])
+#                            next_sharp = self._func("lambda_sharp", ["q_" + spec_next_state.name, sys_next_state])
+#                            guarantee_counters = greater(next_sharp, crt_sharp)
+#
+#                            guarantee = self._and([guarantee_run_graph, guarantee_counters])
+#                            and_guarantees.append(guarantee)
+#
+#                        or_guarantees.append(self._and(and_guarantees))
+#
+#                    transition_guarantees.append(self._forall(free_input_vars, self._or(or_guarantees)))
+#
+#                smt_addition = self._assert(self._implies(assumption, self._and(transition_guarantees)))
+#                smt_str += smt_addition
+
+#        return smt_str
 
 
     def _make_set_logic(self):
@@ -265,15 +384,16 @@ class Encoder:
     def _make_headers(self):
         return '(set-option :produce-models true)\n'
 
+
     def _make_get_values(self, num_impl_states):
         smt_str = ''
         for s in range(0, num_impl_states):
-            for input_values in self._upsilon.enumerate_input_values():
-                smt_str += "(get-value ({0}))\n".format(self._func("tau", ['t_'+str(s)] + self._upsilon.make_tau_arg_list(input_values)[0]))
+            for input_values in self._signals.enumerate_input_values():
+                smt_str += "(get-value ({0}))\n".format(self._func("tau", ['t_'+str(s)] + self._signals.make_tau_arg_list(input_values)[0]))
         for s in range(0, num_impl_states):
             smt_str += "(get-value (t_{0}))\n".format(s)
 
-        for output in self._outputs:
+        for output in self._signals.outputs:
             for s in range(0, num_impl_states):
                 smt_str += "(get-value ((fo_{0} t_{1})))\n".format(output, s)
 
@@ -301,7 +421,7 @@ class Encoder:
         smt_str += "\n"
         smt_str += self._make_initial_states_condition()
         smt_str += "\n"
-        smt_str += self._make_main_assertions(num_impl_states)
+        smt_str += self._make_transition_assertions(num_impl_states)
         smt_str += "\n"
         smt_str += self.CHECK_SAT
         smt_str += "\n"
@@ -315,23 +435,41 @@ class Encoder:
         return smt_str
 
 
-class Upsilon:
-    def __init__(self, inputs):
+    def _true(self):
+        return ' true '
+    def _false(self):
+        return ' false '
+
+
+    def _counter_greater(self, next_spec_state, next_sys_state, spec_state, sys_state):
+        crt_counter = self._counter(spec_state, sys_state)
+        next_counter = self._counter(next_spec_state, next_sys_state)
+
+        greater_func = [self._ge, self._gt][next_spec_state in self._automaton.rejecting_nodes]
+        counters_relation = greater_func(next_counter, crt_counter)
+
+        return counters_relation
+
+
+    def _beautify(self, s):
+        depth = 0
+        beautified = ''
+        for i, c in enumerate(s):
+            if c is '(':
+                beautified += '\n'
+                beautified += '\t'*depth
+                depth += 1
+            elif c is ')':
+                depth -= 1
+            beautified += c
+
+        return beautified
+
+
+class Signals:
+    def __init__(self, inputs, outputs):
         self._inputs = OrderedSet(list(inputs))
-
-
-    def enumerate_input_values(self):
-        """ Return list of maps: [{var:val, var:val}, {..}, ...] """
-
-        values_tuples = list(itertools.product([False, True], repeat=len(self._inputs)))
-
-        result = []
-        for values_tuple in values_tuples:
-            values = {}
-            for i, (var, value) in enumerate(zip(self._inputs, values_tuple)):
-                values[var] = value
-            result.append(values)
-        return result
+        self._outputs = outputs
 
 
     def make_tau_arg_list(self, input_values): #TODO: use ?var_name instead of var_name in forall
@@ -357,3 +495,57 @@ class Upsilon:
     @property
     def inputs(self):
         return self._inputs
+
+    @property
+    def outputs(self):
+        return self._outputs
+
+
+    def _enumerate_values(self, variables):
+        """ Return list of maps: [ {var:val, var:val}, ..., {var:val, var:val} ] """
+
+        values_tuples = list(itertools.product([False, True], repeat=len(variables)))
+
+        result = []
+        for values_tuple in values_tuples:
+            values = {}
+            for i, (var, value) in enumerate(zip(variables, values_tuple)):
+                values[var] = value
+            result.append(values)
+        return result
+
+
+    def enumerate_out_values(self):
+        return self._enumerate_values(self._outputs)
+
+
+    def enumerate_input_values(self):
+        return self._enumerate_values(self._inputs)
+
+
+    def is_forbidden_label_values(self, var_values, labels):
+        return sum(map(lambda l: self.satisfies(var_values, l), labels)) == 0
+
+
+    def satisfies(self, all_values, label):
+        for var, val in all_values.items():
+            if var not in label:
+                continue
+            if label[var] != val:
+                return False
+        return True
+
+
+    def get_relevant_edges(self, var_values, spec_state):
+        """ Return dst_sets_list """
+        relevant_edges = []
+
+        for label, dst_set_list in spec_state.transitions.items():
+            if not self.satisfies(var_values, label):
+                continue #consider only edges with labels that are satisfied by current signal values
+
+            relevant_edges.extend(dst_set_list)
+
+        return relevant_edges
+
+

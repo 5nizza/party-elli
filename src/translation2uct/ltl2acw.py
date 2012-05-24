@@ -35,15 +35,16 @@ def _get_create(name, name_to_node):
 #    {2}
 
 def _extract_state_names_set(curly_token_set):
-    return curly_token_set.strip().split('}')[0].strip('{').split(',')
+    names = curly_token_set.strip().split('}')[0].strip('{').strip()
+    return set(_stripped(names.split(',')))
 
 
 def _create_rejecting_initial_nodes(states_block, name_to_node):
     sets_list = []
-    for l in _stripped(states_block.split('\n'))[1:]:
+    for l in _stripped_filtered(states_block.split('\n'))[1:]:
         states_set = set()
         names = _extract_state_names_set(l)
-        for name in names:
+        for name in filter(lambda x: x != '', names):
             node = _get_create(name, name_to_node)
             states_set.add(node)
 
@@ -71,13 +72,16 @@ def _get_src_name(state_lines):
     return name
 
 
-def _stripped(toks):
-    return [_.strip() for _ in toks if _.strip() != '']
+def _stripped(strings):
+    return map(str.strip, strings)
+
+
+def _stripped_filtered(strings):
+    return filter(lambda x: x != '' and x is not None, strings)
 
 
 def _split_trans(trans):
-    label_tok, dst_tok = _stripped(trans.split('->')) #(1) -> {4,7}            {}
-
+    label_tok, dst_tok = _stripped_filtered(trans.split('->')) #(1) -> {4,7}            {}
     dst_names = _extract_state_names_set(dst_tok)
     dst_names = _stripped(dst_names)
     for n in dst_names:
@@ -88,10 +92,26 @@ def _split_trans(trans):
     return labels, dst_names
 
 
-def parse_ltl3ba_aa(text): #TODO: what is an empty {}?!
+def parse_ltl3ba_aa(text):
     """ Parse ltl3ba output, return (init_sets_list, set of rejecting nodes, set of all nodes) """
 
     aa_desc = _extract_aa_desc(text)
+#    print("parse_ltl3ba_aa: DEBUG ONLY!")
+#
+#    aa_desc = """init :
+#{17}
+#rejecting :
+#{}
+#state 17 : (false V ((! ((stop)) || ((! ((c0)) && X (! ((c0)))) || (X ((c0)) && (c0)))) && ((! ((c0)) && X ((c0))) || ((X (! ((c0))) && (c0)) || (stop)))))
+#(!stop && c0) -> {2,17}         {}
+#(!stop && !c0) -> {5,17}                {}
+#(stop && !c0) -> {2,17}                {}
+#(stop && c0) -> {5,17}                {}
+#state 5 : (c0)
+#(c0) -> {}              {}
+#state 2 : ! ((c0))
+#(!c0) -> {}             {}"""
+
 
     blocks = _get_blocks(aa_desc)
     init_states_block = blocks[0]
@@ -108,7 +128,7 @@ def parse_ltl3ba_aa(text): #TODO: what is an empty {}?!
         src_name = _get_src_name(block_lines)
         src = _get_create(src_name, name_to_node)
 
-        for trans in _stripped(block_lines[1:]):
+        for trans in _stripped_filtered(block_lines[1:]):
             labels, dst_names = _split_trans(trans)
 
             dst_set = {_get_create(n, name_to_node) for n in dst_names}

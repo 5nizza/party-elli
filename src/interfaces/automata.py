@@ -20,6 +20,7 @@ class Automaton:
     def rejecting_nodes(self):
         return self._rejecting_nodes
 
+
     def __str__(self):
         return "\n".join([str(x) for x in self._nodes]) +\
                "\n initial nodes:\n" +\
@@ -47,7 +48,7 @@ class Node:
 
     @property
     def transitions(self):
-        """ Return map label->[nodes:set, nodes, ..] """
+        """ Return map { label->[nodes_set, .., nodes_set] ... label->[nodes_set, .., nodes_set] } """
         return self._transitions
 
     def add_transition(self, label, dst_set):
@@ -69,8 +70,8 @@ class Node:
 
             labels_strings.append('[{0}: {1}]'.format(str(l), ', '.join(dst_strings)))
 
-        return '{0}, transitions: {1}'.format(self.name, ' '.join(labels_strings))
+        return "'{0}', transitions: {1}".format(self.name, ' '.join(labels_strings))
 
 
     def __repr__(self):
-        return self.name
+        return "'{0}'".format(self.name)

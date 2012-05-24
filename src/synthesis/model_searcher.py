@@ -36,4 +36,4 @@ def search(uct, inputs, outputs, size, bound, z3solver, logic):
         else:
             logger.warning('solver status is unknown')
 
-    return 'model is not available'
+    return None

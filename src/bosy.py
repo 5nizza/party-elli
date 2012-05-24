@@ -92,7 +92,7 @@ def _create_spec_converter_z3(use_acw):
     root_dir = ('/'.join(bosy_dir_toks[:-1]) + '/..') #root dir is one level up compared to bosy.py
 
     z3_path = root_dir + '/lib/z3/bin/z3'
-    ltl2ba_path = root_dir + '/lib/ltl3ba/ltl3ba-1.0/ltl3ba'
+    ltl2ba_path = root_dir + '/lib/ltl3ba/ltl3ba-1.0.1/ltl3ba'
     #
 
     import platform
