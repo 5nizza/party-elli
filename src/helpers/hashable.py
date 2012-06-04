@@ -3,5 +3,5 @@ class HashableDict(dict): # http://bob.pythonmac.org/archives/2005/03/04/frozend
     def __hash__(self):
         rval = getattr(self, '_hash', None)
         if rval is None:
-            rval = self._hash = hash(frozenset(self.iteritems()))
+            rval = self._hash = hash(frozenset(self.items()))
         return rval

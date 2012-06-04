@@ -2,6 +2,14 @@ import unittest
 from translation2uct.ltl2ba import _get_hacked_ucw, _unwind_label
 
 
+def _assert_equal_list_dict(first_list_of_dict, second_list_of_dict):
+    assert len(first_list_of_dict) == len(second_list_of_dict)
+
+    for f in first_list_of_dict:
+        assert f in second_list_of_dict, \
+            '{0} vs {1}'.format(first_list_of_dict, second_list_of_dict)
+
+
 class Test(unittest.TestCase):
     def test_parse_ltl2ba_output(self):
         text = """
@@ -72,10 +80,9 @@ class Test(unittest.TestCase):
         accept_all_node = [n for n in nodes if n.name == 'accept_all'][0]
 
         assert rejecting_nodes == {accept_all_node}
-
         assert len(accept_all_node.transitions) == 1
 
-        label, dst_set_list = accept_all_node.transitions.items()[0]
+        label, dst_set_list = list(accept_all_node.transitions.items())[0]
         dst_set = dst_set_list[0]
         dst = dst_set.pop()
         assert dst == accept_all_node, str(dst)
@@ -118,8 +125,10 @@ class Test(unittest.TestCase):
         vars = {'r', 'g'}
 
         concrete_labels = _unwind_label(pattern_lbl, vars)
-        assert sorted(concrete_labels) == sorted([{'r': True, 'g': True}, {'r': True, 'g': False},
-                                                  {'r': False, 'g': True}, {'r': False, 'g': False}])
+        _assert_equal_list_dict(
+            concrete_labels,
+            [{'r': True, 'g': True}, {'r': True, 'g': False},
+             {'r': False, 'g': True}, {'r': False, 'g': False}])
 
 
     def test_unwind_labels__concrete_lbl(self):
@@ -135,7 +144,10 @@ class Test(unittest.TestCase):
         vars = {'r', 'g'}
 
         concrete_labels = _unwind_label(pattern_lbl, vars)
-        assert sorted(concrete_labels) == sorted([{'r': True, 'g': True}, {'r': True, 'g': False}])
+
+        _assert_equal_list_dict(
+            concrete_labels,
+            [{'r': True, 'g': True}, {'r': True, 'g': False}])
 
 
 

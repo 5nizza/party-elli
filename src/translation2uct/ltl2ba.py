@@ -1,6 +1,6 @@
 import itertools
 from helpers.python_ext import get_add
-from interfaces.automata import Node, Label, Automaton
+from interfaces.automata import Node, Label
 
 def _get_cases(toks):
     start = None
@@ -19,7 +19,6 @@ def parse_label_tok(label_tok):
     """ Return maps of labels [{var_name : True/False}, ..] """
     # (!a && !g && r) || (g)
     # (1)
-
     if label_tok == '(1)':
         return [{}]
 

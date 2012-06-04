@@ -30,7 +30,7 @@ class Ltl2UCW:
 
 
 class Ltl2ACW:
-    def __init__(self, ltl2ba_path):
+    def __init__(self, ltl2ba_path): #TODO: should accept instance of ltl3ba runner
         self._execute_cmd = ltl2ba_path + ' -d -f' #TODO: -M?
         self._logger = logging.getLogger(__name__)
 

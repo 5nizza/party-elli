@@ -1,15 +1,20 @@
 from interfaces.automata import Node
-from ltl2ba import parse_label_tok
+from translation2uct.ltl2ba import parse_label_tok
 import itertools
 
 
 def _extract_aa_desc(text):
     splitted = text.split('\n')
+    start = 0
+    end = -1
     for i, l in enumerate(splitted):
         if 'Alternating automaton after simplification' in l:
             start = i+1
         if 'Generalized' in l:
-            return '\n'.join(splitted[start:i])
+            end = i
+            break
+
+    return '\n'.join(splitted[start:end])
 
 
 def _get_blocks(aa_text):
@@ -23,7 +28,7 @@ def _get_blocks(aa_text):
 
     states_desc.append(crt)
 
-    return filter(lambda s: s != '' and s is not None, states_desc)
+    return list(filter(lambda s: s != '' and s is not None, states_desc))
 
 
 def _get_create(name, name_to_node):
@@ -73,11 +78,11 @@ def _get_src_name(state_lines):
 
 
 def _stripped(strings):
-    return map(str.strip, strings)
+    return list(map(str.strip, strings))
 
 
 def _stripped_filtered(strings):
-    return filter(lambda x: x != '' and x is not None, strings)
+    return list(filter(lambda x: x.strip() != '' and x is not None, _stripped(strings)))
 
 
 def _split_trans(trans):
@@ -87,15 +92,18 @@ def _split_trans(trans):
     for n in dst_names:
         assert '{' not in n, n
         assert '}' not in n, n
+
     labels = parse_label_tok(label_tok)
+
 
     return labels, dst_names
 
 
 def parse_ltl3ba_aa(text):
-    """ Parse ltl3ba output, return (init_sets_list, set of rejecting nodes, set of all nodes) """
+    """ Return (init_sets_list, set of rejecting nodes, set of all nodes) """
 
     aa_desc = _extract_aa_desc(text)
+
 #    print("parse_ltl3ba_aa: DEBUG ONLY!")
 #
 #    aa_desc = """init :

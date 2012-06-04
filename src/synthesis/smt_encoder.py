@@ -3,10 +3,10 @@ import logging
 from math import log, ceil
 from helpers.ordered_set import OrderedSet
 
+
 class Logic:
     def counters_type(self, max_counter_value):
         pass
-    @property
     def smt_name(self):
         pass
     @property
@@ -235,6 +235,16 @@ class Encoder:
     def _is_end_node(self, spec_state):
         return spec_state.name == '' #TODO: dirty hack!
 
+#
+#    def _make_transition(self, src_root_clause, label):
+#        """ Return tuple (list_of_sets, [state->[src, src], ..] ) """
+#        root_node = _make_dnf(src_root_clause)
+#        assert root_node.type == self.Clause.OR or \
+#            root_node.type == self.Clause.TERM
+#
+#
+#
+
 
     def _get_guarantees(self, spec_state, sys_state):
         labels = spec_state.transitions.keys()
@@ -246,11 +256,12 @@ class Encoder:
 
             inputs_ands = []
             for in_values in self._signals.enumerate_input_values():
-                all_values = dict(in_values.items() + out_values.items())
+                all_values = dict(list(in_values.items()) +
+                                  list(out_values.items()))
 
                 if self._signals.is_forbidden_label_values(all_values, labels):
-                    continue #
-
+                    inputs_ands = [self._false()]
+                    break #advisory will always make you loose here, so break
 
                 dst_set_list = self._signals.get_relevant_edges(all_values, spec_state)
 
@@ -279,42 +290,6 @@ class Encoder:
             output_ors.append(self._and([self._assert_out_values(out_values, sys_state)] + inputs_ands))
 
         return self._or(output_ors)
-
-#
-#
-#
-#        or_guarantees = []
-#        for label, dst_set_list in spec_state.transitions.items():
-#            lbl_output_clause = self._assert_out_values(label, sys_state)
-#            and_guarantees = [lbl_output_clause]
-#
-#            input_values = self._get_input_values(label)
-#            tau_args, free_input_vars = self._signals.make_tau_arg_list(input_values)
-#
-#            sys_next_state = self._func("tau", ["t_" + str(sys_state)] + tau_args)
-#
-#            ors_of_edge = []
-#            for dst_set in dst_set_list:
-#                for spec_next_state in dst_set:
-#                    if self._is_end_node(spec_next_state):
-#                        and_guarantees.append(self._true())
-#                        continue
-#
-#                    guarantee_next_run_graph = self._func("lambda_B", ["q_" + spec_next_state.name, sys_next_state])
-#
-#                    greater_func = [self._ge, self._gt][spec_next_state in self._automaton.rejecting_nodes]
-#                    crt_sharp = self._func("lambda_sharp", ["q_" + spec_state.name, "t_" + str(sys_state)])
-#                    next_sharp = self._func("lambda_sharp", ["q_" + spec_next_state.name, sys_next_state])
-#                    guarantee_counters = greater_func(next_sharp, crt_sharp)
-#
-#                    guarantee = self._and([guarantee_next_run_graph, guarantee_counters])
-#                    and_guarantees.append(guarantee)
-#
-#                ors_of_edge.append(self._and(and_guarantees))
-#
-#            or_guarantees.append(self._forall(free_input_vars, self._or(ors_of_edge)))
-#
-#        return self._or(or_guarantees)
 
 
     def _make_transition_assertions(self, num_impl_states):
@@ -454,13 +429,20 @@ class Encoder:
     def _beautify(self, s):
         depth = 0
         beautified = ''
+        ignore = False #TODO: dirty
         for i, c in enumerate(s):
             if c is '(':
-                beautified += '\n'
-                beautified += '\t'*depth
-                depth += 1
+                if s[i+1:].strip().startswith('tau'):
+                    ignore = True
+                if not ignore:
+                    beautified += '\n'
+                    beautified += '\t'*depth
+                    depth += 1
             elif c is ')':
-                depth -= 1
+                if not ignore:
+                    depth -= 1
+                else:
+                    ignore = False
             beautified += c
 
         return beautified
