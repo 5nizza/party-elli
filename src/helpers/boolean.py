@@ -14,14 +14,14 @@ import collections
 # A boolean algebra is defined by its base elements (=domain), its operations
 # (in this case only NOT, AND and OR) and an additional "symbol" type.
 Algebra = collections.namedtuple("Algebra",
-                                 ("domain", "operations", "symbol"))
+    ("domain", "operations", "symbol"))
 
 # Defines the two base elements TRUE and FALSE for the algebra.
 BooleanDomain = collections.namedtuple("BooleanDomain", ("TRUE", "FALSE"))
 
 # Defines the basic boolean operations NOT, AND and OR.
 BooleanOperations = collections.namedtuple("BooleanOperations",
-                                           ("NOT", "AND", "OR"))
+    ("NOT", "AND", "OR"))
 
 
 class Expression:
@@ -153,7 +153,7 @@ class Expression:
                     break
             if not matched:
                 new_arg = None if arg.args is None else\
-                         arg._subs(subs_dict, eval)
+                arg._subs(subs_dict, eval)
                 if new_arg is None:
                     new_args.append(arg)
                 else:
@@ -300,7 +300,11 @@ class BaseElement(Expression):
             return domain.TRUE
         else:
             raise AttributeError("Class should be TRUE or FALSE but is %s."\
-                                 % self.cls.__name__)
+            % self.cls.__name__)
+
+    @property
+    def isliteral(self):
+        return True
 
     def __lt__(self, other):
         cmp = Expression.__lt__(self, other)
@@ -462,10 +466,10 @@ class Function(Expression):
             return cls(*args, eval=False).eval()
         if order[0] > length:
             raise TypeError("Too few arguments. Got %s, but need at least %s."\
-                             % (length, order[0]))
+            % (length, order[0]))
         if order[1] < length:
             raise TypeError("Too many arguments. Got %s, but need at most %s."\
-                             % (length, order[1]))
+            % (length, order[1]))
         return object.__new__(cls)
 
     def __init__(self, *args, eval=True):
@@ -557,7 +561,7 @@ class NOT(Function):
             return term.args[0].dual
         else:
             expr = self.__class__(term.args[0].eval(**evalkwargs),
-                                  eval=False)
+                eval=False)
             expr._iscanonical = True
             return expr
 
@@ -584,11 +588,11 @@ class NOT(Function):
         """
         term = self.cancel()
         if term.isliteral or\
-                not isinstance(term.args[0], self.algebra.operations):
+           not isinstance(term.args[0], self.algebra.operations):
             return term
         op = term.args[0]
         return op.dual(*tuple(self.__class__(arg, eval=False).cancel()\
-                for arg in op.args), eval=False)
+            for arg in op.args), eval=False)
 
     def __lt__(self, other):
         if self.args[0] == other:
@@ -685,23 +689,23 @@ class DualBase(Function):
         # Annihilation: A * 0 = 0, A + 1 = 1
         if self.annihilator in term.args:
             return self.annihilator
-        # Idempotence: A * A = A, A + A = A
+            # Idempotence: A * A = A, A + A = A
         args = []
         for arg in term.args:
             if arg not in args:
                 args.append(arg)
         if len(args) == 1:
             return args[0]
-        # Identity: A * 1 = A, A + 0 = A
+            # Identity: A * 1 = A, A + 0 = A
         if self.identity in args:
             args.remove(self.identity)
             if len(args) == 1:
                 return args[0]
-        # Complementation: A * ~A = 0, A + ~A = 1
+            # Complementation: A * ~A = 0, A + ~A = 1
         for arg in args:
             if ops.NOT(arg) in args:
                 return self.annihilator
-        # Elemination: (A * B) + (A * ~B) = A, (A + B) * (A + ~B) = A
+            # Elemination: (A * B) + (A * ~B) = A, (A + B) * (A + ~B) = A
         i = 0
         while i < len(args)-1:
             j = i + 1
@@ -710,7 +714,7 @@ class DualBase(Function):
                 while j < len(args):
                     aj = args[j]
                     if isinstance(aj, self.dual) and\
-                                len(ai.args)==len(aj.args):
+                       len(ai.args)==len(aj.args):
                         # Find terms where only one arg is different.
                         negated = None
                         for arg in ai.args:
@@ -725,7 +729,7 @@ class DualBase(Function):
                             else:
                                 negated = None
                                 break
-                        # If the different arg is a negation simplify the term.
+                            # If the different arg is a negation simplify the term.
                         if negated is not None:
                             # Cancel out one of the two terms.
                             del args[j]
@@ -743,7 +747,7 @@ class DualBase(Function):
                                 return self.__class__(*args, eval=True)
                     j += 1
             i += 1
-        # Absorption: A * (A + B) = A, A + (A * B) = A
+            # Absorption: A * (A + B) = A, A + (A * B) = A
         # Negative absorption: A * (~A + B) = A * B, A + (~A * B) = A + B
         i = 0
         while i < len(args):
@@ -754,8 +758,10 @@ class DualBase(Function):
                 aj = args[j]
                 if isinstance(aj, self.dual):
                     if ai in aj.args or\
-                         (isdual and all(arg in aj.args for arg in ai.args)):
+                       (isdual and all(arg in aj.args for arg in ai.args)):
                         del args[j]
+                        if i >= len(args):
+                            break
                     elif isdual:
                         negated = None
                         for arg in ai.args:
@@ -774,7 +780,7 @@ class DualBase(Function):
                             ajargs = list(aj.args)
                             ajargs.remove(ops.NOT(negated, eval=False).cancel())
                             args[j] = self.dual(*ajargs, eval=False)\
-                                        if len(ajargs) > 1 else ajargs[0]
+                            if len(ajargs) > 1 else ajargs[0]
                             return self.__class__(*args, eval=True)
                         else:
                             j += 1 if i != j+1 else 2
@@ -782,7 +788,7 @@ class DualBase(Function):
                         ajargs = list(aj.args)
                         ajargs.remove(ops.NOT(ai, eval=False).cancel())
                         args[j] = self.dual(*ajargs, eval=False)\
-                                    if len(ajargs) > 1 else ajargs[0]
+                        if len(ajargs) > 1 else ajargs[0]
                         return self.__class__(*args, eval=True)
                     else:
                         j += 1 if i != j+1 else 2
@@ -791,7 +797,7 @@ class DualBase(Function):
             i += 1
         if len(args) == 1:
             return args[0]
-        # Commutivity: A * B = B * A, A + B = B + A
+            # Commutivity: A * B = B * A, A + B = B + A
         args.sort()
         # Create new (now canonical) expression.
         term = self.__class__(*args, eval=False)
@@ -894,6 +900,7 @@ def normalize(operation, expr):
     the operation doesn't occur in any arg. Also NOT is only appearing
     in literals.
     """
+
     dualoperation = operation.getdual()
     # Move NOT inwards.
     expr = expr.literalize()
@@ -934,7 +941,7 @@ PRECEDENCE = {
     AND: 10,
     OR: 15,
     "(": 20,
-}
+    }
 
 def parse(expr, eval=True):
     """
@@ -1058,4 +1065,3 @@ class BooleanAlgebra:
 
     def __add__(self, other):
         return self.bool_base(bool_expr = self.bool_expr+other.bool_expr)
-

@@ -40,6 +40,6 @@ class Ltl2ACW:
         assert rc == 0, rc
         assert (err == '') or err is None, err
 
-        init_sets_list, rejecting_nodes, nodes = parse_ltl3ba_aa(text)
+        init_sets_list, rejecting_nodes, nodes = parse_ltl3ba_aa(text, self._logger)
 
         return Automaton(init_sets_list, rejecting_nodes, nodes)

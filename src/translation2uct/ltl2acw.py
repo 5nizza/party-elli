@@ -94,32 +94,14 @@ def _split_trans(trans):
         assert '}' not in n, n
 
     labels = parse_label_tok(label_tok)
-
-
     return labels, dst_names
 
 
-def parse_ltl3ba_aa(text):
+def parse_ltl3ba_aa(text, logger):
     """ Return (init_sets_list, set of rejecting nodes, set of all nodes) """
 
     aa_desc = _extract_aa_desc(text)
-
-#    print("parse_ltl3ba_aa: DEBUG ONLY!")
-#
-#    aa_desc = """init :
-#{17}
-#rejecting :
-#{}
-#state 17 : (false V ((! ((stop)) || ((! ((c0)) && X (! ((c0)))) || (X ((c0)) && (c0)))) && ((! ((c0)) && X ((c0))) || ((X (! ((c0))) && (c0)) || (stop)))))
-#(!stop && c0) -> {2,17}         {}
-#(!stop && !c0) -> {5,17}                {}
-#(stop && !c0) -> {2,17}                {}
-#(stop && c0) -> {5,17}                {}
-#state 5 : (c0)
-#(c0) -> {}              {}
-#state 2 : ! ((c0))
-#(!c0) -> {}             {}"""
-
+    logger.debug(aa_desc)
 
     blocks = _get_blocks(aa_desc)
     init_states_block = blocks[0]

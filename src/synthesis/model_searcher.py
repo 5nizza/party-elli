@@ -1,6 +1,6 @@
 import logging
 from interfaces.smt_model import SmtModel
-from synthesis.smt_encoder import Encoder, UFLIA
+from synthesis.smt_encoder import Encoder
 from synthesis.z3 import Z3
 
 _logger = None

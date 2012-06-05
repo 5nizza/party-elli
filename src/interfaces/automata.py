@@ -75,3 +75,26 @@ class Node:
 
     def __repr__(self):
         return "'{0}'".format(self.name)
+
+
+#------------------------------helper functions--------------------------
+def satisfied(label, signal_values):
+    """ Do signal values satisfy the label? """
+
+    for var, val in signal_values.items():
+        if var not in label:
+            continue
+        if label[var] != val:
+            return False
+    return True
+
+
+def get_next_states(state, signal_values):
+    """ Return list of state_sets """
+
+    total_list_of_state_sets = []
+    for label, list_of_state_sets in state.transitions.items():
+        if satisfied(label, signal_values):
+            total_list_of_state_sets.extend(list_of_state_sets)
+
+    return total_list_of_state_sets
