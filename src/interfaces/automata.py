@@ -4,7 +4,7 @@ from helpers.hashable import HashableDict
 
 class Automaton:
     def __init__(self, init_sets_list, rejecting_nodes, nodes):
-        self._init_sets_list = init_sets_list
+        self._init_sets_list = list(init_sets_list)
         self._rejecting_nodes = set(rejecting_nodes)
         self._nodes = set(nodes)
 
@@ -42,6 +42,7 @@ class Node:
     def __init__(self, name):
         self._transitions = {} # label->[nodes, nodes, nodes]
         self._name = name
+        assert name != "0"
         assert ',' not in name, name
 
     @property
@@ -60,7 +61,8 @@ class Node:
         """
         label = Label(label)
         label_transitions = self._transitions[label] = self._transitions.get(label, [])
-        label_transitions.append(dst_set)
+        if dst_set not in label_transitions:
+            label_transitions.append(dst_set)
 
 
     def __str__(self):
@@ -100,6 +102,7 @@ def get_next_states(state, signal_values):
             total_list_of_state_sets.extend(list_of_state_sets)
 
     return total_list_of_state_sets
+
 
 def label_to_short_string(label):
     if len(label) == 0:

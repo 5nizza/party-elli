@@ -6,6 +6,10 @@ from translation2uct.ltl2acw import parse_ltl3ba_aa
 from translation2uct.ltl2ba import parse_ltl2ba_ba
 
 
+def negate(ltl_spec):
+    return LtlSpec(ltl_spec.inputs, ltl_spec.outputs, '!({0})'.format(ltl_spec.property))
+
+
 class Ltl2UCW:
     def __init__(self, ltl2ba_path):
         self._execute_cmd = ltl2ba_path +' -f'
@@ -13,7 +17,7 @@ class Ltl2UCW:
 
 
     def convert(self, ltl_spec):
-        negated = self._negate(ltl_spec)
+        negated = negate(ltl_spec)
 
         rc, ba, err = execute_shell('{0} "{1}"'.format(self._execute_cmd, negated.property))
         assert rc == 0, rc
@@ -23,10 +27,6 @@ class Ltl2UCW:
         initial_nodes, rejecting_nodes, nodes = parse_ltl2ba_ba(ba)
 
         return Automaton(initial_nodes, rejecting_nodes, nodes)
-
-
-    def _negate(self, ltl_spec):
-        return LtlSpec(ltl_spec.inputs, ltl_spec.outputs, '!({0})'.format(ltl_spec.property))
 
 
 class Ltl2ACW:

@@ -1,9 +1,13 @@
+import logging
 import unittest
 from interfaces.automata import Label
 from translation2uct.ltl2acw import parse_ltl3ba_aa
 
 
 class Test(unittest.TestCase):
+    def setUp(self):
+        self._logger = logging.getLogger(__name__)
+
     def test__two_init(self):
         text = """Alternating automaton after simplification
             init :
@@ -15,7 +19,7 @@ class Test(unittest.TestCase):
             (b) -> {}               {}
             state 1 : (a)
             (a) -> {}               {}\n\n"""
-        init_nodes, rejecting_nodes, nodes = parse_ltl3ba_aa(text)
+        init_nodes, rejecting_nodes, nodes = parse_ltl3ba_aa(text, self._logger)
         assert len(init_nodes) == 2, [str(n) for n in init_nodes]
         assert len(rejecting_nodes) == 0
         assert len(nodes) == 3, str(nodes) #+1 fot safe end
@@ -36,7 +40,7 @@ class Test(unittest.TestCase):
                 (1) -> {4}              {4}
                 \n\n"""
 
-        init_nodes_list, rejecting_nodes, nodes = parse_ltl3ba_aa(text)
+        init_nodes_list, rejecting_nodes, nodes = parse_ltl3ba_aa(text, self._logger)
         assert len(init_nodes_list) == 1
         assert init_nodes_list[0].pop().name == '7'
         assert [n.name for n in rejecting_nodes] == ['4']

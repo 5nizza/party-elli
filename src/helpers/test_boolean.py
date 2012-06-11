@@ -31,8 +31,8 @@ class BaseElementTestCase(unittest.TestCase):
         self.assertTrue(boolean.FALSE.__class__() is boolean.FALSE)
 
     def test_literals(self):
-        self.assertTrue(boolean.TRUE.literals == set())
-        self.assertTrue(boolean.FALSE.literals == set())
+        self.assertTrue(boolean.FALSE.literals == {boolean.FALSE})
+        self.assertTrue(boolean.TRUE.literals == {boolean.TRUE})
 
     def test_literalize(self):
         self.assertTrue(boolean.TRUE.literalize() is boolean.TRUE)

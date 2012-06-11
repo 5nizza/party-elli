@@ -7,7 +7,7 @@ import os
 from interfaces.ltl_spec import LtlSpec
 from module_generation.dot import to_dot
 from synthesis.smt_logic import UFLIA, UFBV
-from translation2uct.ltl2automaton import Ltl2UCW, Ltl2ACW
+from translation2uct.ltl2automaton import Ltl2UCW, Ltl2ACW, negate
 from synthesis.model_searcher import search
 from synthesis.z3 import Z3
 from module_generation.verilog import to_verilog

@@ -4,14 +4,17 @@ from interfaces.automata import Automaton, Node
 
 def _replace_link_in_transitions(transitions, old_dst, new_dst):
     new_transitions = {}
+
     for label, list_of_sets in transitions.items():
         new_list_of_sets = []
 
         for states in list_of_sets:
-            states = states.difference({old_dst})
+            states = set(states)
 
-            if new_dst is not None:
-                states.add(new_dst)
+            if old_dst in states:
+                states.remove(old_dst)
+                if new_dst is not None:
+                    states.add(new_dst)
 
             if len(states) > 0:
                 new_list_of_sets.append(states)

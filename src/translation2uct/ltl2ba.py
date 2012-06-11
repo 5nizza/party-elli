@@ -95,7 +95,7 @@ def _conform2acw(initial_nodes, rejecting_nodes, nodes, vars):
     new_initial_nodes = map(lambda n: new_name_to_node[n.name], initial_nodes)
     new_rejecting_nodes = map(lambda n: new_name_to_node[n.name], rejecting_nodes)
 
-    return [new_initial_nodes], new_rejecting_nodes, new_name_to_node.values()
+    return new_initial_nodes, new_rejecting_nodes, new_name_to_node.values()
 
 
 def _get_hacked_ucw(text): #TODO: bad smell - it is left for testing purposes only
