@@ -215,18 +215,32 @@ class Encoder:
         return spec_state.name == '' #TODO: dirty hack!
 
 
-    def _convert_state_clause_to_lambdaB(self,
-                                         next_spec_state_clause,
-                                         next_sys_state):
-        if (str(next_spec_state_clause)) == '0':
-            assert next_spec_state_clause == FALSE
+    def _map_spec_states_to_smt_names(self, spec_states):
+        return map(self._get_smt_name_spec_state, spec_states)
 
-        if next_spec_state_clause == TRUE:
+
+    def _convert_state_clause_to_lambdaB_stmt(self,
+                                         spec_state_clause,
+                                         sys_state,
+                                         term_clauses):
+        if (str(spec_state_clause)) == '0':
+            assert spec_state_clause == FALSE
+
+        if spec_state_clause == TRUE:
             guarantee = self._true()
-        elif next_spec_state_clause == FALSE:
+        elif spec_state_clause == FALSE:
             guarantee = self._false()
         else:
-            guarantee = self._lambdaB(self._get_smt_name(next_spec_state_clause), next_sys_state)
+            def convert_and_to_lambdaB(and_clause):
+                clause_to_state = dict(map(lambda item: (item[1], item[0]), term_clauses.items()))
+                and_state_names = map(lambda l: self._get_smt_name_spec_state(clause_to_state[l]), and_clause.literals)
+                ands = list(map(lambda name: self._lambdaB(name, sys_state), and_state_names))
+                assert len(ands) > 0
+                return self._and(ands)
+
+            ors = list(map(convert_and_to_lambdaB, normalize(OR, spec_state_clause)))
+            assert len(ors) > 0
+            guarantee = self._or(ors)
 
         return guarantee
 
@@ -260,7 +274,9 @@ class Encoder:
             for output in self._signals.enumerate_out_values():
                 signal_values = dict(chain(input.items(), output.items()))
 
-                assumption_on_crt_state = self._lambdaB(self._get_smt_name(spec_state_clause), sys_state)
+                assumption_on_crt_state = self._convert_state_clause_to_lambdaB_stmt(spec_state_clause,
+                                                                                      sys_state,
+                                                                                      state_to_clause)
                 assumption_on_output = self._condition_on_output(signal_values, sys_state)
 
                 next_spec_state_clause = self._get_next_spec_state_clause(signal_values, spec_state_clause, state_to_clause)
@@ -280,7 +296,9 @@ class Encoder:
 
                 next_sys_state = self._tau(sys_state, tau_args)
 
-                guarantee_lambdaB = self._convert_state_clause_to_lambdaB(next_spec_state_clause, next_sys_state)
+                guarantee_lambdaB = self._convert_state_clause_to_lambdaB_stmt(next_spec_state_clause,
+                    next_sys_state,
+                    state_to_clause)
 
                 guarantee_counter = self._true()
                 if next_spec_state_clause != TRUE and next_spec_state_clause != FALSE:
@@ -293,6 +311,7 @@ class Encoder:
                 implication = self._implies(self._and([assumption_on_crt_state, assumption_on_output]),
                                             guarantee)
 
+                assertions.append(self._comment('{0} -> {1}'.format(spec_state_clause, next_spec_state_clause)))
                 assertions.append(self._assert(implication))
 
         return assertions
@@ -416,7 +435,9 @@ class Encoder:
         transition_assertions_str, spec_state_clauses = self._make_transition_assertions(terminals, sys_states)
 
         spec_state_clauses_names = [self._get_smt_name(c) for c in spec_state_clauses]
-        spec_states_declarations_str = self._make_state_declarations(spec_state_clauses_names, "Q")
+        spec_states_declarations_str = self._make_state_declarations(
+            set(spec_state_clauses_names).union(set(self._map_spec_states_to_smt_names(terminals.keys()))),
+                "Q")
 
         query_blocks = [
             self._make_headers(),
@@ -436,18 +457,18 @@ class Encoder:
 
         self._logger.debug(query_str)
 
-        print()
-        print()
-        clause_automaton = Automaton([{self._get_create_node(init_state_clause)}], [], set(self._my_nodes.values()))
-        print('clause automaton: \n' + to_dot(clause_automaton))
-        print()
-        print('(raw format) clause automaton: \n' + str(clause_automaton))
-        print()
-        print()
-        for k,v in self._my_nodes.items():
-            print('{0}:   {1}'.format(k,v.name))
-        print()
-        print()
+#        print()
+#        print()
+#        clause_automaton = Automaton([{self._get_create_node(init_state_clause)}], [], set(self._my_nodes.values()))
+#        print('clause automaton: \n' + to_dot(clause_automaton))
+#        print()
+#        print('(raw format) clause automaton: \n' + str(clause_automaton))
+#        print()
+#        print()
+#        for k,v in self._my_nodes.items():
+#            print('{0}:   {1}'.format(k,v.name))
+#        print()
+#        print()
 
         return query_str
 
@@ -477,13 +498,16 @@ class Encoder:
                          spec_state_clause, sys_state,
                          term_clauses):
 
-        next_counter = self._counter(self._get_smt_name(next_spec_state_clause), next_sys_state)
-        crt_counter = self._counter(self._get_smt_name(spec_state_clause), sys_state)
+        print('DEBUG ONLY')
+        return self._true()
 
-        greater_func = [self._ge, self._gt][self._is_rejecting_clause(next_spec_state_clause, term_clauses)]
-        counters_relation = greater_func(next_counter, crt_counter)
-
-        return counters_relation
+#        next_counter = self._counter(self._get_smt_name(next_spec_state_clause), next_sys_state)
+#        crt_counter = self._counter(self._get_smt_name(spec_state_clause), sys_state)
+#
+#        greater_func = [self._ge, self._gt][self._is_rejecting_clause(next_spec_state_clause, term_clauses)]
+#        counters_relation = greater_func(next_counter, crt_counter)
+#
+#        return counters_relation
 
 
     def _beautify(self, s):
@@ -516,27 +540,28 @@ class Encoder:
         return s
 
 
+    def _get_smt_name_spec_state(self, spec_state):
+        return 'q_' + spec_state.name
+
+
     def _get_next_spec_state_clause(self,
                                     signal_values,
                                     spec_state_clause,
                                     term_clauses):
+        """ Return true/false/next_spec_state_clause, and set of rejecting states which end up in self-loop
+            (and therefore their counters should be '>'
+        """
+
         # each state is replaced by true/false/next_spec_state_by_automaton
         # then the formula is evaluated:
         # return true/false/next_spec_state_clause
 
         states = _get_spec_states_of_clause(spec_state_clause, term_clauses)
 
-        if '17' in str(spec_state_clause):
-            print('_get_next_spec_state_clause: {0} contains {2} (under {1})'.format(spec_state_clause, signal_values, states))
-            for s in states:
-                print(':: {0}'.format(str(s)))
-
         subst_map = {}
         for state in states:
             list_of_next_state_sets = get_next_states(state, signal_values)
             next_state_clause = _build_clause(term_clauses, list_of_next_state_sets)
-            if '17' in state.name:
-                print('.. next states of 17 is {0} and the clause is {1}'.format(list_of_next_state_sets, next_state_clause))
             subst_map[term_clauses[state]] = next_state_clause
 
         next_clause = spec_state_clause.subs(subst_map)
@@ -545,6 +570,9 @@ class Encoder:
 
         if len(next_normalized_or_clauses) > 1:
             return OR(*next_normalized_or_clauses)
+
+        #TODO: current
+#        rejecting_states_to_increase = set(map(lambda old, new: old==new and  , subst_map.items()))
 
         return next_normalized_or_clauses[0]
 
