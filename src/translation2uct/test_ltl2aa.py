@@ -1,4 +1,3 @@
-from itertools import chain
 import logging
 import unittest
 from interfaces.automata import Label, LIVE_END
@@ -43,10 +42,7 @@ class Test(unittest.TestCase):
         assert len(init_nodes) == 1
         assert len(rejecting_nodes) == 1
 
-        nof_rejecting = 0
-        for n in nodes:
-            for label, list_of_sets in n.transitions.items():
-                for dst, is_rejecting in list_of_sets:
+        nof_rejecting = 0als:
                     nof_rejecting += is_rejecting
                     if is_rejecting:
                         assert '2' in n.name and '2' in list(dst)[0].name

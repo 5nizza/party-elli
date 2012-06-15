@@ -133,7 +133,8 @@ def parse_ltl3ba_aa(text, logger):
 
             dst_set = {_get_create(n, name_to_node) for n in dst_names}
             for l in labels:
-                src.add_transition(l, dst_set, _is_rejecting(src, dst_set, rejecting_nodes))
+                src.add_transition(l, set(map(lambda n: (n, _is_rejecting(src, dst_set, rejecting_nodes)),
+                                              dst_set)))
 
     return init_sets_list, rejecting_nodes, name_to_node.values()
 

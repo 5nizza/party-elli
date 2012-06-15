@@ -54,15 +54,17 @@ class Node:
         """ Return map { label->[nodes_set, .., nodes_set] ... label->[nodes_set, .., nodes_set] } """
         return self._transitions
 
-    def add_transition(self, label, dst_set, is_rejecting):
+    def add_transition(self, label, flagged_nodes):
         """ Add transition:
-            dst_set - set of destination nodes, singleton set if non-universal transition.
+            flagged_nodes - set of destination nodes, singleton set if non-universal transition.
             Several calls with the same label are allowed - this means that transition is non-deterministic.
         """
         label = Label(label)
         label_transitions = self._transitions[label] = self._transitions.get(label, [])
-        if (dst_set, is_rejecting) not in label_transitions:
-            label_transitions.append((dst_set, is_rejecting))
+        if flagged_nodes in label_transitions:
+            assert False
+
+        label_transitions.append(set(flagged_nodes))
 
 
     def __str__(self):
@@ -130,12 +132,14 @@ def get_relevant_edges(var_values, spec_state):
     return relevant_edges
 
 def get_next_states(state, signal_values):
-    """ Return list of state_sets """
+    """ Return list of state sets """
 
     total_list_of_state_sets = []
     for label, list_of_state_sets in state.transitions.items():
         if satisfied(label, signal_values):
-            total_list_of_state_sets.extend(list_of_state_sets)
+            for flagged_states_set in list_of_state_sets:
+                states_set = set(map(lambda flagged: flagged[0], flagged_states_set))
+                total_list_of_state_sets.append(states_set)
 
     return total_list_of_state_sets
 
@@ -171,19 +175,19 @@ def to_dot(automaton):
         colors = 'black purple green yellow blue orange red brown pink'.split() + ['gray']*10
 
         for label, list_of_sets in n.transitions.items():
-            for states in list_of_sets:
+            for flagged_states in list_of_sets:
                 color = colors.pop(0)
 
                 edge_is_labelled = False
 
-                for dst in states:
+                for dst, is_rejecting in flagged_states:
                     edge_label_add = ''
                     if not edge_is_labelled:
                         edge_label_add = ', label="{0}"'.format(label_to_short_string(label))
                         edge_is_labelled = True
 
-                    trans_dot.append('"{0}" -> "{1}" [color={2} {3}];'.format(
-                        n.name, dst.name, color, edge_label_add))
+                    trans_dot.append('"{0}" -> "{1}" [color={2}{3}, arrowhead="{4}"];'.format(
+                        n.name, dst.name, color, edge_label_add, ['normal', 'normalnormal'][is_rejecting]))
 
                 trans_dot.append('\n')
 

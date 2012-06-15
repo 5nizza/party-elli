@@ -16,7 +16,7 @@ class Logic:
 
 class UFBV(Logic):
     def counters_type(self, max_counter_value):
-        width = int(ceil(log(max(max_counter_value, 2), 2)))
+        width = int(ceil(log(max(max_counter_value, 1), 2)))
         return '(_ BitVec {0})'.format(width)
 
     @property
