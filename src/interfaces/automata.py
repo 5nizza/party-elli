@@ -1,4 +1,5 @@
 from itertools import chain
+import itertools
 from helpers.hashable import HashableDict
 
 
@@ -18,7 +19,7 @@ class Automaton:
         return self._init_sets_list
 
     @property
-    def rejecting_nodes(self):
+    def rejecting_nodes(self): #seems to become deprecated
         return self._rejecting_nodes
 
 
@@ -40,10 +41,9 @@ class Label(HashableDict):
 
 class Node:
     def __init__(self, name):
-        self._transitions = {} # label->[nodes, nodes, nodes]
+        self._transitions = {} # label->[(set, is_rejecting), (set, is_rejecting), ..]
         self._name = name
         assert name != "0"
-        assert ',' not in name, name
 
     @property
     def name(self):
@@ -54,22 +54,22 @@ class Node:
         """ Return map { label->[nodes_set, .., nodes_set] ... label->[nodes_set, .., nodes_set] } """
         return self._transitions
 
-    def add_transition(self, label, dst_set):
+    def add_transition(self, label, dst_set, is_rejecting):
         """ Add transition:
             dst_set - set of destination nodes, singleton set if non-universal transition.
             Several calls with the same label are allowed - this means that transition is non-deterministic.
         """
         label = Label(label)
         label_transitions = self._transitions[label] = self._transitions.get(label, [])
-        if dst_set not in label_transitions:
-            label_transitions.append(dst_set)
+        if (dst_set, is_rejecting) not in label_transitions:
+            label_transitions.append((dst_set, is_rejecting))
 
 
     def __str__(self):
         labels_strings = []
         for l, dst_list in self.transitions.items():
             dst_strings = []
-            for dst_set in dst_list:
+            for dst_set, is_rejecting in dst_list:
                 dst_strings.append('({0})'.format(str(', '.join([d.name for d in dst_set]))))
 
             labels_strings.append('[{0}: {1}]'.format(str(l), ', '.join(dst_strings)))
@@ -81,7 +81,12 @@ class Node:
         return "'{0}'".format(self.name)
 
 
+#------------------------------CONSTANTS---------------------------------
+DEAD_END = Node('dead')
+LIVE_END = Node('live')
+
 #------------------------------helper functions--------------------------
+#TODO: extract to a different file
 def satisfied(label, signal_values):
     """ Do signal values satisfy the label? """
 
@@ -92,6 +97,37 @@ def satisfied(label, signal_values):
             return False
     return True
 
+
+def enumerate_values(variables):
+    """ Return list of maps: [ {var:val, var:val}, ..., {var:val, var:val} ]
+        where vars are from variables
+    """
+
+    values_tuples = list(itertools.product([False, True], repeat=len(variables)))
+
+    result = []
+    for values_tuple in values_tuples:
+        values = {}
+        for i, (var, value) in enumerate(zip(variables, values_tuple)):
+            values[var] = value
+        result.append(values)
+    return result
+
+
+def is_forbidden_label_values(var_values, labels):
+    return sum(map(lambda l: satisfied(l, var_values), labels)) == 0
+
+def get_relevant_edges(var_values, spec_state):
+    """ Return dst_sets_list """
+    relevant_edges = []
+
+    for label, dst_set_list in spec_state.transitions.items():
+        if not satisfied(label, var_values):
+            continue #consider only edges with labels that are satisfied by current signal values
+
+        relevant_edges.extend(dst_set_list)
+
+    return relevant_edges
 
 def get_next_states(state, signal_values):
     """ Return list of state_sets """

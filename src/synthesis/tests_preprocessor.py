@@ -1,7 +1,7 @@
 from itertools import chain
 import unittest
 from interfaces.automata import Node, Label, Automaton
-from synthesis.preprocessor import extend_rejecting_states, _extend_node_inplace
+from synthesis.states_extender import extend_self_looped_rejecting_states, _extend_node_inplace
 
 class Test(unittest.TestCase):
     def test_extend_node__rej_with_link(self):
@@ -43,7 +43,7 @@ class Test(unittest.TestCase):
         rej.add_transition(label, {rej})
 
         automaton = Automaton([{init}], {rej}, {rej, init})
-        extended_automaton = extend_rejecting_states(automaton, 1)
+        extended_automaton = extend_self_looped_rejecting_states(automaton, 1)
 
         assert len(extended_automaton.nodes) == 3, str(extended_automaton.nodes)
         assert len(extended_automaton.rejecting_nodes) == 0
@@ -60,7 +60,7 @@ class Test(unittest.TestCase):
         rej.add_transition(label, {rej})
 
         automaton = Automaton([{node}], {rej}, [node, rej])
-        extended_automaton = extend_rejecting_states(automaton, 2)
+        extended_automaton = extend_self_looped_rejecting_states(automaton, 2)
 
         assert len(extended_automaton.nodes) == 4, str(extended_automaton.nodes)
         assert len(extended_automaton.rejecting_nodes) == 0
@@ -76,7 +76,7 @@ class Test(unittest.TestCase):
         rej.add_transition(label, {rej})
 
         automaton = Automaton([{init}], {rej}, {rej, init})
-        extended_automaton = extend_rejecting_states(automaton, 5)
+        extended_automaton = extend_self_looped_rejecting_states(automaton, 5)
 
         assert len(extended_automaton.nodes) == len(automaton.nodes) + 5
 

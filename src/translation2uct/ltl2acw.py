@@ -1,4 +1,4 @@
-from interfaces.automata import Node
+from interfaces.automata import Node, LIVE_END
 from translation2uct.ltl2ba import parse_label_tok
 import itertools
 
@@ -32,8 +32,11 @@ def _get_blocks(aa_text):
 
 
 def _get_create(name, name_to_node):
-    node = name_to_node[name] = name_to_node.get(name, Node(name))
-    return node
+    if name not in name_to_node:
+        name_to_node[name] = Node(name) if name != '' else LIVE_END
+
+    return name_to_node[name]
+
 
 #init :
 #    {1}
@@ -97,6 +100,13 @@ def _split_trans(trans):
     return labels, dst_names
 
 
+def _is_rejecting(src, dst_set, rejecting_states):
+    if src in dst_set and src in rejecting_states:
+        return True
+
+    return False
+
+
 def parse_ltl3ba_aa(text, logger):
     """ Return (init_sets_list, set of rejecting nodes, set of all nodes) """
 
@@ -123,7 +133,7 @@ def parse_ltl3ba_aa(text, logger):
 
             dst_set = {_get_create(n, name_to_node) for n in dst_names}
             for l in labels:
-                src.add_transition(l, dst_set)
+                src.add_transition(l, dst_set, _is_rejecting(src, dst_set, rejecting_nodes))
 
     return init_sets_list, rejecting_nodes, name_to_node.values()
 

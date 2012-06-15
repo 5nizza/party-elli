@@ -2,7 +2,7 @@ import itertools
 import logging
 from helpers.boolean import AND, OR, Symbol, normalize, FALSE, TRUE
 from helpers.ordered_set import OrderedSet
-from interfaces.automata import get_next_states, satisfied, Node, Automaton, to_dot
+from interfaces.automata import get_next_states, satisfied, Node, Automaton, to_dot, enumerate_values, is_forbidden_label_values, get_relevant_edges
 from itertools import chain
 
 
@@ -46,7 +46,8 @@ class Encoder:
 
     def __init__(self, automaton, inputs, outputs, logic):
         self._automaton = automaton
-        self._signals = Signals(inputs, outputs)
+        self._inputs = inputs
+        self._outputs = outputs
         self._logic = logic
         self._logger = logging.getLogger(__name__)
 
@@ -155,9 +156,9 @@ class Encoder:
 
     def _make_input_declarations(self):
         smt_str = ''
-        for input_var in self._signals._inputs:
+        for input_var in self._inputs:
             for value in [False, True]:
-                smt_str += self._declare_bool_const(self._signals.get_valued_var_name(input_var, value), value)
+                smt_str += self._declare_bool_const(self.get_valued_var_name(input_var, value), value)
 
         smt_str += '\n'
         return smt_str
@@ -165,9 +166,9 @@ class Encoder:
 
     def _make_func_declarations(self, nof_impl_states):
         smt_str = self._comment("Declarations of transition relation, output function and annotation")
-        smt_str += self._declare_fun("tau", ["T"] + ['Bool'] * len(self._signals._inputs), "T")
+        smt_str += self._declare_fun("tau", ["T"] + ['Bool'] * len(self._inputs), "T")
 
-        for output in self._signals.outputs:
+        for output in self._outputs:
             smt_str += self._declare_fun("fo_" + output, ["T"], "Bool")
 
         smt_str += self._declare_fun("lambda_B", ["Q", "T"], "Bool")
@@ -183,7 +184,7 @@ class Encoder:
 
     def _condition_on_output(self, label, sys_state):
         and_args = []
-        for var in self._signals.outputs:
+        for var in self._outputs:
             if (var in label) and (label[var] is True):
                 and_args.append(self._func("fo_" + var, [sys_state])) #TODO: get rid off fo_
             elif (var in label) and (label[var] is False):
@@ -204,7 +205,7 @@ class Encoder:
 
     def _get_input_values(self, label):
         input_values = {}
-        for input_var in self._signals.inputs:
+        for input_var in self._inputs:
             if input_var in label:
                 input_values[input_var] = label[input_var]
 
@@ -270,8 +271,8 @@ class Encoder:
         # --(in,out)-->
         # next_spec_state (tau(input))
         assertions = []
-        for input in self._signals.enumerate_input_values():
-            for output in self._signals.enumerate_out_values():
+        for input in enumerate_values(self._inputs):
+            for output in enumerate_values(self._outputs):
                 signal_values = dict(chain(input.items(), output.items()))
 
                 assumption_on_crt_state = self._convert_state_clause_to_lambdaB_stmt(spec_state_clause,
@@ -291,7 +292,7 @@ class Encoder:
                 if next_spec_state_clause != TRUE and next_spec_state_clause != FALSE:
                     clauses_generated.add(next_spec_state_clause)
 
-                tau_args, free_in_vars = self._signals.make_tau_arg_list(signal_values)
+                tau_args, free_in_vars = self._make_tau_arg_list(signal_values)
                 assert len(free_in_vars) == 0
 
                 next_sys_state = self._tau(sys_state, tau_args)
@@ -321,20 +322,20 @@ class Encoder:
         labels = spec_state.transitions.keys()
 
         output_ors = []
-        for out_values in self._signals.enumerate_out_values():
-            if self._signals.is_forbidden_label_values(out_values, labels):
+        for out_values in enumerate_values(self._outputs):
+            if is_forbidden_label_values(out_values, labels):
                 continue #forbid outputs which are not in the spec graph by excluding them from top OR
 
             inputs_ands = []
-            for in_values in self._signals.enumerate_input_values():
+            for in_values in enumerate_values(self._inputs):
                 all_values = dict(list(in_values.items()) +
                                   list(out_values.items()))
 
-                if self._signals.is_forbidden_label_values(all_values, labels):
+                if is_forbidden_label_values(all_values, labels):
                     inputs_ands = [self._false()]
                     break #advisory will always make you loose here, so break
 
-                dst_set_list = self._signals.get_relevant_edges(all_values, spec_state)
+                dst_set_list = get_relevant_edges(all_values, spec_state)
 
                 non_determinism = []
                 for dst_set in dst_set_list:
@@ -345,7 +346,7 @@ class Encoder:
                             universality.append(self._true())
                             continue
 
-                        tau_args, free_in_vars = self._signals.make_tau_arg_list(in_values)
+                        tau_args, free_in_vars = self._make_tau_arg_list(in_values)
                         assert len(free_in_vars) == 0
 
                         sys_next_state = self._tau(sys_state, tau_args)
@@ -397,12 +398,12 @@ class Encoder:
     def _make_get_values(self, num_impl_states):
         smt_str = ''
         for s in range(0, num_impl_states):
-            for input_values in self._signals.enumerate_input_values():
-                smt_str += "(get-value ({0}))\n".format(self._func("tau", ['t_'+str(s)] + self._signals.make_tau_arg_list(input_values)[0]))
+            for input_values in enumerate_values(self._inputs):
+                smt_str += "(get-value ({0}))\n".format(self._func("tau", ['t_'+str(s)] + self._make_tau_arg_list(input_values)[0]))
         for s in range(0, num_impl_states):
             smt_str += "(get-value (t_{0}))\n".format(s)
 
-        for output in self._signals.outputs:
+        for output in self._outputs:
             for s in range(0, num_impl_states):
                 smt_str += "(get-value ((fo_{0} t_{1})))\n".format(output, s)
 
@@ -577,13 +578,7 @@ class Encoder:
         return next_normalized_or_clauses[0]
 
 
-class Signals:
-    def __init__(self, inputs, outputs):
-        self._inputs = OrderedSet(list(inputs))
-        self._outputs = outputs
-
-
-    def make_tau_arg_list(self, input_values): #TODO: use ?var_name instead of var_name in forall
+    def _make_tau_arg_list(self, input_values): #TODO: use ?var_name instead of var_name in forall
         """ Return tuple (list of tau args(in correct order), free vars):
             for variables without values use variable name (you should enumerate them afterwards).
         """
@@ -602,53 +597,6 @@ class Signals:
 
     def get_valued_var_name(self, var, value):
         return '{0}{1}'.format('i_' if value else 'i_not_', var)
-
-    @property
-    def inputs(self):
-        return self._inputs
-
-    @property
-    def outputs(self):
-        return self._outputs
-
-
-    def _enumerate_values(self, variables):
-        """ Return list of maps: [ {var:val, var:val}, ..., {var:val, var:val} ] """
-
-        values_tuples = list(itertools.product([False, True], repeat=len(variables)))
-
-        result = []
-        for values_tuple in values_tuples:
-            values = {}
-            for i, (var, value) in enumerate(zip(variables, values_tuple)):
-                values[var] = value
-            result.append(values)
-        return result
-
-
-    def enumerate_out_values(self):
-        return self._enumerate_values(self._outputs)
-
-
-    def enumerate_input_values(self):
-        return self._enumerate_values(self._inputs)
-
-
-    def is_forbidden_label_values(self, var_values, labels):
-        return sum(map(lambda l: satisfied(l, var_values), labels)) == 0
-
-
-    def get_relevant_edges(self, var_values, spec_state):
-        """ Return dst_sets_list """
-        relevant_edges = []
-
-        for label, dst_set_list in spec_state.transitions.items():
-            if not satisfied(label, var_values):
-                continue #consider only edges with labels that are satisfied by current signal values
-
-            relevant_edges.extend(dst_set_list)
-
-        return relevant_edges
 
 
 

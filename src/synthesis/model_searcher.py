@@ -1,7 +1,7 @@
 import logging
 from interfaces.automata import to_dot
 from interfaces.smt_model import SmtModel
-from synthesis.preprocessor import extend_rejecting_states
+from synthesis.states_extender import extend_self_looped_rejecting_states
 from synthesis.smt_encoder import Encoder
 from synthesis.z3 import Z3
 
@@ -25,7 +25,7 @@ def search(automaton, inputs, outputs, size, bound, z3solver, logic):
     for current_bound in model_sizes:
         logger.info('trying model size = %i', current_bound)
 
-        automaton_wo_rejecting_states = extend_rejecting_states(automaton, current_bound)
+        automaton_wo_rejecting_states = extend_self_looped_rejecting_states(automaton, current_bound)
         assert len(automaton_wo_rejecting_states.rejecting_nodes) == 0
 
 #        _logger.debug('original automaton nodes: ' + to_dot(automaton))

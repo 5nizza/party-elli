@@ -58,7 +58,7 @@ def _extend_node_inplace(rej, extension_length):
     return others
 
 
-def extend_rejecting_states(automaton, extension_length):
+def extend_self_looped_rejecting_states(automaton, extension_length):
     """ Extend all rejecting states with 'extension_length' number of states wo self-loops.
         The last state has the same transitions as original except self-loop.
         Works with self-looped automata only! """
