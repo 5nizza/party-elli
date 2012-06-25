@@ -17,10 +17,6 @@ def _build_clause(term_clauses, list_of_state_sets):
     if len(list_of_state_sets) is 0:
         return FALSE
 
-#    print('\n'.join([str(t) for t in terminals]))
-#    print()
-#    print()
-
     ors = []
     for state_set in list_of_state_sets:
         if len(state_set) > 1:
@@ -28,7 +24,6 @@ def _build_clause(term_clauses, list_of_state_sets):
             ors.append(AND(*and_args))
         else:
             state = list(state_set)[0]
-#            print(str(state))
             ors.append(term_clauses[state])
 
     if len(ors) > 1:
@@ -262,61 +257,6 @@ class Encoder:
         return node
 
 
-#    def _make_state_transition_assertions(self,
-#                                          sys_state,
-#                                          spec_state_clause,
-#                                          state_to_clause,
-#                                          clauses_generated):
-#        # of the form: spec_state(t) & output
-#        # --(in,out)-->
-#        # next_spec_state (tau(input))
-#        assertions = []
-#        for input in enumerate_values(self._inputs):
-#            for output in enumerate_values(self._outputs):
-#                signal_values = dict(chain(input.items(), output.items()))
-#
-#                assumption_on_crt_state = self._convert_state_clause_to_lambdaB_stmt(spec_state_clause,
-#                                                                                      sys_state,
-#                                                                                      state_to_clause)
-#                assumption_on_output = self._condition_on_output(signal_values, sys_state)
-#
-#                next_spec_state_clause = self._get_next_spec_state_clause(signal_values, spec_state_clause, state_to_clause)
-#                # next_spec_state_clause may be True/False/clause
-#
-#                #
-#                if next_spec_state_clause != FALSE:
-#                    crt_node = self._get_create_node(spec_state_clause)
-#                    crt_node.add_transition(signal_values, {self._get_create_node(next_spec_state_clause)})
-#                #
-#
-#                if next_spec_state_clause != TRUE and next_spec_state_clause != FALSE:
-#                    clauses_generated.add(next_spec_state_clause)
-#
-#                tau_args, free_in_vars = self._make_tau_arg_list(signal_values)
-#                assert len(free_in_vars) == 0
-#
-#                next_sys_state = self._tau(sys_state, tau_args)
-#
-#                guarantee_lambdaB = self._convert_state_clause_to_lambdaB_stmt(next_spec_state_clause,
-#                    next_sys_state,
-#                    state_to_clause)
-#
-#                guarantee_counter = self._true()
-#                if next_spec_state_clause != TRUE and next_spec_state_clause != FALSE:
-#                    guarantee_counter = self._counter_greater(next_spec_state_clause, next_sys_state,
-#                                                              spec_state_clause, sys_state,
-#                                                              state_to_clause)
-#
-#                guarantee = self._and([guarantee_lambdaB, guarantee_counter])
-#
-#                implication = self._implies(self._and([assumption_on_crt_state, assumption_on_output]),
-#                                            guarantee)
-#
-#                assertions.append(self._comment('{0} -> {1}'.format(spec_state_clause, next_spec_state_clause)))
-#                assertions.append(self._assert(implication))
-#
-#        return assertions
-
     def _make_trans_condition_on_output_vars(self, label, sys_state):
         and_args = []
         for var in self._outputs:
@@ -389,52 +329,6 @@ class Encoder:
                     assertions.append(smt_addition)
 
         return assertions
-
-
-    def _get_guarantees(self, spec_state, sys_state):
-        labels = spec_state.transitions.keys()
-
-        output_ors = []
-        for out_values in enumerate_values(self._outputs):
-            if is_forbidden_label_values(out_values, labels):
-                continue #forbid outputs which are not in the spec graph by excluding them from top OR
-
-            inputs_ands = []
-            for in_values in enumerate_values(self._inputs):
-                all_values = dict(list(in_values.items()) +
-                                  list(out_values.items()))
-
-                if is_forbidden_label_values(all_values, labels):
-                    inputs_ands = [self._false()]
-                    break #advisory will always make you loose here, so break
-
-                dst_set_list = get_relevant_edges(all_values, spec_state)
-
-                non_determinism = []
-                for dst_set in dst_set_list:
-
-                    universality = []
-                    for spec_next_state in dst_set:
-                        if self._is_end_node(spec_next_state):
-                            universality.append(self._true())
-                            continue
-
-                        tau_args, free_in_vars = self._make_tau_arg_list(in_values)
-                        assert len(free_in_vars) == 0
-
-                        sys_next_state = self._tau(sys_state, tau_args)
-                        new_transition = self._and([self._lambdaB(spec_next_state, sys_next_state),
-                                                    self._counter_greater(spec_next_state, sys_next_state,
-                                                                          spec_state, sys_state)])
-                        universality.append(new_transition)
-
-                    non_determinism.append(self._and(universality))
-
-                inputs_ands.append(self._or(non_determinism))
-
-            output_ors.append(self._and([self._condition_on_output(out_values, sys_state)] + inputs_ands))
-
-        return self._or(output_ors)
 
 
     def _make_set_logic(self):
@@ -520,21 +414,6 @@ class Encoder:
         self._logger.debug(smt_str)
 
         return smt_str
-
-#        print()
-#        print()
-#        clause_automaton = Automaton([{self._get_create_node(init_state_clause)}], [], set(self._my_nodes.values()))
-#        print('clause automaton: \n' + to_dot(clause_automaton))
-#        print()
-#        print('(raw format) clause automaton: \n' + str(clause_automaton))
-#        print()
-#        print()
-#        for k,v in self._my_nodes.items():
-#            print('{0}:   {1}'.format(k,v.name))
-#        print()
-#        print()
-
-        return query_str
 
 
     def _true(self):

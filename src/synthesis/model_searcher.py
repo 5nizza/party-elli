@@ -26,22 +26,19 @@ def search(automaton, inputs, outputs, size, bound, z3solver, logic):
     for current_bound in model_sizes:
         logger.info('trying model size = %i', current_bound)
 
-#        automaton_wo_rejecting_states = extend_self_looped_rejecting_states(automaton, current_bound)
-#        assert len(automaton_wo_rejecting_states.rejecting_nodes) == 0
+        logger.debug('original automaton nodes: ' + to_dot(automaton))
 
-        print('original automaton nodes: ' + to_dot(automaton))
         ucw_automaton = convert_acw_to_ucw(automaton, automaton.rejecting_nodes, inputs+outputs)
-        print('preprocessed ucw_automaton: ' + to_dot(ucw_automaton))
+        logger.info('converted alternating automaton to ucw: size increase from {0} to {1}'.format(
+            len(automaton.nodes), len(ucw_automaton.nodes)))
 
-#        _logger.debug('preprocessed automaton nodes: ' + to_dot(automaton_wo_rejecting_states))
-
-#        _logger.debug('(raw format) original automaton nodes: ' + str(automaton))
-#        _logger.debug('(raw format) preprocessed automaton nodes: ' + str(automaton_wo_rejecting_states))
+        logger.debug('preprocessed ucw_automaton: ' + to_dot(ucw_automaton))
 
         encoder = Encoder(ucw_automaton, inputs, outputs, logic)
         smt_str = encoder.encode(current_bound)
 
         z3solver.solve(smt_str)
+        logger.info('z3 solving finished')
 
         if z3solver.get_state() == Z3.UNSAT:
             logger.info('unsat..')

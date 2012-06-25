@@ -71,8 +71,8 @@ class Node:
         labels_strings = []
         for l, dst_list in self.transitions.items():
             dst_strings = []
-            for dst_set, is_rejecting in dst_list:
-                dst_strings.append('({0})'.format(str(', '.join([d.name for d in dst_set]))))
+            for flagged_dst_set in dst_list:
+                dst_strings.append('({0})'.format(str(', '.join([n.name for n, is_rejecting in flagged_dst_set]))))
 
             labels_strings.append('[{0}: {1}]'.format(str(l), ', '.join(dst_strings)))
 
@@ -172,7 +172,7 @@ def to_dot(automaton):
 
     trans_dot = []
     for n in automaton.nodes:
-        colors = 'black purple green yellow blue orange red brown pink'.split() + ['gray']*10
+        colors = 'black purple green yellow blue orange red brown pink'.split() + ['gray']*100
 
         for label, list_of_sets in n.transitions.items():
             for flagged_states in list_of_sets:
@@ -181,6 +181,7 @@ def to_dot(automaton):
                 edge_is_labelled = False
 
                 for dst, is_rejecting in flagged_states:
+
                     edge_label_add = ''
                     if not edge_is_labelled:
                         edge_label_add = ', label="{0}"'.format(label_to_short_string(label))

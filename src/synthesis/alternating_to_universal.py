@@ -1,3 +1,4 @@
+from itertools import chain
 from helpers import boolean
 from helpers.boolean import AND, normalize, FALSE, TRUE
 from interfaces.automata import Automaton, get_next_states, Node, enumerate_values, DEAD_END, LIVE_END
@@ -85,7 +86,12 @@ def _create_nodes_if_necessary(clauses, clause_to_node):
     return list(map(lambda c: _get_create(c, clause_to_node), clauses))
 
 
-def _is_rejecting_transition(src_node, dst_node, clause_to_node, term_clauses, rejecting_states):
+def _is_self_loop(src_state, label):
+    next_states_set_list = get_next_states(src_state, label)
+    return src_state in set(chain(*next_states_set_list))
+
+
+def _is_rejecting_transition(src_node, label, dst_node, clause_to_node, term_clauses, rejecting_states):
     # mark all non-self loops as rejecting transitions (preserves language)
     # transition (A) -> (B) is rejecting iff all constituent transitions (A) -> (B) are rejecting
     # this is equivalent to considering only self-looped transitions and making the transition
@@ -94,9 +100,9 @@ def _is_rejecting_transition(src_node, dst_node, clause_to_node, term_clauses, r
     node_to_clause = dict(map(lambda k: (clause_to_node[k], k), clause_to_node))
 
     src_states = _get_spec_states_of_clause(node_to_clause[src_node], term_clauses)
-    dst_states = _get_spec_states_of_clause(node_to_clause[dst_node], term_clauses)
 
-    self_looped_states = set(src_states).intersection(dst_states)
+    self_looped_states = list(filter(lambda n: _is_self_loop(n, label), src_states))
+
     if len(self_looped_states) == 0:
         return False
 
@@ -130,6 +136,7 @@ def _process_spec_clause(crt_clause,
         assert len(next_nodes) > 0
 
         flagged_next_nodes = set(map(lambda n: (n, _is_rejecting_transition(crt_node,
+                                                                            signal_values,
                                                                             n,
                                                                             clause_to_node,
                                                                             term_clauses,
@@ -166,6 +173,5 @@ def convert_acw_to_ucw(acw, rejecting_nodes, variables):
 
     init_list_of_sets = [{clause_to_node[init_state_clause]}]
     states = set(map(lambda c: clause_to_node[c], explored_clauses))
-    print(clause_to_node)
 
     return Automaton(init_list_of_sets, set(), states)
