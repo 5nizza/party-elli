@@ -2,7 +2,7 @@ import itertools
 import logging
 from helpers.boolean import AND, OR, Symbol, normalize, FALSE, TRUE
 from helpers.ordered_set import OrderedSet
-from interfaces.automata import get_next_states, satisfied, Node, Automaton, to_dot, enumerate_values, is_forbidden_label_values, get_relevant_edges
+from interfaces.automata import get_next_states, satisfied, Node, Automaton, to_dot, enumerate_values, is_forbidden_label_values, get_relevant_edges, DEAD_END
 from itertools import chain
 
 
@@ -52,8 +52,8 @@ class Encoder:
         self._logger = logging.getLogger(__name__)
 
 
-    def _lambdaB(self, spec_state_name, sys_state_expression):
-        return self._func("lambda_B", [spec_state_name, sys_state_expression])
+    def _lambdaB(self, spec_state, sys_state_expression):
+        return self._func("lambda_B", [self._get_smt_name_spec_state(spec_state), sys_state_expression])
 
     def _counter(self, spec_state_name, sys_state_expression):
         return self._func("lambda_sharp", [spec_state_name, sys_state_expression])
@@ -262,58 +262,131 @@ class Encoder:
         return node
 
 
-    def _make_state_transition_assertions(self,
-                                          sys_state,
-                                          spec_state_clause,
-                                          state_to_clause,
-                                          clauses_generated):
-        # of the form: spec_state(t) & output
-        # --(in,out)-->
-        # next_spec_state (tau(input))
+#    def _make_state_transition_assertions(self,
+#                                          sys_state,
+#                                          spec_state_clause,
+#                                          state_to_clause,
+#                                          clauses_generated):
+#        # of the form: spec_state(t) & output
+#        # --(in,out)-->
+#        # next_spec_state (tau(input))
+#        assertions = []
+#        for input in enumerate_values(self._inputs):
+#            for output in enumerate_values(self._outputs):
+#                signal_values = dict(chain(input.items(), output.items()))
+#
+#                assumption_on_crt_state = self._convert_state_clause_to_lambdaB_stmt(spec_state_clause,
+#                                                                                      sys_state,
+#                                                                                      state_to_clause)
+#                assumption_on_output = self._condition_on_output(signal_values, sys_state)
+#
+#                next_spec_state_clause = self._get_next_spec_state_clause(signal_values, spec_state_clause, state_to_clause)
+#                # next_spec_state_clause may be True/False/clause
+#
+#                #
+#                if next_spec_state_clause != FALSE:
+#                    crt_node = self._get_create_node(spec_state_clause)
+#                    crt_node.add_transition(signal_values, {self._get_create_node(next_spec_state_clause)})
+#                #
+#
+#                if next_spec_state_clause != TRUE and next_spec_state_clause != FALSE:
+#                    clauses_generated.add(next_spec_state_clause)
+#
+#                tau_args, free_in_vars = self._make_tau_arg_list(signal_values)
+#                assert len(free_in_vars) == 0
+#
+#                next_sys_state = self._tau(sys_state, tau_args)
+#
+#                guarantee_lambdaB = self._convert_state_clause_to_lambdaB_stmt(next_spec_state_clause,
+#                    next_sys_state,
+#                    state_to_clause)
+#
+#                guarantee_counter = self._true()
+#                if next_spec_state_clause != TRUE and next_spec_state_clause != FALSE:
+#                    guarantee_counter = self._counter_greater(next_spec_state_clause, next_sys_state,
+#                                                              spec_state_clause, sys_state,
+#                                                              state_to_clause)
+#
+#                guarantee = self._and([guarantee_lambdaB, guarantee_counter])
+#
+#                implication = self._implies(self._and([assumption_on_crt_state, assumption_on_output]),
+#                                            guarantee)
+#
+#                assertions.append(self._comment('{0} -> {1}'.format(spec_state_clause, next_spec_state_clause)))
+#                assertions.append(self._assert(implication))
+#
+#        return assertions
+
+    def _make_trans_condition_on_output_vars(self, label, sys_state):
+        and_args = []
+        for var in self._outputs:
+            if (var in label) and (label[var] is True):
+                and_args.append(self._func("fo_" + var, [sys_state]))
+            elif (var in label) and (label[var] is False):
+                and_args.append(self._not(self._func("fo_" + var, [sys_state])))
+            elif var not in label:
+                pass
+            else:
+                assert False, "Error: Variable in label has wrong value: " + label[var]
+
+        smt_str = ' '
+        if len(and_args) > 1:
+            smt_str = self._and(and_args)
+        elif len(and_args) == 1:
+            smt_str = and_args[0]
+
+        return smt_str
+
+
+    def _make_state_transition_assertions(self, sys_states):
         assertions = []
-        for input in enumerate_values(self._inputs):
-            for output in enumerate_values(self._outputs):
-                signal_values = dict(chain(input.items(), output.items()))
 
-                assumption_on_crt_state = self._convert_state_clause_to_lambdaB_stmt(spec_state_clause,
-                                                                                      sys_state,
-                                                                                      state_to_clause)
-                assumption_on_output = self._condition_on_output(signal_values, sys_state)
+        for spec_state in self._automaton.nodes:
+            for label, dst_set_list in spec_state.transitions.items():
+                if not len(list(itertools.chain(*dst_set_list))): #TODO: why?
+                    continue
 
-                next_spec_state_clause = self._get_next_spec_state_clause(signal_values, spec_state_clause, state_to_clause)
-                # next_spec_state_clause may be True/False/clause
+                for sys_state in sys_states:
+                    implication_left_1 = self._lambdaB(spec_state, sys_state)
+                    implication_left_2 = self._make_trans_condition_on_output_vars(label, sys_state)
 
-                #
-                if next_spec_state_clause != FALSE:
-                    crt_node = self._get_create_node(spec_state_clause)
-                    crt_node.add_transition(signal_values, {self._get_create_node(next_spec_state_clause)})
-                #
+                    if len(implication_left_2) > 0:
+                        implication_left = self._and([implication_left_1, implication_left_2])
+                    else:
+                        implication_left = implication_left_1
 
-                if next_spec_state_clause != TRUE and next_spec_state_clause != FALSE:
-                    clauses_generated.add(next_spec_state_clause)
+                    input_values = {}
+                    for input_var in self._inputs:
+                        if input_var in label:
+                            input_values[input_var] = label[input_var]
 
-                tau_args, free_in_vars = self._make_tau_arg_list(signal_values)
-                assert len(free_in_vars) == 0
+                    tau_args, free_input_vars = self._make_tau_arg_list(input_values)
+                    sys_next_state = self._tau(sys_state, tau_args)
 
-                next_sys_state = self._tau(sys_state, tau_args)
+                    or_args = []
+                    for dst_set in dst_set_list:
+                        and_args = []
+                        for spec_next_state, is_rejecting in dst_set:
+                            if spec_next_state is DEAD_END:
+                                implication_right = self._false()
+                            else:
+                                implication_right_1 = self._lambdaB(spec_next_state, sys_next_state)
 
-                guarantee_lambdaB = self._convert_state_clause_to_lambdaB_stmt(next_spec_state_clause,
-                    next_sys_state,
-                    state_to_clause)
+                                crt_sharp = self._func("lambda_sharp", ["q_" + spec_state.name, sys_state])
+                                next_sharp = self._func("lambda_sharp", ["q_" + spec_next_state.name, sys_next_state])
+                                greater = [self._ge, self._gt][is_rejecting]
+                                implication_right_2 = greater(next_sharp, crt_sharp)
 
-                guarantee_counter = self._true()
-                if next_spec_state_clause != TRUE and next_spec_state_clause != FALSE:
-                    guarantee_counter = self._counter_greater(next_spec_state_clause, next_sys_state,
-                                                              spec_state_clause, sys_state,
-                                                              state_to_clause)
+                                implication_right = self._and([implication_right_1, implication_right_2])
 
-                guarantee = self._and([guarantee_lambdaB, guarantee_counter])
+                            and_args.append(implication_right)
 
-                implication = self._implies(self._and([assumption_on_crt_state, assumption_on_output]),
-                                            guarantee)
+                        or_args.append(self._and(and_args))
 
-                assertions.append(self._comment('{0} -> {1}'.format(spec_state_clause, next_spec_state_clause)))
-                assertions.append(self._assert(implication))
+                    smt_addition = self._assert(self._implies(implication_left,
+                                                              self._forall(free_input_vars, self._or(or_args))))
+
+                    assertions.append(smt_addition)
 
         return assertions
 
@@ -364,29 +437,6 @@ class Encoder:
         return self._or(output_ors)
 
 
-    def _make_transition_assertions(self, terms, sys_states):
-        assertions = []
-
-        for sys_state in sys_states:
-            explored_clauses = set()
-            unexplored_clauses = {_build_clause(terms, self._automaton.initial_sets_list)}
-
-            while unexplored_clauses:
-                crt_clause = unexplored_clauses.pop()
-
-                clauses_generated = set()
-                assertions.extend(self._make_state_transition_assertions(sys_state,
-                    crt_clause,
-                    terms,
-                    clauses_generated))
-
-                explored_clauses.add(crt_clause)
-
-                unexplored_clauses.update(clauses_generated.difference(explored_clauses))
-
-        return '\n'.join(assertions), explored_clauses
-
-
     def _make_set_logic(self):
         return ';(set-logic {0})\n'.format(self._logic.smt_name)
 
@@ -416,7 +466,7 @@ class Encoder:
         return ''.join(smt)
 
 
-    def _build_terminals(self):
+    def _build_terminal_clauses(self):
         term_clauses = dict([(s, Symbol(s.name)) for s in self._automaton.nodes if s.name != ''])
         true_states = list(filter(lambda x: x.name == '', self._automaton.nodes))
 
@@ -427,36 +477,49 @@ class Encoder:
 
 
     def encode(self, num_impl_states):
-        terminals = self._build_terminals()
+        smt_str = self._make_headers()
+        smt_str += "\n"
+        smt_str += self._make_set_logic()
+        smt_str += "\n"
 
-        init_state_clause = _build_clause(terminals, self._automaton.initial_sets_list)
-        init_state_assertions_str = self._make_initial_states_condition(self._get_smt_name(init_state_clause))
+        smt_str += self._make_state_declarations(map(self._get_smt_name_spec_state, self._automaton.nodes),
+                                                "Q")
 
-        sys_states = list(map(lambda x: 't_' + str(x), range(0, num_impl_states)))
-        transition_assertions_str, spec_state_clauses = self._make_transition_assertions(terminals, sys_states)
+        smt_str += "\n"
 
-        spec_state_clauses_names = [self._get_smt_name(c) for c in spec_state_clauses]
-        spec_states_declarations_str = self._make_state_declarations(
-            set(spec_state_clauses_names).union(set(self._map_spec_states_to_smt_names(terminals.keys()))),
-                "Q")
+        smt_str += self._make_state_declarations(map(self._get_smt_name_sys_state, range(num_impl_states)),
+                                                 "T")
 
-        query_blocks = [
-            self._make_headers(),
-            self._make_set_logic(),
-            spec_states_declarations_str,
-            self._make_state_declarations(sys_states, "T"),
-            self._make_input_declarations(),
-            self._make_func_declarations(num_impl_states),
-            init_state_assertions_str,
-            transition_assertions_str,
-            self.CHECK_SAT,
-            self._make_get_values(num_impl_states),
-            self.EXIT_CALL
-            ]
+        smt_str += "\n"
 
-        query_str = '\n\n'.join(query_blocks)
+        smt_str += self._make_input_declarations()
+        smt_str += "\n"
 
-        self._logger.debug(query_str)
+        smt_str += self._make_func_declarations(3) #TODO: change length
+        smt_str += "\n"
+
+        assert len(self._automaton.initial_sets_list) == 1, 'universal init state is not supported'
+        assert len(self._automaton.initial_sets_list[0]) == 1
+
+        init_spec_state = list(self._automaton.initial_sets_list[0])[0]
+        smt_str += self._make_initial_states_condition(self._get_smt_name_spec_state(init_spec_state))
+
+        smt_str += "\n"
+
+        sys_states = ['t_'+str(i) for i in range(num_impl_states)]
+        smt_str += '\n'.join(self._make_state_transition_assertions(sys_states))
+
+        smt_str += "\n"
+        smt_str += self.CHECK_SAT
+        smt_str += "\n"
+        smt_str += self._make_get_values(num_impl_states)
+        smt_str += "\n"
+        smt_str += self.EXIT_CALL
+        smt_str += "\n"
+
+        self._logger.debug(smt_str)
+
+        return smt_str
 
 #        print()
 #        print()
@@ -499,7 +562,6 @@ class Encoder:
                          spec_state_clause, sys_state,
                          term_clauses):
 
-        print('DEBUG ONLY')
         return self._true()
 
 #        next_counter = self._counter(self._get_smt_name(next_spec_state_clause), next_sys_state)
@@ -543,6 +605,10 @@ class Encoder:
 
     def _get_smt_name_spec_state(self, spec_state):
         return 'q_' + spec_state.name
+
+
+    def _get_smt_name_sys_state(self, sys_state):
+        return 't_' + str(sys_state)
 
 
     def _get_next_spec_state_clause(self,
