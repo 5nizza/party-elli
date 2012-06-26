@@ -15,30 +15,18 @@ def _get_logger():
     return _logger
 
 
-def search(automaton, inputs, outputs, size, bound, z3solver, logic):
+def search(ucw_automaton, inputs, outputs, size, bound, z3solver, logic):
     assert bound > 0
 
     logger = _get_logger()
 
-    logger.info("searching the model of size {0}".format(('<=' + str(bound)) if size is None else size))
-
     model_sizes = range(1, bound + 1) if size is None else range(size, size + 1)
     for current_bound in model_sizes:
-        logger.info('trying model size = %i', current_bound)
-
-        logger.debug('original automaton nodes: ' + to_dot(automaton))
-
-        ucw_automaton = convert_acw_to_ucw(automaton, automaton.rejecting_nodes, inputs+outputs)
-        logger.info('converted alternating automaton to ucw: size increase from {0} to {1}'.format(
-            len(automaton.nodes), len(ucw_automaton.nodes)))
-
-        logger.debug('preprocessed ucw_automaton: ' + to_dot(ucw_automaton))
+        logger.info('searching model of size {0}..'.format(current_bound))
 
         encoder = Encoder(ucw_automaton, inputs, outputs, logic)
         smt_str = encoder.encode(current_bound)
-
         z3solver.solve(smt_str)
-        logger.info('z3 solving finished')
 
         if z3solver.get_state() == Z3.UNSAT:
             logger.info('unsat..')

@@ -1,4 +1,5 @@
 import logging
+from helpers.logging import log_entrance
 from helpers.python_ext import is_empty_str
 from helpers.shell import execute_shell
 from interfaces.transition import StateTransition
@@ -68,8 +69,10 @@ class Z3:
 
         return [tau, lo]
 
-    def solve(self, smtstr):
-        rc, output, err = execute_shell(self._cmd, smtstr)
+
+    @log_entrance(logging.getLogger(), logging.INFO)
+    def solve(self, smt_query):
+        rc, output, err = execute_shell(self._cmd, smt_query)
         output = self._remove_model_is_not_available(output)
         err = self._remove_model_is_not_available(err)
         if rc != 0 or err:

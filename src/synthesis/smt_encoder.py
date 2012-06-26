@@ -1,6 +1,7 @@
 import itertools
 import logging
 from helpers.boolean import AND, OR, Symbol, normalize, FALSE, TRUE
+from helpers.logging import log_entrance
 from helpers.ordered_set import OrderedSet
 from interfaces.automata import get_next_states, satisfied, Node, Automaton, to_dot, enumerate_values, is_forbidden_label_values, get_relevant_edges, DEAD_END
 from itertools import chain
@@ -370,6 +371,7 @@ class Encoder:
         return term_clauses
 
 
+    @log_entrance(logging.getLogger(), logging.INFO)
     def encode(self, num_impl_states):
         smt_str = self._make_headers()
         smt_str += "\n"

@@ -1,6 +1,8 @@
 import itertools
+import logging
+from helpers.logging import log_entrance
 from helpers.python_ext import get_add
-from interfaces.automata import Node, Label
+from interfaces.automata import Node, Label, Automaton
 
 def _get_cases(toks):
     start = None
@@ -75,28 +77,28 @@ def _get_create_new_nodes(new_name_to_node, old_dst_nodes):
     return new_nodes
 
 
-def _conform2acw(initial_nodes, rejecting_nodes, nodes, vars):
-    new_name_to_node = {}
-
-    for n in nodes:
-        new_node = get_add(new_name_to_node, n.name, Node(n.name))
-
-        lbl_to_nodes = {}
-        for pattern_lbl, old_dst_nodes in [(lbl, _flatten(d)) for lbl, d in n.transitions.items()]:
-            new_dst_nodes = _get_create_new_nodes(new_name_to_node, old_dst_nodes)
-
-            for lbl in _unwind_label(pattern_lbl, vars):
-                lbl_nodes = get_add(lbl_to_nodes, Label(lbl), set())
-                lbl_nodes.update(new_dst_nodes) #collect universal transitions
-
-        for lbl, dst_nodes in lbl_to_nodes.items():
-            new_node.add_transition(lbl, dst_nodes)
-
-    new_initial_nodes = map(lambda n: new_name_to_node[n.name], initial_nodes)
-    new_rejecting_nodes = map(lambda n: new_name_to_node[n.name], rejecting_nodes)
-
-    return new_initial_nodes, new_rejecting_nodes, new_name_to_node.values()
-
+#def _conform2acw(initial_nodes, rejecting_nodes, nodes, vars):
+#    new_name_to_node = {}
+#
+#    for n in nodes:
+#        new_node = get_add(new_name_to_node, n.name, Node(n.name))
+#
+#        lbl_to_nodes = {}
+#        for pattern_lbl, old_dst_nodes in [(lbl, _flatten(d)) for lbl, d in n.transitions.items()]:
+#            new_dst_nodes = _get_create_new_nodes(new_name_to_node, old_dst_nodes)
+#
+#            for lbl in _unwind_label(pattern_lbl, vars):
+#                lbl_nodes = get_add(lbl_to_nodes, Label(lbl), set())
+#                lbl_nodes.update(new_dst_nodes) #collect universal transitions
+#
+#        for lbl, dst_nodes in lbl_to_nodes.items():
+#            new_node.add_transition(lbl, dst_nodes)
+#
+#    new_initial_nodes = map(lambda n: new_name_to_node[n.name], initial_nodes)
+#    new_rejecting_nodes = map(lambda n: new_name_to_node[n.name], rejecting_nodes)
+#
+#    return new_initial_nodes, new_rejecting_nodes, new_name_to_node.values()
+#
 
 def _get_hacked_ucw(text): #TODO: bad smell - it is left for testing purposes only
     """ It is hacked since it doesn't conform to description of Node transitions:
@@ -150,12 +152,13 @@ def _get_hacked_ucw(text): #TODO: bad smell - it is left for testing purposes on
     return initial_nodes, rejecting_nodes, name_to_node.values(), vars
 
 
+@log_entrance(logging.getLogger(), logging.DEBUG)
 def parse_ltl2ba_ba(text):
     """ Parse ltl2ba output, return (initial_nodes, rejecting nodes, nodes of Node class) """
 
     initial_nodes, rejecting_nodes, nodes, vars = _get_hacked_ucw(text)
 
-    return _conform2acw(initial_nodes, rejecting_nodes, nodes, vars)
+    return Automaton(initial_nodes, rejecting_nodes, nodes, vars)
 
 
 #_tmp = """

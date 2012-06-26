@@ -172,11 +172,14 @@ def to_dot(automaton):
 
     trans_dot = []
     for n in automaton.nodes:
-        colors = 'black purple green yellow blue orange red brown pink'.split() + ['gray']*100
+        colors = 'black purple green yellow blue orange red brown pink gray'.split()
 
         for label, list_of_sets in n.transitions.items():
             for flagged_states in list_of_sets:
-                color = colors.pop(0)
+                if len(colors):
+                    color = colors.pop(0)
+                else:
+                    color = 'gray'
 
                 edge_is_labelled = False
 

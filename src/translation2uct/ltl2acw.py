@@ -1,3 +1,5 @@
+import logging
+from helpers.logging import log_entrance
 from interfaces.automata import Node, LIVE_END
 from translation2uct.ltl2ba import parse_label_tok
 import itertools
@@ -107,6 +109,7 @@ def _is_rejecting(src, dst_set, rejecting_states):
     return False
 
 
+@log_entrance(logging.getLogger(), logging.DEBUG)
 def parse_ltl3ba_aa(text, logger):
     """ Return (init_sets_list, set of rejecting nodes, set of all nodes) """
 

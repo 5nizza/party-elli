@@ -1,6 +1,8 @@
 from itertools import chain
+import logging
 from helpers import boolean
 from helpers.boolean import AND, normalize, FALSE, TRUE
+from helpers.logging import log_entrance
 from interfaces.automata import Automaton, get_next_states, Node, enumerate_values, DEAD_END, LIVE_END
 
 
@@ -148,6 +150,7 @@ def _process_spec_clause(crt_clause,
         clauses_generated.update(next_literals)
 
 
+@log_entrance(logging.getLogger(), logging.INFO)
 def convert_acw_to_ucw(acw, rejecting_nodes, variables):
     """ Accepts alternating coBuchi automaton as outputted by
         ltl3ba: failing out of automaton => death!

@@ -7,7 +7,7 @@ import os
 from interfaces.ltl_spec import LtlSpec
 from module_generation.dot import to_dot
 from synthesis.smt_logic import UFLIA, UFBV
-from translation2uct.ltl2automaton import Ltl2UCW, Ltl2ACW, negate
+from translation2uct.ltl2automaton import Ltl2UCW, Ltl2ACW, negate, Ltl2UCW_thru_ACW
 from synthesis.model_searcher import search
 from synthesis.z3 import Z3
 from module_generation.verilog import to_verilog
@@ -46,11 +46,11 @@ def _verilog_to_str(verilog_module):
     return verilog_module
 
 
-def main(ltl_file, size, bound, verilog_file, dot_file, ltl2automaton, z3solver, logic):
+def main(ltl_file, size, bound, verilog_file, dot_file, ltl2ucw, z3solver, logic):
     logger = _get_logger()
     ltl_spec = _parse_ltl(ltl_file.read())
 
-    automaton = ltl2automaton.convert(ltl_spec)
+    automaton = ltl2ucw.convert(ltl_spec)
 
     model = search(automaton, ltl_spec.inputs, ltl_spec.outputs, size, bound, z3solver, logic)
 
@@ -102,8 +102,8 @@ def _create_spec_converter_z3(use_acw):
         z3_path = 'z3' #assume z3 bin directory is in the PATH
         flag_marker = '/'
 
-    ltl2automaton = Ltl2ACW if use_acw else Ltl2UCW
-    return ltl2automaton(ltl2ba_path), Z3(z3_path, flag_marker)
+    ltl2ucw = Ltl2UCW_thru_ACW if use_acw else Ltl2UCW
+    return ltl2ucw(ltl2ba_path), Z3(z3_path, flag_marker)
 
 
 def _setup_logging(verbose):
