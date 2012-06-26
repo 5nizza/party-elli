@@ -1,0 +1,9 @@
+INPUT:s2b_req0 
+INPUT:s2b_req1 
+INPUT:r2b_ack0
+INPUT:r2b_ack1
+OUTPUT:b2s_ack0
+OUTPUT:b2s_ack1 
+OUTPUT:b2r_req0
+OUTPUT:b2r_req1
+PROPERTY:((  (!s2b_req0) &&   []((s2b_req0 && (!b2s_ack0)) -> X(s2b_req0)) &&   [](b2s_ack0 -> X((!s2b_req0))) &&   (!s2b_req1) &&   []((s2b_req1 && (!b2s_ack1)) -> X(s2b_req1)) &&   [](b2s_ack1 -> X((!s2b_req1))) &&   (!r2b_ack0) &&   []((!b2r_req0) -> X((!r2b_ack0))) &&     [](b2r_req0 -> X(<>(r2b_ack0))) &&   (!r2b_ack1) &&   []((!b2r_req1) -> X((!r2b_ack1))) &&     [](b2r_req1 -> X(<>(r2b_ack1))) ) -> ( (!b2s_ack0) &&   []( ((!s2b_req0) && X(s2b_req0)) -> X((!b2s_ack0) && X(<>(b2s_ack0))) ) &&   []( ((!b2s_ack0) && X((!s2b_req0))) -> X((!b2s_ack0)) ) &&   []((!b2s_ack0) || (!b2s_ack1)) &&  (!b2s_ack1) &&   []( ((!s2b_req1) && X(s2b_req1)) -> X((!b2s_ack1) && X(<>(b2s_ack1))) ) &&   []( ((!b2s_ack1) && X((!s2b_req1))) -> X((!b2s_ack1)) ) &&   []((!b2s_ack0) || (!b2s_ack1)) &&  (!b2r_req0) &&    [](r2b_ack0 -> X((!b2r_req0))) &&   []((b2r_req0 && (!r2b_ack0)) -> X(b2r_req0)) &&   []((b2r_req0 && X((!b2r_req0))) -> X( (!b2r_req0) U ((!b2r_req0) && b2r_req1))) &&  [](((!b2r_req0)) || ((!b2r_req1)) ) &&  []((s2b_req0 || s2b_req1) -> X(<>(b2r_req0 || b2r_req1))) &&  (!b2r_req1) &&   [](r2b_ack1 -> X((!b2r_req1))) &&   []((b2r_req1 && (!r2b_ack1)) -> X(b2r_req1)) &&   []((b2r_req1 && X((!b2r_req1))) -> X( (!b2r_req1) U ((!b2r_req1) && b2r_req0))) &&  [](((!b2r_req0)) || ((!b2r_req1)) ) &&  []((s2b_req0 || s2b_req1) -> X(<>(b2r_req0 || b2r_req1))) ))
