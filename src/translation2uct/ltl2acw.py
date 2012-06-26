@@ -103,6 +103,7 @@ def _split_trans(trans):
 
 
 def _is_rejecting(src, dst_set, rejecting_states):
+    print('_is_rejecting: {0} -> {1} /{2}'.format(src, dst_set, rejecting_states))
     if src in dst_set and src in rejecting_states:
         return True
 
@@ -136,8 +137,8 @@ def parse_ltl3ba_aa(text, logger):
 
             dst_set = {_get_create(n, name_to_node) for n in dst_names}
             for l in labels:
-                src.add_transition(l, set(map(lambda n: (n, _is_rejecting(src, dst_set, rejecting_nodes)),
-                                              dst_set)))
+                src.add_transition(l, [(n, n in rejecting_nodes)
+                                       for n in dst_set])
 
     return init_sets_list, rejecting_nodes, name_to_node.values()
 

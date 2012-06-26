@@ -93,12 +93,15 @@ def _is_self_loop(src_state, label):
     return src_state in set(chain(*next_states_set_list))
 
 
-def _is_rejecting_transition(src_node, label, dst_node, clause_to_node, term_clauses, rejecting_states):
+#TODO: get rid of rejecting_nodes at all! use rejecting edges everywhere!
+def _is_rejecting_transition(src_node, label, clause_to_node, term_clauses, rejecting_states):
     # mark all non-self loops as rejecting transitions (preserves language)
-    # transition (A) -> (B) is rejecting iff all constituent transitions (A) -> (B) are rejecting
+    # transition (A) -> (B) is rejecting iff all constituent transitions in (A) -> (B) are rejecting
     # this is equivalent to considering only self-looped transitions and making the transition
     # rejecting if all self-loop transitions are rejecting
     # if there are no self-loops => non-rejecting
+    # currently it ignores rejecting edges and considers rejecting nodes only
+
     node_to_clause = dict(map(lambda k: (clause_to_node[k], k), clause_to_node))
 
     src_states = _get_spec_states_of_clause(node_to_clause[src_node], term_clauses)
@@ -109,6 +112,7 @@ def _is_rejecting_transition(src_node, label, dst_node, clause_to_node, term_cla
         return False
 
     nof_non_rejecting_self_loops = sum(map(lambda n: n not in rejecting_states, self_looped_states))
+
     if nof_non_rejecting_self_loops > 0:
         return False
 
@@ -139,7 +143,6 @@ def _process_spec_clause(crt_clause,
 
         flagged_next_nodes = set(map(lambda n: (n, _is_rejecting_transition(crt_node,
                                                                             signal_values,
-                                                                            n,
                                                                             clause_to_node,
                                                                             term_clauses,
                                                                             rejecting_nodes)),

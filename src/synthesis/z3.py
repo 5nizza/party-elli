@@ -81,6 +81,8 @@ class Z3:
             else:
                 self._logger.warning("Z3: returned: {0}\noutput:\n{1}\nerror:\n{2}\n".format(rc, output, err))
 
+        self._logger.debug('Z3 output is:\n' + output)
+
         #parse results
         self._current_state = Z3.UNKNOWN
         output_lines = [x.strip() for x in output.split('\n')]

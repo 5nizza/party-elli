@@ -61,10 +61,11 @@ class Node:
         """
         label = Label(label)
         label_transitions = self._transitions[label] = self._transitions.get(label, [])
-        if flagged_nodes in label_transitions:
-            assert False
 
-        label_transitions.append(set(flagged_nodes))
+        flagged_nodes_set = set(flagged_nodes)
+        assert flagged_nodes_set not in label_transitions
+
+        label_transitions.append(flagged_nodes_set)
 
 
     def __str__(self):
@@ -72,7 +73,8 @@ class Node:
         for l, dst_list in self.transitions.items():
             dst_strings = []
             for flagged_dst_set in dst_list:
-                dst_strings.append('({0})'.format(str(', '.join([n.name for n, is_rejecting in flagged_dst_set]))))
+                dst_strings.append('({0})'.format(str(', '.join(['{0}{1}'.format(n.name, ['',':rej'][is_rejecting])
+                                                                 for n, is_rejecting in flagged_dst_set]))))
 
             labels_strings.append('[{0}: {1}]'.format(str(l), ', '.join(dst_strings)))
 
@@ -138,7 +140,7 @@ def get_next_states(state, signal_values):
     for label, list_of_state_sets in state.transitions.items():
         if satisfied(label, signal_values):
             for flagged_states_set in list_of_state_sets:
-                states_set = set(map(lambda flagged: flagged[0], flagged_states_set))
+                states_set = set([n for (n, is_rejecting) in flagged_states_set])
                 total_list_of_state_sets.append(states_set)
 
     return total_list_of_state_sets

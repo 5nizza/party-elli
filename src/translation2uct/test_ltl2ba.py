@@ -39,8 +39,8 @@ class Test(unittest.TestCase):
 
                 for label, dst_set_list in n.transitions.items():
                     assert len(dst_set_list) == 1, str(dst_set_list)
-                    dst_set = dst_set_list[0]
-                    for dst in dst_set:
+                    flagged_dst_set = dst_set_list[0]
+                    for dst, is_rejecting in flagged_dst_set:
                         assert (dst.name == 'T0_init' and label == {}) or\
                                (dst.name == 'accept_S2' and label == {'g':False, 'r':True}),\
                                 'unknown transition: {0} {1}'.format(label, str(dst))
@@ -52,8 +52,8 @@ class Test(unittest.TestCase):
 
                 for label, dst_set_list in n.transitions.items():
                     assert len(dst_set_list) == 1, str(dst_set_list)
-                    dst_set = dst_set_list[0]
-                    dst = dst_set.pop()
+                    flagged_dst_set = dst_set_list[0]
+                    dst, is_rejecting = flagged_dst_set.pop()
                     assert dst.name == 'accept_S2' and label == {'g':False}
             else:
                 assert False, 'unknown node: {0}'.format(str(n))
@@ -83,8 +83,8 @@ class Test(unittest.TestCase):
         assert len(accept_all_node.transitions) == 1
 
         label, dst_set_list = list(accept_all_node.transitions.items())[0]
-        dst_set = dst_set_list[0]
-        dst = dst_set.pop()
+        flagged_dst_set = dst_set_list[0]
+        dst, is_rejecting = flagged_dst_set.pop()
         assert dst == accept_all_node, str(dst)
         assert label == {}, str(label)
 
@@ -113,8 +113,8 @@ class Test(unittest.TestCase):
 
         for label, dst_set_list in init_node.transitions.items():
             assert len(dst_set_list) == 1, str(dst_set_list)
-            dst_set = dst_set_list[0]
-            for dst in dst_set:
+            flagged_dst_set = dst_set_list[0]
+            for dst, is_rejecting in flagged_dst_set:
                 assert (label == {} and dst == init_node)\
                         or (label == {'r':True} and dst != init_node)\
                         or (label == {'g':False} and dst != init_node)

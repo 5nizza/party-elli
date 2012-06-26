@@ -136,20 +136,24 @@ if __name__ == "__main__":
         help='bound the maximal size of the system to synthesize(default: %(default)i)')
     parser.add_argument('--size', metavar='size', type=int, default=None, required=False,
         help='specify exact size of the model to synthesize(default: %(default)i)')
-    parser.add_argument('--acw', default=False, action='store_true', required=False,
-        help='use alternating very weak automaton as an input(default: %(default)i)')
     parser.add_argument('--logic', metavar='logic', type=str, default='uflia', required=False,
         help='logic of smt queries(uflia, ufbv)(default: %(default)i)')
     parser.add_argument('-v', '--verbose', action='count', default=0)
+
+    automaton_type_group = parser.add_mutually_exclusive_group(required=True)
+    automaton_type_group.add_argument('--acw', action='store_true',
+        help='use alternating very weak automaton and translate by themselves (default: %(default)i)')
+    automaton_type_group.add_argument('--ucw', action='store_true',
+        help='use ucw produced by ltl3ba (default: %(default)i)')
 
     args = parser.parse_args(sys.argv[1:])
 
     _setup_logging(args.verbose)
 
-    ltl2automaton, z3solver = _create_spec_converter_z3(args.acw)
+    ltl2ucw_converter, z3solver = _create_spec_converter_z3(args.acw)
     logic = _get_logic(args.logic)
 
-    main(args.ltl, args.size, args.bound, args.verilog, args.dot, ltl2automaton, z3solver, logic)
+    main(args.ltl, args.size, args.bound, args.verilog, args.dot, ltl2ucw_converter, z3solver, logic)
 
     args.ltl.close()
     if args.verilog:

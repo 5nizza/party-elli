@@ -20,9 +20,12 @@ def search(ucw_automaton, inputs, outputs, size, bound, z3solver, logic):
 
     logger = _get_logger()
 
+    logger.debug(ucw_automaton)
+    logger.debug(to_dot(ucw_automaton))
+
     model_sizes = range(1, bound + 1) if size is None else range(size, size + 1)
     for current_bound in model_sizes:
-        logger.info('searching model of size {0}..'.format(current_bound))
+        logger.info('searching a model of size {0}..'.format(current_bound))
 
         encoder = Encoder(ucw_automaton, inputs, outputs, logic)
         smt_str = encoder.encode(current_bound)

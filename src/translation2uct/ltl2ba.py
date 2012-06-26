@@ -72,37 +72,41 @@ def _flatten(dst_set_list):
     return set(itertools.chain(*dst_set_list))
 
 
-def _get_create_new_nodes(new_name_to_node, old_dst_nodes):
-    new_nodes = map(lambda n: get_add(new_name_to_node, n.name, Node(n.name)), old_dst_nodes)
+def _get_create_new_nodes(new_name_to_node, flagged_nodes_set):
+    new_nodes = [(get_add(new_name_to_node, fn[0].name, Node(fn[0].name)), fn[1])
+                for fn in flagged_nodes_set]
     return new_nodes
 
 
-#def _conform2acw(initial_nodes, rejecting_nodes, nodes, vars):
-#    new_name_to_node = {}
-#
-#    for n in nodes:
-#        new_node = get_add(new_name_to_node, n.name, Node(n.name))
-#
-#        lbl_to_nodes = {}
-#        for pattern_lbl, old_dst_nodes in [(lbl, _flatten(d)) for lbl, d in n.transitions.items()]:
-#            new_dst_nodes = _get_create_new_nodes(new_name_to_node, old_dst_nodes)
-#
-#            for lbl in _unwind_label(pattern_lbl, vars):
-#                lbl_nodes = get_add(lbl_to_nodes, Label(lbl), set())
-#                lbl_nodes.update(new_dst_nodes) #collect universal transitions
-#
-#        for lbl, dst_nodes in lbl_to_nodes.items():
-#            new_node.add_transition(lbl, dst_nodes)
-#
-#    new_initial_nodes = map(lambda n: new_name_to_node[n.name], initial_nodes)
-#    new_rejecting_nodes = map(lambda n: new_name_to_node[n.name], rejecting_nodes)
-#
-#    return new_initial_nodes, new_rejecting_nodes, new_name_to_node.values()
-#
+def _conform2acw(initial_nodes, rejecting_nodes, nodes, vars):
+    new_name_to_node = {}
+    for n in nodes:
+        new_node = get_add(new_name_to_node, n.name, Node(n.name))
+
+        lbl_to_flagged_nodes = {}
+        for pattern_lbl, old_dst_nodes in [(lbl, _flatten(flagged_dst)) for lbl, flagged_dst in n.transitions.items()]:
+            new_dst_nodes = _get_create_new_nodes(new_name_to_node, old_dst_nodes)
+
+            for lbl in _unwind_label(pattern_lbl, vars):
+                lbl_nodes = get_add(lbl_to_flagged_nodes, Label(lbl), set())
+                lbl_nodes.update(new_dst_nodes) #collect universal transitions
+
+        for lbl, flagged_dst_nodes in lbl_to_flagged_nodes.items():
+            new_node.add_transition(lbl, flagged_dst_nodes)
+
+    new_init_nodes = [new_name_to_node[n.name] for n in initial_nodes]
+    new_rejecting_nodes = [new_name_to_node[n.name] for n in rejecting_nodes]
+
+    return new_init_nodes, new_rejecting_nodes, new_name_to_node.values()
+
 
 def _get_hacked_ucw(text): #TODO: bad smell - it is left for testing purposes only
-    """ It is hacked since it doesn't conform to description of Node transitions:
-        in this version node's transitions contain: {label:[{}, {}, {}]} where labels can intersect
+    """
+        Return: initial_nodes: set, rejecting_nodes: set, nodes: set, label variables: set
+        It is hacked since it doesn't conform to description of Node transitions:
+        in this version node's transitions may contain intersecting labels:
+        {label1:[{}, {}, {}], label2:[{},{}]} , where label1 n label2 != 0
+
         For example: {1:[{0}, {1}], '!g':[{2}] which means that with '1' you go in _both_ directions,
         and with '!g' actually also in both directions since labels intersect (and no non-determinism!)
     """
@@ -136,7 +140,7 @@ def _get_hacked_ucw(text): #TODO: bad smell - it is left for testing purposes on
         trans_toks = [x.strip(':').strip() for x in lines[1:] if 'if' not in x and 'fi' not in x]
 
         if trans_toks == ['skip']:
-            src.add_transition({}, {src})
+            src.add_transition({}, {(src, src in rejecting_nodes)})
             continue
 
         for trans in trans_toks:
@@ -147,18 +151,23 @@ def _get_hacked_ucw(text): #TODO: bad smell - it is left for testing purposes on
 
             for l in labels:
                 dst = _get_create(dst_tok, name_to_node, initial_nodes, rejecting_nodes)
-                src.add_transition(l, {dst}) #hack: that is not correct usage - there are no ORs in UCT => _conform2acw
+                #that is not correct - there are no ORs in UCT => this is corrected in _conform2acw
+                src.add_transition(l, {(dst, dst in rejecting_nodes)})
 
     return initial_nodes, rejecting_nodes, name_to_node.values(), vars
 
 
 @log_entrance(logging.getLogger(), logging.DEBUG)
 def parse_ltl2ba_ba(text):
-    """ Parse ltl2ba output, return (initial_nodes, rejecting nodes, nodes of Node class) """
+    """ Parse ltl2ba output
+        Return (initial_nodes, rejecting nodes, nodes of Node class)
+    """
 
     initial_nodes, rejecting_nodes, nodes, vars = _get_hacked_ucw(text)
 
-    return Automaton(initial_nodes, rejecting_nodes, nodes, vars)
+    ucw_init_nodes, ucw_rej_nodes, ucw_nodes =  _conform2acw(initial_nodes, rejecting_nodes, nodes, vars)
+
+    return [set(ucw_init_nodes)], ucw_rej_nodes, ucw_nodes
 
 
 #_tmp = """

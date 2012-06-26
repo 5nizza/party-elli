@@ -492,39 +492,6 @@ class Encoder:
         return 't_' + str(sys_state)
 
 
-    def _get_next_spec_state_clause(self,
-                                    signal_values,
-                                    spec_state_clause,
-                                    term_clauses):
-        """ Return true/false/next_spec_state_clause, and set of rejecting states which end up in self-loop
-            (and therefore their counters should be '>'
-        """
-
-        # each state is replaced by true/false/next_spec_state_by_automaton
-        # then the formula is evaluated:
-        # return true/false/next_spec_state_clause
-
-        states = _get_spec_states_of_clause(spec_state_clause, term_clauses)
-
-        subst_map = {}
-        for state in states:
-            list_of_next_state_sets = get_next_states(state, signal_values)
-            next_state_clause = _build_clause(term_clauses, list_of_next_state_sets)
-            subst_map[term_clauses[state]] = next_state_clause
-
-        next_clause = spec_state_clause.subs(subst_map)
-
-        next_normalized_or_clauses = normalize(OR, next_clause)
-
-        if len(next_normalized_or_clauses) > 1:
-            return OR(*next_normalized_or_clauses)
-
-        #TODO: current
-#        rejecting_states_to_increase = set(map(lambda old, new: old==new and  , subst_map.items()))
-
-        return next_normalized_or_clauses[0]
-
-
     def _make_tau_arg_list(self, input_values): #TODO: use ?var_name instead of var_name in forall
         """ Return tuple (list of tau args(in correct order), free vars):
             for variables without values use variable name (you should enumerate them afterwards).

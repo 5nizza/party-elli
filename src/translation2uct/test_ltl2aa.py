@@ -42,12 +42,16 @@ class Test(unittest.TestCase):
         assert len(init_nodes) == 1
         assert len(rejecting_nodes) == 1
 
-        nof_rejecting = 0als:
-                    nof_rejecting += is_rejecting
-                    if is_rejecting:
-                        assert '2' in n.name and '2' in list(dst)[0].name
+        nof_rejecting = 0
+        for n in nodes:
+            for label, list_of_sets in n.transitions.items():
+                for flagged_dst_set in list_of_sets:
+                    for dst, is_rejecting in flagged_dst_set:
+                        nof_rejecting += is_rejecting
+                        if is_rejecting:
+                            assert '2' in dst.name, n.name
 
-        self.assertEqual(nof_rejecting, 1) #2->2
+        self.assertEqual(nof_rejecting, 2) #1->2, 2->2
 
 
     def test__universal_and_non_deterministic_transitions(self):
@@ -79,8 +83,10 @@ class Test(unittest.TestCase):
         self.assertEqual(set(trans7.keys()),
                 {empty_label, Label({'r':False}), Label({'r':True, 'g':True})})
 
-        assert {n4, n7} in map(lambda x: x[0], trans7[empty_label]), str(trans7[empty_label])
-        assert {n7} in map(lambda x: x[0], trans7[empty_label]), str(trans7[empty_label])
+        print('\n'.join([str(x) for x in nodes]))
+
+        assert {(n4, True), (n7, False)} in trans7[empty_label], str(trans7[empty_label])
+        assert {(n7, False)} in trans7[empty_label], str(trans7[empty_label])
 
 
 
