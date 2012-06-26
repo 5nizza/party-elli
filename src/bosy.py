@@ -52,6 +52,8 @@ def main(ltl_file, size, bound, verilog_file, dot_file, ltl2ucw, z3solver, logic
 
     automaton = ltl2ucw.convert(ltl_spec)
 
+    logger.info('spec automaton has {0} states'.format(len(automaton.nodes)))
+
     model = search(automaton, ltl_spec.inputs, ltl_spec.outputs, size, bound, z3solver, logic)
 
     if model is None:

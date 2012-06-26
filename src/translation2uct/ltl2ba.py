@@ -2,7 +2,8 @@ import itertools
 import logging
 from helpers.logging import log_entrance
 from helpers.python_ext import get_add
-from interfaces.automata import Node, Label, Automaton
+from interfaces.automata import Node, Label
+
 
 def _get_cases(toks):
     start = None
