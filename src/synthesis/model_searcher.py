@@ -39,5 +39,6 @@ def search(ucw_automaton, inputs, outputs, size, bound, z3solver, logic):
             return model
         else:
             logger.warning('solver status is unknown')
+            break
 
     return None

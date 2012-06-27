@@ -51,7 +51,7 @@ def to_verilog(model):
 
     for i in range(len(state_trans.state)):
         verilog+= "\t\tif ((state == " + str(state_trans.state[i]) + ") && (" + str(state_trans.input[i]) + ")) \n"
-        verilog+= "\t\t\t state = " + str(state_trans.newState[i]) + ";\n"
+        verilog+= "\t\t\t state = " + str(state_trans.new_state[i]) + ";\n"
 
     for j in states:
         verilog += "\t if (state == " + j + ") \n \t\t begin \n"
