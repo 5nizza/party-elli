@@ -55,6 +55,7 @@ class Ltl2UCW_thru_ACW:
     def convert(self, ltl_spec):
         acw_automaton = self._ltl2acw.convert(ltl_spec)
 
+        print('convert: before convert_acw_to_ucw')
         ucw_automaton = convert_acw_to_ucw(acw_automaton, acw_automaton.rejecting_nodes, ltl_spec.inputs+ltl_spec.outputs)
 
         self._logger.info('converted alternating automaton to ucw: size increase from {0} to {1}'

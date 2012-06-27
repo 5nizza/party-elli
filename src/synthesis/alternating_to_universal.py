@@ -46,6 +46,7 @@ def _get_spec_states_of_clause(spec_state_clause, terminals):
     states = set(map(lambda s: symbol_to_state[s], symbols))
     return states
 
+import sys
 
 def _get_next_spec_state_clause(signal_values,
                                 spec_state_clause,
@@ -55,6 +56,9 @@ def _get_next_spec_state_clause(signal_values,
     # return true/false/next_spec_state_clause
 
     states = _get_spec_states_of_clause(spec_state_clause, term_clauses)
+
+    print('_get_next_spec_state_clause: entered')
+    sys.stdout.flush()
 
     subst_map = {}
     for state in states:
@@ -66,6 +70,9 @@ def _get_next_spec_state_clause(signal_values,
         next_clause = spec_state_clause.subs(subst_map)
     else:
         next_clause = FALSE
+
+    print('_get_next_spec_state_clause: exited')
+    sys.stdout.flush()
 
     return next_clause
 
@@ -135,7 +142,14 @@ def _process_spec_clause(crt_clause,
         if next_clause == TRUE:
             continue
 
+        print('normalizing: ' + str(next_clause))
+        sys.stdout.flush()
+
         next_literals = normalize(AND, next_clause)
+
+        print('# of clauses after normalization : ' + str(len(next_literals)))
+        sys.stdout.flush()
+
         _create_nodes_if_necessary(next_literals, clause_to_node)
 
         next_nodes = set(map(lambda c: clause_to_node[c], next_literals))
@@ -153,7 +167,7 @@ def _process_spec_clause(crt_clause,
         clauses_generated.update(next_literals)
 
 
-@log_entrance(logging.getLogger(), logging.INFO)
+#@log_entrance(logging.getLogger(), logging.INFO)
 def convert_acw_to_ucw(acw, rejecting_nodes, variables):
     """ Accepts alternating coBuchi automaton as outputted by
         ltl3ba: failing out of automaton => death!
@@ -168,6 +182,8 @@ def convert_acw_to_ucw(acw, rejecting_nodes, variables):
 
     explored_clauses = {FALSE, TRUE}
     unexplored_clauses = {init_state_clause}
+
+    i = 0
     while unexplored_clauses:
         crt_clause = unexplored_clauses.pop()
 
@@ -176,6 +192,13 @@ def convert_acw_to_ucw(acw, rejecting_nodes, variables):
 
         explored_clauses.add(crt_clause)
         unexplored_clauses.update(clauses_generated.difference(explored_clauses).difference({FALSE, TRUE}))
+
+        i += 1
+        if i == i:
+            print('convert_acw_to_ucw: #unexplored_clauses={0}, #explored={1}'.format(
+                len(unexplored_clauses),
+                len(explored_clauses)))
+#            i = 0
 
     init_list_of_sets = [{clause_to_node[init_state_clause]}]
     states = set(map(lambda c: clause_to_node[c], explored_clauses))

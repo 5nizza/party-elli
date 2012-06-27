@@ -391,7 +391,7 @@ class Encoder:
         smt_str += self._make_input_declarations()
         smt_str += "\n"
 
-        smt_str += self._make_func_declarations(3) #TODO: change length
+        smt_str += self._make_func_declarations(2) #TODO: change length
         smt_str += "\n"
 
         assert len(self._automaton.initial_sets_list) == 1, 'universal init state is not supported'

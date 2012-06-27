@@ -302,10 +302,6 @@ class BaseElement(Expression):
             raise AttributeError("Class should be TRUE or FALSE but is %s."\
             % self.cls.__name__)
 
-    @property
-    def isliteral(self):
-        return True
-
     def __lt__(self, other):
         cmp = Expression.__lt__(self, other)
         if cmp is not NotImplemented:
@@ -900,7 +896,6 @@ def normalize(operation, expr):
     the operation doesn't occur in any arg. Also NOT is only appearing
     in literals.
     """
-
     dualoperation = operation.getdual()
     # Move NOT inwards.
     expr = expr.literalize()
