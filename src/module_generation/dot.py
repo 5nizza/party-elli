@@ -1,10 +1,12 @@
 def to_dot(smt_module):
-    dotStr = "digraph g { \n"
+    dot_lines = ["digraph module { "]
+
     state_trans = smt_module.get_model()[0]
     for i in range(len(state_trans.state)):
-        dotStr += state_trans.state[i] + " -> " + \
-                  state_trans.new_state[i] + " [label= \"" + state_trans.input[i].replace("i_r == ", "") + "\"] \n";
+        dot_lines.append('"{0}" -> "{1}" [label="{2}"]'.format(state_trans.state[i],
+            state_trans.new_state[i],
+            state_trans.input[i].replace('i_', '').replace('not_', '-').replace('.', ' ')))
 
-    dotStr += "}"
+    dot_lines.append('}')
 
-    return dotStr
+    return '\n'.join(dot_lines)
