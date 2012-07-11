@@ -1,4 +1,4 @@
-def to_dot(smt_module):
+def to_dot(smt_module): #TODO: the whole verilog/output package requires refactoring
     dot_lines = ["digraph module { "]
 
     state_trans, output_transition = smt_module.get_model()

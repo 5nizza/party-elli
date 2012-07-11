@@ -47,3 +47,20 @@ class UFLIA(Logic):
     @property
     def ge(self):
         return '>='
+
+
+class UFLRA(Logic):
+    def counters_type(self, max_counter_value):
+        return 'Real'
+
+    @property
+    def smt_name(self):
+        return 'UFLRA'
+
+    @property
+    def gt(self):
+        return '>'
+
+    @property
+    def ge(self):
+        return '>='

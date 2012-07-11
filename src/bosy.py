@@ -6,7 +6,7 @@ import os
 
 from interfaces.ltl_spec import LtlSpec
 from module_generation.dot import to_dot
-from synthesis.smt_logic import UFLIA, UFBV
+from synthesis.smt_logic import UFLIA, UFBV, UFLRA
 from translation2uct.ltl2automaton import Ltl2UCW, Ltl2ACW, negate, Ltl2UCW_thru_ACW
 from synthesis.model_searcher import search
 from synthesis.z3 import Z3
@@ -149,7 +149,7 @@ def _setup_logging(verbose):
 
 
 def _get_logic(logic):
-    return {'uflia':UFLIA, 'ufbv':UFBV}[logic.lower()]()
+    return {'uflra':UFLRA, 'uflia':UFLIA, 'ufbv':UFBV}[logic.lower()]()
 
 if __name__ == "__main__":
     print_hello()
