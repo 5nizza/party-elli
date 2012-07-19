@@ -1,12 +1,12 @@
 import logging
 from interfaces.automata import to_dot
 from interfaces.smt_model import SmtModel
-from synthesis.alternating_to_universal import convert_acw_to_ucw
-from synthesis.states_extender import extend_self_looped_rejecting_states
 from synthesis.smt_encoder import Encoder
 from synthesis.z3 import Z3
 
+
 _logger = None
+
 
 def _get_logger():
     global _logger

@@ -373,49 +373,33 @@ class Encoder:
 
     @log_entrance(logging.getLogger(), logging.INFO)
     def encode(self, num_impl_states):
-        smt_str = self._make_headers()
-        smt_str += "\n"
-        smt_str += self._make_set_logic()
-        smt_str += "\n"
-
-        smt_str += self._make_state_declarations(map(self._get_smt_name_spec_state, self._automaton.nodes),
-                                                "Q")
-
-        smt_str += "\n"
-
-        smt_str += self._make_state_declarations(map(self._get_smt_name_sys_state, range(num_impl_states)),
-                                                 "T")
-
-        smt_str += "\n"
-
-        smt_str += self._make_input_declarations()
-        smt_str += "\n"
-
-        smt_str += self._make_func_declarations(2) #TODO: change length
-        smt_str += "\n"
-
         assert len(self._automaton.initial_sets_list) == 1, 'universal init state is not supported'
         assert len(self._automaton.initial_sets_list[0]) == 1
 
         init_spec_state = list(self._automaton.initial_sets_list[0])[0]
-        smt_str += self._make_initial_states_condition(self._get_smt_name_spec_state(init_spec_state))
-
-        smt_str += "\n"
-
         sys_states = ['t_'+str(i) for i in range(num_impl_states)]
-        smt_str += '\n'.join(self._make_state_transition_assertions(sys_states))
 
-        smt_str += "\n"
-        smt_str += self.CHECK_SAT
-        smt_str += "\n"
-        smt_str += self._make_get_values(num_impl_states)
-        smt_str += "\n"
-        smt_str += self.EXIT_CALL
-        smt_str += "\n"
+        smt_lines = [self._make_headers(),
+                     self._make_set_logic(),
+                     self._make_state_declarations(map(self._get_smt_name_spec_state, self._automaton.nodes),
+                         "Q"),
+                     self._make_state_declarations(map(self._get_smt_name_sys_state, range(num_impl_states)),
+                         "T"),
+                     self._make_input_declarations(),
+                     self._make_func_declarations(2),
+                     self._make_initial_states_condition(self._get_smt_name_spec_state(init_spec_state)),
 
-        self._logger.debug(smt_str)
+                     '\n'.join(self._make_state_transition_assertions(sys_states)),
 
-        return smt_str
+                     self.CHECK_SAT,
+                     self._make_get_values(num_impl_states),
+                     self.EXIT_CALL]
+
+        smt_query = '\n'.join(smt_lines)
+
+        self._logger.debug(smt_query)
+
+        return smt_query
 
 
     def _true(self):
@@ -436,22 +420,6 @@ class Encoder:
         assert is_accepting == FALSE or is_accepting == TRUE
 
         return is_accepting == FALSE
-
-
-    def _counter_greater(self,
-                         next_spec_state_clause, next_sys_state,
-                         spec_state_clause, sys_state,
-                         term_clauses):
-
-        return self._true()
-
-#        next_counter = self._counter(self._get_smt_name(next_spec_state_clause), next_sys_state)
-#        crt_counter = self._counter(self._get_smt_name(spec_state_clause), sys_state)
-#
-#        greater_func = [self._ge, self._gt][self._is_rejecting_clause(next_spec_state_clause, term_clauses)]
-#        counters_relation = greater_func(next_counter, crt_counter)
-#
-#        return counters_relation
 
 
     def _beautify(self, s):

@@ -51,7 +51,7 @@ class Node:
 
     @property
     def transitions(self):
-        """ Return map { label->[nodes_set, .., nodes_set] ... label->[nodes_set, .., nodes_set] } """
+        """ Return map { label->[flagged_nodes_set, ..] ... label->[flagged_nodes_set, ..] } """
         return self._transitions
 
     def add_transition(self, label, flagged_nodes):
@@ -79,6 +79,10 @@ class Node:
             labels_strings.append('[{0}: {1}]'.format(str(l), ', '.join(dst_strings)))
 
         return "'{0}', transitions: {1}".format(self.name, ' '.join(labels_strings))
+
+
+    def __lt__(self, other):
+        return id(self) < id(other)
 
 
     def __repr__(self):
@@ -203,3 +207,5 @@ def to_dot(automaton):
                 trans_dot + ['}']
 
     return '\n'.join(dot_lines)
+
+
