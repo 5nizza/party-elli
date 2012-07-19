@@ -5,6 +5,7 @@ from helpers.logging import log_entrance
 from helpers.ordered_set import OrderedSet
 from interfaces.automata import get_next_states, satisfied, Node, Automaton, to_dot, enumerate_values, is_forbidden_label_values, get_relevant_edges, DEAD_END
 from itertools import chain
+from synthesis.rejecting_states_finder import find_rejecting_sccs, build_state_to_rejecting_scc
 
 
 def _get_spec_states_of_clause(spec_state_clause, terminals):
@@ -154,24 +155,23 @@ class Encoder:
         smt_str = ''
         for input_var in self._inputs:
             for value in [False, True]:
-                smt_str += self._declare_bool_const(self.get_valued_var_name(input_var, value), value)
+                smt_str += self._declare_bool_const(self._get_valued_var_name(input_var, value), value)
 
         smt_str += '\n'
         return smt_str
 
 
-    def _make_func_declarations(self, nof_impl_states):
-        smt_str = self._comment("Declarations of transition relation, output function and annotation")
-        smt_str += self._declare_fun("tau", ["T"] + ['Bool'] * len(self._inputs), "T")
+    def _make_func_declarations(self):
+        smt_lines = [
+            self._comment("Declarations of the transition relation, output function and annotation"),
+            self._declare_fun("tau", ["T"] + ['Bool'] * len(self._inputs), "T"),
+            self._declare_fun("lambda_B", ["Q", "T"], "Bool"),
+            self._declare_fun("lambda_sharp", ["Q", "T"], self._logic.counters_type(4))]
 
-        for output in self._outputs:
-            smt_str += self._declare_fun("fo_" + output, ["T"], "Bool")
+        smt_lines.extend(
+            map(lambda output: self._declare_fun("fo_" + output, ["T"], "Bool"), self._outputs))
 
-        smt_str += self._declare_fun("lambda_B", ["Q", "T"], "Bool")
-        smt_str += self._declare_fun("lambda_sharp", ["Q", "T"], self._logic.counters_type(4))
-        smt_str += '\n'
-
-        return smt_str
+        return '\n'.join(smt_lines)
 
 
     def _make_initial_states_condition(self, initial_spec_state_name):
@@ -282,9 +282,15 @@ class Encoder:
     def _make_state_transition_assertions(self, sys_states):
         assertions = []
 
+        state_to_rejecting_scc = build_state_to_rejecting_scc(self._automaton)
+
+        self._logger.info('number of automaton states requiring counting is %i out of %i',
+            len(state_to_rejecting_scc.keys()),
+            len(self._automaton.nodes))
+
         for spec_state in self._automaton.nodes:
             for label, dst_set_list in spec_state.transitions.items():
-                if not len(list(itertools.chain(*dst_set_list))): #TODO: why?
+                if len(list(itertools.chain(*dst_set_list))) == 0: #TODO: why?
                     continue
 
                 for sys_state in sys_states:
@@ -311,14 +317,16 @@ class Encoder:
                             if spec_next_state is DEAD_END:
                                 implication_right = self._false()
                             else:
-                                implication_right_1 = self._lambdaB(spec_next_state, sys_next_state)
+                                implication_right_lambdaB = self._lambdaB(spec_next_state, sys_next_state)
+                                implication_right_counter = self._get_implication_right_counter(spec_state, spec_next_state,
+                                    is_rejecting,
+                                    sys_state, sys_next_state,
+                                    state_to_rejecting_scc)
 
-                                crt_sharp = self._func("lambda_sharp", ["q_" + spec_state.name, sys_state])
-                                next_sharp = self._func("lambda_sharp", ["q_" + spec_next_state.name, sys_next_state])
-                                greater = [self._ge, self._gt][is_rejecting]
-                                implication_right_2 = greater(next_sharp, crt_sharp)
-
-                                implication_right = self._and([implication_right_1, implication_right_2])
+                                if implication_right_counter is None:
+                                    implication_right = implication_right_lambdaB
+                                else:
+                                    implication_right = self._and([implication_right_lambdaB, implication_right_counter])
 
                             and_args.append(implication_right)
 
@@ -381,12 +389,15 @@ class Encoder:
 
         smt_lines = [self._make_headers(),
                      self._make_set_logic(),
+
                      self._make_state_declarations(map(self._get_smt_name_spec_state, self._automaton.nodes),
                          "Q"),
                      self._make_state_declarations(map(self._get_smt_name_sys_state, range(num_impl_states)),
                          "T"),
+
                      self._make_input_declarations(),
-                     self._make_func_declarations(2),
+                     self._make_func_declarations(),
+
                      self._make_initial_states_condition(self._get_smt_name_spec_state(init_spec_state)),
 
                      '\n'.join(self._make_state_transition_assertions(sys_states)),
@@ -469,7 +480,7 @@ class Encoder:
         free_vars = set()
         for var_name in self._inputs:
             if var_name in input_values:
-                valued_vars.append(self.get_valued_var_name(var_name, input_values[var_name]))
+                valued_vars.append(self._get_valued_var_name(var_name, input_values[var_name]))
             else:
                 valued_vars.append(var_name)
                 free_vars.add(var_name)
@@ -477,8 +488,30 @@ class Encoder:
         return valued_vars, free_vars
 
 
-    def get_valued_var_name(self, var, value):
+    def _get_valued_var_name(self, var, value):
         return '{0}{1}'.format('i_' if value else 'i_not_', var)
 
 
+    def _get_implication_right_counter(self, spec_state, next_spec_state,
+                                       is_rejecting,
+                                       sys_state, next_sys_state,
+                                       state_to_rejecting_scc):
 
+        crt_rejecting_scc = state_to_rejecting_scc.get(spec_state, None)
+        next_rejecting_scc = state_to_rejecting_scc.get(next_spec_state, None)
+
+        if crt_rejecting_scc is not next_rejecting_scc:
+            return None
+        if crt_rejecting_scc is None:
+            return None
+        if next_rejecting_scc is None:
+            return None
+
+        crt_sharp = self._func("lambda_sharp", ["q_" + spec_state.name, sys_state])
+        next_sharp = self._func("lambda_sharp", ["q_" + next_spec_state.name, next_sys_state])
+        greater = [self._ge, self._gt][is_rejecting]
+
+        return greater(next_sharp, crt_sharp)
+
+    def _build_state_to_rejecting_scc(self, rejecting_sccs):
+        pass

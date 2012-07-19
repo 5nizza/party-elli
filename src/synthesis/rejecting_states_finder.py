@@ -51,3 +51,14 @@ def find_rejecting_sccs(automaton):
                 rejecting_sccs.add(frozenset(nodes))
 
     return rejecting_sccs
+
+def build_state_to_rejecting_scc(automaton):
+    """ Helper function: builds dict node->SCC """
+    rejecting_sccs = find_rejecting_sccs(automaton)
+
+    state_to_rejecting_scc = dict()
+    for scc in rejecting_sccs:
+        for n in scc:
+            state_to_rejecting_scc[n] = scc
+
+    return state_to_rejecting_scc
