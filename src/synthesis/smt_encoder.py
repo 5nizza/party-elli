@@ -1,9 +1,11 @@
 import itertools
 import logging
+
 from helpers.boolean import AND, OR, Symbol, normalize, FALSE, TRUE
 from helpers.logging import log_entrance
 from interfaces.automata import  Node, enumerate_values, DEAD_END
 from synthesis.rejecting_states_finder import  build_state_to_rejecting_scc
+from synthesis.smt_helper import *
 
 
 def _get_spec_states_of_clause(spec_state_clause, terminals):
@@ -35,10 +37,6 @@ def _build_clause(term_clauses, list_of_state_sets):
 
 
 class Encoder:
-    CHECK_SAT = "(check-sat)"
-    GET_MODEL = "(get-model)"
-    EXIT_CALL = "(exit)"
-
     def __init__(self, automaton, inputs, outputs, logic):
         self._automaton = automaton
         self._inputs = inputs
@@ -48,141 +46,27 @@ class Encoder:
 
 
     def _lambdaB(self, spec_state, sys_state_expression):
-        return self._func("lambda_B", [self._get_smt_name_spec_state(spec_state), sys_state_expression])
+        return func("lambda_B", [self._get_smt_name_spec_state(spec_state), sys_state_expression])
 
     def _counter(self, spec_state_name, sys_state_expression):
-        return self._func("lambda_sharp", [spec_state_name, sys_state_expression])
+        return func("lambda_sharp", [spec_state_name, sys_state_expression])
 
 
     def _tau(self, sys_state, args_str):
-        return self._func("tau", [sys_state] + args_str)
-
-
-    def _func(self, function, args):
-        smt_str = '(' + function + ' '
-        for arg in args:
-            smt_str += arg + ' '
-        if len(args):
-            smt_str = smt_str[:-1]
-        smt_str += ')'
-        return smt_str
-
-
-    def _assert(self, formula):
-        smt_str = '(assert ' + formula + ')\n'
-        return smt_str
-
-
-    def _comment(self, comment):
-        smt_str = '; ' + comment + '\n'
-        return smt_str
-
-    def _declare_fun(self, name, vars, type):
-        smt_str = '(declare-fun '
-        smt_str += name + ' ('
-
-        for var in vars:
-            smt_str += var + ' '
-        if len(vars):
-            smt_str = smt_str[:-1]
-
-        smt_str += ') ' + type + ')\n'
-        return smt_str
-
-    def _declare_sort(self, name, num_param):
-        smt_str = '(declare-sort '
-        smt_str += name + ' ' + str(num_param) + ')\n'
-        return smt_str
-
-    def _implies(self, arg1, arg2):
-        smt_str = '(=> ' + arg1 + ' ' + arg2 + ')'
-        return smt_str
-
-    def _eq(self, arg1, arg2): #is equal to
-        smt_str = '(= ' + arg1 + ' ' + arg2 + ')'
-        return smt_str
-
-    def _gt(self, arg1, arg2):
-        return '({0} {1} {2})'.format(self._logic.gt, arg1, arg2)
-
-    def _ge(self, arg1, arg2):
-        return '({0} {1} {2})'.format(self._logic.ge, arg1, arg2)
-
-    def _not(self, argument):
-        smt_str = '(not ' + argument + ')'
-        return smt_str
-
-
-    def _make_and_or_xor(self, arguments, op):
-        assert len(arguments) > 0, 'invalid operation "{0}" args "{1}"'.format(str(op), str(arguments))
-
-        if len(arguments) == 1:
-            return ' ' + arguments[0] + ' '
-
-        return '({0} {1})'.format(op, ' '.join(arguments))
-
-
-    def _and(self, arguments):
-        return self._make_and_or_xor(arguments, 'and')
-
-
-    def _or(self, arguments):
-        return self._make_and_or_xor(arguments, 'or')
-
-
-    def _xor(self, arguments):
-        return self._make_and_or_xor(arguments, 'xor')
-
-
-    def _forall(self, free_input_vars, condition):
-        if len(free_input_vars) == 0:
-            return condition
-
-        forall_pre = ' '.join(['({0} Bool)'.format(x) for x in free_input_vars])
-
-        return '(forall ({0}) {1})'.format(forall_pre, condition)
-
-
-    def _make_state_declarations(self, state_names, sort_name):
-        smt_str = '(declare-datatypes () (({0} {1})))\n'.format(sort_name,
-                                                                ' '.join(state_names))
-        return smt_str
-
-
-    def _make_input_declarations(self):
-        smt_str = ''
-        for input_var in self._inputs:
-            for value in [False, True]:
-                smt_str += self._declare_bool_const(self._get_valued_var_name(input_var, value), value)
-
-        smt_str += '\n'
-        return smt_str
-
-
-    def _make_func_declarations(self):
-        smt_lines = [
-            self._comment("Declarations of the transition relation, output function and annotation"),
-            self._declare_fun("tau", ["T"] + ['Bool'] * len(self._inputs), "T"),
-            self._declare_fun("lambda_B", ["Q", "T"], "Bool"),
-            self._declare_fun("lambda_sharp", ["Q", "T"], self._logic.counters_type(4))]
-
-        smt_lines.extend(
-            map(lambda output: self._declare_fun("fo_" + output, ["T"], "Bool"), self._outputs))
-
-        return '\n'.join(smt_lines)
+        return func("tau", [sys_state] + args_str)
 
 
     def _make_initial_states_condition(self, initial_spec_state_name):
-        return self._assert(self._func("lambda_B", [initial_spec_state_name, "t_0"]))
+        return make_assert(func("lambda_B", [initial_spec_state_name, "t_0"]))
 
 
     def _condition_on_output(self, label, sys_state):
         and_args = []
         for var in self._outputs:
             if (var in label) and (label[var] is True):
-                and_args.append(self._func("fo_" + var, [sys_state])) #TODO: get rid off fo_
+                and_args.append(func("fo_" + var, [sys_state])) #TODO: get rid off fo_
             elif (var in label) and (label[var] is False):
-                and_args.append(self._not(self._func("fo_" + var, [sys_state])))
+                and_args.append(op_not(func("fo_" + var, [sys_state])))
             elif var not in label:
                 pass
             else:
@@ -190,7 +74,7 @@ class Encoder:
 
         smt_str = ' '
         if len(and_args) > 1:
-            smt_str = self._and(and_args)
+            smt_str = op_and(and_args)
         elif len(and_args) == 1:
             smt_str = and_args[0]
 
@@ -222,20 +106,20 @@ class Encoder:
             assert spec_state_clause == FALSE
 
         if spec_state_clause == TRUE:
-            guarantee = self._true()
+            guarantee = true()
         elif spec_state_clause == FALSE:
-            guarantee = self._false()
+            guarantee = false()
         else:
             def convert_and_to_lambdaB(and_clause):
                 clause_to_state = dict(map(lambda item: (item[1], item[0]), term_clauses.items()))
                 and_state_names = map(lambda l: self._get_smt_name_spec_state(clause_to_state[l]), and_clause.literals)
                 ands = list(map(lambda name: self._lambdaB(name, sys_state), and_state_names))
                 assert len(ands) > 0
-                return self._and(ands)
+                return op_and(ands)
 
             ors = list(map(convert_and_to_lambdaB, normalize(OR, spec_state_clause)))
             assert len(ors) > 0
-            guarantee = self._or(ors)
+            guarantee = op_or(ors)
 
         return guarantee
 
@@ -260,9 +144,9 @@ class Encoder:
         and_args = []
         for var in self._outputs:
             if (var in label) and (label[var] is True):
-                and_args.append(self._func("fo_" + var, [sys_state]))
+                and_args.append(func("fo_" + var, [sys_state]))
             elif (var in label) and (label[var] is False):
-                and_args.append(self._not(self._func("fo_" + var, [sys_state])))
+                and_args.append(op_not(func("fo_" + var, [sys_state])))
             elif var not in label:
                 pass
             else:
@@ -270,7 +154,7 @@ class Encoder:
 
         smt_str = ' '
         if len(and_args) > 1:
-            smt_str = self._and(and_args)
+            smt_str = op_and(and_args)
         elif len(and_args) == 1:
             smt_str = and_args[0]
 
@@ -296,7 +180,7 @@ class Encoder:
                     implication_left_2 = self._make_trans_condition_on_output_vars(label, sys_state)
 
                     if len(implication_left_2) > 0:
-                        implication_left = self._and([implication_left_1, implication_left_2])
+                        implication_left = op_and([implication_left_1, implication_left_2])
                     else:
                         implication_left = implication_left_1
 
@@ -313,7 +197,7 @@ class Encoder:
                         and_args = []
                         for spec_next_state, is_rejecting in dst_set:
                             if spec_next_state is DEAD_END:
-                                implication_right = self._false()
+                                implication_right = false()
                             else:
                                 implication_right_lambdaB = self._lambdaB(spec_next_state, sys_next_state)
                                 implication_right_counter = self._get_implication_right_counter(spec_state, spec_next_state,
@@ -324,33 +208,25 @@ class Encoder:
                                 if implication_right_counter is None:
                                     implication_right = implication_right_lambdaB
                                 else:
-                                    implication_right = self._and([implication_right_lambdaB, implication_right_counter])
+                                    implication_right = op_and([implication_right_lambdaB, implication_right_counter])
 
                             and_args.append(implication_right)
 
-                        or_args.append(self._and(and_args))
+                        or_args.append(op_and(and_args))
 
-                    smt_addition = self._assert(self._implies(implication_left,
-                                                              self._forall(free_input_vars, self._or(or_args))))
+                    smt_addition = make_assert(implies(implication_left,
+                                                              forall(free_input_vars, op_or(or_args))))
 
                     assertions.append(smt_addition)
 
         return assertions
 
 
-    def _make_set_logic(self):
-        return ';(set-logic {0})\n'.format(self._logic.smt_name)
-
-
-    def _make_headers(self):
-        return '(set-option :produce-models true)\n'
-
-
     def _make_get_values(self, num_impl_states):
         smt_str = ''
         for s in range(0, num_impl_states):
             for input_values in enumerate_values(self._inputs):
-                smt_str += "(get-value ({0}))\n".format(self._func("tau", ['t_'+str(s)] + self._make_tau_arg_list(input_values)[0]))
+                smt_str += "(get-value ({0}))\n".format(func("tau", ['t_'+str(s)] + self._make_tau_arg_list(input_values)[0]))
         for s in range(0, num_impl_states):
             smt_str += "(get-value (t_{0}))\n".format(s)
 
@@ -359,12 +235,6 @@ class Encoder:
                 smt_str += "(get-value ((fo_{0} t_{1})))\n".format(output, s)
 
         return smt_str
-
-
-    def _declare_bool_const(self, const_name, value):
-        smt = ['(declare-const {0} Bool)\n'.format(const_name),
-               '(assert (= {0} {1}))\n'.format(const_name, str(value).lower())]
-        return ''.join(smt)
 
 
     def _build_terminal_clauses(self):
@@ -385,36 +255,30 @@ class Encoder:
         init_spec_state = list(self._automaton.initial_sets_list[0])[0]
         sys_states = ['t_'+str(i) for i in range(num_impl_states)]
 
-        smt_lines = [self._make_headers(),
-                     self._make_set_logic(),
+        smt_lines = [make_headers(),
+                     make_set_logic(self._logic),
 
-                     self._make_state_declarations(map(self._get_smt_name_spec_state, self._automaton.nodes),
+                     make_state_declarations(map(self._get_smt_name_spec_state, self._automaton.nodes),
                          "Q"),
-                     self._make_state_declarations(map(self._get_smt_name_sys_state, range(num_impl_states)),
+                     make_state_declarations(map(self._get_smt_name_sys_state, range(num_impl_states)),
                          "T"),
 
-                     self._make_input_declarations(),
-                     self._make_func_declarations(),
+                     make_input_declarations(self._inputs),
+                     make_func_declarations(self._inputs, self._outputs, self._logic),
 
                      self._make_initial_states_condition(self._get_smt_name_spec_state(init_spec_state)),
 
                      '\n'.join(self._make_state_transition_assertions(sys_states)),
 
-                     self.CHECK_SAT,
+                     make_check_sat(),
                      self._make_get_values(num_impl_states),
-                     self.EXIT_CALL]
+                     make_exit()]
 
         smt_query = '\n'.join(smt_lines)
 
         self._logger.debug(smt_query)
 
         return smt_query
-
-
-    def _true(self):
-        return ' true '
-    def _false(self):
-        return ' false '
 
 
     def _is_rejecting_clause(self, spec_state_clause, term_clauses):
@@ -429,28 +293,6 @@ class Encoder:
         assert is_accepting == FALSE or is_accepting == TRUE
 
         return is_accepting == FALSE
-
-
-    def _beautify(self, s):
-        depth = 0
-        beautified = ''
-        ignore = False #TODO: dirty
-        for i, c in enumerate(s):
-            if c is '(':
-                if s[i+1:].strip().startswith('tau'):
-                    ignore = True
-                if not ignore:
-                    beautified += '\n'
-                    beautified += '\t'*depth
-                    depth += 1
-            elif c is ')':
-                if not ignore:
-                    depth -= 1
-                else:
-                    ignore = False
-            beautified += c
-
-        return beautified
 
 
     def _get_smt_name(self, spec_state_clause):
@@ -478,16 +320,12 @@ class Encoder:
         free_vars = set()
         for var_name in self._inputs:
             if var_name in input_values:
-                valued_vars.append(self._get_valued_var_name(var_name, input_values[var_name]))
+                valued_vars.append(get_valued_var_name(var_name, input_values[var_name]))
             else:
                 valued_vars.append(var_name)
                 free_vars.add(var_name)
 
         return valued_vars, free_vars
-
-
-    def _get_valued_var_name(self, var, value):
-        return '{0}{1}'.format('i_' if value else 'i_not_', var)
 
 
     def _get_implication_right_counter(self, spec_state, next_spec_state,
@@ -505,9 +343,8 @@ class Encoder:
         if next_rejecting_scc is None:
             return None
 
-        crt_sharp = self._func("lambda_sharp", ["q_" + spec_state.name, sys_state])
-        next_sharp = self._func("lambda_sharp", ["q_" + next_spec_state.name, next_sys_state])
-        greater = [self._ge, self._gt][is_rejecting]
+        crt_sharp = func("lambda_sharp", ["q_" + spec_state.name, sys_state])
+        next_sharp = func("lambda_sharp", ["q_" + next_spec_state.name, next_sys_state])
+        greater = [ge, gt][is_rejecting]
 
-        return greater(next_sharp, crt_sharp)
-
+        return greater(next_sharp, crt_sharp, self._logic)
