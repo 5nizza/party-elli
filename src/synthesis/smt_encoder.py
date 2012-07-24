@@ -1,39 +1,27 @@
 import itertools
 import logging
 
-from helpers.boolean import AND, OR, Symbol, normalize, FALSE, TRUE
 from helpers.logging import log_entrance
-from interfaces.automata import  Node, enumerate_values, DEAD_END
-from synthesis.rejecting_states_finder import  build_state_to_rejecting_scc
+from interfaces.automata import enumerate_values, DEAD_END
+from synthesis.rejecting_states_finder import build_state_to_rejecting_scc
 from synthesis.smt_helper import *
 
 
-def _get_spec_states_of_clause(spec_state_clause, terminals):
-    symbols = spec_state_clause.symbols
-    symbol_to_state = dict([(x[1],x[0]) for x in terminals.items()])
-    states = set(map(lambda s: symbol_to_state[s], symbols))
-    return states
+def _make_init_states_condition(init_spec_state_name, init_sys_state_name):
+    return make_assert(func("lambda_B", [init_spec_state_name, init_sys_state_name]))
 
 
-def _build_clause(term_clauses, list_of_state_sets):
-    if len(list_of_state_sets) is 0:
-        return FALSE
+def _lambdaB(spec_state_name, sys_state_expression):
+    return func("lambda_B", [spec_state_name, sys_state_expression])
 
-    ors = []
-    for state_set in list_of_state_sets:
-        if len(state_set) > 1:
-            and_args = list(map(lambda s: term_clauses[s], state_set))
-            ors.append(AND(*and_args))
-        else:
-            state = list(state_set)[0]
-            ors.append(term_clauses[state])
 
-    if len(ors) > 1:
-        clause = OR(*ors)
-    else:
-        clause = ors[0]
+def _counter(spec_state_name, sys_state_expression):
+    return func("lambda_sharp", [spec_state_name, sys_state_expression])
 
-    return clause
+
+def _tau(sys_state, args_str):
+    return func("tau", [sys_state] + args_str)
+
 
 
 class Encoder:
@@ -43,22 +31,6 @@ class Encoder:
         self._outputs = outputs
         self._logic = logic
         self._logger = logging.getLogger(__name__)
-
-
-    def _lambdaB(self, spec_state, sys_state_expression):
-        return func("lambda_B", [self._get_smt_name_spec_state(spec_state), sys_state_expression])
-
-
-    def _counter(self, spec_state_name, sys_state_expression):
-        return func("lambda_sharp", [spec_state_name, sys_state_expression])
-
-
-    def _tau(self, sys_state, args_str):
-        return func("tau", [sys_state] + args_str)
-
-
-    def _make_initial_states_condition(self, initial_spec_state_name):
-        return make_assert(func("lambda_B", [initial_spec_state_name, "t_0"]))
 
 
     def _condition_on_output(self, label, sys_state):
@@ -130,9 +102,10 @@ class Encoder:
                 if len(list(itertools.chain(*dst_set_list))) == 0: #TODO: why?
                     continue
 
-                for sys_state in sys_states:
-                    implication_left_1 = self._lambdaB(spec_state, sys_state)
-                    implication_left_2 = self._make_trans_condition_on_output_vars(label, sys_state)
+                for sys_state_name in sys_states:
+                    implication_left_1 = _lambdaB(self._get_smt_name_spec_state(spec_state),
+                        sys_state_name)
+                    implication_left_2 = self._make_trans_condition_on_output_vars(label, sys_state_name)
 
                     if len(implication_left_2) > 0:
                         implication_left = op_and([implication_left_1, implication_left_2])
@@ -145,7 +118,7 @@ class Encoder:
                             input_values[input_var] = label[input_var]
 
                     tau_args, free_input_vars = self._make_tau_arg_list(input_values)
-                    sys_next_state = self._tau(sys_state, tau_args)
+                    sys_next_state = _tau(sys_state_name, tau_args)
 
                     or_args = []
                     for dst_set in dst_set_list:
@@ -154,10 +127,11 @@ class Encoder:
                             if spec_next_state is DEAD_END:
                                 implication_right = false()
                             else:
-                                implication_right_lambdaB = self._lambdaB(spec_next_state, sys_next_state)
+                                implication_right_lambdaB = _lambdaB(self._get_smt_name_spec_state(spec_next_state),
+                                    sys_next_state)
                                 implication_right_counter = self._get_implication_right_counter(spec_state, spec_next_state,
                                     is_rejecting,
-                                    sys_state, sys_next_state,
+                                    sys_state_name, sys_next_state,
                                     state_to_rejecting_scc)
 
                                 if implication_right_counter is None:
@@ -177,13 +151,25 @@ class Encoder:
         return assertions
 
 
+    def encode_parametrized(self, local_specs, global_spec_automaton):
+        smt_lines = []
+
+        for local_spec in local_specs:
+            smt_lines += [self.encode(local_spec)]
+
+        smt_lines += [self.encode(global_spec_automaton)]
+
+        return '\n'.join(smt_lines)
+
+
     @log_entrance(logging.getLogger(), logging.INFO)
     def encode(self, num_impl_states):
         assert len(self._automaton.initial_sets_list) == 1, 'universal init state is not supported'
         assert len(self._automaton.initial_sets_list[0]) == 1
 
         init_spec_state = list(self._automaton.initial_sets_list[0])[0]
-        sys_states = ['t_'+str(i) for i in range(num_impl_states)]
+        sys_states = [self._get_smt_name_sys_state(i) for i in range(num_impl_states)]
+        init_sys_state = 0
 
         smt_lines = [make_headers(),
                      make_set_logic(self._logic),
@@ -196,7 +182,8 @@ class Encoder:
                      make_input_declarations(self._inputs),
                      make_func_declarations(self._inputs, self._outputs, self._logic),
 
-                     self._make_initial_states_condition(self._get_smt_name_spec_state(init_spec_state)),
+                     _make_init_states_condition(self._get_smt_name_spec_state(init_spec_state),
+                                                    self._get_smt_name_sys_state(init_sys_state)),
 
                      '\n'.join(self._make_state_transition_assertions(sys_states)),
 
@@ -212,8 +199,6 @@ class Encoder:
 
 
     def _get_smt_name(self, spec_state_clause):
-        assert spec_state_clause != TRUE and spec_state_clause != FALSE
-
         s = str(spec_state_clause)
         s = 'q_' + s.replace(' ', '').replace('+', '_or_').replace('*', '_and_').replace('(', '_').replace(')', '_')
         return s
