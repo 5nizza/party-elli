@@ -7,7 +7,7 @@ import os
 from interfaces.ltl_spec import LtlSpec
 from module_generation.dot import to_dot
 from synthesis.smt_logic import UFLIA, UFBV, UFLRA
-from translation2uct.ltl2automaton import Ltl2UCW, Ltl2ACW, negate, Ltl2UCW_thru_ACW
+from translation2uct.ltl2automaton import Ltl2UCW, Ltl2UCW_thru_ACW
 from synthesis.model_searcher import search
 from synthesis.z3 import Z3
 from module_generation.verilog import to_verilog
@@ -120,7 +120,7 @@ def _create_spec_converter_z3(use_acw):
     bosy_dir_toks = ['./'] + os.path.relpath(__file__).split(os.sep) #abspath returns 'windows' (not cygwin) path
     root_dir = ('/'.join(bosy_dir_toks[:-1]) + '/..') #root dir is one level up compared to bosy.py
 
-    z3_path = root_dir + '/lib/z3/bin/z3'
+    z3_path = 'z3' #assume it is in the PATH
     ltl2ba_path = root_dir + '/lib/ltl3ba/ltl3ba-1.0.1/ltl3ba'
     #
 
@@ -128,7 +128,6 @@ def _create_spec_converter_z3(use_acw):
     flag_marker = '-'
     if 'windows' in platform.system().lower() or 'nt' in platform.system().lower():
         ltl2ba_path += '.exe'
-        z3_path = 'z3' #assume z3 bin directory is in the PATH
         flag_marker = '/'
 
     ltl2ucw = Ltl2UCW_thru_ACW if use_acw else Ltl2UCW

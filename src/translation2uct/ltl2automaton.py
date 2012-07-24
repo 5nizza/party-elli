@@ -1,4 +1,5 @@
 import logging
+from helpers.logging import log_entrance
 from helpers.shell import execute_shell
 from interfaces.ltl_spec import LtlSpec
 from interfaces.automata import Automaton, to_dot
@@ -16,7 +17,7 @@ class Ltl2UCW:
         self._execute_cmd = ltl2ba_path +' -M -f'
         self._logger = logging.getLogger(__name__)
 
-
+    @log_entrance(logging.getLogger(), logging.INFO)
     def convert(self, ltl_spec):
         negated = negate(ltl_spec)
 
@@ -51,7 +52,7 @@ class Ltl2UCW_thru_ACW:
         self._ltl2acw = Ltl2ACW(ltl2ba_path)
         self._logger = logging.getLogger()
 
-
+    @log_entrance(logging.getLogger(), logging.INFO)
     def convert(self, ltl_spec):
         acw_automaton = self._ltl2acw.convert(ltl_spec)
 

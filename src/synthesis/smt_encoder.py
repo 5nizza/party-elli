@@ -2,10 +2,8 @@ import itertools
 import logging
 from helpers.boolean import AND, OR, Symbol, normalize, FALSE, TRUE
 from helpers.logging import log_entrance
-from helpers.ordered_set import OrderedSet
-from interfaces.automata import get_next_states, satisfied, Node, Automaton, to_dot, enumerate_values, is_forbidden_label_values, get_relevant_edges, DEAD_END
-from itertools import chain
-from synthesis.rejecting_states_finder import find_rejecting_sccs, build_state_to_rejecting_scc
+from interfaces.automata import  Node, enumerate_values, DEAD_END
+from synthesis.rejecting_states_finder import  build_state_to_rejecting_scc
 
 
 def _get_spec_states_of_clause(spec_state_clause, terminals):
@@ -513,5 +511,3 @@ class Encoder:
 
         return greater(next_sharp, crt_sharp)
 
-    def _build_state_to_rejecting_scc(self, rejecting_sccs):
-        pass
