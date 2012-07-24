@@ -48,6 +48,7 @@ class Encoder:
     def _lambdaB(self, spec_state, sys_state_expression):
         return func("lambda_B", [self._get_smt_name_spec_state(spec_state), sys_state_expression])
 
+
     def _counter(self, spec_state_name, sys_state_expression):
         return func("lambda_sharp", [spec_state_name, sys_state_expression])
 
@@ -122,22 +123,6 @@ class Encoder:
             guarantee = op_or(ors)
 
         return guarantee
-
-
-    def _get_create_node(self, spec_state_clause):
-        if getattr(self, '_my_nodes', None) is None:
-            self._my_nodes = {}
-            self._my_keys = set()
-
-        assert spec_state_clause != FALSE
-
-        self._my_keys.add(spec_state_clause)
-
-        name = str(spec_state_clause)
-        if spec_state_clause == TRUE:
-            name = 'OK'
-        node = self._my_nodes[spec_state_clause] = self._my_nodes.get(spec_state_clause, Node(name))
-        return node
 
 
     def _make_trans_condition_on_output_vars(self, label, sys_state):
@@ -220,21 +205,6 @@ class Encoder:
                     assertions.append(smt_addition)
 
         return assertions
-
-
-    def _make_get_values(self, num_impl_states):
-        smt_str = ''
-        for s in range(0, num_impl_states):
-            for input_values in enumerate_values(self._inputs):
-                smt_str += "(get-value ({0}))\n".format(func("tau", ['t_'+str(s)] + self._make_tau_arg_list(input_values)[0]))
-        for s in range(0, num_impl_states):
-            smt_str += "(get-value (t_{0}))\n".format(s)
-
-        for output in self._outputs:
-            for s in range(0, num_impl_states):
-                smt_str += "(get-value ((fo_{0} t_{1})))\n".format(output, s)
-
-        return smt_str
 
 
     def _build_terminal_clauses(self):
@@ -348,3 +318,23 @@ class Encoder:
         greater = [ge, gt][is_rejecting]
 
         return greater(next_sharp, crt_sharp, self._logic)
+
+
+    def _make_get_values(self, num_impl_states):
+        smt_lines = []
+        for s in range(num_impl_states):
+            for input_values in enumerate_values(self._inputs):
+                smt_lines.append(
+                    get_value(self._tau(self._get_smt_name_sys_state(s),
+                                        self._make_tau_arg_list(input_values)[0])))
+
+        for s in range(num_impl_states):
+            smt_lines.append(
+                get_value(self._get_smt_name_sys_state(s)))
+
+        for output in self._outputs:
+            for s in range(num_impl_states):
+                smt_lines.append(
+                    get_value(func('fo_'+str(output), [self._get_smt_name_sys_state(s)])))
+
+        return '\n'.join(smt_lines)

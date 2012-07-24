@@ -60,7 +60,7 @@ def make_state_declarations(state_names, sort_name):
 def func(function, args):
     smt_str = '(' + function + ' '
     for arg in args:
-        smt_str += arg + ' '
+        smt_str += str(arg) + ' '
     if len(args):
         smt_str = smt_str[:-1]
     smt_str += ')'
@@ -156,6 +156,10 @@ def false():
     return ' false '
 
 
+def get_value(arg):
+    return "(get-value ({0}))".format(arg)
+
+
 def beautify(s):
     depth = 0
     beautified = ''
@@ -176,3 +180,5 @@ def beautify(s):
         beautified += c
 
     return beautified
+
+
