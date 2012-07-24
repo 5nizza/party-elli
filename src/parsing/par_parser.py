@@ -57,7 +57,7 @@ def _get_spec_type(ltl_property):
 def is_parameterized(ltl_property):
     return '_i' in ltl_property\
            or '_j' in ltl_property\
-    or '_i1' in ltl_property
+           or '_i1' in ltl_property
 
 
 def reduce_par_ltl(ltl_spec):
@@ -82,7 +82,7 @@ def reduce_par_ltl(ltl_spec):
 def build_reduced_spec(proc_inputs, proc_outputs, property, nof_processes):
     """ Return the spec of the system as a whole """
 
-    system_inputs = list(itertools.product(proc_inputs, range(0, nof_processes)))
-    system_outputs = list(itertools.product(proc_outputs, range(0, nof_processes)))
+    system_inputs = list(itertools.product(proc_inputs, range(nof_processes)))
+    system_outputs = list(itertools.product(proc_outputs, range(nof_processes)))
 
     return LtlSpec(system_inputs, system_outputs, property)

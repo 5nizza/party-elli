@@ -4,7 +4,6 @@ import sys
 import random
 import os
 
-from interfaces.ltl_spec import LtlSpec
 from module_generation.dot import to_dot
 from parsing.parser import parse_ltl
 from synthesis.smt_logic import UFLIA, UFBV, UFLRA
@@ -104,6 +103,7 @@ def _setup_logging(verbose):
 
 def _get_logic(logic):
     return {'uflra':UFLRA, 'uflia':UFLIA, 'ufbv':UFBV}[logic.lower()]()
+
 
 if __name__ == "__main__":
     print_hello()

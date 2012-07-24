@@ -91,38 +91,8 @@ class Encoder:
         return input_values
 
 
-    def _is_end_node(self, spec_state):
-        return spec_state.name == '' #TODO: dirty hack!
-
-
     def _map_spec_states_to_smt_names(self, spec_states):
         return map(self._get_smt_name_spec_state, spec_states)
-
-
-    def _convert_state_clause_to_lambdaB_stmt(self,
-                                         spec_state_clause,
-                                         sys_state,
-                                         term_clauses):
-        if (str(spec_state_clause)) == '0':
-            assert spec_state_clause == FALSE
-
-        if spec_state_clause == TRUE:
-            guarantee = true()
-        elif spec_state_clause == FALSE:
-            guarantee = false()
-        else:
-            def convert_and_to_lambdaB(and_clause):
-                clause_to_state = dict(map(lambda item: (item[1], item[0]), term_clauses.items()))
-                and_state_names = map(lambda l: self._get_smt_name_spec_state(clause_to_state[l]), and_clause.literals)
-                ands = list(map(lambda name: self._lambdaB(name, sys_state), and_state_names))
-                assert len(ands) > 0
-                return op_and(ands)
-
-            ors = list(map(convert_and_to_lambdaB, normalize(OR, spec_state_clause)))
-            assert len(ors) > 0
-            guarantee = op_or(ors)
-
-        return guarantee
 
 
     def _make_trans_condition_on_output_vars(self, label, sys_state):
@@ -207,16 +177,6 @@ class Encoder:
         return assertions
 
 
-    def _build_terminal_clauses(self):
-        term_clauses = dict([(s, Symbol(s.name)) for s in self._automaton.nodes if s.name != ''])
-        true_states = list(filter(lambda x: x.name == '', self._automaton.nodes))
-
-        if true_states is not None and len(true_states) == 1:
-            term_clauses[true_states[0]] = TRUE
-
-        return term_clauses
-
-
     @log_entrance(logging.getLogger(), logging.INFO)
     def encode(self, num_impl_states):
         assert len(self._automaton.initial_sets_list) == 1, 'universal init state is not supported'
@@ -249,20 +209,6 @@ class Encoder:
         self._logger.debug(smt_query)
 
         return smt_query
-
-
-    def _is_rejecting_clause(self, spec_state_clause, term_clauses):
-        states = _get_spec_states_of_clause(spec_state_clause, term_clauses)
-
-        subst_map = {}
-        for state in states:
-            subst_map[term_clauses[state]] = TRUE if state not in self._automaton._rejecting_nodes else FALSE
-
-        is_accepting = spec_state_clause.subs(subst_map)
-
-        assert is_accepting == FALSE or is_accepting == TRUE
-
-        return is_accepting == FALSE
 
 
     def _get_smt_name(self, spec_state_clause):
@@ -313,8 +259,10 @@ class Encoder:
         if next_rejecting_scc is None:
             return None
 
-        crt_sharp = func("lambda_sharp", ["q_" + spec_state.name, sys_state])
-        next_sharp = func("lambda_sharp", ["q_" + next_spec_state.name, next_sys_state])
+        crt_sharp = func("lambda_sharp", [self._get_smt_name_spec_state(spec_state),
+                                          sys_state])
+        next_sharp = func("lambda_sharp", [self._get_smt_name_spec_state(next_spec_state),
+                                           next_sys_state])
         greater = [ge, gt][is_rejecting]
 
         return greater(next_sharp, crt_sharp, self._logic)
