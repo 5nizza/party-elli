@@ -118,31 +118,30 @@ class Encoder:
                     tau_args, free_input_vars = self._make_tau_arg_list(input_values, inputs)
                     sys_next_state = _tau(sys_state_name, tau_args)
 
-                    or_args = []
-                    for dst_set in dst_set_list:
-                        and_args = []
-                        for spec_next_state, is_rejecting in dst_set:
-                            if spec_next_state is DEAD_END:
-                                implication_right = false()
+                    assert len(dst_set_list) == 1, 'alternative transitions are not supported'
+
+                    dst_set = dst_set_list[0]
+                    and_args = []
+                    for spec_next_state, is_rejecting in dst_set:
+                        if spec_next_state is DEAD_END:
+                            implication_right = false()
+                        else:
+                            implication_right_lambdaB = _lambdaB(self._get_smt_name_spec_state(spec_next_state),
+                                sys_next_state)
+                            implication_right_counter = self._get_implication_right_counter(spec_state, spec_next_state,
+                                is_rejecting,
+                                sys_state_name, sys_next_state,
+                                state_to_rejecting_scc)
+
+                            if implication_right_counter is None:
+                                implication_right = implication_right_lambdaB
                             else:
-                                implication_right_lambdaB = _lambdaB(self._get_smt_name_spec_state(spec_next_state),
-                                    sys_next_state)
-                                implication_right_counter = self._get_implication_right_counter(spec_state, spec_next_state,
-                                    is_rejecting,
-                                    sys_state_name, sys_next_state,
-                                    state_to_rejecting_scc)
+                                implication_right = op_and([implication_right_lambdaB, implication_right_counter])
 
-                                if implication_right_counter is None:
-                                    implication_right = implication_right_lambdaB
-                                else:
-                                    implication_right = op_and([implication_right_lambdaB, implication_right_counter])
-
-                            and_args.append(implication_right)
-
-                        or_args.append(op_and(and_args))
+                        and_args.append(implication_right)
 
                     smt_addition = make_assert(implies(implication_left,
-                                                              forall(free_input_vars, op_or(or_args))))
+                                                       forall(free_input_vars, op_and(and_args))))
 
                     assertions.append(smt_addition)
 
