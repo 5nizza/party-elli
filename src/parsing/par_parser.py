@@ -1,5 +1,5 @@
 import itertools
-from interfaces.ltl_spec import LtlSpec
+from interfaces.spec import Spec
 
 
 def _instantiate_input_output(ltl_spec, nof_times):
@@ -28,9 +28,9 @@ def _instantiate_ii1(ltl_property):
 
 def _instantiate_ij(ltl_property):
     props_list = ['({0})'.format(ltl_property.replace('_i', '0').replace('_j', str(j)))
-                  for j in range(1, 4)]
+                  for j in range(1, 2)]
     new_prop = ' && '.join(props_list)
-    return 4, new_prop
+    return 2, new_prop
 
 
 def _instantiate_ii1j(ltl_property):
@@ -54,13 +54,13 @@ def _get_spec_type(ltl_property):
     return type
 
 
-def is_parameterized(ltl_property):
+def is_parametrized(ltl_property):
     return '_i' in ltl_property\
            or '_j' in ltl_property\
            or '_i1' in ltl_property
 
 
-def reduce_par_ltl(ltl_spec):
+def reduce_par_ltl(ltl_spec): #TODO: creates copies of the same property
     """ Return (min_size, instantiated LtlSpec) """
 
     handlers = {'i':_instantiate_i,
@@ -74,7 +74,7 @@ def reduce_par_ltl(ltl_spec):
 
     inst_in, inst_out = _instantiate_input_output(ltl_spec, size)
 
-    inst_ltl_spec = LtlSpec(inst_in, inst_out, inst_ltl_property)
+    inst_ltl_spec = Spec(inst_in, inst_out, inst_ltl_property)
 
     return size, inst_ltl_spec
 
@@ -85,4 +85,4 @@ def build_reduced_spec(proc_inputs, proc_outputs, property, nof_processes):
     system_inputs = list(itertools.product(proc_inputs, range(nof_processes)))
     system_outputs = list(itertools.product(proc_outputs, range(nof_processes)))
 
-    return LtlSpec(system_inputs, system_outputs, property)
+    return Spec(system_inputs, system_outputs, property)

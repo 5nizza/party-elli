@@ -3,12 +3,14 @@ import argparse
 import sys
 import random
 import os
+from interfaces.spec import Spec
 
 from module_generation.dot import to_dot
+from parsing.par_parser import is_parametrized, reduce_par_ltl
 from parsing.parser import parse_ltl
 from synthesis.smt_logic import UFLIA, UFBV, UFLRA
 from translation2uct.ltl2automaton import Ltl2UCW, Ltl2UCW_thru_ACW
-from synthesis.model_searcher import search
+from synthesis.model_searcher import search, SCHED_ID_PREFIX
 from synthesis.z3 import Z3
 from module_generation.verilog import to_verilog
 
@@ -27,9 +29,26 @@ def _verilog_to_str(verilog_module):
     return verilog_module
 
 
+def _generate_sched_constraints(nof_processes, sched_id_prefix):
+    return ' && '.join(map(lambda i: 'GF{0}{1}'.format(sched_id_prefix, i), range(nof_processes)))
+
+
 def main(ltl_file, size, bound, verilog_file, dot_file, ltl2ucw, z3solver, logic):
     logger = _get_logger()
-    ltl_spec = parse_ltl(ltl_file.read())
+
+    raw_ltl_spec = parse_ltl(ltl_file.read())
+
+    if is_parametrized(raw_ltl_spec.property):
+        nof_processes, instantiated_ltl_spec = reduce_par_ltl(raw_ltl_spec)
+        logger.info('parametrized specification: cutoff size=%i', nof_processes)
+        logger.debug('instantiated spec is %s', instantiated_ltl_spec)
+        sched_constraints = _generate_sched_constraints(nof_processes, SCHED_ID_PREFIX)
+
+        ltl_spec = Spec(instantiated_ltl_spec.inputs, instantiated_ltl_spec.outputs,
+            '({sched}) -> ({original})'.format_map({'original':instantiated_ltl_spec.property,
+                                                    'sched': sched_constraints}))
+    else:
+        ltl_spec = raw_ltl_spec
 
     automaton = ltl2ucw.convert(ltl_spec)
 

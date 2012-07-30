@@ -1,4 +1,4 @@
-class LtlSpec:
+class Spec:
     def __init__(self, inputs, outputs, property):
         self._inputs = inputs
         self._outputs = outputs

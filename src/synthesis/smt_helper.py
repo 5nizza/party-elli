@@ -18,21 +18,26 @@ def make_headers():
     return '(set-option :produce-models true)\n'
 
 
+#TODO: no need of constraints for input values
 def declare_bool_const(const_name, value):
     smt = ['(declare-const {0} Bool)\n'.format(const_name),
            '(assert (= {0} {1}))\n'.format(const_name, str(value).lower())]
     return ''.join(smt)
 
 
-def make_func_declarations(inputs, outputs, logic):
+def get_output_name(output):
+    return 'fo_' + str(output)
+
+
+def declare_outputs(outputs):
+    smt_lines = list(map(lambda output: declare_fun(get_output_name(output), ["T"], "Bool"), outputs))
+    return '\n'.join(smt_lines)
+
+
+def declare_counters(logic):
     smt_lines = [
-        comment("Declarations of the transition relation, output function and annotation"),
-        declare_fun("tau", ["T"] + ['Bool'] * len(inputs), "T"),
         declare_fun("lambda_B", ["Q", "T"], "Bool"),
         declare_fun("lambda_sharp", ["Q", "T"], logic.counters_type(4))]
-
-    smt_lines.extend(
-        map(lambda output: declare_fun("fo_" + output, ["T"], "Bool"), outputs))
 
     return '\n'.join(smt_lines)
 
@@ -41,7 +46,7 @@ def get_valued_var_name(var, value):
     return '{0}{1}'.format('i_' if value else 'i_not_', var)
 
 
-def make_input_declarations(inputs):
+def declare_inputs(inputs):
     smt_str = ''
     for input_var in inputs:
         for value in [False, True]:
@@ -51,9 +56,32 @@ def make_input_declarations(inputs):
     return smt_str
 
 
-def make_state_declarations(state_names, sort_name):
-    smt_str = '(declare-datatypes () (({0} {1})))\n'.format(sort_name,
-        ' '.join(state_names))
+def declare_enum(enum_name, values):
+    smt_str = '(declare-datatypes () (({0} {1})))\n'.format(enum_name,
+        ' '.join(values))
+    return smt_str
+
+
+def tuple_type(name, component_types):
+    args = ' '.join(component_types)
+    return '({name} {args})'.format_map({'name':name, 'args':args})
+
+
+def declare_tuple(name, component_types, getter_prefix):
+    """ This implementation is Z3 specific """
+
+    ctor_args = ' '.join(map(lambda i: 'arg'+str(i), range(len(component_types))))
+    components_def = ' '.join(map(lambda i,t: '({get}{i} {t})'.format_map({'i':i,
+                                                                           't':t,
+                                                                           'get':getter_prefix}),
+                                  enumerate(component_types)))
+
+    smt_str = """
+    (declare-datatypes ({args})
+    ( ({name} (mk-pair {components_def})) )
+    )
+    """.format_map({'args':ctor_args, 'name':name, 'components_def':components_def})
+
     return smt_str
 
 
@@ -76,16 +104,17 @@ def comment(comment):
     smt_str = '; ' + comment + '\n'
     return smt_str
 
-def declare_fun(name, vars, type):
+
+def declare_fun(name, input_types, out_type):
     smt_str = '(declare-fun '
     smt_str += name + ' ('
 
-    for var in vars:
+    for var in input_types:
         smt_str += var + ' '
-    if len(vars):
+    if len(input_types):
         smt_str = smt_str[:-1]
 
-    smt_str += ') ' + type + ')\n'
+    smt_str += ') ' + out_type + ')\n'
     return smt_str
 
 

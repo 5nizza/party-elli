@@ -85,7 +85,9 @@ def _conform2acw(initial_nodes, rejecting_nodes, nodes, vars):
         new_node = get_add(new_name_to_node, n.name, Node(n.name))
 
         lbl_to_flagged_nodes = {}
-        for pattern_lbl, old_dst_nodes in [(lbl, _flatten(flagged_dst)) for lbl, flagged_dst in n.transitions.items()]:
+
+        lbl_dst_set_pairs = [(lbl, _flatten(list_of_sets)) for lbl, list_of_sets in n.transitions.items()]
+        for pattern_lbl, old_dst_nodes in lbl_dst_set_pairs:
             new_dst_nodes = _get_create_new_nodes(new_name_to_node, old_dst_nodes)
 
             for lbl in _unwind_label(pattern_lbl, vars):
@@ -109,7 +111,7 @@ def _get_hacked_ucw(text): #TODO: bad smell - it is left for testing purposes on
         {label1:[{}, {}, {}], label2:[{},{}]} , where label1 n label2 != 0
 
         For example: {1:[{0}, {1}], '!g':[{2}] which means that with '1' you go in _both_ directions,
-        and with '!g' actually also in both directions since labels intersect (and no non-determinism!)
+        and with '!g' in both directions since labels intersect (and no non-determinism!)
     """
 
     toks = text.split('\n')

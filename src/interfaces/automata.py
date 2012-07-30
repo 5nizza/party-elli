@@ -51,7 +51,7 @@ class Node:
 
     @property
     def transitions(self):
-        """ Return map { label->[flagged_nodes_set, ..] ... label->[flagged_nodes_set, ..] } """
+        """ Return dict { label->[set_of_flagged_nodes, set_of_flagged_nodes..] ..] } """
         return self._transitions
 
     def add_transition(self, label, flagged_nodes):

@@ -1,4 +1,4 @@
-from interfaces.ltl_spec import LtlSpec
+from interfaces.spec import Spec
 
 
 def _remove_comments_in_ltl(text):
@@ -42,5 +42,5 @@ def parse_ltl(text):
         else:
             assert False, 'unknown input line: ' + l
 
-    ltl_spec = LtlSpec(inputs, outputs, property)
+    ltl_spec = Spec(inputs, outputs, property)
     return ltl_spec

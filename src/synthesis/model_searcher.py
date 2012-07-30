@@ -7,6 +7,7 @@ from synthesis.z3 import Z3
 
 _logger = None
 
+SCHED_ID_PREFIX = 'sch'
 
 def _get_logger():
     global _logger
@@ -27,8 +28,8 @@ def search(ucw_automaton, inputs, outputs, size, bound, z3solver, logic):
     for current_bound in model_sizes:
         logger.info('searching a model of size {0}..'.format(current_bound))
 
-        encoder = Encoder(ucw_automaton, inputs, outputs, logic)
-        smt_str = encoder.encode(current_bound)
+        encoder = Encoder(logic)
+        smt_str = encoder.encode(ucw_automaton, inputs, outputs, current_bound)
         z3solver.solve(smt_str)
 
         if z3solver.get_state() == Z3.UNSAT:

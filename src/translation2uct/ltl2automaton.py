@@ -1,7 +1,7 @@
 import logging
 from helpers.logging import log_entrance
 from helpers.shell import execute_shell
-from interfaces.ltl_spec import LtlSpec
+from interfaces.spec import Spec
 from interfaces.automata import Automaton, to_dot
 from synthesis.alternating_to_universal import convert_acw_to_ucw
 from translation2uct.ltl2acw import parse_ltl3ba_aa
@@ -9,7 +9,7 @@ from translation2uct.ltl2ba import parse_ltl2ba_ba
 
 
 def negate(ltl_spec):
-    return LtlSpec(ltl_spec.inputs, ltl_spec.outputs, '!({0})'.format(ltl_spec.property))
+    return Spec(ltl_spec.inputs, ltl_spec.outputs, '!({0})'.format(ltl_spec.property))
 
 
 class Ltl2UCW:
