@@ -85,6 +85,54 @@ class Encoder:
         return smt_str
 
 
+    def _encode_transition(self, spec_state, sys_state_name,
+                           label, dst_set,
+                           inputs, outputs,
+                           state_to_rejecting_scc):
+
+        spec_state_name = self._get_smt_name_spec_state(spec_state)
+
+        implication_left_1 = _lambdaB(spec_state_name,sys_state_name)
+        implication_left_2 = self._make_trans_condition_on_output_vars(label,
+            sys_state_name, outputs)
+
+        if len(implication_left_2) > 0:
+            implication_left = op_and([implication_left_1, implication_left_2])
+        else:
+            implication_left = implication_left_1
+
+        input_values = {}
+        for input_var in inputs:
+            if input_var in label:
+                input_values[input_var] = label[input_var]
+
+        tau_args, free_input_vars = self._make_tau_arg_list(input_values, inputs)
+        sys_next_state = _tau(sys_state_name, tau_args)
+
+        and_args = []
+        for spec_next_state, is_rejecting in dst_set:
+            if spec_next_state is DEAD_END:
+                implication_right = false()
+            else:
+                implication_right_lambdaB = _lambdaB(self._get_smt_name_spec_state(spec_next_state),
+                    sys_next_state)
+                implication_right_counter = self._get_implication_right_counter(spec_state, spec_next_state,
+                    is_rejecting,
+                    sys_state_name, sys_next_state,
+                    state_to_rejecting_scc)
+
+                if implication_right_counter is None:
+                    implication_right = implication_right_lambdaB
+                else:
+                    implication_right = op_and([implication_right_lambdaB, implication_right_counter])
+
+            and_args.append(implication_right)
+
+        smt_addition = make_assert(implies(implication_left, forall(free_input_vars, op_and(and_args))))
+
+        return smt_addition
+
+
     def _make_state_transition_assertions(self, automaton, inputs, outputs, sys_states):
         assertions = []
 
@@ -97,51 +145,14 @@ class Encoder:
         for spec_state in automaton.nodes:
             for label, dst_set_list in spec_state.transitions.items():
                 for sys_state_name in sys_states:
-
-                    implication_left_1 = _lambdaB(self._get_smt_name_spec_state(spec_state),
-                        sys_state_name)
-                    implication_left_2 = self._make_trans_condition_on_output_vars(label,
-                        sys_state_name, outputs)
-
-                    if len(implication_left_2) > 0:
-                        implication_left = op_and([implication_left_1, implication_left_2])
-                    else:
-                        implication_left = implication_left_1
-
-                    input_values = {}
-                    for input_var in inputs:
-                        if input_var in label:
-                            input_values[input_var] = label[input_var]
-
-                    tau_args, free_input_vars = self._make_tau_arg_list(input_values, inputs)
-                    sys_next_state = _tau(sys_state_name, tau_args)
-
                     assert len(dst_set_list) == 1, 'alternative transitions are not supported'
 
-                    dst_set = dst_set_list[0]
-                    and_args = []
-                    for spec_next_state, is_rejecting in dst_set:
-                        if spec_next_state is DEAD_END:
-                            implication_right = false()
-                        else:
-                            implication_right_lambdaB = _lambdaB(self._get_smt_name_spec_state(spec_next_state),
-                                sys_next_state)
-                            implication_right_counter = self._get_implication_right_counter(spec_state, spec_next_state,
-                                is_rejecting,
-                                sys_state_name, sys_next_state,
-                                state_to_rejecting_scc)
+                    assertion = self._encode_transition(spec_state, sys_state_name,
+                        label, dst_set_list[0],
+                        inputs, outputs,
+                        state_to_rejecting_scc)
 
-                            if implication_right_counter is None:
-                                implication_right = implication_right_lambdaB
-                            else:
-                                implication_right = op_and([implication_right_lambdaB, implication_right_counter])
-
-                        and_args.append(implication_right)
-
-                    smt_addition = make_assert(implies(implication_left,
-                                                       forall(free_input_vars, op_and(and_args))))
-
-                    assertions.append(smt_addition)
+                    assertions.append(assertion)
 
         return assertions
 
