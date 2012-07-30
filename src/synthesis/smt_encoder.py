@@ -96,10 +96,8 @@ class Encoder:
 
         for spec_state in automaton.nodes:
             for label, dst_set_list in spec_state.transitions.items():
-                if len(list(itertools.chain(*dst_set_list))) == 0: #TODO: why?
-                    continue
-
                 for sys_state_name in sys_states:
+
                     implication_left_1 = _lambdaB(self._get_smt_name_spec_state(spec_state),
                         sys_state_name)
                     implication_left_2 = self._make_trans_condition_on_output_vars(label,
