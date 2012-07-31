@@ -80,6 +80,9 @@ def _get_create_new_nodes(new_name_to_node, flagged_nodes_set):
 
 
 def _conform2acw(initial_nodes, rejecting_nodes, nodes, vars):
+    """ correct incorrect transitions:
+        label->[set1,set2] corrected to label->[set3], where set3=set1 u set2
+    """
     new_name_to_node = {}
     for n in nodes:
         new_node = get_add(new_name_to_node, n.name, Node(n.name))
@@ -90,9 +93,10 @@ def _conform2acw(initial_nodes, rejecting_nodes, nodes, vars):
         for pattern_lbl, old_dst_nodes in lbl_dst_set_pairs:
             new_dst_nodes = _get_create_new_nodes(new_name_to_node, old_dst_nodes)
 
-            for lbl in _unwind_label(pattern_lbl, vars):
-                lbl_nodes = get_add(lbl_to_flagged_nodes, Label(lbl), set())
-                lbl_nodes.update(new_dst_nodes) #collect universal transitions
+#            for lbl in _unwind_label(pattern_lbl, vars):
+#            print(pattern_lbl)
+            lbl_nodes = get_add(lbl_to_flagged_nodes, pattern_lbl, set())
+            lbl_nodes.update(new_dst_nodes) #TODO: determenize, make labels do not intersect
 
         for lbl, flagged_dst_nodes in lbl_to_flagged_nodes.items():
             new_node.add_transition(lbl, flagged_dst_nodes)
@@ -105,13 +109,12 @@ def _conform2acw(initial_nodes, rejecting_nodes, nodes, vars):
 
 def _get_hacked_ucw(text): #TODO: bad smell - it is left for testing purposes only
     """
-        Return: initial_nodes: set, rejecting_nodes: set, nodes: set, label variables: set
+        Return: initial_nodes:set, rejecting_nodes:set, nodes:set, label variables:set
         It is hacked since it doesn't conform to description of Node transitions:
-        in this version node's transitions may contain intersecting labels:
-        {label1:[{}, {}, {}], label2:[{},{}]} , where label1 n label2 != 0
+        label->[set1, set2] here means: with label go to _both set1 and set2
 
-        For example: {1:[{0}, {1}], '!g':[{2}] which means that with '1' you go in _both_ directions,
-        and with '!g' in both directions since labels intersect (and no non-determinism!)
+        @see _conform2acw which corrects this
+
     """
 
     toks = text.split('\n')

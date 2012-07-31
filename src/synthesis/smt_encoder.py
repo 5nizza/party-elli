@@ -86,7 +86,7 @@ class Encoder:
 
 
     def _encode_transition(self, spec_state, sys_state_name,
-                           label, dst_set,
+                           label,
                            inputs, outputs,
                            state_to_rejecting_scc):
 
@@ -108,6 +108,11 @@ class Encoder:
 
         tau_args, free_input_vars = self._make_tau_arg_list(input_values, inputs)
         sys_next_state = _tau(sys_state_name, tau_args)
+#        print('label {0}\ntau_args {1}\nfree_vars {2}\ninputs{3}\n'.format(label, tau_args, free_input_vars, inputs))
+
+        dst_set_list = spec_state.transitions[label]
+        assert len(dst_set_list) == 1, 'alternative transitions are not supported'
+        dst_set = dst_set_list[0]
 
         and_args = []
         for spec_next_state, is_rejecting in dst_set:
@@ -128,9 +133,8 @@ class Encoder:
 
             and_args.append(implication_right)
 
-        smt_addition = make_assert(implies(implication_left, forall(free_input_vars, op_and(and_args))))
-
-        return smt_addition
+        #TODO: forall is evil!
+        return make_assert(implies(implication_left, forall(free_input_vars, op_and(and_args))))
 
 
     def _make_state_transition_assertions(self, automaton, inputs, outputs, sys_states):
@@ -145,10 +149,9 @@ class Encoder:
         for spec_state in automaton.nodes:
             for label, dst_set_list in spec_state.transitions.items():
                 for sys_state_name in sys_states:
-                    assert len(dst_set_list) == 1, 'alternative transitions are not supported'
 
                     assertion = self._encode_transition(spec_state, sys_state_name,
-                        label, dst_set_list[0],
+                        label,
                         inputs, outputs,
                         state_to_rejecting_scc)
 

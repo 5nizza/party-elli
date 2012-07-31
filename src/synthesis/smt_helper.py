@@ -15,7 +15,8 @@ def make_set_logic(logic):
 
 
 def make_headers():
-    return '(set-option :produce-models true)\n'
+    #ematching slows down if forall quantifier is present
+    return '(set-option :produce-models true)\n(set-option :EMATCHING false)\n'
 
 
 #TODO: no need of constraints for input values
