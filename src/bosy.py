@@ -3,6 +3,11 @@ import argparse
 import sys
 import random
 import os
+import math
+from helpers.main_helper import setup_logging
+from helpers.python_ext import bin_fixed_list
+from interfaces.architecture import RingEN
+
 from interfaces.spec import Spec
 
 from module_generation.dot import to_dot
@@ -10,7 +15,7 @@ from parsing.par_parser import is_parametrized, reduce_par_ltl
 from parsing.parser import parse_ltl
 from synthesis.smt_logic import UFLIA, UFBV, UFLRA
 from translation2uct.ltl2automaton import Ltl2UCW, Ltl2UCW_thru_ACW
-from synthesis.model_searcher import search, SCHED_ID_PREFIX
+from synthesis.model_searcher import search, SCHED_ID_PREFIX, search_parametrized
 from synthesis.z3 import Z3
 from module_generation.verilog import to_verilog
 
@@ -29,32 +34,38 @@ def _verilog_to_str(verilog_module):
     return verilog_module
 
 
-def _generate_sched_constraints(nof_processes, sched_id_prefix):
-    return ' && '.join(map(lambda i: 'GF{0}{1}'.format(sched_id_prefix, i), range(nof_processes)))
 
 
-def main(ltl_file, size, bound, verilog_file, dot_file, ltl2ucw, z3solver, logic):
-    logger = _get_logger()
-
+def main(ltl_file, bounds, verilog_file, dot_file, ltl2ucw, z3solver, logic, logger):
     raw_ltl_spec = parse_ltl(ltl_file.read())
 
-    if is_parametrized(raw_ltl_spec.property):
-        nof_processes, instantiated_ltl_spec = reduce_par_ltl(raw_ltl_spec)
-        logger.info('parametrized specification: cutoff size=%i', nof_processes)
-        logger.debug('instantiated spec is %s', instantiated_ltl_spec)
-        sched_constraints = _generate_sched_constraints(nof_processes, SCHED_ID_PREFIX)
+    is_par_spec = is_parametrized(raw_ltl_spec.property)
+    if is_par_spec:
+        architecture = RingEN()
 
-        ltl_spec = Spec(instantiated_ltl_spec.inputs, instantiated_ltl_spec.outputs,
-            '({sched}) -> ({original})'.format_map({'original':instantiated_ltl_spec.property,
-                                                    'sched': sched_constraints}))
+        par_inputs, par_outputs, concrete_property, nof_processes = architecture.modify_spec(raw_ltl_spec)
+
+        automaton = ltl2ucw.convert(ltl_spec)
+        inputs = raw_ltl_spec.inputs
+        outputs = raw_ltl_spec.outputs
+
+        logger.info('spec automaton has {0} states'.format(len(automaton.nodes)))
+
+        model = search_parametrized(architecture,
+            automaton,
+            inputs, outputs, nof_processes,
+            bounds,
+            z3solver, logic)
+
     else:
         ltl_spec = raw_ltl_spec
 
-    automaton = ltl2ucw.convert(ltl_spec)
+        automaton = ltl2ucw.convert(ltl_spec)
 
-    logger.info('spec automaton has {0} states'.format(len(automaton.nodes)))
+        logger.info('spec automaton has {0} states'.format(len(automaton.nodes)))
 
-    model = search(automaton, ltl_spec.inputs, ltl_spec.outputs, size, bound, z3solver, logic)
+        model = search(automaton, ltl_spec.inputs, ltl_spec.outputs, bounds, z3solver, logic)
+
 
     if model is None:
         logger.info('The specification is unrealizable with input conditions.')
@@ -107,19 +118,6 @@ def _create_spec_converter_z3(use_acw):
     return ltl2ucw(ltl2ba_path), Z3(z3_path, flag_marker)
 
 
-def _setup_logging(verbose):
-    level = None
-    if verbose is 0:
-        level = logging.INFO
-    elif verbose >= 1:
-        level = logging.DEBUG
-
-    logging.basicConfig(format="%(asctime)-10s%(message)s",
-                        datefmt="%H:%M:%S",
-                        level=level,
-                        stream=sys.stdout)
-
-
 def _get_logic(logic):
     return {'uflra':UFLRA, 'uflia':UFLIA, 'ufbv':UFBV}[logic.lower()]()
 
@@ -142,20 +140,16 @@ if __name__ == "__main__":
         help='logic of smt queries(uflia, ufbv)(default: %(default)i)')
     parser.add_argument('-v', '--verbose', action='count', default=0)
 
-    automaton_type_group = parser.add_mutually_exclusive_group(required=True)
-    automaton_type_group.add_argument('--acw', action='store_true',
-        help='use alternating very weak automaton and translate by themselves (default: %(default)i)')
-    automaton_type_group.add_argument('--ucw', action='store_true',
-        help='use ucw produced by ltl3ba (default: %(default)i)')
-
     args = parser.parse_args(sys.argv[1:])
 
-    _setup_logging(args.verbose)
+    setup_logging(args.verbose)
 
     ltl2ucw_converter, z3solver = _create_spec_converter_z3(args.acw)
     logic = _get_logic(args.logic)
 
-    main(args.ltl, args.size, args.bound, args.verilog, args.dot, ltl2ucw_converter, z3solver, logic)
+    bounds = list(range(1, args.bound + 1) if args.size is None else range(args.size, args.size + 1))
+
+    main(args.ltl, bounds, args.verilog, args.dot, ltl2ucw_converter, z3solver, logic, _get_logger())
 
     args.ltl.close()
     if args.verilog:

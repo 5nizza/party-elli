@@ -1,3 +1,10 @@
+def get_bits_definition(arg_prefix, nof_bits):
+    args  = list(map(lambda i: arg_prefix+str(i), range(nof_bits)))
+    args_def = ' '.join(map(lambda a: '({0} Bool)'.format(a), args))
+    args_call = ' '.join(args)
+    return args, args_def, args_call
+
+
 def make_check_sat():
     return "(check-sat)"
 
@@ -30,15 +37,14 @@ def get_output_name(output):
     return 'fo_' + str(output)
 
 
-def declare_outputs(outputs):
-    smt_lines = list(map(lambda output: declare_fun(get_output_name(output), ["T"], "Bool"), outputs))
-    return '\n'.join(smt_lines)
+def declare_output(output, sys_state_type):
+    return declare_fun(get_output_name(output), [sys_state_type], "Bool")
 
 
-def declare_counters(logic):
+def declare_counters(logic, sys_state_type, spec_state_type):
     smt_lines = [
-        declare_fun("lambda_B", ["Q", "T"], "Bool"),
-        declare_fun("lambda_sharp", ["Q", "T"], logic.counters_type(4))]
+        declare_fun("lambda_B", [spec_state_type, sys_state_type], "Bool"),
+        declare_fun("lambda_sharp", [spec_state_type, sys_state_type], logic.counters_type(4))]
 
     return '\n'.join(smt_lines)
 
@@ -86,7 +92,7 @@ def declare_tuple(name, component_types, getter_prefix):
     return smt_str
 
 
-def func(function, args):
+def call_func(function, args):
     smt_str = '(' + function + ' '
     for arg in args:
         smt_str += str(arg) + ' '
@@ -125,7 +131,7 @@ def declare_sort(name, num_param):
     return smt_str
 
 
-def implies(arg1, arg2):
+def op_implies(arg1, arg2):
     smt_str = '(=> ' + arg1 + ' ' + arg2 + ')'
     return smt_str
 
@@ -149,7 +155,9 @@ def op_not(argument):
 
 
 def make_and_or_xor(arguments, op):
-    assert len(arguments) > 0, 'invalid operation "{0}" args "{1}"'.format(str(op), str(arguments))
+    arguments = list(arguments)
+    if len(arguments) == 0:
+        return ''
 
     if len(arguments) == 1:
         return ' ' + arguments[0] + ' '
@@ -169,13 +177,17 @@ def op_xor(arguments):
     return make_and_or_xor(arguments, 'xor')
 
 
-def forall(free_input_vars, condition):
-    if len(free_input_vars) == 0:
+def forall(free_var_type_pairs, condition):
+    if len(free_var_type_pairs) == 0:
         return condition
 
-    forall_pre = ' '.join(['({0} Bool)'.format(x) for x in free_input_vars])
+    forall_pre = ' '.join(['({0} {1})'.format(var, type) for (var,type) in free_var_type_pairs])
 
     return '(forall ({0}) {1})'.format(forall_pre, condition)
+
+
+def forall_bool(free_input_vars, condition):
+    return forall([(var, 'Bool') for var in free_input_vars], condition)
 
 
 def true():

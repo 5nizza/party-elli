@@ -1,0 +1,11 @@
+INPUT: r_
+OUTPUT: g_
+PROPERTY:
+(
+(!g_i)
+&& G( ((!r_i) && g_i) -> F((r_i&&g_i) || (!g_i)) )
+&& G(r_i -> Fg_i)
+&& (!F(g_i && X((!r_i)&&!g_i) && X(((!r_i)&&!g_i) U (g_i && !r_i) )) )
+
+&& G(!(g_i && g_j))
+)
