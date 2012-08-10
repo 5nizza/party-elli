@@ -1,7 +1,7 @@
 import re
 import unittest
 from parsing.parser import parse_ltl
-from parsing.par_parser import reduce_par_ltl
+from parsing.en_rings_parser import reduce_par_ltl
 
 
 class Test(unittest.TestCase):

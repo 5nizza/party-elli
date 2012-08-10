@@ -1,39 +1,20 @@
-import logging
 import argparse
+import logging
 import sys
 import random
-import os
-import math
-from helpers.main_helper import setup_logging
-from helpers.python_ext import bin_fixed_list
-from interfaces.architecture import RingEN
-
-from interfaces.spec import Spec
+from helpers.main_helper import setup_logging, create_spec_converter_z3
+from interfaces.par_spec import RingEN
 
 from module_generation.dot import to_dot
-from parsing.par_parser import is_parametrized, reduce_par_ltl
+from parsing.en_rings_parser import is_parametrized, reduce_par_ltl
 from parsing.parser import parse_ltl
 from synthesis.smt_logic import UFLIA, UFBV, UFLRA
-from translation2uct.ltl2automaton import Ltl2UCW, Ltl2UCW_thru_ACW
-from synthesis.model_searcher import search, SCHED_ID_PREFIX, search_parametrized
-from synthesis.z3 import Z3
+from synthesis.model_searcher import search, search_parametrized
 from module_generation.verilog import to_verilog
-
-
-_logger = None
-
-
-def _get_logger():
-    global _logger
-    if _logger is None:
-        _logger = logging.getLogger(__name__)
-    return _logger
 
 
 def _verilog_to_str(verilog_module):
     return verilog_module
-
-
 
 
 def main(ltl_file, bounds, verilog_file, dot_file, ltl2ucw, z3solver, logic, logger):
@@ -97,27 +78,6 @@ def print_bye():
     print(byes[random.randint(0, len(byes) - 1)] + '!')
 
 
-def _create_spec_converter_z3(use_acw):
-    """ Return ltl to automaton converter, Z3 solver """
-
-    #make paths independent of current working directory
-    bosy_dir_toks = ['./'] + os.path.relpath(__file__).split(os.sep) #abspath returns 'windows' (not cygwin) path
-    root_dir = ('/'.join(bosy_dir_toks[:-1]) + '/..') #root dir is one level up compared to bosy.py
-
-    z3_path = 'z3' #assume it is in the PATH
-    ltl2ba_path = root_dir + '/lib/ltl3ba/ltl3ba-1.0.1/ltl3ba'
-    #
-
-    import platform
-    flag_marker = '-'
-    if 'windows' in platform.system().lower() or 'nt' in platform.system().lower():
-        ltl2ba_path += '.exe'
-        flag_marker = '/'
-
-    ltl2ucw = Ltl2UCW_thru_ACW if use_acw else Ltl2UCW
-    return ltl2ucw(ltl2ba_path), Z3(z3_path, flag_marker)
-
-
 def _get_logic(logic):
     return {'uflra':UFLRA, 'uflia':UFLIA, 'ufbv':UFBV}[logic.lower()]()
 
@@ -144,12 +104,12 @@ if __name__ == "__main__":
 
     setup_logging(args.verbose)
 
-    ltl2ucw_converter, z3solver = _create_spec_converter_z3(args.acw)
+    ltl2ucw_converter, z3solver = create_spec_converter_z3(args.acw)
     logic = _get_logic(args.logic)
 
     bounds = list(range(1, args.bound + 1) if args.size is None else range(args.size, args.size + 1))
 
-    main(args.ltl, bounds, args.verilog, args.dot, ltl2ucw_converter, z3solver, logic, _get_logger())
+    main(args.ltl, bounds, args.verilog, args.dot, ltl2ucw_converter, z3solver, logic, logging.getLogger(__name__))
 
     args.ltl.close()
     if args.verilog:

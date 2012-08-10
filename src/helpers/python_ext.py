@@ -29,6 +29,7 @@ def index(lambda_func, iterable):
     for i, e in enumerate(iterable):
         if lambda_func(e):
             return i
+    return None
 
 
 class SmarterList(list):
