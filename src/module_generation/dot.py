@@ -1,24 +1,25 @@
-def to_dot(smt_module): #TODO: the whole verilog/output package requires refactoring
-    dot_lines = ["digraph module { "]
+from helpers.python_ext import SmarterList
+from synthesis.smt_helper import get_output_name
 
-    state_trans, output_transition = smt_module.get_model()
 
-    output = {}
-    for state, out_var, out_val in zip(output_transition.state, output_transition.type, output_transition.result):
-        output[state] = output.get(state, {})
-        output[state][out_var] = out_val
+def to_dot(lts):
+    dot_lines = SmarterList()
+    dot_lines += 'digraph module {'
 
-    for state, values_dict in output.items():
-        var_value_pairs = sorted(map(lambda it: (it[0], it[1]), values_dict.items()))
-        values = ' '.join(map(lambda var_val: ['-', ''][var_val[1]=='true'] + var_val[0].replace('fo_', ''),
-                              var_value_pairs))
-        dot_lines.append('"{0}" [label="{1}"{2}]'.format(state, values, ['', ', color="green"'][state=='0']))
+    for state in lts.states:
+        name_value_pairs = sorted(lts.outputs(state).items())
+        values_str = ' '.join(map(lambda name_value: '{0}{1}'.format(['-', ''][name_value[1]=='true'],
+                                                                     name_value[0].replace(get_output_name(''), '')),
+                              name_value_pairs))
+        dot_lines += '"{state}" [label="{values}"{color}]'.format_map({'state':state, 'values':values_str,
+                                                                       'color':['', ', color="green"'][state=='0']})
 
-    for i in range(len(state_trans.state)):
-        dot_lines.append('"{0}" -> "{1}" [label="{2}"]'.format(state_trans.state[i],
-            state_trans.new_state[i],
-            state_trans.input[i].replace('i_', '').replace('not_', '-').replace('.', ' ')))
+    for state in lts.states:
+        for input, new_state in lts.next_states(state).items():
+            dot_lines += '"{state}" -> "{new_state}" [label="{label}"]'.format_map({'state': state,
+                                                                                    'new_state': new_state,
+                                                                                    'label':' '.join(input)})
 
-    dot_lines.append('}')
+    dot_lines += '}'
 
     return '\n'.join(dot_lines)

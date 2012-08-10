@@ -43,3 +43,4 @@ class SmarterList(list):
         else:
             super().append(other)
             return self
+

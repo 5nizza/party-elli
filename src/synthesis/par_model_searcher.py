@@ -29,11 +29,9 @@ def search(automaton, inputs, outputs,
         smt_query = encoder.encode_parametrized(bound)
         logger.debug(smt_query)
 
-        z3solver.solve(smt_query)
+        status, data = z3solver.solve(smt_query)
 
-        if z3solver.get_state() == Z3.UNSAT: #TODO: replace with Solver
-            logger.info('unsat..')
-        elif z3solver.get_state() == Z3.SAT:
-            logger.info('sat!')
+        if status == Z3.SAT:
+            return encoder.parse_model(data)
 
-    return None
+        return None

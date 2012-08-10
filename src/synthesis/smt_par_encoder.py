@@ -1,10 +1,12 @@
+from collections import defaultdict
 from itertools import product, chain
 import logging
 import math
 
 from helpers.logging import log_entrance
 from helpers.python_ext import SmarterList, bin_fixed_list, index
-from interfaces.automata import  DEAD_END, enumerate_values
+from interfaces.automata import  DEAD_END
+from interfaces.lts import LTS
 from parsing.en_rings_parser import concretize, parametrize
 from synthesis.rejecting_states_finder import build_state_to_rejecting_scc
 from synthesis.smt_helper import *
@@ -78,7 +80,6 @@ class ParEncoder:
                            sys_state_vector,
                            label,
                            state_to_rejecting_scc,
-                           tau_name,
                            is_active_func_name,
                            equals_bits_name):
 
@@ -95,7 +96,7 @@ class ParEncoder:
 
         implication_left = op_and([assume_lambdaB]+[assume_out] +[assume_is_active])
 
-        sys_next_state = [call_func(tau_name,
+        sys_next_state = [call_func(self._tau_sched_wrapper_name,
                                     self._make_tau_arg_list(sys_state_vector, label, proc_index, equals_bits_name))
                           for proc_index in range(self._nof_processes)]
 
@@ -130,7 +131,7 @@ class ParEncoder:
         return make_assert(forall_bool(free_input_vars, op_implies(implication_left, op_and(and_args))))
 
 
-    def _define_tau_sched_wrapper(self, name, tau_name, is_active_name, state_type):
+    def _define_tau_sched_wrapper(self, is_active_name, state_type):
         _, input_args_def, input_args_call = get_bits_definition('in', len(self._orig_inputs))
         _, sched_args_def, sched_args_call = get_bits_definition('sched', self._nof_bits)
         _, proc_args_def, proc_args_call = get_bits_definition('proc', self._nof_bits)
@@ -139,8 +140,8 @@ class ParEncoder:
 (define-fun {tau_wrapper} ((state {state}) {inputs_def} (sends_prev Bool) {sched_def} {proc_def}) {state}
     (ite ({is_active} {sched} {proc} sends_prev) ({tau} state {inputs_call} sends_prev) state)
 )
-        """.format_map({'tau_wrapper':name,
-                        'tau': tau_name,
+        """.format_map({'tau_wrapper':self._tau_sched_wrapper_name,
+                        'tau': self._tau_name,
                         'sched_def': sched_args_def,
                         'proc_def': proc_args_def,
                         'sched': sched_args_call,
@@ -199,15 +200,13 @@ class ParEncoder:
         is_active_name = 'is_active'
         smt_lines += self._define_is_active(is_active_name, equal_bits_name, equal_to_prev_name)
 
-        tau_name = 'local_tau'
-        smt_lines += declare_fun(tau_name,
+        self._tau_name = 'local_tau'
+        smt_lines += declare_fun(self._tau_name,
             [local_states_type] + ['Bool']*(len(self._orig_inputs)+1), #+sends_prev
             local_states_type)
 
-        tau_sched_wrapper_name = tau_name + '_wrapper'
-        sched_wrapper_def = self._define_tau_sched_wrapper(tau_sched_wrapper_name,
-            tau_name,
-            is_active_name,
+        self._tau_sched_wrapper_name = self._tau_name + '_wrapper'
+        sched_wrapper_def = self._define_tau_sched_wrapper(is_active_name,
             local_states_type)
         smt_lines += [sched_wrapper_def]
 
@@ -230,13 +229,11 @@ class ParEncoder:
                         global_state,
                         label,
                         state_to_rejecting_scc,
-                        tau_sched_wrapper_name,
                         is_active_name,
                         equal_bits_name)
 
         smt_lines += make_check_sat()
-        smt_lines += make_get_model()
-        get_values = self._make_get_values(tau_name, nof_local_states)
+        get_values = self._make_get_values(nof_local_states)
         print(get_values)
         smt_lines += get_values
         smt_lines += make_exit()
@@ -323,13 +320,13 @@ class ParEncoder:
         return greater(next_sharp, crt_sharp, self._logic)
 
 
-    def _make_get_values(self, local_tau_func_name, nof_impl_states):
+    def _make_get_values(self, nof_impl_states):
         smt_lines = SmarterList()
 
         for s in range(nof_impl_states):
             for raw_values in product([False, True], repeat=len(self._orig_inputs)+1): #+1 for sends_prev
                 values = [str(v).lower() for v in raw_values]
-                smt_lines += get_value(call_func(local_tau_func_name, [self._get_smt_name_sys_state([s])] + values))
+                smt_lines += get_value(call_func(self._tau_name, [self._get_smt_name_sys_state([s])] + values))
 
         for output in self._outputs:
             for s in range(nof_impl_states):
@@ -504,12 +501,35 @@ class ParEncoder:
         return free_vars
 
 
+    def parse_model(self, get_value_lines):
+        tau_get_value_lines = list(filter(lambda l: self._tau_name in l, get_value_lines))
+        outputs_get_value_lines = list(filter(lambda l: get_output_name('') in l, get_value_lines))
+
+        state_to_input_to_new_state = self._get_tau_model(tau_get_value_lines)
+        state_to_outname_to_value = self._get_output_model(outputs_get_value_lines)
+
+        return LTS(state_to_outname_to_value, state_to_input_to_new_state)
 
 
+    def _get_tau_model(self, tau_lines):
+        state_to_input_to_new_state = defaultdict(lambda: defaultdict(lambda: {}))
+        for l in tau_lines:
+            parts = l.replace("(", "").replace(")", "").replace(self._tau_name, "").strip().split()
+
+            old_state_part = parts[0]
+            inputs = tuple(parts[1:-1])
+            new_state_part = parts[-1]
+            state_to_input_to_new_state[old_state_part][inputs] = new_state_part
+
+        return state_to_input_to_new_state
 
 
+    def _get_output_model(self, output_lines):
+        state_to_outname_to_value = defaultdict(lambda: defaultdict(lambda: {}))
+        for l in output_lines:
+            parts  = l.replace("(", "").replace(")", "").strip().split()
+            assert len(parts) == 3, str(parts)
+            outname, state, outvalue = parts
+            state_to_outname_to_value[state][outname] = outvalue
 
-
-
-
-
+        return state_to_outname_to_value

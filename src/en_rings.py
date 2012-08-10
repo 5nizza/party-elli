@@ -21,13 +21,13 @@ def main(ltl_file, dot_file, bounds, automaton_converter, solver, logger):
 
     automaton = automaton_converter.convert(Spec(par_inputs, par_outputs, full_concr_prop))
 
-    model = search(automaton, par_inputs, par_outputs,
+    lts = search(automaton, par_inputs, par_outputs,
         nof_processes,
         bounds,
         solver, SCHED_ID_PREFIX, ACTIVE_NAME_PREFIX, SENDS_NAME)
 
-    if dot_file is not None and model is not None:
-        dot = to_dot(model)
+    if dot_file is not None and lts is not None:
+        dot = to_dot(lts)
         dot_file.write(dot)
 
 
