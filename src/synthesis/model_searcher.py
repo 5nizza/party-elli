@@ -1,32 +1,28 @@
 import logging
 from helpers.logging import log_entrance
 from interfaces.automata import to_dot
-from interfaces.smt_model import SmtModel
-from synthesis.smt_par_encoder import ParEncoder
+from synthesis.smt_encoder import Encoder
+from synthesis.smt_logic import UFLIA
 from synthesis.z3 import Z3
 
+
 @log_entrance(logging.getLogger(), logging.INFO)
-def search(ucw_automaton, inputs, outputs, bounds, z3solver, logic):
+def search(automaton, inputs, outputs, bounds, z3solver, logic):
     logger = logging.getLogger()
 
-    logger.debug(ucw_automaton)
-    logger.debug(to_dot(ucw_automaton))
+    logger.debug(automaton)
+    logger.debug(to_dot(automaton))
 
-    for current_bound in bounds:
-        logger().info('searching a model of size {0}..'.format(current_bound))
+    for bound in bounds:
+        logger.info('searching a model of size {0}..'.format(bound))
+        encoder = Encoder(UFLIA(), automaton, inputs, outputs)
 
-        encoder = ParEncoder(logic, False)
-        smt_str = encoder.encode(ucw_automaton, inputs, outputs, current_bound)
-        z3solver.solve(smt_str)
+        smt_query = encoder.encode(bound)
+        logger.debug(smt_query)
 
-        if z3solver.get_state() == Z3.UNSAT:
-            logger().info('unsat..')
-        elif z3solver.get_state() == Z3.SAT:
-            logger().info('sat!')
-            model = SmtModel(z3solver.get_model())
-            return model
-        else:
-            logger().warning('solver status is unknown')
-            break
+        status, data = z3solver.solve(smt_query)
 
-    return None
+        if status == Z3.SAT:
+            return encoder.parse_model(data)
+
+        return None

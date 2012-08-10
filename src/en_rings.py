@@ -4,7 +4,7 @@ import sys
 from helpers.main_helper import setup_logging, create_spec_converter_z3
 from interfaces.spec import Spec
 from module_generation.dot import to_dot
-from parsing.en_rings_parser import is_parametrized, get_cutoff_size, get_fair_scheduler_property, SCHED_ID_PREFIX, concretize_property, SENDS_NAME, get_tok_ring_par_io, get_tok_ring_concr_properties, ACTIVE_NAME_PREFIX, update_spec_w_en_rings
+from parsing.en_rings_parser import is_parametrized, SCHED_ID_PREFIX, SENDS_NAME, ACTIVE_NAME_PREFIX, update_spec_w_en_rings
 from parsing.parser import parse_ltl
 from synthesis.par_model_searcher import search
 
@@ -20,11 +20,14 @@ def main(ltl_file, dot_file, bounds, automaton_converter, solver, logger):
     logger.debug('par_inputs %s, par_outputs %s', str(par_inputs), str(par_outputs))
 
     automaton = automaton_converter.convert(Spec(par_inputs, par_outputs, full_concr_prop))
+    logger.info('spec automaton has %i states', len(automaton.nodes))
 
     lts = search(automaton, par_inputs, par_outputs,
         nof_processes,
         bounds,
         solver, SCHED_ID_PREFIX, ACTIVE_NAME_PREFIX, SENDS_NAME)
+
+    logger.info('model %s found', ['', 'not'][lts is None])
 
     if dot_file is not None and lts is not None:
         dot = to_dot(lts)
@@ -32,7 +35,7 @@ def main(ltl_file, dot_file, bounds, automaton_converter, solver, logger):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Parametrized SynthesIs Tool')
+    parser = argparse.ArgumentParser(description='Parametrized Synthesis Tool for token rings architecture')
     parser.add_argument('ltl', metavar='ltl', type=argparse.FileType(),
         help='loads the LTL formula from the given input file')
     parser.add_argument('--dot', metavar='dot', type=argparse.FileType('w'), required=False,

@@ -3,7 +3,7 @@ import logging
 from helpers.logging import log_entrance
 from interfaces.automata import to_dot
 from synthesis.smt_logic import UFLIA
-from synthesis.smt_par_encoder import ParEncoder
+from synthesis.par_smt_encoder import ParEncoder
 from synthesis.z3 import Z3
 
 

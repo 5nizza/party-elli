@@ -234,7 +234,6 @@ class ParEncoder:
 
         smt_lines += make_check_sat()
         get_values = self._make_get_values(nof_local_states)
-        print(get_values)
         smt_lines += get_values
         smt_lines += make_exit()
 
