@@ -4,42 +4,9 @@ import sys
 from helpers.main_helper import setup_logging, create_spec_converter_z3
 from interfaces.spec import Spec
 from module_generation.dot import to_dot
-from parsing.en_rings_parser import is_parametrized, get_cutoff_size, get_fair_scheduler_property, SCHED_ID_PREFIX, concretize_property, SENDS_NAME, get_tok_ring_par_io, get_tok_ring_concr_properties, ACTIVE_NAME_PREFIX
+from parsing.en_rings_parser import is_parametrized, get_cutoff_size, get_fair_scheduler_property, SCHED_ID_PREFIX, concretize_property, SENDS_NAME, get_tok_ring_par_io, get_tok_ring_concr_properties, ACTIVE_NAME_PREFIX, update_spec_w_en_rings
 from parsing.parser import parse_ltl
 from synthesis.par_model_searcher import search
-
-
-def update_spec_w_en_rings(raw_ltl_spec):
-    nof_processes = get_cutoff_size(raw_ltl_spec.property)
-
-    fair_sched_prop = get_fair_scheduler_property(nof_processes, SCHED_ID_PREFIX, SENDS_NAME)
-
-    print()
-    print(fair_sched_prop)
-    print()
-
-    concr_safety_tok_ring_prop, concrt_liveness_tok_ring_prop = get_tok_ring_concr_properties(nof_processes)
-    print()
-    print(concr_safety_tok_ring_prop)
-    print(concrt_liveness_tok_ring_prop)
-    print()
-
-    concr_original_prop = concretize_property(raw_ltl_spec.property, nof_processes)
-    full_concr_prop = '{ring} && (({sched}) -> (({original}) && ({live_tok_ring})))'.format_map(
-            {'ring': concr_safety_tok_ring_prop,
-             'sched': fair_sched_prop,
-             'original': concr_original_prop,
-             'live_tok_ring': concrt_liveness_tok_ring_prop})
-
-    print()
-    print('modified original', full_concr_prop)
-    print()
-    par_tok_ring_inputs, par_tok_ring_outputs = get_tok_ring_par_io()
-
-    par_inputs = raw_ltl_spec.inputs + par_tok_ring_inputs
-    par_outputs = raw_ltl_spec.outputs + par_tok_ring_outputs
-
-    return par_inputs, par_outputs, full_concr_prop, nof_processes
 
 
 def main(ltl_file, dot_file, bounds, automaton_converter, solver, logger):
@@ -49,6 +16,9 @@ def main(ltl_file, dot_file, bounds, automaton_converter, solver, logger):
 
     par_inputs, par_outputs, full_concr_prop, nof_processes = update_spec_w_en_rings(raw_ltl_spec)
 
+    logger.info('cutoff of size %i', nof_processes)
+    logger.debug('par_inputs %s, par_outputs %s', str(par_inputs), str(par_outputs))
+
     automaton = automaton_converter.convert(Spec(par_inputs, par_outputs, full_concr_prop))
 
     model = search(automaton, par_inputs, par_outputs,
@@ -56,40 +26,9 @@ def main(ltl_file, dot_file, bounds, automaton_converter, solver, logger):
         bounds,
         solver, SCHED_ID_PREFIX, ACTIVE_NAME_PREFIX, SENDS_NAME)
 
-
     if dot_file is not None and model is not None:
         dot = to_dot(model)
         dot_file.write(dot)
-
-
-#    is_par_spec = is_parametrized(raw_ltl_spec.property)
-#
-#    automaton = ltl2ucw.convert(ltl_spec)
-#    inputs = raw_ltl_spec.inputs
-#    outputs = raw_ltl_spec.outputs
-#
-#    logger.info('spec automaton has {0} states'.format(len(automaton.nodes)))
-#
-#    model = search_parametrized(architecture,
-#        automaton,
-#        inputs, outputs, nof_processes,
-#        bounds,
-#        z3solver, logic)
-#
-#    if model is None:
-#        logger.info('The specification is unrealizable with input conditions.')
-#    return
-#
-#    output = str(model)
-#    if verilog_file is not None:
-#        verilog_module = to_verilog(model)
-#        output = _verilog_to_str(verilog_module)
-#        verilog_file.write(output)
-#
-
-#
-#    logger.info('-'*80)
-#    logger.info(output)
 
 
 if __name__ == '__main__':

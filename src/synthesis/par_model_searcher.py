@@ -15,7 +15,6 @@ def search(automaton, inputs, outputs,
                         sched_id_prefix,
                         active_var_prefix,
                         sends_var_prefix):
-
     logger = logging.getLogger()
 
     logger.debug(automaton)
@@ -26,6 +25,7 @@ def search(automaton, inputs, outputs,
         encoder = ParEncoder(UFLIA(), nof_processes,
             sched_id_prefix, active_var_prefix, sends_var_prefix,
             automaton, inputs, outputs)
+
         smt_query = encoder.encode_parametrized(bound)
         logger.debug(smt_query)
 

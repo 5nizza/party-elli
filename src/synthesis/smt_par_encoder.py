@@ -1,11 +1,10 @@
-from collections import Iterable
 from itertools import product, chain
 import logging
 import math
 
 from helpers.logging import log_entrance
 from helpers.python_ext import SmarterList, bin_fixed_list, index
-from interfaces.automata import enumerate_values, DEAD_END
+from interfaces.automata import  DEAD_END, enumerate_values
 from parsing.en_rings_parser import concretize, parametrize
 from synthesis.rejecting_states_finder import build_state_to_rejecting_scc
 from synthesis.smt_helper import *
@@ -20,11 +19,6 @@ def _lambdaB(spec_state_name, sys_state_expression):
 
 def _counter(spec_state_name, sys_state_name):
     return call_func("lambda_sharp", [spec_state_name, sys_state_name])
-
-
-def _tau(sys_state_name, args):
-    return call_func("tau", [sys_state_name] + args)
-
 
 
 class ParEncoder:
@@ -51,29 +45,9 @@ class ParEncoder:
 
         self._sched_id_prefix = sched_id_prefix
         self._automaton = automaton
-        self._inputs = list(filter(lambda i: sends_var_prefix not in i, par_inputs)) #special treatment of sends_prev
+
+        self._orig_inputs = list(filter(lambda i: sends_var_prefix not in i, par_inputs)) #special treatment of sends_prev
         self._outputs = par_outputs
-
-
-    def _condition_on_output(self, outputs, label, sys_state):
-        and_args = []
-        for var in outputs:
-            if (var in label) and (label[var] is True):
-                and_args.append(call_func("fo_" + var, [sys_state])) #TODO: get rid off fo_
-            elif (var in label) and (label[var] is False):
-                and_args.append(op_not(call_func("fo_" + var, [sys_state])))
-            elif var not in label:
-                pass
-            else:
-                assert False, "Error: wrong variable value: " + label[var]
-
-        smt_str = ' '
-        if len(and_args) > 1:
-            smt_str = op_and(and_args)
-        elif len(and_args) == 1:
-            smt_str = and_args[0]
-
-        return smt_str
 
 
     def _make_trans_condition_on_output_vars(self, label, sys_state_vector, outputs):
@@ -125,11 +99,6 @@ class ParEncoder:
                                     self._make_tau_arg_list(sys_state_vector, label, proc_index, equals_bits_name))
                           for proc_index in range(self._nof_processes)]
 
-#        print()
-#        print('label', label)
-#        print('inputs', inputs)
-#        print('all_free_vars', all_free_vars)
-
         sys_next_state_name = ' '.join(sys_next_state)
 
         dst_set_list = spec_state.transitions[label]
@@ -158,18 +127,16 @@ class ParEncoder:
 
         #TODO: forall is evil!
         free_input_vars = self._get_free_vars(label)
-        return make_assert(op_implies(implication_left, forall_bool(free_input_vars, op_and(and_args))))
+        return make_assert(forall_bool(free_input_vars, op_implies(implication_left, op_and(and_args))))
 
 
     def _define_tau_sched_wrapper(self, name, tau_name, is_active_name, state_type):
-        input_def_args = ' '.join(map(lambda i: '(in{0} Bool)'.format(i), range(len(self._inputs))))
-        input_call_args = ' '.join(map(lambda i: 'in'+str(i), range(len(self._inputs))))
-
+        _, input_args_def, input_args_call = get_bits_definition('in', len(self._orig_inputs))
         _, sched_args_def, sched_args_call = get_bits_definition('sched', self._nof_bits)
         _, proc_args_def, proc_args_call = get_bits_definition('proc', self._nof_bits)
 
         return """
-(define-fun {tau_wrapper} ((state {state}) {inputs_def} {sched_def} {proc_def} (sends_prev Bool)) {state}
+(define-fun {tau_wrapper} ((state {state}) {inputs_def} (sends_prev Bool) {sched_def} {proc_def}) {state}
     (ite ({is_active} {sched} {proc} sends_prev) ({tau} state {inputs_call} sends_prev) state)
 )
         """.format_map({'tau_wrapper':name,
@@ -178,63 +145,11 @@ class ParEncoder:
                         'proc_def': proc_args_def,
                         'sched': sched_args_call,
                         'proc': proc_args_call,
-                        'inputs_call':input_call_args,
-                        'inputs_def':input_def_args,
+                        'inputs_call':input_args_call,
+                        'inputs_def':input_args_def,
                         'state':state_type,
                         'is_active': is_active_name})
 
-
-#    def _define_proj_function(self, proj_name, getter, global_ty, local_ty):
-#        return """
-#        (define-fun {proj} ((global_state {global_ty})) {local_ty}
-#        ({getter} global_state)
-#        )
-#        """.format_map({'proj': proj_name,
-#                        'getter': getter,
-#                        'global_ty':global_ty,
-#                        'local_ty':local_ty})
-
-
-#    def _define_combine_function(self, combine_name, global_ty, args):
-#        args_str = ' '.join(args)
-#        return """ (define-fun {combine} ({args}) {global}
-#        ()
-#        )
-#        """.format_map({'args':args_str,
-#                        'combine':combine_name,
-#                        'global':global_ty})
-
-#    def _define_vector_function(self, global_tau_name, local_tau_name, proj_name, combine_name,
-#                                global_state_type, sched_id_type,
-#                                nof_processes):
-#        new_states = ' '.join(map(lambda i: '({tau} ({proj} vector_state) {proc_id} sched_id)'.format_map(
-#                {'tau':local_tau_name,
-#                 'proj':proj_name+str(i),
-#                 'proc_id':str(i)}),
-#            range(nof_processes)))
-#
-#        return """
-#        (define-fun {vector_tau} (vector_state {vector_state} sched_id {sched_id}) {vector_state}
-#        ({combine} {new_states})
-#        )
-#        """.format_map({'vector_tau':global_tau_name,
-#                        'vector_state': global_state_type,
-#                        'sched_id':sched_id_type,
-#                        'new_states':new_states,
-#                        'combine':combine_name})
-
-#    def _define_sends_prev(self, sends_prev_name, sends_name, nof_processes): #TODO: hardcode
-#        smt = """
-#(define-fun {name} ((proc_id Int)) Bool
-#(
-# (ite (= proc_id 0) ({sends} {max_proc_id})
-#                    ({sends} (- proc_id 1))
-# )
-#)
-#        """.format_map({'name': sends_prev_name,
-#                        'sends': sends_name,
-#                        'max_proc_id': })
-#        return smt
 
     #NOTE
     # there are three cases:
@@ -254,8 +169,7 @@ class ParEncoder:
 
     @log_entrance(logging.getLogger(), logging.INFO)
     def encode_parametrized(self, nof_local_states):
-
-        assert nof_local_states > 1, 'initial token distribution requires > 1 local states'
+        assert nof_local_states > 1, 'initial token distribution requires at least two states'
 
         smt_lines = SmarterList()
 
@@ -287,7 +201,7 @@ class ParEncoder:
 
         tau_name = 'local_tau'
         smt_lines += declare_fun(tau_name,
-            [local_states_type] + ['Bool']*(len(self._inputs)+1),
+            [local_states_type] + ['Bool']*(len(self._orig_inputs)+1), #+sends_prev
             local_states_type)
 
         tau_sched_wrapper_name = tau_name + '_wrapper'
@@ -322,46 +236,12 @@ class ParEncoder:
 
         smt_lines += make_check_sat()
         smt_lines += make_get_model()
+        get_values = self._make_get_values(tau_name, nof_local_states)
+        print(get_values)
+        smt_lines += get_values
         smt_lines += make_exit()
 
         return '\n'.join(smt_lines)
-
-
-    @log_entrance(logging.getLogger(), logging.INFO)
-    def encode(self, automaton, inputs, outputs, nof_sys_states):
-        assert len(automaton.initial_sets_list) == 1, 'universal init state is not supported'
-        assert len(automaton.initial_sets_list[0]) == 1
-
-        init_spec_state = list(automaton.initial_sets_list[0])[0]
-        sys_states = [[i] for i in range(nof_sys_states)]
-        init_sys_state = [0]
-
-        smt_lines = [make_headers(),
-                     make_set_logic(self._logic),
-
-                     declare_enum("Q", map(self._get_smt_name_spec_state, automaton.nodes)),
-                     declare_enum("T", map(lambda s: self._get_smt_name_sys_state(s), chain(sys_states))),
-
-                     declare_inputs(inputs),
-                     declare_outputs(outputs, 'T'),
-                     declare_fun("tau", ['T'] + ['Bool'] * len(inputs), 'T'),
-                     declare_counters(self._logic, 'T', 'Q'),
-
-                     _make_init_states_condition(self._get_smt_name_spec_state(init_spec_state),
-                                                 self._get_smt_name_sys_state(init_sys_state)),
-
-                     '\n'.join(self._make_state_transition_assertions(automaton, inputs, outputs,
-                         sys_states, 'tau')),
-
-                     make_check_sat(),
-                     self._make_get_values(inputs, outputs, nof_sys_states),
-                     make_exit()]
-
-        smt_query = '\n'.join(smt_lines)
-
-        self._logger.debug(smt_query)
-
-        return smt_query
 
 
     def _get_smt_name_spec_state(self, spec_state):
@@ -383,7 +263,7 @@ class ParEncoder:
 
         tau_args = [self._get_smt_name_sys_state([sys_state_vector[proc_index]])]
 
-        for concr_var_name in concretize(self._inputs, proc_index):
+        for concr_var_name in concretize(self._orig_inputs, proc_index):
             if concr_var_name in label:
                 tau_args.append(str(label[concr_var_name]).lower())
             else:
@@ -392,27 +272,28 @@ class ParEncoder:
                     value = '?{0}'.format(concr_var_name)
                     tau_args.append(value)
 
+        prev_proc = (proc_index - 1) % self._nof_processes
+        prev_proc_id_values = list(map(lambda b: str(b).lower(), bin_fixed_list(prev_proc, self._nof_bits)))
+
         sched_values = self._get_sched_values(label)
+        sched_prev = call_func(equals_bits_name, sched_values+prev_proc_id_values)
+
+        sends_prev = self._get_sends_prev_expr(proc_index, sys_state_vector)
+        modified_sends_prev = op_and([sends_prev, sched_prev])
+#        print(modified_sends_prev)
+
+        tau_args += [modified_sends_prev]
+
         tau_args += sched_values
+
+        proc_id_values = list(map(lambda b: str(b).lower(), bin_fixed_list(proc_index, self._nof_bits)))
+        tau_args += proc_id_values
 
 #        print(label)
 #        print('proc_index', proc_index)
 #        print('before updating proc', tau_args)
 #        print('before updating', free_vars)
 
-        tau_args += list(map(lambda b: str(b).lower(), bin_fixed_list(proc_index, self._nof_bits)))
-
-
-        prev_proc = (proc_index - 1) % self._nof_processes
-        prev_proc_id_values = list(map(lambda b: str(b).lower(), bin_fixed_list(prev_proc, self._nof_bits)))
-        sched_prev = call_func(equals_bits_name, sched_values+prev_proc_id_values)
-
-        sends_prev = self._get_sends_prev_expr(proc_index, sys_state_vector)
-        modified_sends_prev = op_and([sends_prev, sched_prev])
-
-        print(modified_sends_prev)
-
-        tau_args += [modified_sends_prev]
 #        print('after updating', tau_args)
 #        print('after updating', free_vars)
 #        print()
@@ -442,25 +323,19 @@ class ParEncoder:
         return greater(next_sharp, crt_sharp, self._logic)
 
 
-    def _make_get_values(self, inputs, outputs, num_impl_states):
-        return '' #TODO
-#        smt_lines = []
-#        for s in range(num_impl_states):
-#            for input_values in enumerate_values(inputs):
-#                smt_lines.append(
-#                    get_value(_tau(self._get_smt_name_sys_state(s),
-#                                        self._make_tau_arg_list(input_values, inputs)[0])))
-#
-#        for s in range(num_impl_states):
-#            smt_lines.append(
-#                get_value(self._get_smt_name_sys_state(s)))
-#
-#        for output in outputs:
-#            for s in range(num_impl_states):
-#                smt_lines.append(
-#                    get_value(func('fo_'+str(output), [self._get_smt_name_sys_state(s)])))
-#
-#        return '\n'.join(smt_lines)
+    def _make_get_values(self, local_tau_func_name, nof_impl_states):
+        smt_lines = SmarterList()
+
+        for s in range(nof_impl_states):
+            for raw_values in product([False, True], repeat=len(self._orig_inputs)+1): #+1 for sends_prev
+                values = [str(v).lower() for v in raw_values]
+                smt_lines += get_value(call_func(local_tau_func_name, [self._get_smt_name_sys_state([s])] + values))
+
+        for output in self._outputs:
+            for s in range(nof_impl_states):
+                smt_lines += get_value(call_func(get_output_name(output), [self._get_smt_name_sys_state([s])]))
+
+        return '\n'.join(smt_lines)
 
 
     def _define_equal_bools(self, equal_bits_name):
@@ -597,6 +472,7 @@ class ParEncoder:
         return call_func(is_active_func_name, proc_id_args + sched_vals + [sends_prev])
 
 
+    #TODO: duplications
     def _get_sched_values(self, label):
         sched_vars = list(map(lambda i: '{0}{1}'.format(self._sched_id_prefix, i), range(self._nof_bits)))
         sched_values = []
@@ -615,7 +491,7 @@ class ParEncoder:
         free_vars = []
 
         for proc_index in range(self._nof_processes):
-            for concr_var_name in concretize(self._inputs, proc_index):
+            for concr_var_name in concretize(self._orig_inputs, proc_index):
                 if concr_var_name not in label:
                     value = '?{0}'.format(concr_var_name)
                     free_vars.append(value)
