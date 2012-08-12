@@ -105,7 +105,7 @@ class GenericEncoder:
                 self._get_smt_name_spec_state(init_spec_state),
                 self._get_smt_name_sys_state(init_sys_state, impl.proc_states_descs))
 
-        global_states = list(product(*[range(proc_states_desc[1]) for proc_states_desc in impl.proc_states_descs]))
+        global_states = list(product(*[range(len(proc_states_desc[1])) for proc_states_desc in impl.proc_states_descs]))
 
         state_to_rejecting_scc = build_state_to_rejecting_scc(impl.automaton)
 
@@ -126,13 +126,14 @@ class GenericEncoder:
     @log_entrance(logging.getLogger(), logging.INFO)
     def encode(self, impl):
         smt_lines = SmarterList()
+
         smt_lines += make_headers()
         smt_lines += make_set_logic(self._logic)
 
         smt_lines += self._define_automaton_states(impl.automaton)
         smt_lines += self._define_sys_states(impl.proc_states_descs)
 
-        func_descs = impl.aux_func_descs() + impl.outputs_descs() + impl.taus_descs()
+        func_descs = impl.aux_func_descs + impl.outputs_descs + impl.taus_descs
         smt_lines += self._define_declare_functions(func_descs)
 
         smt_lines += self._define_counters(impl.proc_states_descs)
@@ -151,7 +152,7 @@ class GenericEncoder:
 
 
     def _get_smt_name_sys_state(self, sys_state_vector, proc_states_descs):
-        sys_state_values = list(map(lambda i,v: proc_states_descs[i][v], enumerate(sys_state_vector)))
+        sys_state_values = list(map(lambda iv: proc_states_descs[iv[0]][iv[1]], enumerate(sys_state_vector)))
         return  ' '.join(sys_state_values)
 
 
@@ -278,7 +279,7 @@ class GenericEncoder:
             if enum_name in declared_enums:
                 continue
 
-            smt_lines += declare_enum(enum_name, map(lambda v: range(proc_states_desc[1])))
+            smt_lines += declare_enum(enum_name, proc_states_desc[1])
             declared_enums.add(enum_name)
 
         return smt_lines
@@ -305,7 +306,10 @@ class GenericEncoder:
     def _get_tau_args_from_label(self, proc_state, proc_inputs, proc_label, proc_states_descs):
         tau_args = [self._get_smt_name_sys_state([proc_state], proc_states_descs)]
 
+
+        print(proc_label)
         for var_name in proc_inputs:
+            print(var_name)
             if var_name in proc_label:
                 tau_args.append(str(proc_label[var_name]).lower())
             else:

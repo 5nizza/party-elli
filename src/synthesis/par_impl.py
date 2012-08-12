@@ -1,25 +1,27 @@
 import math
 from helpers.python_ext import bin_fixed_list, SmarterList, index
 from interfaces.automata import Label
-from parsing.en_rings_parser import parametrize
+from parsing.en_rings_parser import parametrize, concretize
 from synthesis.smt_helper import call_func, op_and, get_bits_definition
 
 
 class ParImpl: #TODO: separate architecture from the spec
     def __init__(self, automaton, par_inputs, par_outputs, nof_processes,
+                 nof_local_states,
                  sched_var_prefix, active_var_prefix, sends_var_prefix):
         self.automaton = automaton
 
-        self.proc_states_descs = self._create_proc_descs(nof_processes)
+        self._state_type = 'LS'
+        self.proc_states_descs = self._create_proc_descs(nof_local_states)
 
         self.nof_processes = nof_processes
 
         self._nof_bits = int(math.ceil(math.log(self.nof_processes, 2)))
 
         self._par_inputs = list(par_inputs)
+        self.inputs = list(map(lambda proc_index: list(map(lambda pi: concretize(pi, proc_index), self._par_inputs)), range(nof_processes)))
+        print(self.inputs)
         self._par_outputs = list(par_outputs)
-
-        self._state_type = 'LS'
 
         self._tau_name = 'tau'
         self._is_active_name = 'is_active'
@@ -34,7 +36,7 @@ class ParImpl: #TODO: separate architecture from the spec
         self._active_var_prefix = active_var_prefix
         self._sends_name = sends_var_prefix
 
-
+    @property
     def aux_func_descs(self):
         """ Return func_name, input_types, output_type, body[optional]
         """
@@ -43,11 +45,12 @@ class ParImpl: #TODO: separate architecture from the spec
                 self._get_desc_local_tau(),
                 self._get_desc_is_active()]
 
-
+    @property
     def outputs_descs(self):
         return list(map(lambda o: (str(o), [self._state_type], 'Bool', None), self._par_outputs))
 
 
+    @property
     def taus_descs(self):
         return list(map(lambda i: self._get_desc_tau_sched_wrapper(), range(self.nof_processes)))
 
@@ -261,8 +264,8 @@ class ParImpl: #TODO: separate architecture from the spec
                                                'state': self.proc_states_descs[0][prev_proc_state]})
 
 
-    def _create_proc_descs(self, nof_processes):
-        return list(map(lambda i: (self._state_type, 't'+str(i)), range(nof_processes)))
+    def _create_proc_descs(self, nof_local_states):
+        return list(map(lambda i: (self._state_type, 't'+str(i)), range(nof_local_states)))
 
 
     def filter_label_by_process(self, label, proc_index): #TODO: hack
