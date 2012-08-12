@@ -22,6 +22,7 @@ def make_set_logic(logic):
 
 
 def make_headers():
+    #TODO: ask stackoverflow about other speed upers
     #ematching slows down if forall quantifier is present
     return '(set-option :produce-models true)\n(set-option :EMATCHING false)\n'
 
@@ -64,7 +65,7 @@ def declare_inputs(inputs):
 
 
 def declare_enum(enum_name, values):
-    smt_str = '(declare-datatypes () (({0} {1})))\n'.format(enum_name,
+    smt_str = '(declare-datatypes () (({0} {1})))'.format(enum_name,
         ' '.join(values))
     return smt_str
 
