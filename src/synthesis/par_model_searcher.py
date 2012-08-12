@@ -32,6 +32,6 @@ def search(automaton, inputs, outputs,
         status, data = z3solver.solve(smt_query)
 
         if status == Z3.SAT:
-            return encoder.parse_model(data)
+            return encoder.parse_model(data, impl)
 
         return None

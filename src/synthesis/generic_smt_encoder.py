@@ -1,9 +1,11 @@
+from collections import defaultdict
 from itertools import product, chain
 import logging
 
 from helpers.logging import log_entrance
 from helpers.python_ext import SmarterList
 from interfaces.automata import  DEAD_END
+from interfaces.lts import LTS
 from synthesis.rejecting_states_finder import build_state_to_rejecting_scc
 from synthesis.smt_helper import *
 
@@ -206,8 +208,7 @@ class GenericEncoder:
             for s in impl.proc_states_descs[proc_index][1]:
                 for raw_values in product([False, True], repeat=len(tau_desc[1])-1): #first arg is the state
                     values = [str(v).lower() for v in raw_values]
-                    smt_lines += get_value(call_func(tau_desc[0],
-                                                     [s] + values))
+                    smt_lines += get_value(call_func(tau_desc[0], [s] + values))
 
         processed_outputs = []
         for proc_index, outputs in enumerate(impl.outputs):
@@ -237,22 +238,32 @@ class GenericEncoder:
         return free_vars
 
 
-    def parse_model(self, get_value_lines):
-        self._logger.warning('parse model: not supported: return None!')
-        return None #TODO
-        tau_get_value_lines = list(filter(lambda l: self._tau_name in l, get_value_lines))
-        outputs_get_value_lines = list(filter(lambda l: get_output_name('') in l, get_value_lines))
+    def parse_model(self, get_value_lines, impl):
+        models = []
+        processed_tau_descs = []
+        for proc_index, (tau_desc, outputs_descs) in enumerate(zip(impl.model_taus_descs, impl.outputs_descs)):
+            if tau_desc in processed_tau_descs:
+                continue
+            processed_tau_descs.append(tau_desc)
 
-        state_to_input_to_new_state = self._get_tau_model(tau_get_value_lines)
-        state_to_outname_to_value = self._get_output_model(outputs_get_value_lines)
+            tau_get_value_lines = list(filter(lambda l: tau_desc[0] in l, get_value_lines))
 
-        return LTS(state_to_outname_to_value, state_to_input_to_new_state)
+            outputs_get_value_lines = SmarterList()
+            for output_desc in outputs_descs:
+                outputs_get_value_lines += list(filter(lambda l: output_desc[0] in l, get_value_lines))
+
+            state_to_input_to_new_state = self._get_tau_model(tau_get_value_lines, tau_desc)
+            state_to_outname_to_value = self._get_output_model(outputs_get_value_lines)
+
+            models.append(LTS(state_to_outname_to_value, state_to_input_to_new_state))
+
+        return models #TODO: should return nof_processes models?
 
 
-    def _get_tau_model(self, tau_lines):
+    def _get_tau_model(self, tau_lines, tau_desc):
         state_to_input_to_new_state = defaultdict(lambda: defaultdict(lambda: {}))
         for l in tau_lines:
-            parts = l.replace("(", "").replace(")", "").replace(self._tau_name, "").strip().split()
+            parts = l.replace("(", "").replace(")", "").replace(tau_desc[0], "").strip().split()
 
             old_state_part = parts[0]
             inputs = tuple(parts[1:-1])

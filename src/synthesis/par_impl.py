@@ -55,12 +55,12 @@ class ParImpl: #TODO: separate architecture from the spec
 
     @property
     def taus_descs(self):
-        return list(map(lambda i: self._get_desc_tau_sched_wrapper(), range(self.nof_processes)))
+        return [self._get_desc_tau_sched_wrapper()]*self.nof_processes
 
 
     @property
     def model_taus_descs(self):
-        return [self._get_desc_local_tau()]
+        return [self._get_desc_local_tau()]*self.nof_processes
 
 
     def get_proc_tau_additional_args(self, proc_label, sys_state_vector, proc_index):

@@ -22,16 +22,18 @@ def main(ltl_file, dot_file, bounds, automaton_converter, solver, logger):
     automaton = automaton_converter.convert(Spec(par_inputs, par_outputs, full_concr_prop))
     logger.info('spec automaton has %i states', len(automaton.nodes))
 
-    lts = search(automaton, par_inputs, par_outputs,
+    models = search(automaton, par_inputs, par_outputs,
         nof_processes,
         bounds,
         solver, SCHED_ID_PREFIX, ACTIVE_NAME_PREFIX, SENDS_NAME)
 
-    logger.info('model %s found', ['', 'not'][lts is None])
+    logger.info('model %s found', ['', 'not'][models is None])
 
-    if dot_file is not None and lts is not None:
-        dot = to_dot(lts)
-        dot_file.write(dot)
+    if dot_file is not None and models is not None:
+        for lts in models:
+            dot = to_dot(lts)
+            print(dot)
+#        dot_file.write(dot)
 
 
 if __name__ == '__main__':
