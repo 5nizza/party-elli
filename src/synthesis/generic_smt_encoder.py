@@ -142,6 +142,7 @@ class GenericEncoder:
 
         smt_lines += make_check_sat()
 #        get_values = self._make_get_values()
+#        smt_lines += get_values
         smt_lines += make_exit()
 
         return '\n'.join(smt_lines)
@@ -152,7 +153,7 @@ class GenericEncoder:
 
 
     def _get_smt_name_sys_state(self, sys_state_vector, proc_states_descs):
-        sys_state_values = list(map(lambda iv: proc_states_descs[iv[0]][iv[1]], enumerate(sys_state_vector)))
+        sys_state_values = list(map(lambda iv: proc_states_descs[iv[0]][1][iv[1]], enumerate(sys_state_vector)))
         return  ' '.join(sys_state_values)
 
 
@@ -166,13 +167,6 @@ class GenericEncoder:
         tau_args = self._get_tau_args_from_label(proc_state, impl.inputs[proc_index], proc_label, impl.proc_states_descs)
 
         tau_args += impl.get_proc_tau_additional_args(proc_label, sys_state, proc_index)
-
-#        print(label)
-#        print('proc_index', proc_index)
-#        print('before updating proc', tau_args)
-
-#        print('after updating', tau_args)
-#        print()
 
         return tau_args
 
@@ -199,19 +193,19 @@ class GenericEncoder:
         return greater(next_sharp, crt_sharp, self._logic)
 
 
-#    def _make_get_values(self, nof_impl_states):
-#        smt_lines = SmarterList()
-#
-#        for s in range(nof_impl_states):
-#            for raw_values in product([False, True], repeat=len(self._orig_inputs)+1): #+1 for sends_prev
-#                values = [str(v).lower() for v in raw_values]
-#                smt_lines += get_value(call_func(self._tau_name, [self._get_smt_name_sys_state([s])] + values))
-#
-#        for output in self._outputs:
-#            for s in range(nof_impl_states):
-#                smt_lines += get_value(call_func(get_output_name(output), [self._get_smt_name_sys_state([s])]))
-#
-#        return '\n'.join(smt_lines)
+    def _make_get_values(self, nof_impl_states):
+        smt_lines = SmarterList()
+
+        for s in range(nof_impl_states):
+            for raw_values in product([False, True], repeat=len(self._orig_inputs)+1): #+1 for sends_prev
+                values = [str(v).lower() for v in raw_values]
+                smt_lines += get_value(call_func(self._tau_name, [self._get_smt_name_sys_state([s])] + values))
+
+        for output in self._outputs:
+            for s in range(nof_impl_states):
+                smt_lines += get_value(call_func(get_output_name(output), [self._get_smt_name_sys_state([s])]))
+
+        return '\n'.join(smt_lines)
 
 
     def _get_free_vars(self, label, impl):
@@ -228,38 +222,40 @@ class GenericEncoder:
         return free_vars
 
 
-#    def parse_model(self, get_value_lines):
-#        tau_get_value_lines = list(filter(lambda l: self._tau_name in l, get_value_lines))
-#        outputs_get_value_lines = list(filter(lambda l: get_output_name('') in l, get_value_lines))
-#
-#        state_to_input_to_new_state = self._get_tau_model(tau_get_value_lines)
-#        state_to_outname_to_value = self._get_output_model(outputs_get_value_lines)
-#
-#        return LTS(state_to_outname_to_value, state_to_input_to_new_state)
-#
-#
-#    def _get_tau_model(self, tau_lines):
-#        state_to_input_to_new_state = defaultdict(lambda: defaultdict(lambda: {}))
-#        for l in tau_lines:
-#            parts = l.replace("(", "").replace(")", "").replace(self._tau_name, "").strip().split()
-#
-#            old_state_part = parts[0]
-#            inputs = tuple(parts[1:-1])
-#            new_state_part = parts[-1]
-#            state_to_input_to_new_state[old_state_part][inputs] = new_state_part
-#
-#        return state_to_input_to_new_state
-#
-#
-#    def _get_output_model(self, output_lines):
-#        state_to_outname_to_value = defaultdict(lambda: defaultdict(lambda: {}))
-#        for l in output_lines:
-#            parts  = l.replace("(", "").replace(")", "").strip().split()
-#            assert len(parts) == 3, str(parts)
-#            outname, state, outvalue = parts
-#            state_to_outname_to_value[state][outname] = outvalue
-#
-#        return state_to_outname_to_value
+    def parse_model(self, get_value_lines):
+        self._logger.warning('parse model: not supported: return None!')
+        return None #TODO
+        tau_get_value_lines = list(filter(lambda l: self._tau_name in l, get_value_lines))
+        outputs_get_value_lines = list(filter(lambda l: get_output_name('') in l, get_value_lines))
+
+        state_to_input_to_new_state = self._get_tau_model(tau_get_value_lines)
+        state_to_outname_to_value = self._get_output_model(outputs_get_value_lines)
+
+        return LTS(state_to_outname_to_value, state_to_input_to_new_state)
+
+
+    def _get_tau_model(self, tau_lines):
+        state_to_input_to_new_state = defaultdict(lambda: defaultdict(lambda: {}))
+        for l in tau_lines:
+            parts = l.replace("(", "").replace(")", "").replace(self._tau_name, "").strip().split()
+
+            old_state_part = parts[0]
+            inputs = tuple(parts[1:-1])
+            new_state_part = parts[-1]
+            state_to_input_to_new_state[old_state_part][inputs] = new_state_part
+
+        return state_to_input_to_new_state
+
+
+    def _get_output_model(self, output_lines):
+        state_to_outname_to_value = defaultdict(lambda: defaultdict(lambda: {}))
+        for l in output_lines:
+            parts  = l.replace("(", "").replace(")", "").strip().split()
+            assert len(parts) == 3, str(parts)
+            outname, state, outvalue = parts
+            state_to_outname_to_value[state][outname] = outvalue
+
+        return state_to_outname_to_value
 
 
     def _define_automaton_states(self, automaton):
@@ -306,10 +302,7 @@ class GenericEncoder:
     def _get_tau_args_from_label(self, proc_state, proc_inputs, proc_label, proc_states_descs):
         tau_args = [self._get_smt_name_sys_state([proc_state], proc_states_descs)]
 
-
-        print(proc_label)
         for var_name in proc_inputs:
-            print(var_name)
             if var_name in proc_label:
                 tau_args.append(str(proc_label[var_name]).lower())
             else:

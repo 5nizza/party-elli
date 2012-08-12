@@ -1,8 +1,9 @@
 import logging
 from helpers.logging import log_entrance
 from interfaces.automata import to_dot
-from synthesis.smt_encoder import Encoder
+from synthesis.generic_smt_encoder import GenericEncoder
 from synthesis.smt_logic import UFLIA
+from synthesis.solitary_impl import SolitaryImpl
 from synthesis.z3 import Z3
 
 
@@ -15,9 +16,10 @@ def search(automaton, inputs, outputs, bounds, z3solver, logic):
 
     for bound in bounds:
         logger.info('searching a model of size {0}..'.format(bound))
-        encoder = Encoder(UFLIA(), automaton, inputs, outputs)
 
-        smt_query = encoder.encode(bound)
+        encoder = GenericEncoder(UFLIA())
+        impl = SolitaryImpl(automaton, inputs, outputs, bound)
+        smt_query = encoder.encode(impl)
         logger.debug(smt_query)
 
         status, data = z3solver.solve(smt_query)

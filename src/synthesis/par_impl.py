@@ -11,17 +11,18 @@ class ParImpl: #TODO: separate architecture from the spec
                  sched_var_prefix, active_var_prefix, sends_var_prefix):
         self.automaton = automaton
 
+        self.nof_processes = nof_processes
+
         self._state_type = 'LS'
         self.proc_states_descs = self._create_proc_descs(nof_local_states)
-
-        self.nof_processes = nof_processes
 
         self._nof_bits = int(math.ceil(math.log(self.nof_processes, 2)))
 
         self._par_inputs = list(par_inputs)
-        self.inputs = list(map(lambda proc_index: list(map(lambda pi: concretize(pi, proc_index), self._par_inputs)), range(nof_processes)))
-        print(self.inputs)
         self._par_outputs = list(par_outputs)
+
+        self.inputs = list(map(lambda i: concretize(filter(lambda input: not input.startswith(sends_var_prefix), self._par_inputs), i), range(nof_processes)))
+        self.outputs = list(map(lambda i: concretize(self._par_outputs, i), range(nof_processes)))
 
         self._tau_name = 'tau'
         self._is_active_name = 'is_active'
@@ -235,7 +236,7 @@ class ParImpl: #TODO: separate architecture from the spec
 
     def _get_desc_local_tau(self):
         return self._tau_name, \
-               [self._state_type] + ['Bool']*(len(self._sched_args)+len(self._proc_args)+1), \
+               [self._state_type] + ['Bool']*len(self._par_inputs), \
                self._state_type, \
                None
 
@@ -261,19 +262,25 @@ class ParImpl: #TODO: separate architecture from the spec
         prev_proc_state = sys_states_vector[prev_proc]
 
         return '({sends} {state})'.format_map({'sends': self._sends_name,
-                                               'state': self.proc_states_descs[0][prev_proc_state]})
+                                               'state': self.proc_states_descs[0][1][prev_proc_state]})
 
 
     def _create_proc_descs(self, nof_local_states):
-        return list(map(lambda i: (self._state_type, 't'+str(i)), range(nof_local_states)))
+        return list(map(lambda proc_i: (self._state_type, list(map(lambda s: 't'+str(s), range(nof_local_states)))),
+                        range(self.nof_processes)))
 
 
     def filter_label_by_process(self, label, proc_index): #TODO: hack
         filtered_label = dict()
 
+        #TODO: bugs ideas
         for var_name, var_value in label.items():
             par_var_name, var_proc_index = parametrize(var_name)
             if proc_index == var_proc_index:
+                filtered_label[var_name] = var_value
+            if var_name.startswith(self._sched_var_prefix):
+                filtered_label[var_name] = var_value
+            if var_name.startswith(self._active_var_prefix):
                 filtered_label[var_name] = var_value
 
         return Label(filtered_label)

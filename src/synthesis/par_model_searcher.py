@@ -5,7 +5,6 @@ from interfaces.automata import to_dot
 from synthesis.generic_smt_encoder import GenericEncoder
 from synthesis.par_impl import ParImpl
 from synthesis.smt_logic import UFLIA
-from synthesis.par_smt_encoder import ParEncoder
 from synthesis.z3 import Z3
 
 

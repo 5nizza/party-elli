@@ -4,7 +4,7 @@ import sys
 from helpers.main_helper import setup_logging, create_spec_converter_z3
 from module_generation.dot import to_dot
 from parsing.parser import parse_ltl
-from synthesis.model_searcher import search
+from synthesis.solitary_model_searcher import search
 from synthesis.smt_logic import UFLIA
 
 
