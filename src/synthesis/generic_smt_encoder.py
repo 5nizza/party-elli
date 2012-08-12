@@ -1,4 +1,4 @@
-from itertools import product
+from itertools import product, chain
 import logging
 
 from helpers.logging import log_entrance
@@ -133,7 +133,7 @@ class GenericEncoder:
         smt_lines += self._define_automaton_states(impl.automaton)
         smt_lines += self._define_sys_states(impl.proc_states_descs)
 
-        func_descs = impl.aux_func_descs + impl.outputs_descs + impl.taus_descs
+        func_descs = impl.aux_func_descs + list(chain(*impl.outputs_descs)) + impl.taus_descs
         smt_lines += self._define_declare_functions(func_descs)
 
         smt_lines += self._define_counters(impl.proc_states_descs)
@@ -141,8 +141,9 @@ class GenericEncoder:
         smt_lines += self.encode_automaton(impl)
 
         smt_lines += make_check_sat()
-#        get_values = self._make_get_values()
-#        smt_lines += get_values
+        get_values = self._make_get_values(impl)
+        print(get_values)
+        smt_lines += get_values
         smt_lines += make_exit()
 
         return '\n'.join(smt_lines)
@@ -193,17 +194,31 @@ class GenericEncoder:
         return greater(next_sharp, crt_sharp, self._logic)
 
 
-    def _make_get_values(self, nof_impl_states):
+    def _make_get_values(self, impl):
         smt_lines = SmarterList()
 
-        for s in range(nof_impl_states):
-            for raw_values in product([False, True], repeat=len(self._orig_inputs)+1): #+1 for sends_prev
-                values = [str(v).lower() for v in raw_values]
-                smt_lines += get_value(call_func(self._tau_name, [self._get_smt_name_sys_state([s])] + values))
+        unique_tau_descs = []
+        for proc_index, tau_desc in enumerate(impl.model_taus_descs):
+            if tau_desc in unique_tau_descs:
+                continue
+            unique_tau_descs.append(tau_desc)
 
-        for output in self._outputs:
-            for s in range(nof_impl_states):
-                smt_lines += get_value(call_func(get_output_name(output), [self._get_smt_name_sys_state([s])]))
+            for s in impl.proc_states_descs[proc_index][1]:
+                for raw_values in product([False, True], repeat=len(tau_desc[1])-1): #first arg is the state
+                    values = [str(v).lower() for v in raw_values]
+                    smt_lines += get_value(call_func(tau_desc[0],
+                                                     [s] + values))
+
+        processed_outputs = []
+        for proc_index, outputs in enumerate(impl.outputs):
+            for output_var in outputs:
+                output_func = impl.get_output_func_name(output_var)
+                if output_func in processed_outputs:
+                    continue
+                processed_outputs.append(output_func)
+
+                for s in impl.proc_states_descs[proc_index][1]:
+                    smt_lines += get_value(call_func(output_func, [s]))
 
         return '\n'.join(smt_lines)
 

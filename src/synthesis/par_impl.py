@@ -1,3 +1,4 @@
+from itertools import repeat
 import math
 from helpers.python_ext import bin_fixed_list, SmarterList, index
 from interfaces.automata import Label
@@ -48,12 +49,18 @@ class ParImpl: #TODO: separate architecture from the spec
 
     @property
     def outputs_descs(self):
-        return list(map(lambda o: (str(o), [self._state_type], 'Bool', None), self._par_outputs))
+        return list(repeat(list(map(lambda o: (str(o), [self._state_type], 'Bool', None), self._par_outputs)),
+                           times=self.nof_processes))
 
 
     @property
     def taus_descs(self):
         return list(map(lambda i: self._get_desc_tau_sched_wrapper(), range(self.nof_processes)))
+
+
+    @property
+    def model_taus_descs(self):
+        return [self._get_desc_local_tau()]
 
 
     def get_proc_tau_additional_args(self, proc_label, sys_state_vector, proc_index):
