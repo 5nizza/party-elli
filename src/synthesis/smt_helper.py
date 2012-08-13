@@ -114,6 +114,7 @@ def comment(comment):
 
 
 def declare_fun(name, input_types, out_type):
+    input_types = list(input_types)
     smt_str = '(declare-fun '
     smt_str += name + ' ('
 

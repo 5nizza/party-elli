@@ -49,8 +49,7 @@ class ParImpl: #TODO: separate architecture from the spec
 
     @property
     def outputs_descs(self):
-        return list(repeat(list(map(lambda o: (str(o), [self._state_type], 'Bool', None), self._par_outputs)),
-                           times=self.nof_processes))
+        return [list(map(lambda o: (str(o), [('state', self._state_type)], 'Bool', None), self._par_outputs))]*self.nof_processes
 
 
     @property
@@ -141,7 +140,7 @@ class ParImpl: #TODO: separate architecture from the spec
                         'is_active': self._is_active_name})
 
         return self._tau_sched_wrapper_name, \
-               [self._state_type] + ['Bool']*(len(input_args) + 1 + len(self._sched_args) + len(self._proc_args)), \
+               [self._state_type] + ['b', 'Bool']*(len(input_args) + 1 + len(self._sched_args) + len(self._proc_args)), \
                self._state_type, \
                body
 
@@ -176,7 +175,7 @@ class ParImpl: #TODO: separate architecture from the spec
         })
 
         return self._equal_bits_name, \
-               ['Bool'] * (len(first_args) + len(second_args)), \
+               list(map(lambda i: (str(i), 'Bool'), first_args)) + list(map(lambda i: (str(i), 'Bool'), second_args)), \
                'Bool', \
                body
 
@@ -196,7 +195,7 @@ class ParImpl: #TODO: separate architecture from the spec
         })
 
         return self._is_active_name, \
-               ['Bool']*(len(self._proc_args) + len(self._sched_args) + 1), \
+               [('b', 'Bool')]*(len(self._proc_args) + len(self._sched_args) + 1), \
                'Bool', \
                body
 
@@ -224,7 +223,7 @@ class ParImpl: #TODO: separate architecture from the spec
                         'enum_clauses': '\n   '.join(enum_clauses)})
 
         return self._equal_to_prev_name, \
-               ['Bool']*(len(self._sched_args)+len(self._proc_args)), \
+               ['b', 'Bool']*(len(self._sched_args)+len(self._proc_args)), \
                'Bool', \
                body
 
@@ -243,7 +242,7 @@ class ParImpl: #TODO: separate architecture from the spec
 
     def _get_desc_local_tau(self):
         return self._tau_name, \
-               [self._state_type] + ['Bool']*len(self._par_inputs), \
+               [('state', self._state_type)] + list(map(lambda i: (str(i), 'Bool'), self._par_inputs)), \
                self._state_type, \
                None
 

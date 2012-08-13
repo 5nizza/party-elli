@@ -1,6 +1,7 @@
 from collections import defaultdict
 from itertools import product, chain
 import logging
+from helpers.hashable import HashableDict
 
 from helpers.logging import log_entrance
 from helpers.python_ext import SmarterList
@@ -251,10 +252,11 @@ class GenericEncoder:
             for output_desc in outputs_descs:
                 outputs_get_value_lines += list(filter(lambda l: output_desc[0] in l, get_value_lines))
 
+            init_state = impl.proc_states_descs[proc_index][1][1] #first process starts in state 1, others - in 0
             state_to_input_to_new_state = self._get_tau_model(tau_get_value_lines, tau_desc)
             state_to_outname_to_value = self._get_output_model(outputs_get_value_lines)
 
-            models.append(LTS(state_to_outname_to_value, state_to_input_to_new_state))
+            models.append(LTS(init_state, state_to_outname_to_value, state_to_input_to_new_state))
 
         return models #TODO: should return nof_processes models?
 
@@ -265,7 +267,9 @@ class GenericEncoder:
             parts = l.replace("(", "").replace(")", "").replace(tau_desc[0], "").strip().split()
 
             old_state_part = parts[0]
-            inputs = tuple(parts[1:-1])
+            input_vals = list(map(lambda v: v=='true', parts[1:-1]))
+            input_vars = list(map(lambda arg: arg[0], tau_desc[1][1:])) #[1:] due to first var being the state
+            inputs = HashableDict(zip(input_vars, input_vals))
             new_state_part = parts[-1]
             state_to_input_to_new_state[old_state_part][inputs] = new_state_part
 
@@ -310,13 +314,14 @@ class GenericEncoder:
         smt_lines = SmarterList()
         declared_funcs = set()
 
-        for func_name, input_types, output_type, body in func_defs:
+        for func_name, input_args, output_type, body in func_defs:
             if func_name in declared_funcs:
                 continue
 
             if body is not None:
                 smt_lines += body
             else:
+                input_types = map(lambda arg: arg[1], input_args)
                 smt_lines += declare_fun(func_name, input_types, output_type)
 
             declared_funcs.add(func_name)

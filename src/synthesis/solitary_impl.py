@@ -17,12 +17,13 @@ class SolitaryImpl:
 
     @property
     def outputs_descs(self):
-        return [list(map(lambda o: (str(o), [self._state_type], 'Bool', None), *self.outputs))]
+        return [list(map(lambda o: (str(o), [('state', self._state_type)], 'Bool', None), *self.outputs))]
 
 
     @property
     def taus_descs(self):
-        return [(self._tau_name, [self._state_type] + ['Bool']*len(*self.inputs), self._state_type, None)]
+        return [(self._tau_name, [('state', self._state_type)] + list(map(lambda i: (str(i), 'Bool'), self.inputs[0])),
+                 self._state_type, None)]
 
     @property
     def model_taus_descs(self):

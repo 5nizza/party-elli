@@ -12,13 +12,14 @@ def to_dot(lts):
                                                                      name_value[0].replace(get_output_name(''), '')),
                               name_value_pairs))
         dot_lines += '"{state}" [label="{values}"{color}]'.format_map({'state':state, 'values':values_str,
-                                                                       'color':['', ', color="green"'][state=='0']})
+                                                                       'color':['', ', color="green"'][state == lts.init_state]})
 
     for state in lts.states:
-        for input, new_state in lts.next_states(state).items():
+        for input_args, new_state in lts.next_states(state).items():
+            inputs = map(lambda arg: '{0}{1}'.format(['-', ''][arg[1]], arg[0]), input_args.items())
             dot_lines += '"{state}" -> "{new_state}" [label="{label}"]'.format_map({'state': state,
                                                                                     'new_state': new_state,
-                                                                                    'label':' '.join(input)})
+                                                                                    'label':' '.join(inputs)})
 
     dot_lines += '}'
 
