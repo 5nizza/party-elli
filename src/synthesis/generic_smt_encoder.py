@@ -144,7 +144,6 @@ class GenericEncoder:
 
         smt_lines += make_check_sat()
         get_values = self._make_get_values(impl)
-        print(get_values)
         smt_lines += get_values
         smt_lines += make_exit()
 
