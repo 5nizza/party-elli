@@ -16,14 +16,14 @@ def main(ltl_file, dot_file, bounds, ltl2ucw_converter, z3solver, logger):
     logger.info('spec automaton has {0} states'.format(len(automaton.nodes)))
 
     models = search(automaton, ltl_spec.inputs, ltl_spec.outputs, bounds, z3solver, UFLIA())
+    assert len(models) == 1
 
     logger.info('model %s found', ['', 'not'][models is None])
 
     if dot_file is not None and models is not None:
         for lts in models:
             dot = to_dot(lts)
-            print(dot)
-    #        dot_file.write(dot)
+            dot_file.write(dot)
 
 
 if __name__ == "__main__":

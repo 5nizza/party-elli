@@ -9,7 +9,7 @@ from parsing.parser import parse_ltl
 from synthesis.par_model_searcher import search
 
 
-def main(ltl_file, dot_file, bounds, automaton_converter, solver, logger):
+def main(ltl_file, dot_files_prefix, bounds, automaton_converter, solver, logger):
     raw_ltl_spec = parse_ltl(ltl_file.read())
 
     assert is_parametrized(raw_ltl_spec)
@@ -29,19 +29,19 @@ def main(ltl_file, dot_file, bounds, automaton_converter, solver, logger):
 
     logger.info('model %s found', ['', 'not'][models is None])
 
-    if dot_file is not None and models is not None:
-        for lts in models:
-            dot = to_dot(lts)
-            print(dot)
-#        dot_file.write(dot)
+    if dot_files_prefix is not None and models is not None:
+        for i, lts in enumerate(models):
+            with open(dot_files_prefix + str(i) + '.dot', mode='w') as out:
+                dot = to_dot(lts)
+                out.write(dot)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Parametrized Synthesis Tool for token rings architecture')
     parser.add_argument('ltl', metavar='ltl', type=argparse.FileType(),
         help='loads the LTL formula from the given input file')
-    parser.add_argument('--dot', metavar='dot', type=argparse.FileType('w'), required=False,
-        help='writes the output into a dot graph file')
+    parser.add_argument('--dot', metavar='dot', type=str, required=False,
+        help='writes the output into a dot graph files prefixed with this prefix')
     parser.add_argument('--bound', metavar='bound', type=int, default=2, required=False,
         help='upper bound on the size of local process (default: %(default)i)')
     parser.add_argument('--size', metavar='size', type=int, default=None, required=False,
@@ -59,6 +59,3 @@ if __name__ == '__main__':
     main(args.ltl, args.dot, bounds, ltl2ucw_converter, z3solver, logging.getLogger(__name__))
 
     args.ltl.close()
-
-    if args.dot:
-        args.dot.close()
