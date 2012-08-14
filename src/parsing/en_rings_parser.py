@@ -114,15 +114,16 @@ def get_tok_ring_par_io():
 def get_par_tok_ring_safety_props():
 #    tok_dont_disappear = 'G(({tok}i && !{sends}i) -> X{tok}i)'.format_map({'sends': SENDS_NAME,
 #                                                                           'tok': HAS_TOK_NAME})
-    sends_with_token_only = "G({sends}i -> {tok}i)".format_map({'sends': SENDS_NAME,
-                                                                'tok': HAS_TOK_NAME})
+#    sends_with_token_only = "G({sends}i -> {tok}i)".format_map({'sends': SENDS_NAME,
+#                                                                'tok': HAS_TOK_NAME})
 
     #TODO: can be specified with sends_prev
     sends_means_release = "G(({active}i && {sends}i) -> X({tok}i1 && !{tok}i))".format_map({'sends': SENDS_NAME,
                                                                                             'tok': HAS_TOK_NAME,
                                                                                             'active': ACTIVE_NAME_PREFIX + '_'})
 #    return [sends_means_release, sends_with_token_only, tok_dont_disappear]
-    return [sends_means_release, sends_with_token_only]
+#    return [sends_means_release, sends_with_token_only]
+    return [sends_means_release]
 
 
 def get_tok_rings_liveness_par_props():

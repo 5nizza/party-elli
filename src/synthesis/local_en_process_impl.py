@@ -96,7 +96,7 @@ class LocalENImpl:
             #tok_dont_disappear = 'G(({tok}i && !{sends}i) -> X{tok}i)'
             smt_lines += make_assert(forall_bool(free_vars, op_implies(op_and([has_tok_str, op_not(sends_tok_str)]), next_tok_str)))
             #sends_with_token_only = "G({sends}i -> {tok}i)"
-#            smt_lines += make_assert(forall_bool(free_vars, op_implies(sends_tok_str, has_tok_str)))
+            smt_lines += make_assert(forall_bool(free_vars, op_implies(sends_tok_str, has_tok_str)))
 
         return smt_lines
 
