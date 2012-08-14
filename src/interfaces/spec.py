@@ -1,9 +1,11 @@
 class Spec:
     def __init__(self, inputs, outputs, properties):
+        assert properties
+        assert not isinstance(properties, str)
+
         self._inputs = inputs
         self._outputs = outputs
         self._properties = properties
-        assert not isinstance(properties, str)
 
     @property
     def inputs(self):

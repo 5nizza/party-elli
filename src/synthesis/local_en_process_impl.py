@@ -88,15 +88,38 @@ class LocalENImpl:
             has_tok_str = call_func(self._has_tok_var_prefix, [state_str])
             sends_tok_str = call_func(self._sends_var_name, [state_str])
 
-            tau_args, free_vars = build_values_from_label(self._par_inputs, Label({self._sends_prev_var_name:False}))
+            _, free_vars = build_values_from_label(self._par_inputs, Label({self._sends_prev_var_name:False}))
 
-            next_state_str = call_func(self.taus_descs[0][0], [state_str] + tau_args)
-            next_tok_str = call_func(self._has_tok_var_prefix, [next_state_str])
+            tau_args_not_sends_prev, _ = build_values_from_label(self._par_inputs, Label({self._sends_prev_var_name:False}))
+            tau_args_sends_prev, _ = build_values_from_label(self._par_inputs, Label({self._sends_prev_var_name:True}))
 
-            #tok_dont_disappear = 'G(({tok}i && !{sends}i) -> X{tok}i)'
-            smt_lines += make_assert(forall_bool(free_vars, op_implies(op_and([has_tok_str, op_not(sends_tok_str)]), next_tok_str)))
-            #sends_with_token_only = "G({sends}i -> {tok}i)"
-            smt_lines += make_assert(forall_bool(free_vars, op_implies(sends_tok_str, has_tok_str)))
+            tau_not_sends_prev_str = call_func(self.taus_descs[0][0], [state_str] + tau_args_not_sends_prev)
+            next_tok_not_sends_prev_str = call_func(self._has_tok_var_prefix, [tau_not_sends_prev_str])
+
+            tau_sends_prev_str = call_func(self.taus_descs[0][0], [state_str] + tau_args_sends_prev)
+            next_tok_sends_prev_str = call_func(self._has_tok_var_prefix, [tau_sends_prev_str])
+
+            #
+            tok_dont_disappear = make_assert(forall_bool(free_vars,
+                op_implies(op_and([has_tok_str, op_not(sends_tok_str)]), next_tok_not_sends_prev_str)))
+
+            sends_with_token_only = make_assert(forall_bool(free_vars,
+                op_implies(sends_tok_str, has_tok_str)))
+
+            sends_means_release = make_assert(forall_bool(free_vars,
+                op_implies(sends_tok_str, op_not(next_tok_not_sends_prev_str))))
+
+            sends_prev_means_acquire = make_assert(forall_bool(free_vars,
+                next_tok_sends_prev_str))
+
+            no_sends_prev_no_tok_means_no_next_tok = make_assert(forall_bool(free_vars,
+                op_implies(op_not(has_tok_str), op_not(next_tok_not_sends_prev_str))))
+
+            smt_lines += [tok_dont_disappear,
+                          sends_with_token_only,
+                          sends_means_release,
+                          sends_prev_means_acquire,
+                          no_sends_prev_no_tok_means_no_next_tok]
 
         return smt_lines
 

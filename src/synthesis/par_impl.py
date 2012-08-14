@@ -17,7 +17,7 @@ class ParImpl: #TODO: separate architecture from the spec
         self._state_type = state_type
         self.proc_states_descs = self._create_proc_descs(nof_local_states)
 
-        self._nof_bits = int(math.ceil(math.log(self.nof_processes, 2)))
+        self._nof_bits = int(max(1, math.ceil(math.log(self.nof_processes, 2))))
 
         self._par_inputs = list(par_inputs)
         self._par_outputs = list(par_outputs)
@@ -231,10 +231,9 @@ class ParImpl: #TODO: separate architecture from the spec
 
 
     def _ring_modulo_iterate(self, nof_processes, function):
-        nof_bits = math.ceil(math.log(nof_processes, 2))
 
         def to_smt_bools(int_val):
-            return ' '.join(map(lambda b: str(b), bin_fixed_list(int_val, nof_bits))).lower()
+            return ' '.join(map(lambda b: str(b), bin_fixed_list(int_val, self._nof_bits))).lower()
 
         for crt in range(nof_processes):
             crt_str = to_smt_bools(crt)

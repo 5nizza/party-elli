@@ -99,15 +99,19 @@ class GenericEncoder:
 
 
     def encode_automaton(self, impl):
-        assert len(impl.automaton.initial_sets_list) == 1, 'nondet not supported'
 
         smt_lines = SmarterList()
+
+        smt_lines += impl.get_architecture_assertions()
+
+        if not impl.automaton:
+            return smt_lines
+
+        assert len(impl.automaton.initial_sets_list) == 1, 'nondet not supported'
 
         smt_lines += self._define_automaton_states(impl.automaton)
 
         smt_lines += self._define_counters(impl.proc_states_descs)
-
-        smt_lines += impl.get_architecture_assertions()
 
         init_sys_state = impl.init_state
 

@@ -23,8 +23,8 @@ def main(ltl_file, dot_files_prefix, bounds, automaton_converter, solver, logger
 
     loc_props = list(filter(lambda p: is_local_property(p), all_props))
     glob_props = list(filter(lambda p: p not in loc_props, all_props))
-    logger.debug('local properties:%s', '\n'+'\n'.join(loc_props))
-    logger.debug('global properties:%s', '\n'+'\n'.join(glob_props))
+#    logger.debug('local properties:%s', '\n'+'\n'.join(loc_props))
+#    logger.debug('global properties:%s', '\n'+'\n'.join(glob_props))
 
     par_inputs, par_outputs = get_par_io(raw_ltl_spec)
 
@@ -34,16 +34,17 @@ def main(ltl_file, dot_files_prefix, bounds, automaton_converter, solver, logger
         local_automaton = automaton_converter.convert(Spec(par_inputs, par_outputs, [concrt_loc_prop]))
         logger.info('local automaton has %i states', len(local_automaton.nodes))
 
-    #TODO: check for safety property first
-    full_concr_prop = add_concretize_fair_sched(glob_props)
-    nof_processes = get_cutoff_size(get_solid_property(glob_props))
-
-    logger.debug('concr property:\n' + full_concr_prop)
-    logger.info('cutoff of size %i', nof_processes)
-    logger.debug('par_inputs %s, par_outputs %s', str(par_inputs), str(par_outputs))
-
-    global_automaton = automaton_converter.convert(Spec(par_inputs, par_outputs, [full_concr_prop]))
-    logger.info('global automaton has %i states', len(global_automaton.nodes))
+    global_automaton = None
+    nof_processes = 1
+    if glob_props:
+        #TODO: check for safety property first
+        full_concr_prop = add_concretize_fair_sched(glob_props)
+        global_automaton = automaton_converter.convert(Spec(par_inputs, par_outputs, [full_concr_prop]))
+        logger.info('global automaton has %i states', len(global_automaton.nodes))
+        nof_processes = get_cutoff_size(get_solid_property(glob_props))
+#    logger.debug('concr property:\n' + full_concr_prop)
+#    logger.info('cutoff of size %i', nof_processes)
+#    logger.debug('par_inputs %s, par_outputs %s', str(par_inputs), str(par_outputs))
 
     models = search(local_automaton, global_automaton, par_inputs, par_outputs,
         nof_processes,
