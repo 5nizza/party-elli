@@ -1,8 +1,9 @@
 class Spec:
-    def __init__(self, inputs, outputs, property):
+    def __init__(self, inputs, outputs, properties):
         self._inputs = inputs
         self._outputs = outputs
-        self._property = property
+        self._properties = properties
+        assert not isinstance(properties, str)
 
     @property
     def inputs(self):
@@ -13,8 +14,8 @@ class Spec:
         return self._outputs
 
     @property
-    def property(self):
-        return self._property
+    def properties(self):
+        return self._properties
 
     def __str__(self):
-        return 'inputs:{0}, outputs:{1}, property:{2}'.format(self._inputs, self._outputs, self._property)
+        return 'inputs:{0}, outputs:{1}, properties:{2}'.format(self._inputs, self._outputs, '\n'.join(self._properties))

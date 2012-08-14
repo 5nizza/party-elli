@@ -29,6 +29,7 @@ def parse_ltl(text):
 
     inputs = []
     outputs = []
+    properties = []
     for l in blocks:
         if 'INPUT:' in l:
             i = l.replace('INPUT:', '').strip()
@@ -38,9 +39,9 @@ def parse_ltl(text):
             outputs.append(o)
         elif 'PROPERTY:' in l:
             p = l.replace('PROPERTY:', '').strip()
-            property = p
+            properties.append(p)
         else:
             assert False, 'unknown input line: ' + l
 
-    ltl_spec = Spec(inputs, outputs, property)
+    ltl_spec = Spec(inputs, outputs, properties)
     return ltl_spec

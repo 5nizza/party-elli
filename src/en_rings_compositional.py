@@ -4,9 +4,10 @@ import sys
 from helpers.main_helper import setup_logging, create_spec_converter_z3
 from interfaces.spec import Spec
 from module_generation.dot import to_dot
-from parsing.en_rings_parser import is_parametrized, SCHED_ID_PREFIX, SENDS_NAME, ACTIVE_NAME_PREFIX, add_concretize_fair_sched
+from parsing.en_rings_parser import is_parametrized, SCHED_ID_PREFIX, SENDS_NAME, ACTIVE_NAME_PREFIX, add_concretize_fair_sched, get_par_io, is_local_property, concretize_property, get_par_tok_ring_safety_props, get_tok_rings_liveness_par_props, get_cutoff_size, HAS_TOK_NAME, SENDS_PREV_NAME
 from parsing.parser import parse_ltl
-from synthesis.par_model_searcher import search
+from synthesis.par_model_searcher_compositional import search
+from translation2uct.ltl2automaton import get_solid_property
 
 
 def main(ltl_file, dot_files_prefix, bounds, automaton_converter, solver, logger):
@@ -14,18 +15,40 @@ def main(ltl_file, dot_files_prefix, bounds, automaton_converter, solver, logger
 
     assert is_parametrized(raw_ltl_spec)
 
-    par_inputs, par_outputs, full_concr_prop, nof_processes = add_concretize_fair_sched(raw_ltl_spec)
+    #TODO: assumed that a fairness doesn't play a role in local properties..
+    all_props = raw_ltl_spec.properties + get_par_tok_ring_safety_props() + \
+                get_tok_rings_liveness_par_props()
 
+    #TODO: Current: move all rings properties on the SMT level!
+
+    loc_props = list(filter(lambda p: is_local_property(p), all_props))
+    glob_props = list(filter(lambda p: p not in loc_props, all_props))
+    logger.debug('local properties:%s', '\n'+'\n'.join(loc_props))
+    logger.debug('global properties:%s', '\n'+'\n'.join(glob_props))
+
+    par_inputs, par_outputs = get_par_io(raw_ltl_spec)
+
+    local_automaton = None
+    if loc_props:
+        concrt_loc_prop = concretize_property(get_solid_property(loc_props), 1)
+        local_automaton = automaton_converter.convert(Spec(par_inputs, par_outputs, [concrt_loc_prop]))
+        logger.info('local automaton has %i states', len(local_automaton.nodes))
+
+    #TODO: check for safety property first
+    full_concr_prop = add_concretize_fair_sched(glob_props)
+    nof_processes = get_cutoff_size(get_solid_property(glob_props))
+
+    logger.debug('concr property:\n' + full_concr_prop)
     logger.info('cutoff of size %i', nof_processes)
     logger.debug('par_inputs %s, par_outputs %s', str(par_inputs), str(par_outputs))
 
-    automaton = automaton_converter.convert(Spec(par_inputs, par_outputs, [full_concr_prop]))
-    logger.info('spec automaton has %i states', len(automaton.nodes))
+    global_automaton = automaton_converter.convert(Spec(par_inputs, par_outputs, [full_concr_prop]))
+    logger.info('global automaton has %i states', len(global_automaton.nodes))
 
-    models = search(automaton, par_inputs, par_outputs,
+    models = search(local_automaton, global_automaton, par_inputs, par_outputs,
         nof_processes,
         bounds,
-        solver, SCHED_ID_PREFIX, ACTIVE_NAME_PREFIX, SENDS_NAME)
+        solver, SCHED_ID_PREFIX, ACTIVE_NAME_PREFIX, SENDS_NAME, HAS_TOK_NAME, SENDS_PREV_NAME)
 
     logger.info('model %s found', ['', 'not'][models is None])
 

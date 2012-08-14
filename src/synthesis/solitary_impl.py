@@ -1,8 +1,8 @@
 class SolitaryImpl:
-    def __init__(self, automaton, inputs, outputs, nof_local_states):
+    def __init__(self, automaton, inputs, outputs, nof_local_states, sys_state_type):
         self.automaton = automaton
 
-        self._state_type = 'LS'
+        self._state_type = sys_state_type
         self.nof_processes = 1
         self.proc_states_descs = self._create_proc_descs(nof_local_states)
 
@@ -55,3 +55,9 @@ class SolitaryImpl:
         return label
 
 
+    @property
+    def init_state(self):
+        return [0]
+
+    def get_architecture_assertions(self):
+        return []

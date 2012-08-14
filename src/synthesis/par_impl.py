@@ -1,20 +1,20 @@
-from itertools import repeat
 import math
 from helpers.python_ext import bin_fixed_list, SmarterList, index
 from interfaces.automata import Label
 from parsing.en_rings_parser import parametrize, concretize
-from synthesis.smt_helper import call_func, op_and, get_bits_definition
+from synthesis.smt_helper import call_func, op_and, get_bits_definition, make_assert, op_not
 
 
 class ParImpl: #TODO: separate architecture from the spec
     def __init__(self, automaton, par_inputs, par_outputs, nof_processes,
                  nof_local_states,
-                 sched_var_prefix, active_var_prefix, sends_var_prefix):
+                 sched_var_prefix, active_var_prefix, sends_var_prefix, has_tok_var_prefix,
+                 state_type):
         self.automaton = automaton
 
         self.nof_processes = nof_processes
 
-        self._state_type = 'LS'
+        self._state_type = state_type
         self.proc_states_descs = self._create_proc_descs(nof_local_states)
 
         self._nof_bits = int(math.ceil(math.log(self.nof_processes, 2)))
@@ -37,6 +37,8 @@ class ParImpl: #TODO: separate architecture from the spec
         self._sched_var_prefix = sched_var_prefix
         self._active_var_prefix = active_var_prefix
         self._sends_name = sends_var_prefix
+        self._has_tok_var_prefix = has_tok_var_prefix
+
 
     @property
     def aux_func_descs(self):
@@ -86,7 +88,7 @@ class ParImpl: #TODO: separate architecture from the spec
 
 
     def get_output_func_name(self, concr_var_name):
-        par_var_name, proc_index = parametrize(concr_var_name)
+        par_var_name, proc_index = parametrize(concr_var_name) #TODO: bad dependence on parser
         return par_var_name
 
 
@@ -272,7 +274,7 @@ class ParImpl: #TODO: separate architecture from the spec
 
 
     def _create_proc_descs(self, nof_local_states):
-        return list(map(lambda proc_i: (self._state_type, list(map(lambda s: 't'+str(s), range(nof_local_states)))),
+        return list(map(lambda proc_i: (self._state_type, list(map(lambda s: self._state_type.lower()+str(s), range(nof_local_states)))),
                         range(self.nof_processes)))
 
 
@@ -290,6 +292,23 @@ class ParImpl: #TODO: separate architecture from the spec
                 filtered_label[var_name] = var_value
 
         return Label(filtered_label)
+
+
+    def get_architecture_assertions(self):
+        smt_lines = SmarterList()
+
+        smt_lines += make_assert(call_func(self._has_tok_var_prefix, [self.proc_states_descs[0][1][self.init_state[0]]]))
+
+        for i in range(1, self.nof_processes):
+            smt_lines += make_assert(op_not(call_func(self._has_tok_var_prefix, [self.proc_states_descs[i][1][self.init_state[i]]])))
+
+        return smt_lines
+
+
+    @property
+    def init_state(self):
+        return [1] + [0] * (self.nof_processes-1)
+
 
 
 

@@ -1,5 +1,6 @@
 import math
 from helpers.python_ext import bin_fixed_list
+from translation2uct.ltl2automaton import get_solid_property
 
 
 SCHED_ID_PREFIX = 'sch'
@@ -7,7 +8,7 @@ ACTIVE_NAME_PREFIX = 'active'
 SENDS_NAME, SENDS_PREV_NAME, HAS_TOK_NAME = 'sends_', 'sends_prev_', 'has_tok_'
 
 
-def _concretize_var(par_var, process_index):
+def concretize_var(par_var, process_index):
     return par_var[:-1]+ str(process_index)
 
 
@@ -15,6 +16,7 @@ def _instantiate_i(ltl_property, nof_processes):
     props_list = ['({0})'.format(ltl_property.replace('_i', str(i)))
                   for i in range(nof_processes)]
     new_prop = ' && '.join(props_list)
+
     return new_prop
 
 
@@ -51,13 +53,14 @@ def _get_spec_type(ltl_property):
     return type
 
 
-def get_cutoff_size(ltl_property):
-    spec_type = _get_spec_type(ltl_property)
-    return {'i':2, 'i i+1':3, 'i j':4, 'i i+1 j':5}[spec_type]
+def get_cutoff_size(prop):
+    spec_type = _get_spec_type(prop)
+    type_ = {'i': 2, 'i i+1': 3, 'i j': 4, 'i i+1 j': 5}[spec_type]
+    return type_
 
 
 def concretize(par_variables, process_index):
-    concretized_vars = [_concretize_var(i, process_index) for i in par_variables]
+    concretized_vars = [concretize_var(i, process_index) for i in par_variables]
 
     return concretized_vars
 
@@ -72,6 +75,7 @@ def parametrize(concrete_variable):
 
 
 def concretize_property(ltl_property, nof_processes):
+    assert nof_processes > 0, str(nof_processes)
     handlers = {'i':_instantiate_i,
                 'i i+1':_instantiate_ii1,
                 'i j':_instantiate_ij,
@@ -83,13 +87,13 @@ def concretize_property(ltl_property, nof_processes):
 
 
 def is_parametrized(ltl_spec):
-    ltl_property = ltl_spec.property
+    ltl_property = get_solid_property(ltl_spec.properties)
     return '_i' in ltl_property\
            or '_j' in ltl_property\
     or '_i1' in ltl_property
 
 
-def get_fair_scheduler_property(nof_processes, sched_id_prefix, sends_prefix):
+def get_fair_scheduler_property(nof_processes, sched_id_prefix):
     nof_sched_bits = int(math.ceil(math.log(nof_processes, 2)))
 
     sched_constraints = []
@@ -107,52 +111,59 @@ def get_tok_ring_par_io():
     return [SENDS_PREV_NAME], [SENDS_NAME, HAS_TOK_NAME]
 
 
-def get_tok_ring_concr_properties(nof_processes):
+def get_par_tok_ring_safety_props():
     tok_dont_disappear = 'G(({tok}i && !{sends}i) -> X{tok}i)'.format_map({'sends': SENDS_NAME,
                                                                            'tok': HAS_TOK_NAME})
+    sends_with_token_only = "G({sends}i -> {tok}i)".format_map({'sends': SENDS_NAME,
+                                                                'tok': HAS_TOK_NAME})
 
-    sends_with_token_only = "G({sends}i -> {tok}i)".format_map({'sends':SENDS_NAME,
-                                                                'tok':HAS_TOK_NAME})
+    #TODO: can be specified with sends_prev
+    sends_means_release = "G(({active}i && {sends}i) -> X({tok}i1 && !{tok}i))".format_map({'sends': SENDS_NAME,
+                                                                                            'tok': HAS_TOK_NAME,
+                                                                                            'active': ACTIVE_NAME_PREFIX + '_'})
+    return [sends_means_release, sends_with_token_only, tok_dont_disappear]
 
-    sends_means_release = "G(({active}i && {sends}i) -> X({tok}i1 && !{tok}i))".format_map({'sends':SENDS_NAME,
-                                                                                          'tok':HAS_TOK_NAME,
-                                                                                          'active':ACTIVE_NAME_PREFIX+'_'})
 
-    par_safety_property = '{0} && {1} && {2}'.format(sends_with_token_only,
-        sends_means_release,
-        tok_dont_disappear)
+def get_tok_rings_liveness_par_props():
+    tok_rings_liveness_par_prop = "G({tok}i -> F{sends}i)".format_map({'sends': SENDS_NAME, 'tok': HAS_TOK_NAME})
+    return [tok_rings_liveness_par_prop]
 
-    concr_global_property = concretize_property(par_safety_property, nof_processes)
 
-    init_tok_distr = ' && '.join([_concretize_var(HAS_TOK_NAME, 0)] +
-                                 ['(!{0})'.format(_concretize_var(HAS_TOK_NAME, i)) for i in range(1, nof_processes)])
+def get_tok_ring_concr_properties(nof_processes):
+    tok_rings_safety_par_props = get_par_tok_ring_safety_props()
+
+    par_safety_property = get_solid_property(tok_rings_safety_par_props)
+
+    concr_safety_property = concretize_property(par_safety_property, nof_processes)
 
     #liveness, requires fair scheduling
-    concr_finally_release_tok = concretize_property("G({tok}i -> F{sends}i)".format_map(
-            {'sends':SENDS_NAME,
-             'tok':HAS_TOK_NAME}),
+    tok_rings_liveness_par_props = get_tok_rings_liveness_par_props()
+    concr_finally_release_tok = concretize_property(tok_rings_liveness_par_props,
         nof_processes)
 
-    return '({0}) && ({1})'.format(init_tok_distr, concr_global_property), concr_finally_release_tok
+    return '({0}) && ({1})'.format(init_tok_distr, concr_safety_property), concr_finally_release_tok
 
 
-def update_spec_w_en_rings(raw_ltl_spec):
-    nof_processes = get_cutoff_size(raw_ltl_spec.property)
-
-    fair_sched_prop = get_fair_scheduler_property(nof_processes, SCHED_ID_PREFIX, SENDS_NAME)
-
-    concr_safety_tok_ring_prop, concrt_liveness_tok_ring_prop = get_tok_ring_concr_properties(nof_processes)
-
-    concr_original_prop = concretize_property(raw_ltl_spec.property, nof_processes)
-    full_concr_prop = '{ring} && (({sched}) -> (({original}) && ({live_tok_ring})))'.format_map(
-            {'ring': concr_safety_tok_ring_prop,
-             'sched': fair_sched_prop,
-             'original': concr_original_prop,
-             'live_tok_ring': concrt_liveness_tok_ring_prop})
-
+def get_par_io(raw_ltl_spec):
     par_tok_ring_inputs, par_tok_ring_outputs = get_tok_ring_par_io()
-
     par_inputs = raw_ltl_spec.inputs + par_tok_ring_inputs
     par_outputs = raw_ltl_spec.outputs + par_tok_ring_outputs
+    return par_inputs, par_outputs
 
-    return par_inputs, par_outputs, full_concr_prop, nof_processes
+
+def add_concretize_fair_sched(props):
+    #init token distr is hardcoded into ParImpl
+    nof_processes = get_cutoff_size(get_solid_property(props))
+
+    fair_sched_prop = get_fair_scheduler_property(nof_processes, SCHED_ID_PREFIX)
+    concr_original_prop = concretize_property(get_solid_property(props), nof_processes)
+
+    full_concr_prop = '({sched}) -> ({original})'.format_map(
+            {'sched': fair_sched_prop,
+             'original': concr_original_prop})
+
+    return full_concr_prop
+
+
+def is_local_property(property):
+    return _get_spec_type(property) == 'i'

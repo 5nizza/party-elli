@@ -8,8 +8,13 @@ from translation2uct.ltl2acw import parse_ltl3ba_aa
 from translation2uct.ltl2ba import parse_ltl2ba_ba
 
 
+def get_solid_property(properties):
+    return ' && '.join(map(lambda p: '({0})'.format(p), properties))
+
+
 def negate(ltl_spec):
-    return Spec(ltl_spec.inputs, ltl_spec.outputs, '!({0})'.format(ltl_spec.property))
+    solid_property = get_solid_property(ltl_spec.properties)
+    return Spec(ltl_spec.inputs, ltl_spec.outputs, ['!({0})'.format(solid_property)])
 
 
 class Ltl2UCW:
@@ -21,7 +26,8 @@ class Ltl2UCW:
     def convert(self, ltl_spec):
         negated = negate(ltl_spec)
 
-        rc, ba, err = execute_shell('{0} "{1}"'.format(self._execute_cmd, negated.property))
+        rc, ba, err = execute_shell('{0} "{1}"'.format(self._execute_cmd,
+                                                       get_solid_property(negated.properties)))
         assert rc == 0, rc
         assert (err == '') or err is None, err
         self._logger.debug(ba)

@@ -19,7 +19,9 @@ def search(automaton, inputs, outputs, bounds, z3solver, logic):
 
         encoder = GenericEncoder(UFLIA())
         impl = SolitaryImpl(automaton, inputs, outputs, bound)
-        smt_query = encoder.encode(impl)
+        smt_lines = encoder.encode(impl)
+
+        smt_query = '\n'.join(smt_lines)
         logger.debug(smt_query)
 
         status, data = z3solver.solve(smt_query)

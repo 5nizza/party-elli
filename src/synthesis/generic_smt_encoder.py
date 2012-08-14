@@ -12,15 +12,15 @@ from synthesis.smt_helper import *
 
 
 class GenericEncoder:
-    def __init__(self, logic):
+    def __init__(self, logic, spec_state_prefix, counters_prefix):
         self._logger = logging.getLogger(__name__)
 
         self._logic = logic
 
-        self._spec_states_type = 'Q' #TODO: move to impl?
+        self._spec_states_type = spec_state_prefix
 
-        self._laB_name = 'laB'
-        self._laC_name = 'laC'
+        self._laB_name = counters_prefix+'laB'
+        self._laC_name = counters_prefix+'laC'
 
 
     def _get_assumption_on_output_vars(self, label, sys_state_vector, impl):
@@ -78,7 +78,8 @@ class GenericEncoder:
 
                 implication_right_lambdaB = self._laB(next_spec_state_name, next_sys_state_name)
 
-                implication_right_counter = self._get_implication_right_counter(spec_state, spec_next_state,
+                implication_right_counter = self._get_implication_right_counter(spec_state,
+                    spec_next_state,
                     is_rejecting,
                     sys_state_name,
                     next_sys_state_name,
@@ -101,7 +102,11 @@ class GenericEncoder:
 
         smt_lines = SmarterList()
 
-        init_sys_state = [1] + [0] * (impl.nof_processes-1)
+        smt_lines += self._define_automaton_states(impl.automaton)
+
+        smt_lines += self._define_counters(impl.proc_states_descs)
+
+        init_sys_state = impl.init_state
 
         for init_spec_state in impl.automaton.initial_sets_list[0]:
             smt_lines += self._make_init_states_condition(
@@ -113,8 +118,8 @@ class GenericEncoder:
         state_to_rejecting_scc = build_state_to_rejecting_scc(impl.automaton)
 
         spec_states = impl.automaton.nodes
-        for global_state in global_states:
-            for spec_state in spec_states:
+        for spec_state in spec_states:
+            for global_state in global_states:
                 for label, dst_set_list in spec_state.transitions.items():
                     smt_lines += self._encode_transition(
                         spec_state,
@@ -126,33 +131,32 @@ class GenericEncoder:
         return smt_lines
 
 
-    @log_entrance(logging.getLogger(), logging.INFO)
-    def encode(self, impl):
+    def encode_sys_functions(self, impl):
         smt_lines = SmarterList()
 
-        smt_lines += make_headers()
-        smt_lines += make_set_logic(self._logic)
-
-        smt_lines += self._define_automaton_states(impl.automaton)
         smt_lines += self._define_sys_states(impl.proc_states_descs)
 
         func_descs = impl.aux_func_descs + list(chain(*impl.outputs_descs)) + impl.taus_descs
         smt_lines += self._define_declare_functions(func_descs)
 
-        smt_lines += self._define_counters(impl.proc_states_descs)
+        smt_lines += impl.get_architecture_assertions()
 
+        return smt_lines
+
+    @log_entrance(logging.getLogger(), logging.INFO)
+    def encode(self, impl):
+        smt_lines = self.encode_headers()
+
+        smt_lines += self.encode_sys_functions(impl)
         smt_lines += self.encode_automaton(impl)
 
-        smt_lines += make_check_sat()
-        get_values = self._make_get_values(impl)
-        smt_lines += get_values
-        smt_lines += make_exit()
+        smt_lines += self.encode_footings(impl)
 
-        return '\n'.join(smt_lines)
+        return smt_lines
 
 
     def _get_smt_name_spec_state(self, spec_state):
-        return 'q_' + spec_state.name
+        return '{0}_{1}'.format(self._spec_states_type.lower(), spec_state.name)
 
 
     def _get_smt_name_sys_state(self, sys_state_vector, proc_states_descs):
@@ -363,5 +367,19 @@ class GenericEncoder:
 
     def _counter(self, spec_state_name, sys_state_name):
         return call_func(self._laC_name, [spec_state_name, sys_state_name])
+
+    def encode_headers(self):
+        smt_lines = SmarterList()
+        smt_lines += make_headers()
+        smt_lines += make_set_logic(self._logic)
+        return smt_lines
+
+    def encode_footings(self, impl):
+        smt_lines = SmarterList()
+        smt_lines += make_check_sat()
+        get_values = self._make_get_values(impl)
+        smt_lines += get_values
+        smt_lines += make_exit()
+        return smt_lines
 
 

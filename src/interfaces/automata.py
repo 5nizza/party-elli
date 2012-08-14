@@ -164,6 +164,9 @@ def label_to_short_string(label):
 
 
 def to_dot(automaton):
+    if automaton == None:
+        return ''
+
     rej_header = []
     for rej in automaton.rejecting_nodes:
         rej_header.append('"{0}" [shape=doublecircle]'.format(rej.name))
