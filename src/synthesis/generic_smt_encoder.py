@@ -11,6 +11,7 @@ from synthesis.rejecting_states_finder import build_state_to_rejecting_scc
 from synthesis.smt_helper import *
 
 
+
 class GenericEncoder:
     def __init__(self, logic, spec_state_prefix, counters_prefix):
         self._logger = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ class GenericEncoder:
                 if var_name not in impl.outputs[i]:
                     continue
 
-                state_name = self._get_smt_name_sys_state([sys_state_vector[i]], impl.proc_states_descs)
+                state_name = self._get_smt_name_proc_state(i, sys_state_vector, impl.proc_states_descs)
 
                 out_condition = call_func(impl.get_output_func_name(var_name), [state_name]) #TODO: hack
                 if not label[var_name]:
@@ -53,6 +54,8 @@ class GenericEncoder:
         next_sys_state = map(lambda i: call_func(impl.taus_descs[i][0],
                                                  self._get_proc_tau_args(sys_state_vector, impl.filter_label_by_process(label, i), i, impl)),
                              range(impl.nof_processes))
+        #TODO: forall is evil!
+        free_input_vars = self._get_free_vars(label, impl)
 
         next_sys_state_name = ' '.join(next_sys_state)
 
@@ -92,8 +95,6 @@ class GenericEncoder:
 
             and_args.append(implication_right)
 
-        #TODO: forall is evil!
-        free_input_vars = self._get_free_vars(label, impl)
         return make_assert(forall_bool(free_input_vars, op_implies(implication_left, op_and(and_args))))
 
 
@@ -105,6 +106,8 @@ class GenericEncoder:
         smt_lines += self._define_automaton_states(impl.automaton)
 
         smt_lines += self._define_counters(impl.proc_states_descs)
+
+        smt_lines += impl.get_architecture_assertions()
 
         init_sys_state = impl.init_state
 
@@ -139,8 +142,6 @@ class GenericEncoder:
         func_descs = impl.aux_func_descs + list(chain(*impl.outputs_descs)) + impl.taus_descs
         smt_lines += self._define_declare_functions(func_descs)
 
-        smt_lines += impl.get_architecture_assertions()
-
         return smt_lines
 
     @log_entrance(logging.getLogger(), logging.INFO)
@@ -159,9 +160,13 @@ class GenericEncoder:
         return '{0}_{1}'.format(self._spec_states_type.lower(), spec_state.name)
 
 
-    def _get_smt_name_sys_state(self, sys_state_vector, proc_states_descs):
-        sys_state_values = list(map(lambda iv: proc_states_descs[iv[0]][1][iv[1]], enumerate(sys_state_vector)))
-        return  ' '.join(sys_state_values)
+    def _get_smt_name_sys_state(self, sys_state_vector, proc_states_desc):
+        proc_states = map(lambda iv: proc_states_desc[iv[0]][1][iv[1]], enumerate(sys_state_vector))
+        return ' '.join(proc_states)
+
+
+    def _get_smt_name_proc_state(self, proc_index, sys_state_vector, proc_states_descs):
+        return proc_states_descs[proc_index][1][sys_state_vector[proc_index]]
 
 
     def _get_proc_tau_args(self, sys_state, proc_label, proc_index, impl):
@@ -169,9 +174,9 @@ class GenericEncoder:
             free variables (to be enumerated) called ?var_name.
         """
 
-        proc_state = sys_state[proc_index]
+        proc_state = self._get_smt_name_proc_state(proc_index, sys_state, impl.proc_states_descs)
 
-        tau_args = self._get_tau_args_from_label(proc_state, impl.inputs[proc_index], proc_label, impl.proc_states_descs)
+        tau_args = [proc_state] + build_values_from_label(impl.inputs[proc_index], proc_label)[0]
 
         tau_args += impl.get_proc_tau_additional_args(proc_label, sys_state, proc_index)
 
@@ -229,15 +234,10 @@ class GenericEncoder:
 
 
     def _get_free_vars(self, label, impl):
-        free_vars = []
+        free_vars = set(chain(*[build_values_from_label(impl.inputs[proc_index], label)[1]
+                                for proc_index in range(impl.nof_processes)]))
 
-        for proc_index in range(impl.nof_processes):
-            for var_name in impl.inputs[proc_index]:
-                if var_name not in label:
-                    value = '?{0}'.format(var_name)
-                    free_vars.append(value)
-
-        free_vars += impl.get_free_sched_vars(label)
+        free_vars.update(impl.get_free_sched_vars(label))
 
         return free_vars
 
@@ -331,19 +331,6 @@ class GenericEncoder:
             declared_funcs.add(func_name)
 
         return smt_lines
-
-
-    def _get_tau_args_from_label(self, proc_state, proc_inputs, proc_label, proc_states_descs):
-        tau_args = [self._get_smt_name_sys_state([proc_state], proc_states_descs)]
-
-        for var_name in proc_inputs:
-            if var_name in proc_label:
-                tau_args.append(str(proc_label[var_name]).lower())
-            else:
-                value = '?{0}'.format(var_name)
-                tau_args.append(value)
-
-        return tau_args
 
 
     def _define_counters(self, proc_states_descs):

@@ -45,7 +45,7 @@ def search(local_automaton,
 
         if local_automaton:
             local_impl = LocalENImpl(local_automaton, inputs, outputs, bound, sys_state_type,
-                has_tok_var_prefix, sends_prev_var_name, impl.init_state[0])
+                has_tok_var_prefix, sends_var_prefix, sends_prev_var_name, impl.init_state[0])
             local_encoder = GenericEncoder(UFLIA(), 'LQ', 'l')
             local_query_lines = local_encoder.encode_automaton(local_impl)
             global_query_lines += local_query_lines

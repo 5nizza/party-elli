@@ -1,9 +1,13 @@
+from helpers.python_ext import SmarterList
+from interfaces.automata import Label
 from parsing.en_rings_parser import concretize, parametrize, concretize_var
-from synthesis.smt_helper import op_and, call_func, op_not
+from synthesis.generic_smt_encoder import GenericEncoder
+from synthesis.smt_helper import op_and, call_func, op_not, op_implies, forall_bool, build_values_from_label, make_assert
 
 class LocalENImpl:
     def __init__(self, automaton, par_inputs, par_outputs, nof_local_states, sys_state_type,
                  has_tok_var_name,
+                 sends_var_name,
                  sends_prev_var_name,
                  init_state):
         self.automaton = automaton
@@ -11,6 +15,8 @@ class LocalENImpl:
         self._state_type = sys_state_type
         self.nof_processes = 1
         self.proc_states_descs = self._create_proc_descs(nof_local_states)
+
+        self._nof_local_states = nof_local_states
 
         self._par_inputs = list(par_inputs)
         self._par_outputs = list(par_outputs)
@@ -22,6 +28,7 @@ class LocalENImpl:
         self._has_tok_var_prefix = has_tok_var_name
         self._sends_prev_var_name = sends_prev_var_name
         self._init_state = init_state
+        self._sends_var_name = sends_var_name
 
     @property
     def aux_func_descs(self):
@@ -72,5 +79,52 @@ class LocalENImpl:
     def init_state(self):
         return [self._init_state] #should be the same as in ParImpl process with the token
 
+
+    def _get_tok_rings_safety_props(self):
+        smt_lines = SmarterList()
+        for state in range(self._nof_local_states):
+            state_str = self.proc_states_descs[0][1][state]
+
+            has_tok_str = call_func(self._has_tok_var_prefix, [state_str])
+            sends_tok_str = call_func(self._sends_var_name, [state_str])
+
+            tau_args, free_vars = build_values_from_label(self._par_inputs, Label({self._sends_prev_var_name:False}))
+
+            next_state_str = call_func(self.taus_descs[0][0], [state_str] + tau_args)
+            next_tok_str = call_func(self._has_tok_var_prefix, [next_state_str])
+
+            #tok_dont_disappear = 'G(({tok}i && !{sends}i) -> X{tok}i)'
+            smt_lines += make_assert(forall_bool(free_vars, op_implies(op_and([has_tok_str, op_not(sends_tok_str)]), next_tok_str)))
+            #sends_with_token_only = "G({sends}i -> {tok}i)"
+#            smt_lines += make_assert(forall_bool(free_vars, op_implies(sends_tok_str, has_tok_str)))
+
+        return smt_lines
+
+
     def get_architecture_assertions(self):
-        return []
+#        return []
+        smt_lines = self._get_tok_rings_safety_props()
+
+        return smt_lines
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

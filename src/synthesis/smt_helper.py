@@ -1,3 +1,18 @@
+def build_values_from_label(inputs, label):
+    values = []
+    free_values = []
+
+    for var_name in inputs:
+        if var_name in label:
+            values.append(str(label[var_name]).lower())
+        else:
+            value = '?{0}'.format(var_name)
+            values.append(value)
+            free_values.append(value)
+
+    return values, free_values
+
+
 def get_bits_definition(arg_prefix, nof_bits):
     args  = list(map(lambda i: arg_prefix+str(i), range(nof_bits)))
     args_def = ' '.join(map(lambda a: '({0} Bool)'.format(a), args))
