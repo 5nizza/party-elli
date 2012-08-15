@@ -25,7 +25,7 @@ def bin_fixed_list(int, width):
     return extended_bits
 
 
-def index(lambda_func, iterable):
+def index_of(lambda_func, iterable):
     for i, e in enumerate(iterable):
         if lambda_func(e):
             return i

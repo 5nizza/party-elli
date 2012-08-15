@@ -37,7 +37,7 @@ class SolitaryImpl:
         return concr_var_name
 
 
-    def get_architecture_assumptions(self, label, sys_state_vector):
+    def get_architecture_trans_assumptions(self, label, sys_state_vector):
         return ''
 
 
@@ -57,7 +57,7 @@ class SolitaryImpl:
 
     @property
     def init_state(self):
-        return [0]
+        return [[0]]
 
     def get_architecture_assertions(self):
         return []

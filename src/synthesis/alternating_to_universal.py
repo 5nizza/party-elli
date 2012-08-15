@@ -1,9 +1,8 @@
 from itertools import chain
-import logging
 from helpers import boolean
 from helpers.boolean import AND, normalize, FALSE, TRUE
-from helpers.logging import log_entrance
-from interfaces.automata import Automaton, get_next_states, Node, enumerate_values, DEAD_END, LIVE_END
+from interfaces.automata import Automaton, Node, DEAD_END, LIVE_END
+from helpers.automata_helper import get_next_states, enumerate_values
 
 
 def _build_terminals(automaton):

@@ -1,22 +1,14 @@
 from collections import defaultdict
 from pygraph.algorithms.accessibility import mutual_accessibility
 from pygraph.classes.digraph import digraph
-
-
-def _flatten_states_in_transition(node_transitions):
-    states = set()
-    for lbl, nodes_sets_list in node_transitions.items():
-        for flagged_nodes_set in nodes_sets_list:
-            for state, is_rejecting in flagged_nodes_set:
-                states.add((state, is_rejecting))
-    return states
+from helpers.automata_helper import flatten_nodes_in_transition
 
 
 def _convert_to_digraph(nodes):
     g = digraph()
     g.add_nodes(nodes)
     for n in nodes:
-        for next_node, is_rejecting in _flatten_states_in_transition(n.transitions):
+        for next_node, is_rejecting in flatten_nodes_in_transition(n.transitions):
             e = (n, next_node)
             g.add_edge(e)
             g.set_edge_properties(e, is_rejecting=is_rejecting)
@@ -51,6 +43,7 @@ def find_rejecting_sccs(automaton):
                 rejecting_sccs.add(frozenset(nodes))
 
     return rejecting_sccs
+
 
 def build_state_to_rejecting_scc(automaton):
     """ Helper function: builds dict node->SCC """

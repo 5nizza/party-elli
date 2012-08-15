@@ -2,7 +2,7 @@ import itertools
 import logging
 from helpers.logging import log_entrance
 from helpers.python_ext import get_add
-from interfaces.automata import Node, Label
+from interfaces.automata import Node, Label, DEAD_END
 
 
 def _get_cases(toks):
@@ -93,8 +93,6 @@ def _conform2acw(initial_nodes, rejecting_nodes, nodes, vars):
         for pattern_lbl, old_dst_nodes in lbl_dst_set_pairs:
             new_dst_nodes = _get_create_new_nodes(new_name_to_node, old_dst_nodes)
 
-#            for lbl in _unwind_label(pattern_lbl, vars):
-#            print(pattern_lbl)
             lbl_nodes = get_add(lbl_to_flagged_nodes, pattern_lbl, set())
             lbl_nodes.update(new_dst_nodes) #TODO: determenize, make labels do not intersect
 

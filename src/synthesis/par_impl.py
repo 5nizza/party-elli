@@ -1,14 +1,14 @@
 import math
-from helpers.python_ext import bin_fixed_list, SmarterList, index
+from helpers.python_ext import bin_fixed_list, SmarterList, index_of
 from interfaces.automata import Label
-from parsing.en_rings_parser import parametrize, concretize
+from parsing.en_rings_parser import anonymize_concr_var, concretize_anon_vars
 from synthesis.smt_helper import call_func, op_and, get_bits_definition, make_assert, op_not
 
 
 class ParImpl: #TODO: separate architecture from the spec
     def __init__(self, automaton, par_inputs, par_outputs, nof_processes,
                  nof_local_states,
-                 sched_var_prefix, active_var_prefix, sends_var_prefix, has_tok_var_prefix,
+                 sched_var_prefix, active_anon_var_name, sends_var_prefix, has_tok_var_prefix,
                  state_type):
         self.automaton = automaton
 
@@ -22,8 +22,8 @@ class ParImpl: #TODO: separate architecture from the spec
         self._par_inputs = list(par_inputs)
         self._par_outputs = list(par_outputs)
 
-        self.inputs = list(map(lambda i: concretize(filter(lambda input: not input.startswith(sends_var_prefix), self._par_inputs), i), range(nof_processes)))
-        self.outputs = list(map(lambda i: concretize(self._par_outputs, i), range(nof_processes)))
+        self.inputs = list(map(lambda i: concretize_anon_vars(filter(lambda input: not input.startswith(sends_var_prefix), self._par_inputs), i), range(nof_processes)))
+        self.outputs = list(map(lambda i: concretize_anon_vars(self._par_outputs, i), range(nof_processes)))
 
         self._tau_name = 'tau'
         self._is_active_name = 'is_active'
@@ -35,7 +35,7 @@ class ParImpl: #TODO: separate architecture from the spec
         self._proc_args, self._proc_args_def, self._proc_args_call = get_bits_definition('proc', self._nof_bits)
 
         self._sched_var_prefix = sched_var_prefix
-        self._active_var_prefix = active_var_prefix
+        self._active_var_prefix = active_anon_var_name[:-1]
         self._sends_name = sends_var_prefix
         self._has_tok_var_prefix = has_tok_var_prefix
 
@@ -67,17 +67,18 @@ class ParImpl: #TODO: separate architecture from the spec
     def get_proc_tau_additional_args(self, proc_label, sys_state_vector, proc_index):
         tau_args = SmarterList()
 
-        prev_proc = (proc_index - 1) % self.nof_processes
-        prev_proc_id_values = list(map(lambda b: str(b).lower(), bin_fixed_list(prev_proc, self._nof_bits)))
+#        prev_proc = (proc_index - 1) % self.nof_processes
+#        prev_proc_id_values = list(map(lambda b: str(b).lower(), bin_fixed_list(prev_proc, self._nof_bits)))
 
         sched_values = self._get_sched_values(proc_label)
-        sched_prev = call_func(self._equal_bits_name, sched_values+prev_proc_id_values)
+#        sched_prev = call_func(self._equal_bits_name, sched_values+prev_proc_id_values)
 
         sends_prev = self._get_sends_prev_expr(proc_index, sys_state_vector)
-        modified_sends_prev = op_and([sends_prev, sched_prev])
+#        modified_sends_prev = op_and([sends_prev, sched_prev])
         #        print(modified_sends_prev)
 
-        tau_args += [modified_sends_prev]
+#        tau_args += [modified_sends_prev]
+        tau_args += [sends_prev]
 
         tau_args += sched_values
 
@@ -88,21 +89,21 @@ class ParImpl: #TODO: separate architecture from the spec
 
 
     def get_output_func_name(self, concr_var_name):
-        par_var_name, proc_index = parametrize(concr_var_name) #TODO: bad dependence on parser
+        par_var_name, proc_index = anonymize_concr_var(concr_var_name) #TODO: bad dependence on parser
         return par_var_name
 
 
-    def get_architecture_assumptions(self, label, sys_state_vector):
+    def get_architecture_trans_assumptions(self, label, sys_state_vector):
         var_names = list(label.keys())
 
-        active_var_index = index(lambda concr_var_name: self._active_var_prefix in concr_var_name,
+        active_var_index = index_of(lambda concr_var_name: self._active_var_prefix in concr_var_name,
             var_names)
 
         if active_var_index is None:
             return ''
 
         concr_active_variable = var_names[active_var_index]
-        _, proc_index = parametrize(concr_active_variable)
+        _, proc_index = anonymize_concr_var(concr_active_variable)
 
         proc_id_args = list(map(lambda b: str(b).lower(), bin_fixed_list(proc_index, self._nof_bits)))
 
@@ -185,7 +186,7 @@ class ParImpl: #TODO: separate architecture from the spec
     def _get_desc_is_active(self):
         body = """
 (define-fun {is_active} ({sched_id_def} {proc_id_def} (sends_prev Bool)) Bool
-    (or ({equal_bools} {sched_id} {proc_id}) (and sends_prev ({equal_prev} {sched_id} {proc_id})))
+    (or (and (not sends_prev) ({equal_bools} {sched_id} {proc_id})) (and sends_prev ({equal_prev} {sched_id} {proc_id})))
 )
         """.format_map({'is_active': self._is_active_name,
                         'equal_bools':self._equal_bits_name,
@@ -280,15 +281,17 @@ class ParImpl: #TODO: separate architecture from the spec
     def filter_label_by_process(self, label, proc_index): #TODO: hack
         filtered_label = dict()
 
-        #TODO: bugs ideas
         for var_name, var_value in label.items():
-            par_var_name, var_proc_index = parametrize(var_name)
-            if proc_index == var_proc_index:
-                filtered_label[var_name] = var_value
             if var_name.startswith(self._sched_var_prefix):
                 filtered_label[var_name] = var_value
-            if var_name.startswith(self._active_var_prefix):
+
+            elif var_name.startswith(self._active_var_prefix):
                 filtered_label[var_name] = var_value
+
+            else:
+                _, var_proc_index = anonymize_concr_var(var_name)
+                if proc_index == var_proc_index:
+                    filtered_label[var_name] = var_value
 
         return Label(filtered_label)
 
@@ -296,17 +299,17 @@ class ParImpl: #TODO: separate architecture from the spec
     def get_architecture_assertions(self):
         smt_lines = SmarterList()
 
-        smt_lines += make_assert(call_func(self._has_tok_var_prefix, [self.proc_states_descs[0][1][self.init_state[0]]]))
+        smt_lines += make_assert(call_func(self._has_tok_var_prefix, [self.proc_states_descs[0][1][self.init_states[0][0]]]))
 
         for i in range(1, self.nof_processes):
-            smt_lines += make_assert(op_not(call_func(self._has_tok_var_prefix, [self.proc_states_descs[i][1][self.init_state[i]]])))
+            smt_lines += make_assert(op_not(call_func(self._has_tok_var_prefix, [self.proc_states_descs[i][1][self.init_states[0][i]]])))
 
         return smt_lines
 
 
     @property
-    def init_state(self):
-        return [1] + [0] * (self.nof_processes-1)
+    def init_states(self):
+        return [[1] + [0] * (self.nof_processes-1)]
 
 
 

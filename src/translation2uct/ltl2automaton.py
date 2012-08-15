@@ -1,8 +1,8 @@
 import logging
 from helpers.logging import log_entrance
 from helpers.shell import execute_shell
-from interfaces.spec import Spec
-from interfaces.automata import Automaton, to_dot
+from helpers.automata_helper import to_dot
+from interfaces.automata import Automaton
 from synthesis.alternating_to_universal import convert_acw_to_ucw
 from translation2uct.ltl2acw import parse_ltl3ba_aa
 from translation2uct.ltl2ba import parse_ltl2ba_ba
@@ -12,9 +12,8 @@ def get_solid_property(properties):
     return ' && '.join(map(lambda p: '({0})'.format(p), properties))
 
 
-def negate(ltl_spec):
-    solid_property = get_solid_property(ltl_spec.properties)
-    return Spec(ltl_spec.inputs, ltl_spec.outputs, ['!({0})'.format(solid_property)])
+def negate(prop):
+    return '!({0})'.format(prop)
 
 
 class Ltl2UCW:
@@ -23,18 +22,18 @@ class Ltl2UCW:
         self._logger = logging.getLogger(__name__)
 
     @log_entrance(logging.getLogger(), logging.INFO)
-    def convert(self, ltl_spec):
-        negated = negate(ltl_spec)
+    def convert(self, property):
+        negated = negate(property)
 
-        rc, ba, err = execute_shell('{0} "{1}"'.format(self._execute_cmd,
-                                                       get_solid_property(negated.properties)))
+        rc, ba, err = execute_shell('{0} "{1}"'.format(self._execute_cmd, negated))
         assert rc == 0, rc
         assert (err == '') or err is None, err
         self._logger.debug(ba)
 
         initial_nodes, rejecting_nodes, nodes = parse_ltl2ba_ba(ba)
 
-        return Automaton(initial_nodes, rejecting_nodes, nodes)
+        automaton = Automaton(initial_nodes, rejecting_nodes, nodes)
+        return automaton
 
 
 class Ltl2ACW:

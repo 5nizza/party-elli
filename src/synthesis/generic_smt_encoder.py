@@ -64,7 +64,7 @@ class GenericEncoder:
         assume_out = self._get_assumption_on_output_vars(label, sys_state_vector, impl)
 
         ##addition: scheduling+topology
-        assume_is_active = impl.get_architecture_assumptions(label, sys_state_vector)
+        assume_is_active = impl.get_architecture_trans_assumptions(label, sys_state_vector)
 
         implication_left = op_and([assume_laB, assume_out, assume_is_active])
 
@@ -74,7 +74,7 @@ class GenericEncoder:
 
         and_args = []
         for spec_next_state, is_rejecting in dst_set:
-            if spec_next_state is DEAD_END:
+            if spec_next_state is DEAD_END or spec_next_state.name == 'accept_all': #TODO: hack
                 implication_right = false()
             else:
                 next_spec_state_name = self._get_smt_name_spec_state(spec_next_state)
@@ -95,7 +95,8 @@ class GenericEncoder:
 
             and_args.append(implication_right)
 
-        return make_assert(forall_bool(free_input_vars, op_implies(implication_left, op_and(and_args))))
+        assertion = make_assert(forall_bool(free_input_vars, op_implies(implication_left, op_and(and_args))))
+        return assertion
 
 
     def encode_automaton(self, impl):
@@ -113,12 +114,13 @@ class GenericEncoder:
 
         smt_lines += self._define_counters(impl.proc_states_descs)
 
-        init_sys_state = impl.init_state
+        init_sys_states = impl.init_states
 
         for init_spec_state in impl.automaton.initial_sets_list[0]:
-            smt_lines += self._make_init_states_condition(
-                self._get_smt_name_spec_state(init_spec_state),
-                self._get_smt_name_sys_state(init_sys_state, impl.proc_states_descs))
+            for init_sys_state in init_sys_states:
+                smt_lines += self._make_init_states_condition(
+                    self._get_smt_name_spec_state(init_spec_state),
+                    self._get_smt_name_sys_state(init_sys_state, impl.proc_states_descs))
 
         global_states = list(product(*[range(len(proc_states_desc[1])) for proc_states_desc in impl.proc_states_descs]))
 
@@ -128,12 +130,9 @@ class GenericEncoder:
         for spec_state in spec_states:
             for global_state in global_states:
                 for label, dst_set_list in spec_state.transitions.items():
-                    smt_lines += self._encode_transition(
-                        spec_state,
-                        global_state,
-                        label,
-                        state_to_rejecting_scc,
-                        impl)
+                    transition = self._encode_transition(spec_state, global_state, label, state_to_rejecting_scc, impl)
+                    smt_lines += comment(label)
+                    smt_lines += transition
 
         return smt_lines
 

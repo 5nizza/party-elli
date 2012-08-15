@@ -4,12 +4,15 @@ from translation2uct.ltl2automaton import get_solid_property
 
 
 SCHED_ID_PREFIX = 'sch'
-ACTIVE_NAME_PREFIX = 'active'
+
+ACTIVE_NAME = 'active_'
 SENDS_NAME, SENDS_PREV_NAME, HAS_TOK_NAME = 'sends_', 'sends_prev_', 'has_tok_'
 
 
-def concretize_var(par_var, process_index):
-    return par_var[:-1]+ str(process_index)
+def concretize_anon_var(anon_var, process_index):
+    assert not anon_var.endswith('_i')
+
+    return anon_var[:-1]+ str(process_index)
 
 
 def _instantiate_i(ltl_property, nof_processes):
@@ -59,19 +62,34 @@ def get_cutoff_size(prop):
     return type_
 
 
-def concretize(par_variables, process_index):
-    concretized_vars = [concretize_var(i, process_index) for i in par_variables]
+def concretize_anon_vars(anon_vars, process_index):
+    concretized_vars = [concretize_anon_var(i, process_index) for i in anon_vars]
 
     return concretized_vars
 
 
-def parametrize(concrete_variable):
+def anonymize_concr_var(concrete_variable):
     assert concrete_variable[-2] not in '1234567890', 'no support for > 9 processes'
     proc_index = int(concrete_variable[-1])
 
     par_value = concrete_variable[:-1] + '_'
 
     return par_value, proc_index
+
+
+def parametrize_anon_var(var):
+    assert var.endswith('_')
+    return var+'i'
+
+
+def anonymize_property(ltl_property, anon_vars):
+    assert _get_spec_type(ltl_property) == 'i'
+
+    prop = ltl_property
+    for var in anon_vars:
+        prop = prop.replace(parametrize_anon_var(var), var)
+
+    return prop
 
 
 def concretize_property(ltl_property, nof_processes):
@@ -111,7 +129,7 @@ def get_tok_ring_par_io():
     return [SENDS_PREV_NAME], [SENDS_NAME, HAS_TOK_NAME]
 
 
-def get_par_tok_ring_safety_props():
+#def get_par_tok_ring_safety_props():
 #    tok_dont_disappear = 'G(({tok}i && !{sends}i) -> X{tok}i)'.format_map({'sends': SENDS_NAME,
 #                                                                           'tok': HAS_TOK_NAME})
 #    sends_with_token_only = "G({sends}i -> {tok}i)".format_map({'sends': SENDS_NAME,
@@ -122,29 +140,27 @@ def get_par_tok_ring_safety_props():
 #                                                                                            'tok': HAS_TOK_NAME,
 #                                                                                            'active': ACTIVE_NAME_PREFIX + '_'})
 #    return [sends_means_release, sends_with_token_only, tok_dont_disappear]
-#    return [sends_means_release, sends_with_token_only]
-#    return [sends_means_release]
-    return []
 
 
 def get_tok_rings_liveness_par_props():
-    tok_rings_liveness_par_prop = "G({tok}i -> F{sends}i)".format_map({'sends': SENDS_NAME, 'tok': HAS_TOK_NAME})
+    tok_rings_liveness_par_prop = "G({tok} -> F{sends})".format_map({'sends': parametrize_anon_var(SENDS_NAME),
+                                                                     'tok': parametrize_anon_var(HAS_TOK_NAME)})
     return [tok_rings_liveness_par_prop]
 
 
-def get_tok_ring_concr_properties(nof_processes):
-    tok_rings_safety_par_props = get_par_tok_ring_safety_props()
-
-    par_safety_property = get_solid_property(tok_rings_safety_par_props)
-
-    concr_safety_property = concretize_property(par_safety_property, nof_processes)
-
-    #liveness, requires fair scheduling
-    tok_rings_liveness_par_props = get_tok_rings_liveness_par_props()
-    concr_finally_release_tok = concretize_property(tok_rings_liveness_par_props,
-        nof_processes)
-
-    return '({0}) && ({1})'.format(init_tok_distr, concr_safety_property), concr_finally_release_tok
+#def get_tok_ring_concr_properties(nof_processes):
+#    tok_rings_safety_par_props = get_par_tok_ring_safety_props()
+#
+#    par_safety_property = get_solid_property(tok_rings_safety_par_props)
+#
+#    concr_safety_property = concretize_property(par_safety_property, nof_processes)
+#
+#    #liveness, requires fair scheduling
+#    tok_rings_liveness_par_props = get_tok_rings_liveness_par_props()
+#    concr_finally_release_tok = concretize_property(tok_rings_liveness_par_props,
+#        nof_processes)
+#
+#    return '({0}) && ({1})'.format(init_tok_distr, concr_safety_property), concr_finally_release_tok
 
 
 def get_par_io(raw_ltl_spec):
@@ -154,9 +170,8 @@ def get_par_io(raw_ltl_spec):
     return par_inputs, par_outputs
 
 
-def add_concretize_fair_sched(props):
+def add_concretize_fair_sched(props, nof_processes):
     #init token distr is hardcoded into ParImpl
-    nof_processes = get_cutoff_size(get_solid_property(props))
 
     fair_sched_prop = get_fair_scheduler_property(nof_processes, SCHED_ID_PREFIX)
     concr_original_prop = concretize_property(get_solid_property(props), nof_processes)

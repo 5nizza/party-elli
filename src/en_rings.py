@@ -4,7 +4,7 @@ import sys
 from helpers.main_helper import setup_logging, create_spec_converter_z3
 from interfaces.spec import Spec
 from module_generation.dot import to_dot
-from parsing.en_rings_parser import is_parametrized, SCHED_ID_PREFIX, SENDS_NAME, ACTIVE_NAME_PREFIX, add_concretize_fair_sched
+from parsing.en_rings_parser import is_parametrized, SCHED_ID_PREFIX, SENDS_NAME, ACTIVE_NAME, add_concretize_fair_sched
 from parsing.parser import parse_ltl
 from synthesis.par_model_searcher import search
 
@@ -25,7 +25,7 @@ def main(ltl_file, dot_files_prefix, bounds, automaton_converter, solver, logger
     models = search(automaton, par_inputs, par_outputs,
         nof_processes,
         bounds,
-        solver, SCHED_ID_PREFIX, ACTIVE_NAME_PREFIX, SENDS_NAME)
+        solver, SCHED_ID_PREFIX, ACTIVE_NAME, SENDS_NAME)
 
     logger.info('model %s found', ['', 'not'][models is None])
 

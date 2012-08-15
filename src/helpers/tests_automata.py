@@ -1,5 +1,6 @@
 import unittest
-from interfaces.automata import Node, get_next_states
+from interfaces.automata import Node, Label
+from helpers.automata_helper import get_next_states, is_absorbing
 
 
 class Test(unittest.TestCase):
@@ -32,3 +33,33 @@ class Test(unittest.TestCase):
         assert set([x[0] for x in dst_set_rg]) in list_of_state_sets
         assert set([x[0] for x in dst_set_r]) in list_of_state_sets
 
+
+    def test_is_not_absorbing(self):
+        node = Node('node')
+
+        true_label = Label({})
+        node.add_transition(true_label, [('dst1', True)])
+
+        assert not is_absorbing(node)
+
+
+    def test_is_not_absorbing2(self):
+        node = Node('node')
+
+
+        true_label = Label({})
+        node.add_transition(true_label, [('dst1', True)])
+
+        node.add_transition(Label({'r':True}), [(node, True)])
+
+        assert not is_absorbing(node)
+
+
+    def test_is_absorbing(self):
+        node = Node('node')
+
+        true_label = Label({})
+        node.add_transition(true_label, [(node, True)])
+        node.add_transition(Label({'r':True}), [(node, True)])
+
+        assert is_absorbing(node)

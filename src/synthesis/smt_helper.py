@@ -124,7 +124,7 @@ def make_assert(formula):
 
 
 def comment(comment):
-    smt_str = '; ' + comment + '\n'
+    smt_str = '; ' + str(comment)
     return smt_str
 
 
