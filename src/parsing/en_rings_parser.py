@@ -1,3 +1,4 @@
+from itertools import product, combinations
 import math
 from helpers.python_ext import bin_fixed_list
 from translation2uct.ltl2automaton import get_solid_property
@@ -6,7 +7,7 @@ from translation2uct.ltl2automaton import get_solid_property
 SCHED_ID_PREFIX = 'sch'
 
 ACTIVE_NAME = 'active_'
-SENDS_NAME, SENDS_PREV_NAME, HAS_TOK_NAME = 'sends_', 'sends_prev_', 'has_tok_'
+SENDS_NAME, SENDS_PREV_NAME, HAS_TOK_NAME = 'sends_', 'prev_', 'tok_'
 
 
 def concretize_anon_var(anon_var, process_index):
@@ -29,6 +30,8 @@ def _instantiate_ii1(ltl_property, nof_processes):
 
 
 def _instantiate_ij(ltl_property, nof_processes):
+#    props_list = ['({0})'.format(ltl_property.replace('_i', str(i)).replace('_j', str(j)))
+#                  for i,j in combinations(range(nof_processes), 2)]
     props_list = ['({0})'.format(ltl_property.replace('_i', '0').replace('_j', str(j)))
                   for j in range(1, nof_processes)]
     new_prop = ' && '.join(props_list)

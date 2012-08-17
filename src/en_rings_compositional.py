@@ -52,9 +52,13 @@ def main(ltl_file, dot_files_prefix, bounds, cutoff, automaton_converter, solver
                                                                       'original': get_solid_property(liveness_props)})
 
         #TODO: move on SMT level
-        tok_ring_props = get_tok_rings_liveness_par_props()
+#        tok_ring_props = get_tok_rings_liveness_par_props()
 
-        all_local_props = safety_props + [fair_liveness_prop] + tok_ring_props
+        #TODO: temporal: removed implicit tok ring liveness property addition
+        # add it explicitly to the specification
+
+#        all_local_props = safety_props + [fair_liveness_prop] + tok_ring_props
+        all_local_props = safety_props + [fair_liveness_prop]
 
         all_anon_vars = par_inputs + par_outputs + [ACTIVE_NAME]
         anon_loc_prop = anonymize_property(get_solid_property(all_local_props), all_anon_vars)

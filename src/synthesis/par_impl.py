@@ -8,7 +8,7 @@ from synthesis.smt_helper import call_func, op_and, get_bits_definition, make_as
 class ParImpl: #TODO: separate architecture from the spec
     def __init__(self, automaton, par_inputs, par_outputs, nof_processes,
                  nof_local_states,
-                 sched_var_prefix, active_anon_var_name, sends_var_prefix, has_tok_var_prefix,
+                 sched_var_prefix, active_anon_var_name, sends_anon_var_name, sends_prev_anon_var_name, has_tok_var_prefix,
                  state_type):
         self.automaton = automaton
 
@@ -22,7 +22,8 @@ class ParImpl: #TODO: separate architecture from the spec
         self._par_inputs = list(par_inputs)
         self._par_outputs = list(par_outputs)
 
-        self.inputs = list(map(lambda i: concretize_anon_vars(filter(lambda input: not input.startswith(sends_var_prefix), self._par_inputs), i), range(nof_processes)))
+        sends_prev_var_prefix = sends_prev_anon_var_name[:-1] #TODO: hack
+        self.inputs = list(map(lambda i: concretize_anon_vars(filter(lambda input: not input.startswith(sends_prev_var_prefix), self._par_inputs), i), range(nof_processes)))
         self.outputs = list(map(lambda i: concretize_anon_vars(self._par_outputs, i), range(nof_processes)))
 
         self._tau_name = 'tau'
@@ -36,7 +37,7 @@ class ParImpl: #TODO: separate architecture from the spec
 
         self._sched_var_prefix = sched_var_prefix
         self._active_var_prefix = active_anon_var_name[:-1]
-        self._sends_name = sends_var_prefix
+        self._sends_name = sends_anon_var_name
         self._has_tok_var_prefix = has_tok_var_prefix
 
 

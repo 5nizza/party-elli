@@ -105,7 +105,7 @@ class GenericEncoder:
 
         smt_lines += impl.get_architecture_assertions()
 
-        if not impl.automaton:
+        if not impl.automaton: #make sense if there are architecture assertions and no automaton
             return smt_lines
 
         assert len(impl.automaton.initial_sets_list) == 1, 'nondet not supported'
@@ -179,7 +179,8 @@ class GenericEncoder:
 
         proc_state = self._get_smt_name_proc_state(proc_index, sys_state, impl.proc_states_descs)
 
-        tau_args = [proc_state] + build_values_from_label(impl.inputs[proc_index], proc_label)[0]
+        values_from_label = build_values_from_label(impl.inputs[proc_index], proc_label)[0]
+        tau_args = [proc_state] + values_from_label
 
         tau_args += impl.get_proc_tau_additional_args(proc_label, sys_state, proc_index)
 
