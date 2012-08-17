@@ -1,17 +1,18 @@
 import argparse
 import logging
+import os
 import sys
 from helpers.main_helper import setup_logging, create_spec_converter_z3
 from helpers.automata_helper import  is_safety_automaton
 from module_generation.dot import to_dot
-from parsing.en_rings_parser import is_parametrized, SCHED_ID_PREFIX, SENDS_NAME, ACTIVE_NAME, add_concretize_fair_sched, get_par_io, is_local_property, concretize_property, get_tok_rings_liveness_par_props, get_cutoff_size, HAS_TOK_NAME, SENDS_PREV_NAME, anonymize_property, parametrize_anon_var
+from parsing.en_rings_parser import is_parametrized, SCHED_ID_PREFIX, SENDS_NAME, ACTIVE_NAME, add_concretize_fair_sched, get_par_io, is_local_property, concretize_property, get_tok_rings_liveness_par_props, get_cutoff_size, HAS_TOK_NAME, SENDS_PREV_NAME, anonymize_property, parametrize_anon_var, get_fair_scheduler_property
 from parsing.parser import parse_ltl
 from synthesis.par_model_searcher_compositional import search
 from translation2uct.ltl2automaton import get_solid_property
 
 
 def _is_safety_property(property, automaton_converter):
-    #no need to negate
+    #TODO: bug! negation of safety is not necessary a safety property!
     automaton = automaton_converter.convert(property)
     is_safety = is_safety_automaton(automaton)
 
@@ -19,7 +20,9 @@ def _is_safety_property(property, automaton_converter):
 
 
 def _separate_properties(automaton_converter, props):
-    safety_props = list(filter(lambda p: _is_safety_property(p, automaton_converter), props))
+    #TODO: restore
+    safety_props = set()
+    #list(filter(lambda p: _is_safety_property(p, automaton_converter), props))
     liveness_props = list(set(props).difference(safety_props))
     return safety_props, liveness_props
 
@@ -29,76 +32,48 @@ def main(ltl_file, dot_files_prefix, bounds, cutoff, automaton_converter, solver
 
     assert is_parametrized(raw_ltl_spec)
 
-    #TODO: is such a separation valid?
-    loc_props = list(filter(lambda p: is_local_property(p), raw_ltl_spec.properties))
-    glob_props = list(filter(lambda p: p not in loc_props, raw_ltl_spec.properties))
-
-    logger.debug('local properties:%s', '\n'+'\n'.join(loc_props))
-    logger.debug('global properties:%s', '\n'+'\n'.join(glob_props))
-
     par_inputs, par_outputs = get_par_io(raw_ltl_spec)
 
-    local_automaton = None
-    if loc_props:
-        safety_props, liveness_props = _separate_properties(automaton_converter, loc_props)
-
-        logger.debug('safety local props: \n%s', safety_props)
-        logger.debug('liveness local props: \n%s', liveness_props)
-
-        #local_safety G(tok-> not sends_prev) is on SMT level
-
-        local_fairness = 'GF{prev}'.format_map({'prev':parametrize_anon_var(SENDS_PREV_NAME)})
-        fair_liveness_prop = '({assmpt}) -> ({original})'.format_map({'assmpt': local_fairness,
-                                                                      'original': get_solid_property(liveness_props)})
-
-        #TODO: move on SMT level
-#        tok_ring_props = get_tok_rings_liveness_par_props()
-
-        #TODO: temporal: removed implicit tok ring liveness property addition
-        # add it explicitly to the specification
-
-#        all_local_props = safety_props + [fair_liveness_prop] + tok_ring_props
-        all_local_props = safety_props + [fair_liveness_prop]
-
-        all_anon_vars = par_inputs + par_outputs + [ACTIVE_NAME]
-        anon_loc_prop = anonymize_property(get_solid_property(all_local_props), all_anon_vars)
-
-        local_automaton = automaton_converter.convert(anon_loc_prop)
-        logger.info('local automaton has %i states', len(local_automaton.nodes))
-
+    glob_assumptions = ["""
+(!r_i) &&
+G((((!r_i) && g_i) || (r_i && !g_i)) -> (((!r_i) && X(!r_i)) || (r_i && Xr_i))) &&
+GF(!(r_i && g_i))
+     """.strip().replace('\n', ' ')]
+    glob_guarantees = ["""
+    (!g_i) &&
+G((((!r_i) && (!g_i)) || (r_i && g_i)) ->  (((!g_i) && (X(!g_i))) || ((g_i) && (X(g_i))))) &&
+GF(((!r_i) && (!g_i)) || (r_i && g_i)) && G(!(g_i && g_j))""".strip().replace('\n', ' ')]
 
     global_automaton = None
-    nof_processes = 1
-    if glob_props:
-        safety_glob_props, liveness_glob_props = _separate_properties(automaton_converter, glob_props)
-        logger.debug('safety global props: \n%s', safety_glob_props)
-        logger.debug('liveness global props: \n%s', liveness_glob_props)
+    nof_processes = cutoff
 
-        nof_processes = cutoff if cutoff else get_cutoff_size(get_solid_property(liveness_glob_props+safety_glob_props))
+    sched_assmpts = get_fair_scheduler_property(nof_processes, SCHED_ID_PREFIX)
 
-        concrt_safety_props = []
-        if safety_glob_props:
-            concrt_safety_props = [concretize_property(get_solid_property(safety_glob_props), nof_processes)]
+    concrt_assmpts = concretize_property(get_solid_property(glob_assumptions), nof_processes)
+    concrt_guarantees = concretize_property(get_solid_property(glob_guarantees), nof_processes)
+    concrt_tok_rings_guarantees = concretize_property(get_solid_property(get_tok_rings_liveness_par_props()),
+        nof_processes)
 
-        fair_concrt_liveness_props = []
-        if liveness_glob_props:
-            fair_concrt_liveness_props = [add_concretize_fair_sched(liveness_glob_props, nof_processes)]
+    full_concr_prop = '(({sched}) && ({orig_assmpt})) -> (({orig_gua} && {ring_gua}))'.format_map({'sched': sched_assmpts,
+                                                                                                'orig_assmpt': concrt_assmpts,
+                                                                                                'orig_gua': concrt_guarantees,
+                                                                                                'ring_gua': concrt_tok_rings_guarantees
+                                                                                                })
 
-        full_concr_props = concrt_safety_props + fair_concrt_liveness_props
+    global_automaton = automaton_converter.convert(full_concr_prop)
 
-        global_automaton = automaton_converter.convert(get_solid_property(full_concr_props))
-
-        logger.info('global automaton has %i states', len(global_automaton.nodes))
-        logger.info('full_concr_props is %s', full_concr_props)
+    logger.info('global automaton has %i states', len(global_automaton.nodes))
+    logger.info('full_concr_props is %s', full_concr_prop)
 
 
     logger.info('using the cutoff of size %i', nof_processes)
 
 
-    models = search(local_automaton, global_automaton, par_inputs, par_outputs,
+    models = search(None, global_automaton, par_inputs, par_outputs,
         nof_processes,
         bounds,
-        solver, SCHED_ID_PREFIX, ACTIVE_NAME, SENDS_NAME, HAS_TOK_NAME, SENDS_PREV_NAME)
+        solver, SCHED_ID_PREFIX, ACTIVE_NAME, SENDS_NAME, HAS_TOK_NAME, SENDS_PREV_NAME,
+        '/home/art_haali/projects/BoSy/smt_query.smt2') #TODO: hack: hardcode
 
     logger.info('model%s found', ['', ' not'][models is None])
 

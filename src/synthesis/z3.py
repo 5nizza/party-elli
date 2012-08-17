@@ -10,7 +10,8 @@ class Z3:
 
     def __init__(self, path, flag='-'):
         self._logger = logging.getLogger(__name__)
-        self._cmd = path + ' {0}smt2 {0}in'.format(flag)
+        self._cmd_with_stdin = path + ' {0}smt2 {0}in'.format(flag)
+        self._cmd_with_file = path + ' {0}smt2 '.format(flag)
 
 
     def _remove_model_is_not_available(self, err):
@@ -18,10 +19,7 @@ class Z3:
         return '\n'.join(res)
 
 
-    @log_entrance(logging.getLogger(), logging.INFO)
-    def solve(self, smt_query):
-        rc, raw_output, raw_err = execute_shell(self._cmd, smt_query)
-
+    def _process_outputs(self, raw_err, raw_output, rc):
         output = self._remove_model_is_not_available(raw_output)
         err = self._remove_model_is_not_available(raw_err)
 
@@ -35,8 +33,19 @@ class Z3:
 
         if output_lines[0] == 'unsat':
             return Z3.UNSAT, None
-
         if output_lines[0] == 'sat':
             return Z3.SAT, output_lines[1:] #first line is status
-
         assert False, 'unknown Z3 state: ' + output
+
+
+    @log_entrance(logging.getLogger(), logging.INFO)
+    def solve_file(self, file_name): #TODO: bad: access to raw file
+        rc, raw_output, raw_err = execute_shell(self._cmd_with_file + file_name)
+        return self._process_outputs(raw_err, raw_output, rc)
+
+
+    @log_entrance(logging.getLogger(), logging.INFO)
+    def solve(self, smt_query):
+        rc, raw_output, raw_err = execute_shell(self._cmd_with_stdin, smt_query)
+
+        return self._process_outputs(raw_err, raw_output, rc)

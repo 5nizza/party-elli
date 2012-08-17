@@ -30,10 +30,11 @@ def _instantiate_ii1(ltl_property, nof_processes):
 
 
 def _instantiate_ij(ltl_property, nof_processes):
-#    props_list = ['({0})'.format(ltl_property.replace('_i', str(i)).replace('_j', str(j)))
-#                  for i,j in combinations(range(nof_processes), 2)]
-    props_list = ['({0})'.format(ltl_property.replace('_i', '0').replace('_j', str(j)))
-                  for j in range(1, nof_processes)]
+    props_list = ['({0})'.format(ltl_property.replace('_i', str(i)).replace('_j', str(j)))
+                  for i,j in combinations(range(nof_processes), 2)]
+    #TODO: restore (for EN cases only)
+#    props_list = ['({0})'.format(ltl_property.replace('_i', '0').replace('_j', str(j)))
+#                  for j in range(1, nof_processes)]
     new_prop = ' && '.join(props_list)
     return new_prop
 
@@ -96,6 +97,8 @@ def anonymize_property(ltl_property, anon_vars):
 
 
 def concretize_property(ltl_property, nof_processes):
+    """ Works for the conjunction of properties only!
+    """
     assert nof_processes > 0, str(nof_processes)
     handlers = {'i':_instantiate_i,
                 'i i+1':_instantiate_ii1,
@@ -120,7 +123,7 @@ def get_fair_scheduler_property(nof_processes, sched_id_prefix):
     sched_constraints = []
     for i in range(nof_processes):
         bits = [int(b) for b in bin_fixed_list(i, nof_sched_bits)]
-        id_as_formula = ' && '.join(['{0}{1}{2}'.format(['!', ''][bit_value], sched_id_prefix, bit_index)
+        id_as_formula = ' && '.join(['({0}{1}{2})'.format(['!', ''][bit_value], sched_id_prefix, bit_index)
                                      for bit_index, bit_value in enumerate(bits)])
 
         sched_constraints.append('GF({0})'.format(id_as_formula))

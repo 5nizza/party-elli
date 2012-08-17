@@ -1,9 +1,9 @@
-from helpers.python_ext import SmarterList
+from helpers.python_ext import StrAwareList
 from synthesis.smt_helper import get_output_name
 
 
 def to_dot(lts):
-    dot_lines = SmarterList()
+    dot_lines = StrAwareList([])
     dot_lines += 'digraph module {'
 
     for state in lts.states:

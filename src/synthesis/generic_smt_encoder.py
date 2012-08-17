@@ -1,10 +1,11 @@
 from collections import defaultdict
 from itertools import product, chain
 import logging
+import sys
 from helpers.hashable import HashableDict
 
 from helpers.logging import log_entrance
-from helpers.python_ext import SmarterList
+from helpers.python_ext import StrAwareList
 from interfaces.automata import  DEAD_END
 from interfaces.lts import LTS
 from synthesis.rejecting_states_finder import build_state_to_rejecting_scc
@@ -99,10 +100,7 @@ class GenericEncoder:
         return assertion
 
 
-    def encode_automaton(self, impl):
-
-        smt_lines = SmarterList()
-
+    def encode_automaton(self, impl, smt_lines):
         smt_lines += impl.get_architecture_assertions()
 
         if not impl.automaton: #make sense if there are architecture assertions and no automaton
@@ -131,16 +129,15 @@ class GenericEncoder:
             for global_state in global_states:
                 for label, dst_set_list in spec_state.transitions.items():
                     transition = self._encode_transition(spec_state, global_state, label, state_to_rejecting_scc, impl)
+
                     smt_lines += comment(label)
                     smt_lines += transition
 
         return smt_lines
 
 
-    def encode_sys_functions(self, impl):
-        smt_lines = SmarterList()
-
-        smt_lines += self._define_sys_states(impl.proc_states_descs)
+    def encode_sys_functions(self, impl, smt_lines):
+        self._define_sys_states(impl.proc_states_descs, smt_lines)
 
         func_descs = impl.aux_func_descs + list(chain(*impl.outputs_descs)) + impl.taus_descs
         smt_lines += self._define_declare_functions(func_descs)
@@ -148,13 +145,13 @@ class GenericEncoder:
         return smt_lines
 
     @log_entrance(logging.getLogger(), logging.INFO)
-    def encode(self, impl):
-        smt_lines = self.encode_headers()
+    def encode(self, impl, smt_lines):
+        smt_lines += self.encode_headers(smt_lines)
 
-        smt_lines += self.encode_sys_functions(impl)
-        smt_lines += self.encode_automaton(impl)
+        smt_lines += self.encode_sys_functions(impl, smt_lines)
+        smt_lines += self.encode_automaton(impl, smt_lines)
 
-        smt_lines += self.encode_footings(impl)
+        smt_lines += self.encode_footings(impl, smt_lines)
 
         return smt_lines
 
@@ -210,7 +207,7 @@ class GenericEncoder:
 
 
     def _make_get_values(self, impl):
-        smt_lines = SmarterList()
+        smt_lines = StrAwareList()
 
         unique_tau_descs = []
         for proc_index, tau_desc in enumerate(impl.model_taus_descs):
@@ -256,7 +253,7 @@ class GenericEncoder:
 
             tau_get_value_lines = list(filter(lambda l: tau_desc[0] in l, get_value_lines))
 
-            outputs_get_value_lines = SmarterList()
+            outputs_get_value_lines = StrAwareList()
             for output_desc in outputs_descs:
                 outputs_get_value_lines += list(filter(lambda l: output_desc[0] in l, get_value_lines))
 
@@ -296,15 +293,14 @@ class GenericEncoder:
 
 
     def _define_automaton_states(self, automaton):
-        smt_lines = SmarterList()
+        smt_lines = StrAwareList()
         smt_lines += declare_enum(
             self._spec_states_type, map(lambda n: self._get_smt_name_spec_state(n), automaton.nodes))
 
         return smt_lines
 
 
-    def _define_sys_states(self, proc_states_descs):
-        smt_lines = SmarterList()
+    def _define_sys_states(self, proc_states_descs, smt_lines):
 
         declared_enums = set()
         for proc_states_desc in proc_states_descs:
@@ -319,7 +315,7 @@ class GenericEncoder:
 
 
     def _define_declare_functions(self, func_defs):
-        smt_lines = SmarterList()
+        smt_lines = StrAwareList()
         declared_funcs = set()
 
         for func_name, input_args, output_type, body in func_defs:
@@ -338,7 +334,7 @@ class GenericEncoder:
 
 
     def _define_counters(self, proc_states_descs):
-        smt_lines = SmarterList()
+        smt_lines = StrAwareList()
 
         counters_args = [self._spec_states_type] + list(map(lambda desc: desc[0], proc_states_descs))
 
@@ -359,14 +355,12 @@ class GenericEncoder:
     def _counter(self, spec_state_name, sys_state_name):
         return call_func(self._laC_name, [spec_state_name, sys_state_name])
 
-    def encode_headers(self):
-        smt_lines = SmarterList()
+    def encode_headers(self, smt_lines):
         smt_lines += make_headers()
         smt_lines += make_set_logic(self._logic)
         return smt_lines
 
-    def encode_footings(self, impl):
-        smt_lines = SmarterList()
+    def encode_footings(self, impl, smt_lines):
         smt_lines += make_check_sat()
         get_values = self._make_get_values(impl)
         smt_lines += get_values

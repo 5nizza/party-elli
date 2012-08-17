@@ -1,5 +1,5 @@
 import math
-from helpers.python_ext import bin_fixed_list, SmarterList, index_of
+from helpers.python_ext import bin_fixed_list, StrAwareList, index_of
 from interfaces.automata import Label
 from parsing.en_rings_parser import anonymize_concr_var, concretize_anon_vars
 from synthesis.smt_helper import call_func, op_and, get_bits_definition, make_assert, op_not
@@ -66,7 +66,7 @@ class ParImpl: #TODO: separate architecture from the spec
 
 
     def get_proc_tau_additional_args(self, proc_label, sys_state_vector, proc_index):
-        tau_args = SmarterList()
+        tau_args = StrAwareList()
 
 #        prev_proc = (proc_index - 1) % self.nof_processes
 #        prev_proc_id_values = list(map(lambda b: str(b).lower(), bin_fixed_list(prev_proc, self._nof_bits)))
@@ -298,7 +298,7 @@ class ParImpl: #TODO: separate architecture from the spec
 
 
     def get_architecture_assertions(self):
-        smt_lines = SmarterList()
+        smt_lines = StrAwareList()
 
         smt_lines += make_assert(call_func(self._has_tok_var_prefix, [self.proc_states_descs[0][1][self.init_states[0][0]]]))
 

@@ -1,4 +1,4 @@
-from collections import Iterable
+from collections import Iterable, Iterator
 import math
 
 def get_add(dict, name, default):
@@ -32,15 +32,49 @@ def index_of(lambda_func, iterable):
     return None
 
 
-class SmarterList(list):
+class StrAwareList(Iterable):
+    def __len__(self):
+        try:
+            return getattr(self._output, "__len__")()
+        except AttributeError:
+            return 0
+
+
+    def __iter__(self):
+        for e in self._output:
+            yield e
+
+
+    def __init__(self, output=None):
+        if output is None:
+            output = []
+
+        self._output = output
+
+
     def __iadd__(self, other):
         self.__add__(other)
         return self
+
+
     def __add__(self, other):
-        if isinstance(other, Iterable) and not isinstance(other, str):
-            super().extend(other)
+        if isinstance(other, Iterable) and not isinstance(other, str) and not isinstance(other, bytes):
+            self._output.extend(other)
             return self
         else:
-            super().append(other)
+            self._output.append(other)
             return self
 
+
+class FileAsStringEmulator:
+    def __init__(self, file_writer):
+        self._file_writer = file_writer
+
+    def append(self, str):
+        self._file_writer.write(str)
+        self._file_writer.write('\n')
+
+
+    def extend(self, strings):
+        for str in strings:
+            self.append(str)

@@ -1,4 +1,4 @@
-from helpers.python_ext import SmarterList
+from helpers.python_ext import StrAwareList
 from interfaces.automata import Label
 from synthesis.smt_helper import op_and, call_func, op_not, op_implies, forall_bool, build_values_from_label, make_assert
 
@@ -87,7 +87,7 @@ class LocalENImpl:
 
 
     def _get_tok_rings_safety_props(self):
-        smt_lines = SmarterList()
+        smt_lines = StrAwareList()
         for state in range(self._nof_local_states):
             state_str = self.proc_states_descs[0][1][state]
 
