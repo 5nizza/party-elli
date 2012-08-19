@@ -30,11 +30,10 @@ def _instantiate_ii1(ltl_property, nof_processes):
 
 
 def _instantiate_ij(ltl_property, nof_processes):
-    props_list = ['({0})'.format(ltl_property.replace('_i', str(i)).replace('_j', str(j)))
-                  for i,j in combinations(range(nof_processes), 2)]
-    #TODO: restore (for EN cases only)
-#    props_list = ['({0})'.format(ltl_property.replace('_i', '0').replace('_j', str(j)))
-#                  for j in range(1, nof_processes)]
+#    props_list = ['({0})'.format(ltl_property.replace('_i', str(i)).replace('_j', str(j)))
+#                  for i,j in combinations(range(nof_processes), 2)]
+    props_list = ['({0})'.format(ltl_property.replace('_i', '0').replace('_j', str(j)))
+                  for j in range(1, nof_processes)]
     new_prop = ' && '.join(props_list)
     return new_prop
 

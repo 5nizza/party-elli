@@ -40,7 +40,8 @@ class Z3:
 
     @log_entrance(logging.getLogger(), logging.INFO)
     def solve_file(self, file_name): #TODO: bad: access to raw file
-        rc, raw_output, raw_err = execute_shell(self._cmd_with_file + file_name)
+        cmd = self._cmd_with_file + file_name
+        rc, raw_output, raw_err = execute_shell(cmd)
         return self._process_outputs(raw_err, raw_output, rc)
 
 

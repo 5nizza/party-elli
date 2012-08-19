@@ -73,7 +73,7 @@ def search(local_automaton,
 
             logger.info('smt query has %i lines', len(global_query_lines))
 
-            status, data_lines = z3solver.solve_file(smt_file_name)
+        status, data_lines = z3solver.solve_file(smt_file_name)
 
         if status == Z3.SAT:
             return global_encoder.parse_model(data_lines, impl)
