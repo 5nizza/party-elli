@@ -4,7 +4,7 @@ PROPERTY:
 (
 (!g_i)
 && G( ((!r_i) && g_i) -> F((r_i&&g_i) || (!g_i)) )
-&& G(r_i -> Fg_i)
+&& G(r_i -> F(g_i))
 && (!F(g_i && X((!r_i)&&!g_i) && X(((!r_i)&&!g_i) U (g_i && !r_i) )) )
-
+&& (!(((!r_i) && (!g_i)) U ((!r_i) && g_i)))
 )

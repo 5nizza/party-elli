@@ -132,6 +132,9 @@ class LocalENImpl:
 
     def get_architecture_assertions(self):
         smt_lines = self._get_tok_rings_safety_props()
+
+#        smt_lines += '(assert (and (not (tok_ lt2)) (g_ lt2)))'
+
         return smt_lines
 
 

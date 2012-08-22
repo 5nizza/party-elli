@@ -153,6 +153,12 @@ def get_tok_rings_liveness_par_props():
     return [tok_rings_liveness_par_prop]
 
 
+def get_tok_rings_liveness_anon_props():
+    tok_rings_liveness_par_prop = "G({tok} -> F{sends})".format_map({'sends': SENDS_NAME,
+                                                                     'tok': HAS_TOK_NAME})
+    return [tok_rings_liveness_par_prop]
+
+
 #def get_tok_ring_concr_properties(nof_processes):
 #    tok_rings_safety_par_props = get_par_tok_ring_safety_props()
 #
