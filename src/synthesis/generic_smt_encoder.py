@@ -14,15 +14,15 @@ from synthesis.smt_helper import *
 
 
 class GenericEncoder:
-    def __init__(self, logic, spec_state_prefix, counters_prefix):
+    def __init__(self, logic, spec_state_prefix, counters_postfix):
         self._logger = logging.getLogger(__name__)
 
         self._logic = logic
 
         self._spec_states_type = spec_state_prefix
 
-        self._laB_name = counters_prefix+'laB'
-        self._laC_name = counters_prefix+'laC'
+        self._laB_name = 'laB'+counters_postfix
+        self._laC_name = 'laC'+counters_postfix
 
 
     def _get_assumption_on_output_vars(self, label, sys_state_vector, impl):
@@ -136,11 +136,18 @@ class GenericEncoder:
         return smt_lines
 
 
-    def encode_sys_functions(self, impl, smt_lines):
+    def encode_sys_model_functions(self, impl, smt_lines):
         self._define_sys_states(impl.proc_states_descs, smt_lines)
 
-        func_descs = impl.aux_func_descs + list(chain(*impl.outputs_descs)) + impl.taus_descs
+        func_descs = list(chain(*impl.outputs_descs)) + impl.model_taus_descs
         smt_lines += self._define_declare_functions(func_descs)
+        return smt_lines
+
+
+    def encode_sys_aux_functions(self, impl, smt_lines):
+        func_descs = impl.aux_func_descs + impl.taus_descs
+        functions = self._define_declare_functions(func_descs)
+        smt_lines += functions
 
         return smt_lines
 
@@ -148,7 +155,8 @@ class GenericEncoder:
     def encode(self, impl, smt_lines):
         smt_lines += self.encode_headers(smt_lines)
 
-        smt_lines += self.encode_sys_functions(impl, smt_lines)
+        smt_lines += self.encode_sys_model_functions(impl, smt_lines)
+        smt_lines += self.encode_sys_aux_functions(impl, smt_lines)
         smt_lines += self.encode_automaton(impl, smt_lines)
 
         smt_lines += self.encode_footings(impl, smt_lines)
@@ -301,7 +309,6 @@ class GenericEncoder:
 
 
     def _define_sys_states(self, proc_states_descs, smt_lines):
-
         declared_enums = set()
         for proc_states_desc in proc_states_descs:
             enum_name = proc_states_desc[0]

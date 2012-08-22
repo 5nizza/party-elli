@@ -29,6 +29,34 @@ def _separate_properties(automaton_converter, props):
     return safety_props, liveness_props
 
 
+simple_arb_loc_guarantee = """
+G(Fg_i)
+""".strip().replace('\n', ' ')
+
+
+full_arb_loc_guarantee= """
+(
+(!g_i)
+&& G( (active_i && (!r_i) && g_i) -> F((r_i&&g_i) || (!g_i)) )
+&& G((active_i && r_i) -> Fg_i)
+&& (!F(g_i && X((!r_i)&&!g_i) && X(((!r_i)&&!g_i) U (g_i && !r_i) )) )
+&& (!(((!r_i) && (!g_i)) U ((!r_i) && g_i)))
+)
+    """.strip().replace('\n', ' ')
+
+pnueli_arb_loc_assumption ="""
+(!r_i) &&
+G((((!r_i) && g_i) || (r_i && !g_i)) -> (((!r_i) && X(!r_i)) || (r_i && Xr_i))) &&
+GF(!(r_i && g_i))
+""".strip().replace('\n', ' ')
+
+pnueli_arb_loc_guarantee ="""
+(!g_i) &&
+G((((!r_i) && (!g_i)) || (r_i && g_i)) ->  (((!g_i) && (X(!g_i))) || ((g_i) && (X(g_i))))) &&
+GF(((!r_i) && (!g_i)) || (r_i && g_i))
+""".strip().replace('\n', ' ')
+
+
 def main(ltl_file, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
     raw_ltl_spec = parse_ltl(ltl_file.read())
 
@@ -36,37 +64,6 @@ def main(ltl_file, dot_files_prefix, bounds, cutoff, automaton_converter, solver
 
     par_inputs, par_outputs = get_par_io(raw_ltl_spec)
 
-
-    loc_guarantee = """
-(
-(!g_i)
-&& G( ((!r_i) && g_i) -> F((r_i&&g_i) || (!g_i)) )
-&& G(r_i -> Fg_i)
-&& (!F(g_i && X((!r_i)&&!g_i) && X(((!r_i)&&!g_i) U (g_i && !r_i) )) )
-&& (!(((!r_i) && (!g_i)) U ((!r_i) && g_i)))
-)
-    """.strip().replace('\n', ' ')
-
-    loc_assumption = 'true'
-
-#    loc_assumption = \
-#"""
-#(!r_i) &&
-#G((((!r_i) && g_i) || (r_i && !g_i)) -> (((!r_i) && X(!r_i)) || (r_i && Xr_i))) &&
-#GF(!(r_i && g_i))
-#""".strip().replace('\n', ' ')
-#
-#    loc_guarantee = \
-#"""
-#(!g_i) &&
-#G((((!r_i) && (!g_i)) || (r_i && g_i)) ->  (((!g_i) && (X(!g_i))) || ((g_i) && (X(g_i))))) &&
-#GF(((!r_i) && (!g_i)) || (r_i && g_i))
-#""".strip().replace('\n', ' ')
-
-#    loc_assumption = """
-#true
-#""".strip().replace('\n', ' ')
-#
 #    loc_guarantee = """
 #(
 #(!g_i)
@@ -95,40 +92,32 @@ def main(ltl_file, dot_files_prefix, bounds, cutoff, automaton_converter, solver
 #)
 #""".strip().replace('\n', ' ')
 
-    tok_rings_guarantee = get_tok_rings_liveness_anon_props()[0]
-#    tok_rings_assumption = 'GF({sends_prev})'.format(sends_prev = SENDS_PREV_NAME)
-    tok_rings_assumption = 'G((!{tok}) -> F{sends_prev})'.format(tok = HAS_TOK_NAME, sends_prev = SENDS_PREV_NAME)
+    loc_fair_sched = get_fair_scheduler_property(2, SCHED_ID_PREFIX)
+
+    loc_fair_tokens = 'GF{tok}i'.format(tok=HAS_TOK_NAME)
+
+    loc_assumption = '(({0}) && ({1}) && ({2}))'.format(loc_fair_sched,
+        concretize_property(pnueli_arb_loc_assumption, 1),
+        concretize_property(loc_fair_tokens, 1))
+
+    loc_guarantee = '(({0}) && ({1}))'.format(pnueli_arb_loc_guarantee,
+        get_tok_rings_liveness_par_props()[0])
+
+    loc_guarantee = concretize_property(loc_guarantee, 1)
+
+#    tr_par_assumption_on_hub = 'G((!{tok}i) -> F{sends_prev}i)'.format(tok = HAS_TOK_NAME, sends_prev = SENDS_PREV_NAME)
 
     #TODO: tmp!
-    loc_property1 = '( ({tok_rings_assumption}) && ({loc_assumption}) ) -> ({tok_rings_guarantee})'\
-    .format(tok_rings_assumption = tok_rings_assumption,
-        loc_assumption = loc_assumption,
-        tok_rings_guarantee = tok_rings_guarantee)
-#    loc_property1 = '( ({tok_rings_assumption})) -> ({tok_rings_guarantee})'\
-#        .format(tok_rings_assumption = tok_rings_assumption,
-#            loc_assumption = loc_assumption,
-#            tok_rings_guarantee = tok_rings_guarantee)
+    loc_property = '( {loc_assumption} ) -> ({loc_guarantee}))'.format(
+        loc_assumption = loc_assumption, loc_guarantee = loc_guarantee)
 
-    loc_property2 = '(({tok_rings_assumption}) && ({loc_assumption})) -> ({loc_guarantee})'\
-    .format(tok_rings_assumption=tok_rings_assumption,
-        loc_assumption = loc_assumption,
-        loc_guarantee = loc_guarantee)
-#
-#
-#
-    loc_property = '({0}) && ({1})'.format(loc_property1, loc_property2)
-#    loc_property = '{0}'.format(loc_property1)
-
-    loc_property = anonymize_property(loc_property, raw_ltl_spec._inputs+raw_ltl_spec.outputs)
-
+    print()
     print(loc_property)
+    print('-'*80)
 #    assert 0
+
     loc_automaton = automaton_converter.convert(loc_property)
 
-#    print(automata_helper.to_dot(loc_automaton))
-#    assert 0
-
-#    global_automaton = None
     nof_processes = cutoff
 
 #    sched_assmpts = get_fair_scheduler_property(nof_processes, SCHED_ID_PREFIX)
@@ -145,22 +134,21 @@ def main(ltl_file, dot_files_prefix, bounds, cutoff, automaton_converter, solver
 #                                                                                                })
 
     glob_property = 'G(!(g_i && g_j))'
-#    glob_property = '!g_i'
-#    glob_property = ''
     full_concr_prop = concretize_property(glob_property, nof_processes)
-
-#    full_concr_prop = concretize_property('!g_i', nof_processes)
-#    full_concr_prop = 'G()'
-
     global_automaton = automaton_converter.convert(full_concr_prop)
+
+    print(full_concr_prop)
+#    assert 0
 
     logger.info('global automaton has %i states', len(global_automaton.nodes))
     logger.info('full_concr_props is %s', full_concr_prop)
 
     logger.info('using the cutoff of size %i', nof_processes)
 
-    models = search(loc_automaton, global_automaton, par_inputs, par_outputs,
-        nof_processes,
+    #TODO: nof_processes differs in loc in global automaton
+    global_automata = [(loc_automaton, 2), (global_automaton, nof_processes)]
+
+    models = search(global_automata, par_inputs, par_outputs,
         bounds,
         solver, SCHED_ID_PREFIX, ACTIVE_NAME, SENDS_NAME, HAS_TOK_NAME, SENDS_PREV_NAME,
         'smt_query.smt2') #TODO: hack: hardcode

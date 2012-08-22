@@ -11,18 +11,8 @@ from synthesis.smt_logic import UFLIA
 from synthesis.z3 import Z3
 
 
-def _dump_lines_to_file(global_query_lines, smt_file_name):
-    with open(smt_file_name, 'w') as smt_query_file:
-        for line in global_query_lines:
-            smt_query_file.write(line)
-            smt_query_file.write('\n')
-
-
-
 @log_entrance(logging.getLogger(), logging.INFO)
-def search(local_automaton,
-           global_automaton, inputs, outputs,
-                        nof_processes,
+def search(global_automata_nof_processes_pairs, inputs, outputs,
                         local_bounds,
                         z3solver,
                         sched_id_prefix,
@@ -32,50 +22,61 @@ def search(local_automaton,
                         sends_prev_var_name,
                         smt_file_name):
     logger = logging.getLogger()
-#    logger.debug('local_automaton\n%s', local_automaton)
-#    logger.debug('local_automaton\n%s', to_dot(local_automaton))
-#    logger.debug('global_automaton\n%s', local_automaton)
-#    logger.debug('global_automaton\n%s', to_dot(local_automaton))
+
+    logic = UFLIA()
+    sys_state_type = 'T'
+    tau_name = 'tau'
 
     for bound in local_bounds:
-#        logger.info('searching a model of size {0}..'.format(bound))
+        smt_file = open(smt_file_name, 'w')
+        query_lines = StrAwareList(FileAsStringEmulator(smt_file))
 
-        global_encoder = GenericEncoder(UFLIA(), 'GQ', 'g')
+        encoder=impl=None
+        for i, (automaton, nof_processes) in enumerate(global_automata_nof_processes_pairs):
+            counters_postfix = sys_intern_funcs_postfix = '_'+str(i)
+            spec_states_type = 'Q'+str(i)
 
-        sys_state_type = 'LT'
-        impl = ParImpl(global_automaton, inputs, outputs, nof_processes, bound,
-            sched_id_prefix, active_var_name, sends_anon_var_name, sends_prev_var_name, has_tok_var_prefix,
-            sys_state_type)
+            encoder = GenericEncoder(logic, spec_states_type, counters_postfix)
+            impl = ParImpl(automaton, inputs, outputs, nof_processes, bound,
+                sched_id_prefix, active_var_name, sends_anon_var_name, sends_prev_var_name, has_tok_var_prefix,
+                sys_state_type, tau_name, sys_intern_funcs_postfix)
+
+            if i is 0:
+                encoder.encode_headers(query_lines)
+                encoder.encode_sys_model_functions(impl, query_lines)
+                #TODO: hack: can be also added on SMT level
+                tok_ring_safety_constraints = LocalENImpl(None, inputs, outputs, bound, sys_state_type, has_tok_var_prefix,
+                    sends_anon_var_name, sends_prev_var_name, None).get_architecture_assertions()
+
+                query_lines += tok_ring_safety_constraints
+
+            query_lines += comment('global_encoder' + sys_intern_funcs_postfix)
+
+            encoder.encode_sys_aux_functions(impl, query_lines)
+            encoder.encode_automaton(impl, query_lines)
 
 
-        with open(smt_file_name, 'w') as smt_file:
-            global_query_lines = StrAwareList(FileAsStringEmulator(smt_file))
-            global_query_lines += comment('global_encoder')
+        #TODO: hack: adding tok ring guarantees
 
-            global_encoder.encode_headers(global_query_lines)
-            global_encoder.encode_sys_functions(impl, global_query_lines)
-            global_encoder.encode_automaton(impl, global_query_lines)
 
-    #        logger.debug('---- global automaton query\n%s', '\n'.join(global_query_lines))
+        encoder.encode_footings(impl, query_lines)
 
-            local_impl = LocalENImpl(local_automaton, inputs, outputs, bound, sys_state_type,
-                has_tok_var_prefix, sends_anon_var_name, sends_prev_var_name, impl.init_states[0][0:2])
+        logger.info('smt query has %i lines', len(query_lines))
 
-            local_query_lines = StrAwareList()
-
-            local_query_lines += comment('local_encoder')
-            local_encoder = GenericEncoder(UFLIA(), 'LQ', 'l')
-            local_encoder.encode_automaton(local_impl, local_query_lines)
-
-            global_query_lines += local_query_lines
-
-            global_encoder.encode_footings(impl, global_query_lines)
-
-            logger.info('smt query has %i lines', len(global_query_lines))
-
+        smt_file.close()
         status, data_lines = z3solver.solve_file(smt_file_name)
 
         if status == Z3.SAT:
-            return global_encoder.parse_model(data_lines, impl)
+            return encoder.parse_model(data_lines, impl)
 
-        return None
+    return None
+
+#
+#    local_impl = LocalENImpl(local_automaton, inputs, outputs, bound, sys_state_type,
+#        has_tok_var_prefix, sends_anon_var_name, sends_prev_var_name, impl.init_states[0][0:2])
+#
+#    local_query_lines = StrAwareList()
+#
+#    local_query_lines += comment('local_encoder')
+#    local_encoder = GenericEncoder(UFLIA(), 'LQ', 'l')
+#    local_encoder.encode_automaton(local_impl, local_query_lines)

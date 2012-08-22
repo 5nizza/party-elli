@@ -4,7 +4,7 @@ from synthesis.smt_helper import op_and, call_func, op_not, op_implies, forall_b
 
 class LocalENImpl:
     def __init__(self, automaton, par_inputs, par_outputs, nof_local_states, sys_state_type,
-                 has_tok_var_name,
+                 has_tok_var_prefix,
                  sends_var_name,
                  sends_prev_var_name,
                  init_states):
@@ -20,7 +20,7 @@ class LocalENImpl:
         self.outputs = [list(par_outputs)]
 
         self._tau_name = 'tau'
-        self._has_tok_var_prefix = has_tok_var_name
+        self._has_tok_var_prefix = has_tok_var_prefix
         self._sends_prev_var_name = sends_prev_var_name
         self._init_states = init_states
         self._sends_var_name = sends_var_name

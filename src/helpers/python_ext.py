@@ -33,6 +33,10 @@ def index_of(lambda_func, iterable):
 
 
 class StrAwareList(Iterable):
+    def __str__(self):
+        return str(self._output)
+
+
     def __len__(self):
         try:
             return getattr(self._output, "__len__")()

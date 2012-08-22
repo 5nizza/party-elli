@@ -9,7 +9,9 @@ class ParImpl: #TODO: separate architecture from the spec
     def __init__(self, automaton, par_inputs, par_outputs, nof_processes,
                  nof_local_states,
                  sched_var_prefix, active_anon_var_name, sends_anon_var_name, sends_prev_anon_var_name, has_tok_var_prefix,
-                 state_type):
+                 state_type,
+                 tau_name,
+                 internal_funcs_postfix):
         self.automaton = automaton
 
         self.nof_processes = nof_processes
@@ -26,11 +28,11 @@ class ParImpl: #TODO: separate architecture from the spec
         self.inputs = list(map(lambda i: concretize_anon_vars(filter(lambda input: not input.startswith(sends_prev_var_prefix), self._par_inputs), i), range(nof_processes)))
         self.outputs = list(map(lambda i: concretize_anon_vars(self._par_outputs, i), range(nof_processes)))
 
-        self._tau_name = 'tau'
-        self._is_active_name = 'is_active'
-        self._equal_bits_name = 'equal_bits'
-        self._equal_to_prev_name = 'equal_to_prev'
-        self._tau_sched_wrapper_name = 'tau_sched_wrapper'
+        self._tau_name = tau_name
+        self._is_active_name = 'is_active'+internal_funcs_postfix
+        self._equal_bits_name = 'equal_bits'+internal_funcs_postfix
+        self._equal_to_prev_name = 'equal_to_prev'+internal_funcs_postfix
+        self._tau_sched_wrapper_name = 'tau_sch'+internal_funcs_postfix
 
         self._sched_args, self._sched_args_def, self._sched_args_call = get_bits_definition('sch', self._nof_bits)
         self._proc_args, self._proc_args_def, self._proc_args_call = get_bits_definition('proc', self._nof_bits)
@@ -47,7 +49,6 @@ class ParImpl: #TODO: separate architecture from the spec
         """
         return [self._get_desc_equal_bools(),
                 self._get_desc_equal_to_prev(),
-                self._get_desc_local_tau(),
                 self._get_desc_is_active()]
 
     @property
