@@ -12,7 +12,7 @@ from synthesis.z3 import Z3
 
 
 @log_entrance(logging.getLogger(), logging.INFO)
-def search(global_automata_nof_processes_pairs, inputs, outputs,
+def search(global_automata_nof_processes_pairs, anon_inputs, anon_outputs,
                         local_bounds,
                         z3solver,
                         sched_id_prefix,
@@ -37,15 +37,15 @@ def search(global_automata_nof_processes_pairs, inputs, outputs,
             spec_states_type = 'Q'+str(i)
 
             encoder = GenericEncoder(logic, spec_states_type, counters_postfix)
-            impl = ParImpl(automaton, inputs, outputs, nof_processes, bound,
+            impl = ParImpl(automaton, anon_inputs, anon_outputs, nof_processes, bound,
                 sched_id_prefix, active_var_name, sends_anon_var_name, sends_prev_var_name, has_tok_var_prefix,
                 sys_state_type, tau_name, sys_intern_funcs_postfix)
 
             if i is 0:
                 encoder.encode_headers(query_lines)
                 encoder.encode_sys_model_functions(impl, query_lines)
-                #TODO: hack: can be also added on SMT level
-                tok_ring_safety_constraints = LocalENImpl(None, inputs, outputs, bound, sys_state_type, has_tok_var_prefix,
+                #TODO: hack: can be also added on LTL level
+                tok_ring_safety_constraints = LocalENImpl(None, anon_inputs, anon_outputs, bound, sys_state_type, has_tok_var_prefix,
                     sends_anon_var_name, sends_prev_var_name, None).get_architecture_assertions()
 
                 query_lines += tok_ring_safety_constraints
@@ -54,10 +54,6 @@ def search(global_automata_nof_processes_pairs, inputs, outputs,
 
             encoder.encode_sys_aux_functions(impl, query_lines)
             encoder.encode_automaton(impl, query_lines)
-
-
-        #TODO: hack: adding tok ring guarantees
-
 
         encoder.encode_footings(impl, query_lines)
 

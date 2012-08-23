@@ -6,7 +6,7 @@ from synthesis.smt_helper import call_func, op_and, get_bits_definition, make_as
 
 
 class ParImpl: #TODO: separate architecture from the spec
-    def __init__(self, automaton, par_inputs, par_outputs, nof_processes,
+    def __init__(self, automaton, anon_inputs, anon_outputs, nof_processes,
                  nof_local_states,
                  sched_var_prefix, active_anon_var_name, sends_anon_var_name, sends_prev_anon_var_name, has_tok_var_prefix,
                  state_type,
@@ -21,12 +21,12 @@ class ParImpl: #TODO: separate architecture from the spec
 
         self._nof_bits = int(max(1, math.ceil(math.log(self.nof_processes, 2))))
 
-        self._par_inputs = list(par_inputs)
-        self._par_outputs = list(par_outputs)
+        self._anon_inputs = list(anon_inputs)
+        self._anon_outputs = list(anon_outputs)
 
         sends_prev_var_prefix = sends_prev_anon_var_name[:-1] #TODO: hack
-        self.inputs = list(map(lambda i: concretize_anon_vars(filter(lambda input: not input.startswith(sends_prev_var_prefix), self._par_inputs), i), range(nof_processes)))
-        self.outputs = list(map(lambda i: concretize_anon_vars(self._par_outputs, i), range(nof_processes)))
+        self.inputs = list(map(lambda i: concretize_anon_vars(filter(lambda input: not input.startswith(sends_prev_var_prefix), self._anon_inputs), i), range(nof_processes)))
+        self.outputs = list(map(lambda i: concretize_anon_vars(self._anon_outputs, i), range(nof_processes)))
 
         self._tau_name = tau_name
         self._is_active_name = 'is_active'+internal_funcs_postfix
@@ -53,7 +53,7 @@ class ParImpl: #TODO: separate architecture from the spec
 
     @property
     def outputs_descs(self):
-        return [list(map(lambda o: (str(o), [('state', self._state_type)], 'Bool', None), self._par_outputs))]*self.nof_processes
+        return [list(map(lambda o: (str(o), [('state', self._state_type)], 'Bool', None), self._anon_outputs))]*self.nof_processes
 
 
     @property
@@ -127,7 +127,7 @@ class ParImpl: #TODO: separate architecture from the spec
 
 
     def _get_desc_tau_sched_wrapper(self):
-        input_args, input_args_def, input_args_call = get_bits_definition('in', len(self._par_inputs)-1) #-sends_prev
+        input_args, input_args_def, input_args_call = get_bits_definition('in', len(self._anon_inputs)-1) #-sends_prev
 
         body = """
 (define-fun {tau_wrapper} ((state {state}) {inputs_def} (sends_prev Bool) {sched_def} {proc_def}) {state}
@@ -246,7 +246,7 @@ class ParImpl: #TODO: separate architecture from the spec
 
     def _get_desc_local_tau(self):
         return self._tau_name, \
-               [('state', self._state_type)] + list(map(lambda i: (str(i), 'Bool'), self._par_inputs)), \
+               [('state', self._state_type)] + list(map(lambda i: (str(i), 'Bool'), self._anon_inputs)), \
                self._state_type, \
                None
 
