@@ -1,5 +1,5 @@
 from collections import defaultdict
-from itertools import product, chain
+from itertools import product, chain, combinations, permutations
 import logging
 import sys
 from helpers.hashable import HashableDict
@@ -116,9 +116,11 @@ class GenericEncoder:
 
         for init_spec_state in impl.automaton.initial_sets_list[0]:
             for init_sys_state in init_sys_states:
-                smt_lines += self._make_init_states_condition(
-                    self._get_smt_name_spec_state(init_spec_state),
-                    self._get_smt_name_sys_state(init_sys_state, impl.proc_states_descs))
+                permutations_of_init_state = list(permutations(init_sys_state))
+                for sys_state in permutations_of_init_state:
+                    smt_lines += self._make_init_states_condition(
+                        self._get_smt_name_spec_state(init_spec_state),
+                        self._get_smt_name_sys_state(sys_state, impl.proc_states_descs))
 
         global_states = list(product(*[range(len(proc_states_desc[1])) for proc_states_desc in impl.proc_states_descs]))
 

@@ -99,6 +99,9 @@ def concretize_property(ltl_property, nof_processes):
     """ Works for the conjunction of properties only!
     """
     assert nof_processes > 0, str(nof_processes)
+    if ltl_property == 'true':
+        return 'true'
+
     handlers = {'i':_instantiate_i,
                 'i i+1':_instantiate_ii1,
                 'i j':_instantiate_ij,
