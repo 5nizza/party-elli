@@ -39,7 +39,19 @@ def search(logic, automaton, nof_processes,
         query_lines = StrAwareList(FileAsStringEmulator(smt_file))
         query_lines += comment('global_encoder')
 
-        global_encoder.encode(impl, query_lines)
+        global_encoder.encode_headers(query_lines)
+        global_encoder.encode_sys_model_functions(impl, query_lines)
+        global_encoder.encode_sys_aux_functions(impl, query_lines)
+
+        #TODO: hack: can be also added on LTL level
+        tok_ring_safety_constraints = LocalENImpl(None, anon_inputs, anon_outputs, bound, sys_state_type, has_tok_var_prefix,
+            sends_anon_var_name, sends_prev_var_name, None).get_architecture_assertions()
+        query_lines += tok_ring_safety_constraints
+
+        global_encoder.encode_automaton(impl, query_lines)
+        global_encoder.encode_footings(impl, query_lines)
+
+
 
         logger.info('smt query has %i lines', len(query_lines))
 
