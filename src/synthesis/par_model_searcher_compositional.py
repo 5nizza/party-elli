@@ -27,6 +27,8 @@ def search(logic, global_automata_nof_processes_pairs, anon_inputs, anon_outputs
     tau_name = 'tau'
 
     for bound in local_bounds:
+        logger.info('trying size %i', bound)
+
         smt_file = open(smt_file_name, 'w')
         query_lines = StrAwareList(FileAsStringEmulator(smt_file))
 
@@ -60,31 +62,6 @@ def search(logic, global_automata_nof_processes_pairs, anon_inputs, anon_outputs
 
         smt_file.close()
         status, data_lines = z3solver.solve_file(smt_file_name)
-
-        data_lines = """
-sat
-(((tau t0 false false) t0))
-(((tau t0 false true) t0))
-(((tau t0 true false) t1))
-(((tau t0 true true) t1))
-(((tau t1 false false) t0))
-(((tau t1 false true) t0))
-(((tau t1 true false) t0))
-(((tau t1 true true) t2))
-(((tau t2 false false) t0))
-(((tau t2 false true) t0))
-(((tau t2 true false) t2))
-(((tau t2 true true) t2))
-(((g_ t0) false))
-(((g_ t1) false))
-(((g_ t2) true))
-(((sends_ t0) true))
-(((sends_ t1) false))
-(((sends_ t2) false))
-(((tok_ t0) false))
-(((tok_ t1) true))
-(((tok_ t2) false))""".strip().split('\n')
-        status = Z3.SAT
 
         if status == Z3.SAT:
             return encoder.parse_model(data_lines, impl)

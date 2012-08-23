@@ -272,7 +272,7 @@ if __name__ == '__main__':
 
     ltl2ucw_converter, z3solver = create_spec_converter_z3(False)
 
-    bounds = list(range(1, args.bound + 1) if args.size is None else range(args.size, args.size + 1))
+    bounds = list(range(2, args.bound + 1) if args.size is None else range(args.size, args.size + 1))
 
     main_func = args.compo or args.glob or args.hub
     logic = args.ufbv1 or args.ufbv2 or args.ufbv3 or args.ufbv4 or\

@@ -28,6 +28,7 @@ def search(logic, automaton, nof_processes,
     tau_name = 'tau'
 
     for bound in local_bounds:
+        logger.info('trying size %i', bound)
         global_encoder = GenericEncoder(logic, 'GQ', 'g')
 
         impl = ParImpl(automaton, anon_inputs, anon_outputs, nof_processes, bound,
