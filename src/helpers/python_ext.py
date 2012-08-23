@@ -73,12 +73,18 @@ class StrAwareList(Iterable):
 class FileAsStringEmulator:
     def __init__(self, file_writer):
         self._file_writer = file_writer
+        self._len = 0
 
     def append(self, str):
         self._file_writer.write(str)
         self._file_writer.write('\n')
+        self._len += 1
 
 
     def extend(self, strings):
         for str in strings:
             self.append(str)
+
+
+    def __len__(self):
+        return self._len

@@ -2,6 +2,7 @@ from collections import defaultdict
 from itertools import product, chain, combinations, permutations
 import logging
 import sys
+import math
 from helpers.hashable import HashableDict
 
 from helpers.logging import log_entrance
@@ -10,7 +11,7 @@ from interfaces.automata import  DEAD_END
 from interfaces.lts import LTS
 from synthesis.rejecting_states_finder import build_state_to_rejecting_scc
 from synthesis.smt_helper import *
-
+from synthesis.smt_logic import UFBV, UFLIA
 
 
 class GenericEncoder:
@@ -23,6 +24,7 @@ class GenericEncoder:
 
         self._laB_name = 'laB'+counters_postfix
         self._laC_name = 'laC'+counters_postfix
+
 
 
     def _get_assumption_on_output_vars(self, label, sys_state_vector, impl):
@@ -155,13 +157,11 @@ class GenericEncoder:
 
     @log_entrance(logging.getLogger(), logging.INFO)
     def encode(self, impl, smt_lines):
-        smt_lines += self.encode_headers(smt_lines)
-
-        smt_lines += self.encode_sys_model_functions(impl, smt_lines)
-        smt_lines += self.encode_sys_aux_functions(impl, smt_lines)
-        smt_lines += self.encode_automaton(impl, smt_lines)
-
-        smt_lines += self.encode_footings(impl, smt_lines)
+        self.encode_headers(smt_lines)
+        self.encode_sys_model_functions(impl, smt_lines)
+        self.encode_sys_aux_functions(impl, smt_lines)
+        self.encode_automaton(impl, smt_lines)
+        self.encode_footings(impl, smt_lines)
 
         return smt_lines
 
@@ -317,7 +317,10 @@ class GenericEncoder:
             if enum_name in declared_enums:
                 continue
 
-            smt_lines += declare_enum(enum_name, proc_states_desc[1])
+            sys_state_names = proc_states_desc[1]
+
+            smt_lines += declare_enum(enum_name, sys_state_names)
+
             declared_enums.add(enum_name)
 
         return smt_lines
@@ -348,7 +351,7 @@ class GenericEncoder:
         counters_args = [self._spec_states_type] + list(map(lambda desc: desc[0], proc_states_descs))
 
         smt_lines += declare_fun(self._laB_name, counters_args, 'Bool')
-        smt_lines += declare_fun(self._laC_name, counters_args, self._logic.counters_type(4))
+        smt_lines += declare_fun(self._laC_name, counters_args, self._logic.counters_type())
 
         return smt_lines
 

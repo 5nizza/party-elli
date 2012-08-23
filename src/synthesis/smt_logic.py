@@ -1,8 +1,5 @@
-from math import ceil, log
-
-
 class Logic:
-    def counters_type(self, max_counter_value):
+    def counters_type(self):
         pass
     def smt_name(self):
         pass
@@ -15,9 +12,11 @@ class Logic:
 
 
 class UFBV(Logic):
-    def counters_type(self, max_counter_value):
-        width = int(ceil(log(max(max_counter_value, 1), 2)))
-        return '(_ BitVec {0})'.format(width)
+    def __init__(self, width):
+        self._width = width
+
+    def counters_type(self):
+        return '(_ BitVec {0})'.format(self._width)
 
     @property
     def smt_name(self):
@@ -33,7 +32,10 @@ class UFBV(Logic):
 
 
 class UFLIA(Logic):
-    def counters_type(self, max_counter_value):
+    def __init__(self, upper_bound):
+        self._upper_bound = upper_bound
+
+    def counters_type(self):
         return 'Int'
 
     @property

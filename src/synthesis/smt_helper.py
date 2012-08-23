@@ -1,3 +1,6 @@
+import math
+from helpers.python_ext import StrAwareList
+
 def build_values_from_label(inputs, label):
     values = []
     free_values = []
@@ -83,6 +86,34 @@ def declare_enum(enum_name, values):
     smt_str = '(declare-datatypes () (({0} {1})))'.format(enum_name,
         ' '.join(values))
     return smt_str
+
+#def declare_enum_as_int_consts(names):
+#    smt_lines = StrAwareList()
+#    for crt_val, n in enumerate(names):
+#        smt_lines += '(declare-const {name} Int)'.format(
+#            name = n)
+#
+#        smt_lines += '(assert (= {name} {value}))'.format(
+#            name=n,
+#            value=crt_val)
+#
+#    return '\n'.join(smt_lines)
+#
+#
+#def declare_enum_as_bv_consts(names):
+#    smt_lines = StrAwareList()
+#
+#    width = int(max(int(math.ceil(math.log(len(names), 2))), 1))
+#    for crt_val, n in enumerate(names):
+#        smt_lines += '(declare-const {name} {type})'.format(
+#            name = n,
+#            type = '(_ bv {width})'.format(width = width))
+#
+#        smt_lines += '(assert (= {name} {value}))'.format(
+#            name=n,
+#            value='(_ bv{width} {value})'.format(width=width, value = crt_val))
+#
+#    return '\n'.join(smt_lines)
 
 
 def tuple_type(name, component_types):

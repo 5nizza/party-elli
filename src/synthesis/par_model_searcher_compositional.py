@@ -12,7 +12,7 @@ from synthesis.z3 import Z3
 
 
 @log_entrance(logging.getLogger(), logging.INFO)
-def search(global_automata_nof_processes_pairs, anon_inputs, anon_outputs,
+def search(logic, global_automata_nof_processes_pairs, anon_inputs, anon_outputs,
                         local_bounds,
                         z3solver,
                         sched_id_prefix,
@@ -23,7 +23,6 @@ def search(global_automata_nof_processes_pairs, anon_inputs, anon_outputs,
                         smt_file_name):
     logger = logging.getLogger()
 
-    logic = UFLIA()
     sys_state_type = 'T'
     tau_name = 'tau'
 

@@ -18,6 +18,8 @@ def setup_logging(verbose):
         level=level,
         stream=sys.stdout)
 
+    return logging.getLogger(__name__)
+
 
 def create_spec_converter_z3(use_acw): #TODO: add config file
     """ Return ltl to automaton converter, Z3 solver """

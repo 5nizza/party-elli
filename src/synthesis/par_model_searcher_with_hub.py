@@ -12,7 +12,8 @@ from synthesis.z3 import Z3
 
 
 @log_entrance(logging.getLogger(), logging.INFO)
-def search(local_automaton,
+def search(logic,
+           local_automaton,
            global_automaton, nof_processes,
            anon_inputs, anon_outputs,
            local_bounds,
@@ -25,14 +26,12 @@ def search(local_automaton,
            smt_file_name):
     logger = logging.getLogger()
 
-    logic = UFLIA()
     sys_state_type = 'T'
     tau_name = 'tau'
 
     for bound in local_bounds:
         global_encoder = GenericEncoder(logic, 'GQ', 'g')
 
-        sys_state_type = 'LT'
         impl = ParImpl(global_automaton, anon_inputs, anon_outputs, nof_processes, bound,
             sched_id_prefix, active_var_name, sends_anon_var_name, sends_prev_var_name, has_tok_var_prefix,
             sys_state_type, tau_name, '')

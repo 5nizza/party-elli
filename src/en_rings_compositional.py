@@ -4,14 +4,16 @@ import logging
 import os
 import sys
 from helpers import automata_helper
+from helpers.logging import log_entrance
 from helpers.main_helper import setup_logging, create_spec_converter_z3
 from helpers.automata_helper import  is_safety_automaton
 from interfaces import automata
 from module_generation.dot import to_dot
 from parsing.en_rings_parser import is_parametrized, SCHED_ID_PREFIX, SENDS_NAME, ACTIVE_NAME, add_concretize_fair_sched, get_par_io, is_local_property, concretize_property, get_tok_rings_liveness_par_props, get_cutoff_size, HAS_TOK_NAME, SENDS_PREV_NAME, anonymize_property, parametrize_anon_var, get_fair_scheduler_property, get_tok_rings_liveness_anon_props, get_tok_ring_par_io, anonymize_concr_var
 from parsing.parser import parse_ltl
-from synthesis import par_model_searcher_with_hub
+from synthesis import par_model_searcher_with_hub, par_model_searcher_global
 from synthesis.par_model_searcher_compositional import search
+from synthesis.smt_logic import UFLIA, UFBV
 from translation2uct.ltl2automaton import get_solid_property
 
 
@@ -39,13 +41,6 @@ full_arb_loc_guarantee = """
 && (!(((!r_i) && (!g_i)) U ((!r_i) && g_i)))
     """.strip().replace('\n', ' ')
 
-#full_arb_loc_guarantee_without_active = """
-#(!g_i)
-#&& G( ((!r_i) && g_i) -> F((r_i&&g_i) || (!g_i)) )
-#&& G((r_i) -> Fg_i)
-#&& (!F(g_i && X((!r_i)&&!g_i) && X(((!r_i)&&!g_i) U (g_i && !r_i) )) )
-#&& (!(((!r_i) && (!g_i)) U ((!r_i) && g_i)))
-#    """.strip().replace('\n', ' ')
 
 pnueli_arb_loc_assumption = """
 (!r_i) &&
@@ -59,7 +54,23 @@ G((((!r_i) && (!g_i)) || (r_i && g_i)) ->  (((!g_i) && (X(!g_i))) || ((g_i) && (
 GF(((!r_i) && (!g_i)) || (r_i && g_i))
 """.strip().replace('\n', ' ')
 
-simple, full, pnueli = range(3)
+
+xarb_loc_assumption = """
+(!r_i) &&
+G(((!r_i)&&Xg_i) -> X(!r_i)) &&
+G((r_i&&X!g_i) -> Xr_i) &&
+G((r_i&&Xg_i) -> X(!r_i))
+""".strip().replace('\n', ' ')
+
+xarb_loc_guarantee = """
+(!g_i) &&
+G(((!r_i)&&(!g_i))->X!g_i) &&
+G(r_i->XFg_i) &&
+G((r_i&&Xg_i) -> (XXg_i && XXXg_i && XXXX!g_i))
+""".strip().replace('\n', ' ')
+
+
+simple, full, pnueli, xarb = range(4)
 
 
 def _get_spec(spec_type):
@@ -72,12 +83,15 @@ def _get_spec(spec_type):
     specs = [
         (inputs, outputs, 'true', 'G((active_i && r_i) -> Fg_i)', mutual_exclusion),
         (inputs, outputs, 'true', full_arb_loc_guarantee, mutual_exclusion),
-        (inputs, outputs, pnueli_arb_loc_assumption, pnueli_arb_loc_guarantee, mutual_exclusion)]
+        (inputs, outputs, pnueli_arb_loc_assumption, pnueli_arb_loc_guarantee, mutual_exclusion),
+        (inputs, outputs, xarb_loc_assumption, xarb_loc_guarantee, mutual_exclusion)]
 
     return specs[spec_type]
 
 
-def main_with_hub(spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
+def main_with_hub(logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
+    logger.info('hub abstraction approach')
+
     anon_inputs, anon_outputs, orig_loc_assumption, orig_loc_guarantee, orig_glob_guarantee = _get_spec(spec_type)
 
     #TODO: check two cases: when on SMT level and when here
@@ -109,7 +123,8 @@ def main_with_hub(spec_type, dot_files_prefix, bounds, cutoff, automaton_convert
     logger.info('global automaton has %i states', len(global_automaton.nodes))
     logger.info('using the cutoff of size %i', cutoff)
 
-    models = par_model_searcher_with_hub.search(loc_automaton,
+    models = par_model_searcher_with_hub.search(logic,
+        loc_automaton,
         global_automaton, cutoff,
         anon_inputs, anon_outputs,
         bounds,
@@ -124,14 +139,14 @@ def main_with_hub(spec_type, dot_files_prefix, bounds, cutoff, automaton_convert
                 dot = to_dot(lts)
                 out.write(dot)
 
-def main(spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
-    par_inputs, par_outputs, orig_loc_assumption, orig_loc_guarantee, orig_glob_guarantee = _get_spec(spec_type)
+def main_compo(logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
+    logger.info('compositional approach')
+
+    anon_inputs, anon_outputs, orig_loc_assumption, orig_loc_guarantee, orig_glob_guarantee = _get_spec(spec_type)
 
     par_fair_token = 'GF({tok}i)'.format(
         tok=HAS_TOK_NAME,
         prev=SENDS_PREV_NAME)
-
-    #TODO: should I add token ring safety constraints here?
 
     loc_property_wo_sched = '(({orig_loc_assumption} && {fair_tok}) -> ({orig_loc_guarantee} && {tok_ring_guarantee}))'.format(
         orig_loc_assumption = orig_loc_assumption,
@@ -165,7 +180,7 @@ def main(spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solve
 
     automatae = [(loc_automaton, 2), (global_automaton, cutoff)]
 
-    models = search(automatae, par_inputs, par_outputs,
+    models = search(logic, automatae, anon_inputs, anon_outputs,
         bounds,
         solver, SCHED_ID_PREFIX, ACTIVE_NAME, SENDS_NAME, HAS_TOK_NAME, SENDS_PREV_NAME,
         'smt_query.smt2') #TODO: hack: hardcode
@@ -177,6 +192,46 @@ def main(spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solve
             with open(dot_files_prefix + str(i) + '.dot', mode='w') as out:
                 dot = to_dot(lts)
                 out.write(dot)
+
+
+def main_global(logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
+    logger.info('global approach')
+
+    anon_inputs, anon_outputs, orig_loc_assumption, orig_loc_guarantee, orig_glob_guarantee = _get_spec(spec_type)
+
+    glob_property = '({fair_sched}) -> (({loc_assumption}) -> ({loc_guarantee} && {tok_ring_guarantee}))'.format(
+        fair_sched=get_fair_scheduler_property(cutoff, SCHED_ID_PREFIX),
+        loc_assumption = concretize_property(orig_loc_assumption, cutoff),
+        loc_guarantee = concretize_property(orig_loc_guarantee, cutoff),
+        tok_ring_guarantee = concretize_property(get_tok_rings_liveness_par_props()[0], cutoff))
+
+    glob_property = '({0}) && {1}'.format(
+        glob_property,
+        concretize_property(orig_glob_guarantee, cutoff))
+
+    print(glob_property)
+    print('-'*80)
+#    assert 0
+
+    automaton = automaton_converter.convert(glob_property)
+
+    logger.info('global automaton has %i states', len(automaton.nodes))
+    logger.info('using the cutoff of size %i', cutoff)
+
+    models = par_model_searcher_global.search(logic, automaton, cutoff,
+        anon_inputs, anon_outputs,
+        bounds,
+        solver, SCHED_ID_PREFIX, ACTIVE_NAME, SENDS_NAME, HAS_TOK_NAME, SENDS_PREV_NAME,
+        'smt_query.smt2') #TODO: hack: hardcode
+
+    logger.info('model%s found', ['', ' not'][models is None])
+
+    if dot_files_prefix is not None and models is not None:
+        for i, lts in enumerate(models):
+            with open(dot_files_prefix + str(i) + '.dot', mode='w') as out:
+                dot = to_dot(lts)
+                out.write(dot)
+
 
 
 if __name__ == '__main__':
@@ -192,18 +247,38 @@ if __name__ == '__main__':
     parser.add_argument('--cutoff', metavar='cutoff', type=int, default=None, required=True,
         help='force specified cutoff size')
     parser.add_argument('-v', '--verbose', action='count', default=0)
-    parser.add_argument('--hub', action='store_true', default=False)
+
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--hub', action='store_const', const=main_with_hub)
+    group.add_argument('--compo', action='store_const', const=main_compo)
+    group.add_argument('--glob', action='store_const', const=main_global)
+
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--ufbv1', action='store_const', const=UFBV(1))
+    group.add_argument('--ufbv2', action='store_const', const=UFBV(2))
+    group.add_argument('--ufbv3', action='store_const', const=UFBV(3))
+    group.add_argument('--ufbv4', action='store_const', const=UFBV(4))
+
+    group.add_argument('--uflia01', action='store_const', const=UFLIA(1))
+    group.add_argument('--uflia02', action='store_const', const=UFLIA(2))
+    group.add_argument('--uflia03', action='store_const', const=UFLIA(3))
+    group.add_argument('--uflia04', action='store_const', const=UFLIA(4))
 
     args = parser.parse_args(sys.argv[1:])
 
-    setup_logging(args.verbose)
+    logger = setup_logging(args.verbose)
+
+    logger.debug(args)
 
     ltl2ucw_converter, z3solver = create_spec_converter_z3(False)
 
     bounds = list(range(1, args.bound + 1) if args.size is None else range(args.size, args.size + 1))
 
-    main_func = [main, main_with_hub][args.hub]
+    main_func = args.compo or args.glob or args.hub
+    logic = args.ufbv1 or args.ufbv2 or args.ufbv3 or args.ufbv4 or\
+            args.uflia01 or args.uflia02 or args.uflia03 or args.uflia04
 
-    main_func({'pnueli': pnueli, 'full':full, 'simple':simple}[args.ltl],
-        args.dot, bounds, args.cutoff, ltl2ucw_converter, z3solver, logging.getLogger(__name__))
+    main_func(logic,
+        {'pnueli': pnueli, 'full':full, 'simple':simple, 'xarb': xarb}[args.ltl],
+        args.dot, bounds, args.cutoff, ltl2ucw_converter, z3solver, logger)
 
