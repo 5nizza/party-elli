@@ -3,6 +3,7 @@ from itertools import chain
 import logging
 import os
 import sys
+import tempfile
 from helpers import automata_helper
 from helpers.logging import log_entrance
 from helpers.main_helper import setup_logging, create_spec_converter_z3
@@ -89,7 +90,7 @@ def _get_spec(spec_type):
     return specs[spec_type]
 
 
-def main_with_hub(logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
+def main_with_hub(smt_file_prefix, logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
     logger.info('hub abstraction approach')
 
     anon_inputs, anon_outputs, orig_loc_assumption, orig_loc_guarantee, orig_glob_guarantee = _get_spec(spec_type)
@@ -129,7 +130,7 @@ def main_with_hub(logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_
         anon_inputs, anon_outputs,
         bounds,
         solver, SCHED_ID_PREFIX, ACTIVE_NAME, SENDS_NAME, HAS_TOK_NAME, SENDS_PREV_NAME,
-        'smt_query.smt2') #TODO: hack: hardcode
+        smt_file_prefix) #TODO: hack:
 
     logger.info('model%s found', ['', ' not'][models is None])
 
@@ -139,7 +140,7 @@ def main_with_hub(logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_
                 dot = to_dot(lts)
                 out.write(dot)
 
-def main_compo(logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
+def main_compo(smt_file_prefix, logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
     logger.info('compositional approach')
 
     anon_inputs, anon_outputs, orig_loc_assumption, orig_loc_guarantee, orig_glob_guarantee = _get_spec(spec_type)
@@ -183,7 +184,7 @@ def main_compo(logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_con
     models = search(logic, automatae, anon_inputs, anon_outputs,
         bounds,
         solver, SCHED_ID_PREFIX, ACTIVE_NAME, SENDS_NAME, HAS_TOK_NAME, SENDS_PREV_NAME,
-        'smt_query.smt2') #TODO: hack: hardcode
+        smt_file_prefix) #TODO: hack: hardcode
 
     logger.info('model%s found', ['', ' not'][models is None])
 
@@ -194,7 +195,7 @@ def main_compo(logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_con
                 out.write(dot)
 
 
-def main_global(logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
+def main_global(smt_file_prefix, logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
     logger.info('global approach')
 
     anon_inputs, anon_outputs, orig_loc_assumption, orig_loc_guarantee, orig_glob_guarantee = _get_spec(spec_type)
@@ -222,7 +223,7 @@ def main_global(logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_co
         anon_inputs, anon_outputs,
         bounds,
         solver, SCHED_ID_PREFIX, ACTIVE_NAME, SENDS_NAME, HAS_TOK_NAME, SENDS_PREV_NAME,
-        'smt_query.smt2') #TODO: hack: hardcode
+        smt_file_prefix) #TODO: hack: hardcode
 
     logger.info('model%s found', ['', ' not'][models is None])
 
@@ -278,7 +279,12 @@ if __name__ == '__main__':
     logic = args.ufbv1 or args.ufbv2 or args.ufbv3 or args.ufbv4 or\
             args.uflia01 or args.uflia02 or args.uflia03 or args.uflia04
 
-    main_func(logic,
+    smt_file = tempfile.NamedTemporaryFile(delete=False, dir='./')
+    smt_file_name = smt_file.name
+    smt_file.close()
+
+    logger.info('temp file is used %s', smt_file_name)
+
+    main_func(smt_file_name, logic,
         {'pnueli': pnueli, 'full':full, 'simple':simple, 'xarb': xarb}[args.ltl],
         args.dot, bounds, args.cutoff, ltl2ucw_converter, z3solver, logger)
-

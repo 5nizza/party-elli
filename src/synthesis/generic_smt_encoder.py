@@ -378,5 +378,3 @@ class GenericEncoder:
         smt_lines += get_values
         smt_lines += make_exit()
         return smt_lines
-
-
