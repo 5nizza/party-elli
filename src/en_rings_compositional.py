@@ -1,21 +1,14 @@
 import argparse
 from itertools import chain
-import logging
-import os
 import sys
 import tempfile
-from helpers import automata_helper
-from helpers.logging import log_entrance
 from helpers.main_helper import setup_logging, create_spec_converter_z3
 from helpers.automata_helper import  is_safety_automaton
-from interfaces import automata
 from module_generation.dot import to_dot
-from parsing.en_rings_parser import is_parametrized, SCHED_ID_PREFIX, SENDS_NAME, ACTIVE_NAME, add_concretize_fair_sched, get_par_io, is_local_property, concretize_property, get_tok_rings_liveness_par_props, get_cutoff_size, HAS_TOK_NAME, SENDS_PREV_NAME, anonymize_property, parametrize_anon_var, get_fair_scheduler_property, get_tok_rings_liveness_anon_props, get_tok_ring_par_io, anonymize_concr_var
-from parsing.parser import parse_ltl
+from parsing.en_rings_parser import  SCHED_ID_PREFIX, SENDS_NAME, ACTIVE_NAME, concretize_property, get_tok_rings_liveness_par_props, HAS_TOK_NAME, SENDS_PREV_NAME, anonymize_property, get_fair_scheduler_property, get_tok_ring_par_io
 from synthesis import par_model_searcher_with_hub, par_model_searcher_global
 from synthesis.par_model_searcher_compositional import search
 from synthesis.smt_logic import UFLIA, UFBV
-from translation2uct.ltl2automaton import get_solid_property
 
 
 def _is_safety_property(property, automaton_converter):
@@ -37,11 +30,15 @@ def _separate_properties(automaton_converter, props):
 full_arb_loc_guarantee = """
 (!g_i)
 && G( (active_i && (!r_i) && g_i) -> F((r_i&&g_i) || (!g_i)) )
-&& G((active_i && r_i) -> Fg_i)
-&& (!F(g_i && X((!r_i)&&!g_i) && X(((!r_i)&&!g_i) U (g_i && !r_i) )) )
+&& G( (active_i && r_i) -> Fg_i )
+&& (!F(g_i && X((!r_i) && !g_i) && X(((!r_i) && !g_i) U (g_i && !r_i) )) )
 && (!(((!r_i) && (!g_i)) U ((!r_i) && g_i)))
-    """.strip().replace('\n', ' ')
+""".strip().replace('\n', ' ')
 
+#full_arb_loc_assumption = """
+#((r_i -> (r_i U (active_i && r_i))) &&
+#(!r_i -> ((!r_i) U (active_i && !r_i))))
+#""".strip().replace('\n', ' ')
 
 pnueli_arb_loc_assumption = """
 (!r_i) &&
@@ -202,9 +199,9 @@ def main_global(smt_file_prefix, logic, spec_type, dot_files_prefix, bounds, cut
 
     glob_property = '({fair_sched}) -> (({loc_assumption}) -> ({loc_guarantee} && {tok_ring_guarantee}))'.format(
         fair_sched=get_fair_scheduler_property(cutoff, SCHED_ID_PREFIX),
-        loc_assumption = concretize_property(orig_loc_assumption, cutoff),
-        loc_guarantee = concretize_property(orig_loc_guarantee, cutoff),
-        tok_ring_guarantee = concretize_property(get_tok_rings_liveness_par_props()[0], cutoff))
+        loc_assumption = concretize_property(orig_loc_assumption, cutoff if spec_type == pnueli else 1),
+        loc_guarantee = concretize_property(orig_loc_guarantee, 1),
+        tok_ring_guarantee = concretize_property(get_tok_rings_liveness_par_props()[0], 1))
 
     glob_property = '({0}) && {1}'.format(
         glob_property,

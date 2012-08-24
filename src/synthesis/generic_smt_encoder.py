@@ -1,8 +1,6 @@
 from collections import defaultdict
-from itertools import product, chain, combinations, permutations
+from itertools import product, chain, permutations
 import logging
-import sys
-import math
 from helpers.hashable import HashableDict
 
 from helpers.logging import log_entrance
@@ -11,7 +9,6 @@ from interfaces.automata import  DEAD_END
 from interfaces.lts import LTS
 from synthesis.rejecting_states_finder import build_state_to_rejecting_scc
 from synthesis.smt_helper import *
-from synthesis.smt_logic import UFBV, UFLIA
 
 
 class GenericEncoder:
@@ -367,10 +364,12 @@ class GenericEncoder:
     def _counter(self, spec_state_name, sys_state_name):
         return call_func(self._laC_name, [spec_state_name, sys_state_name])
 
+
     def encode_headers(self, smt_lines):
         smt_lines += make_headers()
         smt_lines += make_set_logic(self._logic)
         return smt_lines
+
 
     def encode_footings(self, impl, smt_lines):
         smt_lines += make_check_sat()

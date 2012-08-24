@@ -113,7 +113,9 @@ class ParImpl: #TODO: separate architecture from the spec
 
         sched_vals = self._get_sched_values(label)
 
-        return call_func(self._is_active_name, proc_id_args + sched_vals + [sends_prev])
+        #TODO: make order-safe, this line cost me 5 hours of debugging
+        func = call_func(self._is_active_name, sched_vals + proc_id_args + [sends_prev])
+        return func
 
 
     def get_free_sched_vars(self, label):
@@ -185,6 +187,7 @@ class ParImpl: #TODO: separate architecture from the spec
                body
 
 
+    #do not change order of variables!
     def _get_desc_is_active(self):
         body = """
 (define-fun {is_active} ({sched_id_def} {proc_id_def} (sends_prev Bool)) Bool
