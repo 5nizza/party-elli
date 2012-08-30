@@ -8,6 +8,7 @@ class LocalENImpl:
                  sends_var_name,
                  sends_prev_var_name,
                  init_states):
+        #TODO: if introduce has_tok optimization - be careful about initial states! (case of HOT encoding)
         self.automaton = automaton
 
         self._state_type = sys_state_type

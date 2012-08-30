@@ -87,7 +87,64 @@ def _get_spec(spec_type):
     return specs[spec_type]
 
 
-def main_with_hub(smt_file_prefix, logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
+def main_with_async_hub(smt_file_prefix,
+                        logic,
+                        spec_type,
+                        dot_files_prefix,
+                        bounds,
+                        cutoff,
+                        automaton_converter,
+                        solver,
+                        logger):
+    logger.info('hub abstraction approach')
+
+    anon_inputs, anon_outputs, orig_loc_assumption, orig_loc_guarantee, orig_glob_guarantee = _get_spec(spec_type)
+
+    #TODO: check two cases: when on SMT level and when here
+    hub_par_assumption = 'G((!{tok}i) -> F{prev}i) && G({tok}i -> !{prev}i)'.format(
+        tok = HAS_TOK_NAME,
+        prev = SENDS_PREV_NAME)
+
+    loc_property = '(({orig_loc_assumption} && {hub}) -> ({orig_loc_guarantee} && {tok_ring_guarantee}))'.format(
+        orig_loc_assumption = orig_loc_assumption,
+        orig_loc_guarantee = orig_loc_guarantee,
+        hub=hub_par_assumption,
+        tok_ring_guarantee = get_tok_rings_liveness_par_props()[0])
+
+    loc_property = anonymize_property(loc_property, anon_inputs+anon_outputs+list(chain(*get_tok_ring_par_io())))
+
+    logger.info('\n' + loc_property)
+    #    assert 0
+
+    loc_automaton = automaton_converter.convert(loc_property)
+    logger.info('local automaton has %i states', len(loc_automaton.nodes))
+
+    full_concr_prop = concretize_property(orig_glob_guarantee, cutoff)
+    global_automaton = automaton_converter.convert(full_concr_prop)
+
+    logger.info('\n' + full_concr_prop)
+
+    logger.info('global automaton has %i states', len(global_automaton.nodes))
+    logger.info('using the cutoff of size %i', cutoff)
+
+    models = par_model_searcher_with_hub.search(logic,
+        loc_automaton,
+        global_automaton, cutoff,
+        anon_inputs, anon_outputs,
+        bounds,
+        solver, SCHED_ID_PREFIX, ACTIVE_NAME, SENDS_NAME, HAS_TOK_NAME, SENDS_PREV_NAME,
+        smt_file_prefix) #TODO: hack:
+
+    logger.info('model%s found', ['', ' not'][models is None])
+
+    if dot_files_prefix is not None and models is not None:
+        for i, lts in enumerate(models):
+            with open(dot_files_prefix + str(i) + '.dot', mode='w') as out:
+                dot = to_dot(lts)
+                out.write(dot)
+
+
+def main_with_sync_hub(smt_file_prefix, logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
     logger.info('hub abstraction approach')
 
     anon_inputs, anon_outputs, orig_loc_assumption, orig_loc_guarantee, orig_glob_guarantee = _get_spec(spec_type)
@@ -231,6 +288,11 @@ def main_global(smt_file_prefix, logic, spec_type, dot_files_prefix, bounds, cut
                 out.write(dot)
 
 
+_OPT_TO_MAIN = {'hub_sync':main_with_sync_hub,
+                'hub_async':main_with_async_hub,
+                'compo':main_compo,
+                'glob':main_global}
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Parametrized Synthesis Tool for token rings architecture')
@@ -246,21 +308,7 @@ if __name__ == '__main__':
         help='force specified cutoff size')
     parser.add_argument('-v', '--verbose', action='count', default=0)
 
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('--hub', action='store_const', const=main_with_hub)
-    group.add_argument('--compo', action='store_const', const=main_compo)
-    group.add_argument('--glob', action='store_const', const=main_global)
-
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('--ufbv1', action='store_const', const=UFBV(1))
-    group.add_argument('--ufbv2', action='store_const', const=UFBV(2))
-    group.add_argument('--ufbv3', action='store_const', const=UFBV(3))
-    group.add_argument('--ufbv4', action='store_const', const=UFBV(4))
-
-    group.add_argument('--uflia01', action='store_const', const=UFLIA(1))
-    group.add_argument('--uflia02', action='store_const', const=UFLIA(2))
-    group.add_argument('--uflia03', action='store_const', const=UFLIA(3))
-    group.add_argument('--uflia04', action='store_const', const=UFLIA(4))
+    parser.add_argument('--opt', choices=tuple(_OPT_TO_MAIN.keys()), required=True)
 
     args = parser.parse_args(sys.argv[1:])
 
@@ -272,9 +320,7 @@ if __name__ == '__main__':
 
     bounds = list(range(2, args.bound + 1) if args.size is None else range(args.size, args.size + 1))
 
-    main_func = args.compo or args.glob or args.hub
-    logic = args.ufbv1 or args.ufbv2 or args.ufbv3 or args.ufbv4 or\
-            args.uflia01 or args.uflia02 or args.uflia03 or args.uflia04
+    logic = UFLIA(None)
 
     smt_file = tempfile.NamedTemporaryFile(delete=False, dir='./')
     smt_file_name = smt_file.name
@@ -282,6 +328,7 @@ if __name__ == '__main__':
 
     logger.info('temp file is used %s', smt_file_name)
 
+    main_func = _OPT_TO_MAIN[args.opt]
     main_func(smt_file_name, logic,
         {'pnueli': pnueli, 'full':full, 'simple':simple, 'xarb': xarb}[args.ltl],
         args.dot, bounds, args.cutoff, ltl2ucw_converter, z3solver, logger)
