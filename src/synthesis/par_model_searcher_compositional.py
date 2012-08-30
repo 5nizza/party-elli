@@ -12,7 +12,8 @@ from synthesis.z3 import Z3
 
 
 @log_entrance(logging.getLogger(), logging.INFO)
-def search(logic, global_automata_nof_processes_pairs, anon_inputs, anon_outputs,
+def search(logic,
+           global_automata_nof_processes_pairs, anon_inputs, anon_outputs,
                         local_bounds,
                         z3solver,
                         sched_id_prefix,

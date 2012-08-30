@@ -6,9 +6,8 @@ from helpers.main_helper import setup_logging, create_spec_converter_z3
 from helpers.automata_helper import  is_safety_automaton
 from module_generation.dot import to_dot
 from parsing.en_rings_parser import  SCHED_ID_PREFIX, SENDS_NAME, ACTIVE_NAME, concretize_property, get_tok_rings_liveness_par_props, HAS_TOK_NAME, SENDS_PREV_NAME, anonymize_property, get_fair_scheduler_property, get_tok_ring_par_io
-from synthesis import par_model_searcher_with_hub, par_model_searcher_global
-from synthesis.par_model_searcher_compositional import search
-from synthesis.smt_logic import UFLIA, UFBV
+from synthesis import par_model_searcher_with_hub, par_model_searcher_compositional
+from synthesis.smt_logic import UFLIA
 
 
 def _is_safety_property(property, automaton_converter):
@@ -235,7 +234,7 @@ def main_compo(smt_file_prefix, logic, spec_type, dot_files_prefix, bounds, cuto
 
     automatae = [(loc_automaton, 2), (global_automaton, cutoff)]
 
-    models = search(logic, automatae, anon_inputs, anon_outputs,
+    models = par_model_searcher_compositional.search(logic, automatae, anon_inputs, anon_outputs,
         bounds,
         solver, SCHED_ID_PREFIX, ACTIVE_NAME, SENDS_NAME, HAS_TOK_NAME, SENDS_PREV_NAME,
         smt_file_prefix) #TODO: hack: hardcode
@@ -249,7 +248,7 @@ def main_compo(smt_file_prefix, logic, spec_type, dot_files_prefix, bounds, cuto
                 out.write(dot)
 
 
-def main_global(smt_file_prefix, logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
+def main_global(smt_file_name, logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
     logger.info('global approach')
 
     anon_inputs, anon_outputs, orig_loc_assumption, orig_loc_guarantee, orig_glob_guarantee = _get_spec(spec_type)
@@ -273,11 +272,13 @@ def main_global(smt_file_prefix, logic, spec_type, dot_files_prefix, bounds, cut
     logger.info('global automaton has %i states', len(automaton.nodes))
     logger.info('using the cutoff of size %i', cutoff)
 
-    models = par_model_searcher_global.search(logic, automaton, cutoff,
+    automaton_size_pairs = [(automaton, cutoff)]
+
+    models = par_model_searcher_compositional.search(logic, automaton_size_pairs,
         anon_inputs, anon_outputs,
         bounds,
         solver, SCHED_ID_PREFIX, ACTIVE_NAME, SENDS_NAME, HAS_TOK_NAME, SENDS_PREV_NAME,
-        smt_file_prefix) #TODO: hack: hardcode
+        smt_file_name)
 
     logger.info('model%s found', ['', ' not'][models is None])
 
