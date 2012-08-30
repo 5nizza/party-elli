@@ -120,7 +120,7 @@ def is_parametrized(ltl_spec):
 
 
 def get_fair_scheduler_property(nof_processes, sched_id_prefix):
-    nof_sched_bits = int(math.ceil(math.log(nof_processes, 2)))
+    nof_sched_bits = int(max(math.ceil(math.log(nof_processes, 2)), 1))
 
     sched_constraints = []
     for i in range(nof_processes):

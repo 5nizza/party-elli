@@ -58,6 +58,7 @@ simple, full, pnueli, xarb = range(4)
 
 
 def _get_spec(spec_type):
+    #TODO: the only global property allowed is safety - mutual exclusion
     mutual_exclusion = 'G(!(g_i && g_j))'
 
     par_tok_ring_inputs, par_tok_ring_outputs = get_tok_ring_par_io()
@@ -128,24 +129,22 @@ def main_with_async_hub(smt_file_prefix,
         prev = SENDS_PREV_NAME)
 
     loc_property = '(({fair_sched} && {orig_loc_assumption} && {hub}) -> ({orig_loc_guarantee} && {tok_ring_guarantee}))'.format(
-        fair_sched=get_fair_scheduler_property(1, SCHED_ID_PREFIX),
-        orig_loc_assumption = orig_loc_assumption,
-        orig_loc_guarantee = orig_loc_guarantee,
-        hub=hub_par_assumption,
-        tok_ring_guarantee = get_tok_rings_liveness_par_props()[0])
+        fair_sched = get_fair_scheduler_property(1, SCHED_ID_PREFIX),
+        orig_loc_assumption = concretize_property(orig_loc_assumption, 1),
+        orig_loc_guarantee = concretize_property(orig_loc_guarantee, 1),
+        hub=concretize_property(hub_par_assumption, 1),
+        tok_ring_guarantee = concretize_property(get_tok_rings_liveness_par_props()[0], 1))
 
-    loc_property = anonymize_property(loc_property, anon_inputs+anon_outputs+list(chain(*get_tok_ring_par_io())))
-
-    loc_automaton = automaton_converter.convert(loc_property)
+    ring_with_hub_automaton = automaton_converter.convert(loc_property)
 
     full_concr_prop = concretize_property(orig_glob_guarantee, cutoff)
     global_automaton = automaton_converter.convert(full_concr_prop)
 
-    global_automatae_pairs = [(global_automaton, cutoff)]
+    global_automatae_pairs = [(global_automaton, cutoff), (ring_with_hub_automaton, 1)]
 
     _run(logic,
         global_automatae_pairs,
-        loc_automaton,
+        None,
         anon_inputs, anon_outputs,
         bounds,
         solver,
@@ -208,39 +207,17 @@ def main_compo(smt_file_prefix, logic, spec_type, dot_files_prefix, bounds, cuto
         fair_sched=get_fair_scheduler_property(2, SCHED_ID_PREFIX),
         loc_property = loc_property_wo_sched)
 
-    print(loc_property)
-    print('-'*80)
-#    assert 0
-
-#    tr_par_assumption_on_hub = 'G((!{tok}i) -> F{sends_prev}i)'.format(tok = HAS_TOK_NAME, sends_prev = SENDS_PREV_NAME)
-
     loc_automaton = automaton_converter.convert(loc_property)
-    logger.info('local automaton has %i states', len(loc_automaton.nodes))
 
     full_concr_prop = concretize_property(orig_glob_guarantee, cutoff)
     global_automaton = automaton_converter.convert(full_concr_prop)
 
-    print(full_concr_prop)
-
-    logger.info('global automaton has %i states', len(global_automaton.nodes))
-    logger.info('full_concr_props is %s', full_concr_prop)
-
-    logger.info('using the cutoff of size %i', cutoff)
-
     automatae = [(loc_automaton, 2), (global_automaton, cutoff)]
 
-    models = par_model_searcher.search(logic, automatae, None, anon_inputs, anon_outputs,
+    _run(logic, automatae, None, anon_inputs, anon_outputs,
         bounds,
-        solver, SCHED_ID_PREFIX, ACTIVE_NAME, SENDS_NAME, HAS_TOK_NAME, SENDS_PREV_NAME,
-        smt_file_prefix) #TODO: hack: hardcode
-
-    logger.info('model%s found', ['', ' not'][models is None])
-
-    if dot_files_prefix is not None and models is not None:
-        for i, lts in enumerate(models):
-            with open(dot_files_prefix + str(i) + '.dot', mode='w') as out:
-                dot = to_dot(lts)
-                out.write(dot)
+        solver,
+        smt_file_prefix, dot_files_prefix)
 
 
 def main_global(smt_file_name, logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):

@@ -1,3 +1,4 @@
+from itertools import permutations
 import math
 from helpers.python_ext import bin_fixed_list, StrAwareList, index_of
 from interfaces.automata import Label
@@ -304,6 +305,7 @@ class ParImpl: #TODO: separate architecture from the spec
     def get_architecture_assertions(self):
         smt_lines = StrAwareList()
 
+        #TODO: hack: why does the order matter?
         smt_lines += make_assert(call_func(self._has_tok_var_prefix, [self.proc_states_descs[0][1][self.init_states[0][0]]]))
 
         for i in range(1, self.nof_processes):
@@ -314,7 +316,19 @@ class ParImpl: #TODO: separate architecture from the spec
 
     @property
     def init_states(self):
-        return [[1] + [0] * (self.nof_processes-1)]
+        #TODO: hardcoded knowledge: state 0 no tok, state 1 tok
+
+        if len(self.proc_states_descs) == 1:
+            return [(1,), (0,)] #TODO: the order matters
+
+        init_sys_state = [1] + [0] * (self.nof_processes-1)
+        permutations_of_init_state = list(permutations(init_sys_state))
+
+        result = []
+        for sys_state in permutations_of_init_state:
+            result.append(sys_state)
+
+        return result
 
 
 

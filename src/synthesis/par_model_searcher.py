@@ -50,16 +50,16 @@ def search(logic,
             if i is 0:
                 encoder.encode_headers(query_lines)
                 encoder.encode_sys_model_functions(impl, query_lines)
-                local_init_states = impl.init_states[0]
+
+                query_lines += comment('local_encoder')
 
                 local_impl = LocalENImpl(local_automaton, anon_inputs, anon_outputs,
                     bound,
                     sys_state_type,
                     has_tok_var_prefix, sends_anon_var_name, sends_prev_var_name,
                     tau_name,
-                    local_init_states)
+                    impl.init_states[0])
 
-                query_lines += comment('local_encoder')
                 local_encoder = GenericEncoder(logic, 'LQ', 'l')
                 local_encoder.encode_automaton(local_impl, query_lines)
 
