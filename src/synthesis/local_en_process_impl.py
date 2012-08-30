@@ -3,7 +3,7 @@ from interfaces.automata import Label
 from synthesis.smt_helper import op_and, call_func, op_not, op_implies, forall_bool, build_values_from_label, make_assert
 
 class LocalENImpl:
-    def __init__(self, automaton, par_inputs, par_outputs, nof_local_states, sys_state_type,
+    def __init__(self, automaton, anon_inputs, anon_outputs, nof_local_states, sys_state_type,
                  has_tok_var_prefix,
                  sends_var_name,
                  sends_prev_var_name,
@@ -18,8 +18,8 @@ class LocalENImpl:
 
         self._nof_local_states = nof_local_states
 
-        self.inputs = [list(par_inputs)]
-        self.outputs = [list(par_outputs)]
+        self.inputs = [list(anon_inputs)]
+        self.outputs = [list(anon_outputs)]
 
         self._tau_name = tau_name
         self._has_tok_var_prefix = has_tok_var_prefix
