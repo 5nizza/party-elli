@@ -2,10 +2,16 @@ from helpers.hashable import HashableDict
 
 
 class Automaton:
-    def __init__(self, init_sets_list, rejecting_nodes, nodes):
+    def __init__(self, init_sets_list, rejecting_nodes, nodes, name=''):
         self._init_sets_list = list(init_sets_list)
         self._rejecting_nodes = set(rejecting_nodes)
         self._nodes = set(nodes)
+        self._name = name
+
+
+    @property
+    def name(self):
+        return self._name
 
     @property
     def nodes(self):
@@ -22,7 +28,8 @@ class Automaton:
 
 
     def __str__(self):
-        return "nodes:\n" + \
+        return self._name + \
+               "\nnodes:\n" + \
                "\n".join([str(x) for x in self._nodes]) +\
                "\n initial nodes:\n" +\
                "\n".join([str(x) for x in self._init_sets_list]) +\

@@ -73,98 +73,25 @@ def _get_spec(spec_type):
     return specs[spec_type]
 
 
-def main_with_async_hub(smt_file_prefix,
-                        logic,
-                        spec_type,
-                        dot_files_prefix,
-                        bounds,
-                        cutoff,
-                        automaton_converter,
-                        solver,
-                        logger):
-    logger.info('hub abstraction approach')
+def _run(logic,
+         global_automatae_pairs, loc_automaton,
+         anon_inputs, anon_outputs,
+         bounds,
+         solver,
+         smt_file_name,
+         dot_files_prefix):
 
-    anon_inputs, anon_outputs, orig_loc_assumption, orig_loc_guarantee, orig_glob_guarantee = _get_spec(spec_type)
+    logger.info('# of global automatae %i', len(global_automatae_pairs))
+    for glob_automaton, cutoff in global_automatae_pairs:
+        logger.info('global automaton %s', glob_automaton.name)
+        logger.info('corresponding cutoff=%i', cutoff)
+        logger.info('nof_nodes=%i', len(glob_automaton.nodes))
 
-    #TODO: check two cases: when on SMT level and when here
-    hub_par_assumption = 'G((!{tok}i) -> F{prev}i) && G({tok}i -> !{prev}i)'.format(
-        tok = HAS_TOK_NAME,
-        prev = SENDS_PREV_NAME)
-
-    loc_property = '(({orig_loc_assumption} && {hub}) -> ({orig_loc_guarantee} && {tok_ring_guarantee}))'.format(
-        orig_loc_assumption = orig_loc_assumption,
-        orig_loc_guarantee = orig_loc_guarantee,
-        hub=hub_par_assumption,
-        tok_ring_guarantee = get_tok_rings_liveness_par_props()[0])
-
-    loc_property = anonymize_property(loc_property, anon_inputs+anon_outputs+list(chain(*get_tok_ring_par_io())))
-
-    logger.info('\n' + loc_property)
-    #    assert 0
-
-    loc_automaton = automaton_converter.convert(loc_property)
-    logger.info('local automaton has %i states', len(loc_automaton.nodes))
-
-    full_concr_prop = concretize_property(orig_glob_guarantee, cutoff)
-    global_automaton = automaton_converter.convert(full_concr_prop)
-
-    logger.info('\n' + full_concr_prop)
-
-    logger.info('global automaton has %i states', len(global_automaton.nodes))
-    logger.info('using the cutoff of size %i', cutoff)
-
-    models = par_model_searcher_with_hub.search(logic,
-        loc_automaton,
-        global_automaton, cutoff,
-        anon_inputs, anon_outputs,
-        bounds,
-        solver, SCHED_ID_PREFIX, ACTIVE_NAME, SENDS_NAME, HAS_TOK_NAME, SENDS_PREV_NAME,
-        smt_file_prefix) #TODO: hack:
-
-    logger.info('model%s found', ['', ' not'][models is None])
-
-    if dot_files_prefix is not None and models is not None:
-        for i, lts in enumerate(models):
-            with open(dot_files_prefix + str(i) + '.dot', mode='w') as out:
-                dot = to_dot(lts)
-                out.write(dot)
-
-
-def main_with_sync_hub(smt_file_name, logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
-    logger.info('hub abstraction approach')
-
-    anon_inputs, anon_outputs, orig_loc_assumption, orig_loc_guarantee, orig_glob_guarantee = _get_spec(spec_type)
-
-    #TODO: check two cases: when on SMT level and when here
-    hub_par_assumption = 'G((!{tok}i) -> F{prev}i) && G({tok}i -> !{prev}i)'.format(
-        tok = HAS_TOK_NAME,
-        prev = SENDS_PREV_NAME)
-
-    loc_property = '(({orig_loc_assumption} && {hub}) -> ({orig_loc_guarantee} && {tok_ring_guarantee}))'.format(
-        orig_loc_assumption = orig_loc_assumption,
-        orig_loc_guarantee = orig_loc_guarantee,
-        hub=hub_par_assumption,
-        tok_ring_guarantee = get_tok_rings_liveness_par_props()[0])
-
-    loc_property = anonymize_property(loc_property, anon_inputs+anon_outputs+list(chain(*get_tok_ring_par_io())))
-    #TODO: hack: no need for active_i in hub version
-    loc_property = loc_property.replace(ACTIVE_NAME+'i', 'true')
-
-    logger.info('\n' + loc_property)
-#    assert 0
-
-    loc_automaton = automaton_converter.convert(loc_property)
-    logger.info('local automaton has %i states', len(loc_automaton.nodes))
-
-    full_concr_prop = concretize_property(orig_glob_guarantee, cutoff)
-    global_automaton = automaton_converter.convert(full_concr_prop)
-
-    logger.info('\n' + full_concr_prop)
-
-    logger.info('global automaton has %i states', len(global_automaton.nodes))
-    logger.info('using the cutoff of size %i', cutoff)
-
-    global_automatae_pairs = [(global_automaton, cutoff)]
+    if loc_automaton:
+        logger.info('local automaton %s', loc_automaton.name)
+        logger.info('nof_nodes=%i', len(loc_automaton.nodes))
+    else:
+        logger.info('no local automaton')
 
     models = par_model_searcher.search(logic,
         global_automatae_pairs,
@@ -181,6 +108,84 @@ def main_with_sync_hub(smt_file_name, logic, spec_type, dot_files_prefix, bounds
             with open(dot_files_prefix + str(i) + '.dot', mode='w') as out:
                 dot = to_dot(lts)
                 out.write(dot)
+
+
+def main_with_async_hub(smt_file_prefix,
+                        logic,
+                        spec_type,
+                        dot_files_prefix,
+                        bounds,
+                        cutoff,
+                        automaton_converter,
+                        solver,
+                        logger):
+    logger.info('async_hub')
+
+    anon_inputs, anon_outputs, orig_loc_assumption, orig_loc_guarantee, orig_glob_guarantee = _get_spec(spec_type)
+
+    hub_par_assumption = 'G((!{tok}i) -> F{prev}i) && G({tok}i -> !{prev}i)'.format(
+        tok = HAS_TOK_NAME,
+        prev = SENDS_PREV_NAME)
+
+    loc_property = '(({fair_sched} && {orig_loc_assumption} && {hub}) -> ({orig_loc_guarantee} && {tok_ring_guarantee}))'.format(
+        fair_sched=get_fair_scheduler_property(1, SCHED_ID_PREFIX),
+        orig_loc_assumption = orig_loc_assumption,
+        orig_loc_guarantee = orig_loc_guarantee,
+        hub=hub_par_assumption,
+        tok_ring_guarantee = get_tok_rings_liveness_par_props()[0])
+
+    loc_property = anonymize_property(loc_property, anon_inputs+anon_outputs+list(chain(*get_tok_ring_par_io())))
+
+    loc_automaton = automaton_converter.convert(loc_property)
+
+    full_concr_prop = concretize_property(orig_glob_guarantee, cutoff)
+    global_automaton = automaton_converter.convert(full_concr_prop)
+
+    global_automatae_pairs = [(global_automaton, cutoff)]
+
+    _run(logic,
+        global_automatae_pairs,
+        loc_automaton,
+        anon_inputs, anon_outputs,
+        bounds,
+        solver,
+        smt_file_prefix, dot_files_prefix)
+
+
+def main_with_sync_hub(smt_file_name, logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
+    logger.info('sync hub')
+
+    anon_inputs, anon_outputs, orig_loc_assumption, orig_loc_guarantee, orig_glob_guarantee = _get_spec(spec_type)
+
+    #TODO: check two cases: when on SMT level and when here
+    hub_par_assumption = 'G((!{tok}i) -> F{prev}i) && G({tok}i -> !{prev}i)'.format(
+        tok = HAS_TOK_NAME,
+        prev = SENDS_PREV_NAME)
+
+    loc_property = '(({orig_loc_assumption} && {hub}) -> ({orig_loc_guarantee} && {tok_ring_guarantee}))'.format(
+        orig_loc_assumption = orig_loc_assumption,
+        orig_loc_guarantee = orig_loc_guarantee,
+        hub=hub_par_assumption,
+        tok_ring_guarantee = get_tok_rings_liveness_par_props()[0])
+
+    loc_property = anonymize_property(loc_property, anon_inputs+anon_outputs+list(chain(*get_tok_ring_par_io())))
+    #TODO: hack: no need for active_i in sync_hub version
+    loc_property = loc_property.replace(ACTIVE_NAME+'i', 'true')
+
+    loc_automaton = automaton_converter.convert(loc_property)
+
+    full_concr_prop = concretize_property(orig_glob_guarantee, cutoff)
+    global_automaton = automaton_converter.convert(full_concr_prop)
+
+    global_automatae_pairs = [(global_automaton, cutoff)]
+
+    _run(logic,
+        global_automatae_pairs,
+        loc_automaton,
+        anon_inputs, anon_outputs,
+        bounds,
+        solver,
+        smt_file_name, dot_files_prefix)
 
 
 def main_compo(smt_file_prefix, logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
@@ -253,31 +258,16 @@ def main_global(smt_file_name, logic, spec_type, dot_files_prefix, bounds, cutof
         glob_property,
         concretize_property(orig_glob_guarantee, cutoff))
 
-    print(glob_property)
-    print('-'*80)
-#    assert 0
-
     automaton = automaton_converter.convert(glob_property)
-
-    logger.info('global automaton has %i states', len(automaton.nodes))
-    logger.info('using the cutoff of size %i', cutoff)
 
     automaton_size_pairs = [(automaton, cutoff)]
 
-    models = par_model_searcher.search(logic, automaton_size_pairs,
+    _run(logic, automaton_size_pairs,
         None,
         anon_inputs, anon_outputs,
         bounds,
-        solver, SCHED_ID_PREFIX, ACTIVE_NAME, SENDS_NAME, HAS_TOK_NAME, SENDS_PREV_NAME,
-        smt_file_name)
-
-    logger.info('model%s found', ['', ' not'][models is None])
-
-    if dot_files_prefix is not None and models is not None:
-        for i, lts in enumerate(models):
-            with open(dot_files_prefix + str(i) + '.dot', mode='w') as out:
-                dot = to_dot(lts)
-                out.write(dot)
+        solver,
+        smt_file_name, dot_files_prefix)
 
 
 _OPT_TO_MAIN = {'sync_hub':main_with_sync_hub,

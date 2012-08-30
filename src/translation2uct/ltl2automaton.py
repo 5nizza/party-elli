@@ -32,7 +32,7 @@ class Ltl2UCW:
 
         initial_nodes, rejecting_nodes, nodes = parse_ltl2ba_ba(ba)
 
-        automaton = Automaton(initial_nodes, rejecting_nodes, nodes)
+        automaton = Automaton(initial_nodes, rejecting_nodes, nodes, name=str(property))
         return automaton
 
 
