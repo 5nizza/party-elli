@@ -6,7 +6,7 @@ from helpers.main_helper import setup_logging, create_spec_converter_z3
 from helpers.automata_helper import  is_safety_automaton
 from module_generation.dot import to_dot
 from parsing.en_rings_parser import  SCHED_ID_PREFIX, SENDS_NAME, ACTIVE_NAME, concretize_property, get_tok_rings_liveness_par_props, HAS_TOK_NAME, SENDS_PREV_NAME, anonymize_property, get_fair_scheduler_property, get_tok_ring_par_io
-from synthesis import par_model_searcher_with_hub, par_model_searcher_compositional
+from synthesis import par_model_searcher
 from synthesis.smt_logic import UFLIA
 
 
@@ -18,14 +18,6 @@ def _is_safety_property(property, automaton_converter):
     return is_safety
 
 
-def _separate_properties(automaton_converter, props):
-    #TODO: restore
-    safety_props = set()
-    #list(filter(lambda p: _is_safety_property(p, automaton_converter), props))
-    liveness_props = list(set(props).difference(safety_props))
-    return safety_props, liveness_props
-
-
 full_arb_loc_guarantee = """
 (!g_i)
 && G( (active_i && (!r_i) && g_i) -> F((r_i&&g_i) || (!g_i)) )
@@ -33,11 +25,6 @@ full_arb_loc_guarantee = """
 && (!F(g_i && X((!r_i) && !g_i) && X(((!r_i) && !g_i) U (g_i && !r_i) )) )
 && (!(((!r_i) && (!g_i)) U ((!r_i) && g_i)))
 """.strip().replace('\n', ' ')
-
-#full_arb_loc_assumption = """
-#((r_i -> (r_i U (active_i && r_i))) &&
-#(!r_i -> ((!r_i) U (active_i && !r_i))))
-#""".strip().replace('\n', ' ')
 
 pnueli_arb_loc_assumption = """
 (!r_i) &&
@@ -143,7 +130,7 @@ def main_with_async_hub(smt_file_prefix,
                 out.write(dot)
 
 
-def main_with_sync_hub(smt_file_prefix, logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
+def main_with_sync_hub(smt_file_name, logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
     logger.info('hub abstraction approach')
 
     anon_inputs, anon_outputs, orig_loc_assumption, orig_loc_guarantee, orig_glob_guarantee = _get_spec(spec_type)
@@ -177,13 +164,15 @@ def main_with_sync_hub(smt_file_prefix, logic, spec_type, dot_files_prefix, boun
     logger.info('global automaton has %i states', len(global_automaton.nodes))
     logger.info('using the cutoff of size %i', cutoff)
 
-    models = par_model_searcher_with_hub.search(logic,
+    global_automatae_pairs = [(global_automaton, cutoff)]
+
+    models = par_model_searcher.search(logic,
+        global_automatae_pairs,
         loc_automaton,
-        global_automaton, cutoff,
         anon_inputs, anon_outputs,
         bounds,
         solver, SCHED_ID_PREFIX, ACTIVE_NAME, SENDS_NAME, HAS_TOK_NAME, SENDS_PREV_NAME,
-        smt_file_prefix) #TODO: hack:
+        smt_file_name)
 
     logger.info('model%s found', ['', ' not'][models is None])
 
@@ -192,6 +181,7 @@ def main_with_sync_hub(smt_file_prefix, logic, spec_type, dot_files_prefix, boun
             with open(dot_files_prefix + str(i) + '.dot', mode='w') as out:
                 dot = to_dot(lts)
                 out.write(dot)
+
 
 def main_compo(smt_file_prefix, logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
     logger.info('compositional approach')
@@ -234,7 +224,7 @@ def main_compo(smt_file_prefix, logic, spec_type, dot_files_prefix, bounds, cuto
 
     automatae = [(loc_automaton, 2), (global_automaton, cutoff)]
 
-    models = par_model_searcher_compositional.search(logic, automatae, anon_inputs, anon_outputs,
+    models = par_model_searcher.search(logic, automatae, None, anon_inputs, anon_outputs,
         bounds,
         solver, SCHED_ID_PREFIX, ACTIVE_NAME, SENDS_NAME, HAS_TOK_NAME, SENDS_PREV_NAME,
         smt_file_prefix) #TODO: hack: hardcode
@@ -274,7 +264,8 @@ def main_global(smt_file_name, logic, spec_type, dot_files_prefix, bounds, cutof
 
     automaton_size_pairs = [(automaton, cutoff)]
 
-    models = par_model_searcher_compositional.search(logic, automaton_size_pairs,
+    models = par_model_searcher.search(logic, automaton_size_pairs,
+        None,
         anon_inputs, anon_outputs,
         bounds,
         solver, SCHED_ID_PREFIX, ACTIVE_NAME, SENDS_NAME, HAS_TOK_NAME, SENDS_PREV_NAME,
@@ -289,8 +280,8 @@ def main_global(smt_file_name, logic, spec_type, dot_files_prefix, bounds, cutof
                 out.write(dot)
 
 
-_OPT_TO_MAIN = {'hub_sync':main_with_sync_hub,
-                'hub_async':main_with_async_hub,
+_OPT_TO_MAIN = {'sync_hub':main_with_sync_hub,
+                'async_hub':main_with_async_hub,
                 'compo':main_compo,
                 'glob':main_global}
 

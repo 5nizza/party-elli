@@ -7,6 +7,7 @@ class LocalENImpl:
                  has_tok_var_prefix,
                  sends_var_name,
                  sends_prev_var_name,
+                 tau_name,
                  init_states):
         #TODO: if introduce has_tok optimization - be careful about initial states! (case of HOT encoding)
         self.automaton = automaton
@@ -20,7 +21,7 @@ class LocalENImpl:
         self.inputs = [list(par_inputs)]
         self.outputs = [list(par_outputs)]
 
-        self._tau_name = 'tau'
+        self._tau_name = tau_name
         self._has_tok_var_prefix = has_tok_var_prefix
         self._sends_prev_var_name = sends_prev_var_name
         self._init_states = init_states
