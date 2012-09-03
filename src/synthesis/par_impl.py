@@ -25,6 +25,7 @@ class ParImpl: #TODO: separate architecture from the spec
         self._anon_inputs = list(anon_inputs)
         self._anon_outputs = list(anon_outputs)
 
+        #TODO: here
         sends_prev_var_prefix = sends_prev_anon_var_name[:-1] #TODO: hack
         self.inputs = list(map(lambda i: concretize_anon_vars(filter(lambda input: not input.startswith(sends_prev_var_prefix), self._anon_inputs), i), range(nof_processes)))
         self.outputs = list(map(lambda i: concretize_anon_vars(self._anon_outputs, i), range(nof_processes)))
@@ -70,17 +71,9 @@ class ParImpl: #TODO: separate architecture from the spec
     def get_proc_tau_additional_args(self, proc_label, sys_state_vector, proc_index):
         tau_args = StrAwareList()
 
-#        prev_proc = (proc_index - 1) % self.nof_processes
-#        prev_proc_id_values = list(map(lambda b: str(b).lower(), bin_fixed_list(prev_proc, self._nof_bits)))
-
         sched_values = self._get_sched_values(proc_label)
-#        sched_prev = call_func(self._equal_bits_name, sched_values+prev_proc_id_values)
 
         sends_prev = self._get_sends_prev_expr(proc_index, sys_state_vector)
-#        modified_sends_prev = op_and([sends_prev, sched_prev])
-        #        print(modified_sends_prev)
-
-#        tau_args += [modified_sends_prev]
         tau_args += [sends_prev]
 
         tau_args += sched_values
@@ -151,19 +144,6 @@ class ParImpl: #TODO: separate architecture from the spec
                [self._state_type] + ['b', 'Bool']*(len(input_args) + 1 + len(self._sched_args) + len(self._proc_args)), \
                self._state_type, \
                body
-
-
-        #NOTE
-        # there are three cases:
-        # 1. properties are local (each refer to one process)
-        # 2. properties are not local but they are symmetric
-        #    a) symmetric and talks about subset of processes
-        #    b)                         ... all the processes
-        # aside note1: for EN cases, for (i,i+1) it is enough to check (0,1) in the ring of (0,1,2)
-        # but should we check it with different initial token distributions?
-        # (which is equivalent to checking (0,1) and (1,2) and (2,0)
-        #
-        # aside note2: if properties are not symmetric and it is a parametrized case, then it is reduced to case (2)
 
 
     def _get_desc_equal_bools(self):
@@ -242,10 +222,16 @@ class ParImpl: #TODO: separate architecture from the spec
         def to_smt_bools(int_val):
             return ' '.join(map(lambda b: str(b), bin_fixed_list(int_val, self._nof_bits))).lower()
 
+        if nof_processes == 1:
+            crt_str = to_smt_bools(0)
+            prev_str = to_smt_bools(1)
+            function(prev_str, crt_str)
+            return
+
         for crt in range(nof_processes):
             crt_str = to_smt_bools(crt)
-            crt_prev_str = to_smt_bools((crt-1) % nof_processes)
-            function(crt_prev_str, crt_str)
+            prev_str = to_smt_bools((crt-1) % nof_processes)
+            function(prev_str, crt_str)
 
 
     def _get_desc_local_tau(self):

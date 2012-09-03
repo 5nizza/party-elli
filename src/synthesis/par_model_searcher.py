@@ -1,5 +1,6 @@
 from io import StringIO
 import logging
+import tempfile
 
 from helpers.logging import log_entrance
 from helpers.python_ext import StrAwareList, FileAsStringEmulator
@@ -32,7 +33,7 @@ def search(logic,
     for bound in local_bounds:
         logger.info('trying size %i', bound)
 
-        smt_file = open(smt_file_name, 'w')
+        smt_file = open(smt_file_name+'_'+str(bound), 'w')
         query_lines = StrAwareList(FileAsStringEmulator(smt_file))
 
         encoder=impl=None
@@ -41,6 +42,7 @@ def search(logic,
             spec_states_type = 'Q'+str(i)
 
             encoder = GenericEncoder(logic, spec_states_type, counters_postfix)
+
             impl = ParImpl(automaton, anon_inputs, anon_outputs, nof_processes, bound,
                 sched_id_prefix, active_var_name, sends_anon_var_name, sends_prev_var_name, has_tok_var_prefix,
                 sys_state_type,
@@ -73,7 +75,7 @@ def search(logic,
         logger.info('smt query has %i lines', len(query_lines))
 
         smt_file.close()
-        status, data_lines = z3solver.solve_file(smt_file_name)
+        status, data_lines = z3solver.solve_file(smt_file.name)
 
         if status == Z3.SAT:
             return encoder.parse_model(data_lines, impl)
