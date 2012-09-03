@@ -51,6 +51,8 @@ class GenericEncoder:
         spec_state_name = self._get_smt_name_spec_state(spec_state)
         sys_state_name = self._get_smt_name_sys_state(sys_state_vector, impl.proc_states_descs)
 
+        print(impl.taus_descs[0])
+        assert 0
         next_sys_state = map(lambda i: call_func(impl.taus_descs[i][0],
                                                  self._get_proc_tau_args(sys_state_vector, impl.filter_label_by_process(label, i), i, impl)),
                              range(impl.nof_processes))
