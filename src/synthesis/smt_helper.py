@@ -2,15 +2,15 @@ import math
 from helpers.python_ext import StrAwareList
 
 def build_values_from_label(inputs, label):
-    values = []
+    values = dict()
     free_values = []
 
     for var_name in inputs:
         if var_name in label:
-            values.append(str(label[var_name]).lower())
+            values[var_name] = str(label[var_name]).lower()
         else:
             value = '?{0}'.format(var_name)
-            values.append(value)
+            values[var_name] = value
             free_values.append(value)
 
     return values, free_values
@@ -18,9 +18,8 @@ def build_values_from_label(inputs, label):
 
 def get_bits_definition(arg_prefix, nof_bits):
     args  = list(map(lambda i: arg_prefix+str(i), range(nof_bits)))
-    args_def = ' '.join(map(lambda a: '({0} Bool)'.format(a), args))
-    args_call = ' '.join(args)
-    return args, args_def, args_call
+    args_defs = list(map(lambda a: (a, 'Bool'), args))
+    return args, args_defs
 
 
 def make_check_sat():

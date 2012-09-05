@@ -30,7 +30,7 @@ class SolitaryImpl:
         return self.taus_descs
 
     def get_proc_tau_additional_args(self, proc_label, sys_state_vector, proc_index):
-        return []
+        return dict()
 
 
     def get_output_func_name(self, concr_var_name):

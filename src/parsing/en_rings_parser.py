@@ -75,9 +75,9 @@ def anonymize_concr_var(concrete_variable):
     assert concrete_variable[-2] not in '1234567890', 'no support for > 9 processes'
     proc_index = int(concrete_variable[-1])
 
-    par_value = concrete_variable[:-1] + '_'
+    anon_value = concrete_variable[:-1] + '_'
 
-    return par_value, proc_index
+    return anon_value, proc_index
 
 
 def parametrize_anon_var(var):

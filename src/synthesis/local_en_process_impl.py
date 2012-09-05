@@ -1,5 +1,6 @@
 from helpers.python_ext import StrAwareList
 from interfaces.automata import Label
+from synthesis.func_description import FuncDescription
 from synthesis.smt_helper import op_and, call_func, op_not, op_implies, forall_bool, build_values_from_label, make_assert
 
 class LocalENImpl:
@@ -13,13 +14,15 @@ class LocalENImpl:
         self.automaton = automaton
 
         self._state_type = sys_state_type
+
         self.nof_processes = 1
         self.proc_states_descs = self._create_proc_descs(nof_local_states)
 
         self._nof_local_states = nof_local_states
 
-        self.inputs = [list(anon_inputs)]
-        self.outputs = [list(anon_outputs)]
+        #no architecture => all architecture specific inputs/outputs
+        self.orig_inputs = self.all_inputs = [list(anon_inputs)]
+        self.orig_outputs = self.all_outputs = [list(anon_outputs)]
 
         self._tau_name = tau_name
         self._has_tok_var_prefix = has_tok_var_prefix
@@ -32,13 +35,15 @@ class LocalENImpl:
         return []
 
     @property
-    def outputs_descs(self):
-        assert False, 'not implemented'
-
-    @property
     def taus_descs(self):
-        return [(self._tau_name, [('state', self._state_type)] + list(map(lambda i: (str(i), 'Bool'), self.inputs[0])),
-                 self._state_type, None)]
+        argname_to_type = dict([('state', self._state_type)] + list(map(lambda i: (str(i), 'Bool'), self.orig_inputs[0])))
+        tau_desc = FuncDescription(self._tau_name,
+            argname_to_type,
+            set(),
+            self._state_type,
+            None)
+
+        return [tau_desc]
 
     @property
     def model_taus_descs(self):
@@ -46,7 +51,7 @@ class LocalENImpl:
 
 
     def get_proc_tau_additional_args(self, proc_label, sys_state_vector, proc_index):
-        return []
+        return dict()
 
 
     def get_output_func_name(self, concr_var_name):
@@ -80,6 +85,9 @@ class LocalENImpl:
         assert proc_index == 0, str(proc_index)
         return label
 
+    def convert_global_argnames_to_proc_argnames(self, argname_to_values):
+        return argname_to_values
+
     @property
     def init_states(self):
         init_set_of_states = list()
@@ -90,21 +98,29 @@ class LocalENImpl:
 
     def _get_tok_rings_safety_props(self):
         smt_lines = StrAwareList()
+        tau_desc = self.taus_descs[0]
+
         for state in range(self._nof_local_states):
             state_str = self.proc_states_descs[0][1][state]
 
             has_tok_str = call_func(self._has_tok_var_prefix, [state_str])
             sends_tok_str = call_func(self._sends_var_name, [state_str])
 
-            _, free_vars = build_values_from_label(self.inputs[0], Label({self._sends_prev_var_name:False}))
+            #TODO: bug
+            _, free_vars = build_values_from_label(self.orig_inputs[0], Label({self._sends_prev_var_name:False}))
 
-            tau_args_not_sends_prev, _ = build_values_from_label(self.inputs[0], Label({self._sends_prev_var_name:False}))
-            tau_args_sends_prev, _ = build_values_from_label(self.inputs[0], Label({self._sends_prev_var_name:True}))
+            tau_args_not_sends_prev_raw, _ = build_values_from_label(self.orig_inputs[0], Label({self._sends_prev_var_name:False}))
+            tau_args_not_sends_prev_raw.update({'state':state_str})
+            tau_args_not_sends_prev = tau_desc.get_args_list(tau_args_not_sends_prev_raw)
 
-            tau_not_sends_prev_str = call_func(self.taus_descs[0][0], [state_str] + tau_args_not_sends_prev)
+            tau_args_sends_prev_raw, _ = build_values_from_label(self.orig_inputs[0], Label({self._sends_prev_var_name:True}))
+            tau_args_sends_prev_raw.update({'state':state_str})
+            tau_args_sends_prev = tau_desc.get_args_list(tau_args_sends_prev_raw)
+
+            tau_not_sends_prev_str = call_func(tau_desc.name, tau_args_not_sends_prev)
             next_tok_not_sends_prev_str = call_func(self._has_tok_var_prefix, [tau_not_sends_prev_str])
 
-            tau_sends_prev_str = call_func(self.taus_descs[0][0], [state_str] + tau_args_sends_prev)
+            tau_sends_prev_str = call_func(tau_desc.name, tau_args_sends_prev)
             next_tok_sends_prev_str = call_func(self._has_tok_var_prefix, [tau_sends_prev_str])
 
             #
@@ -138,6 +154,7 @@ class LocalENImpl:
 #        smt_lines += '(assert (and (not (tok_ lt2)) (g_ lt2)))'
 
         return smt_lines
+
 
 
 

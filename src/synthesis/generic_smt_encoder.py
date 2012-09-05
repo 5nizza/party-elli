@@ -28,7 +28,7 @@ class GenericEncoder:
         and_args = []
         for i in range(impl.nof_processes):
             for var_name, value in label.items():
-                if var_name not in impl.outputs[i]:
+                if var_name not in impl.all_outputs[i]:
                     continue
 
                 state_name = self._get_smt_name_proc_state(i, sys_state_vector, impl.proc_states_descs)
@@ -51,11 +51,20 @@ class GenericEncoder:
         spec_state_name = self._get_smt_name_spec_state(spec_state)
         sys_state_name = self._get_smt_name_sys_state(sys_state_vector, impl.proc_states_descs)
 
-        print(impl.taus_descs[0])
-        assert 0
-        next_sys_state = map(lambda i: call_func(impl.taus_descs[i][0],
-                                                 self._get_proc_tau_args(sys_state_vector, impl.filter_label_by_process(label, i), i, impl)),
-                             range(impl.nof_processes))
+#        print(label)
+        next_sys_state = []
+        for i in range(impl.nof_processes):
+            tau_concr_args_dict = self._get_proc_tau_args(sys_state_vector, impl.filter_label_by_process(label, i), i, impl)
+
+            tau_args_dict = impl.convert_global_argnames_to_proc_argnames(tau_concr_args_dict)
+
+            tau_args = impl.taus_descs[i].get_args_list(tau_args_dict)
+
+#            print(i)
+#            print(proc_tau_args)
+#            print()
+            next_sys_state.append(call_func(impl.taus_descs[i].name, tau_args))
+
         #TODO: forall is evil!
         free_input_vars = self._get_free_vars(label, impl)
 
@@ -140,7 +149,7 @@ class GenericEncoder:
     def encode_sys_model_functions(self, impl, smt_lines):
         self._define_sys_states(impl.proc_states_descs, smt_lines)
 
-        func_descs = list(chain(*impl.outputs_descs)) + impl.model_taus_descs
+        func_descs = list(chain(*impl.all_outputs_descs)) + impl.model_taus_descs
         smt_lines += self._define_declare_functions(func_descs)
         return smt_lines
 
@@ -177,18 +186,22 @@ class GenericEncoder:
 
 
     def _get_proc_tau_args(self, sys_state, proc_label, proc_index, impl):
-        """ Return tuple (list of tau args(in correct order), free vars):
-            free variables (to be enumerated) called ?var_name.
+        """ Return dict: name->value
+            free variables (to be enumerated) has called ?var_name value.
         """
 
+        tau_args = dict()
+
         proc_state = self._get_smt_name_proc_state(proc_index, sys_state, impl.proc_states_descs)
+        tau_args.update({'state':proc_state}) #TODO: hack: name 'state'
 
-        values_from_label = build_values_from_label(impl.inputs[proc_index], proc_label)[0]
-        tau_args = [proc_state] + values_from_label
+        label_vals_dict, _ = build_values_from_label(impl.orig_inputs[proc_index], proc_label)
+        tau_args.update(label_vals_dict)
 
-        tau_args += impl.get_proc_tau_additional_args(proc_label, sys_state, proc_index)
+        tau_args.update(impl.get_proc_tau_additional_args(proc_label, sys_state, proc_index))
 
-        return tau_args
+        res = dict(tau_args)
+        return res
 
 
     def _get_implication_right_counter(self, spec_state, next_spec_state,
@@ -223,12 +236,12 @@ class GenericEncoder:
             unique_tau_descs.append(tau_desc)
 
             for s in impl.proc_states_descs[proc_index][1]:
-                for raw_values in product([False, True], repeat=len(tau_desc[1])-1): #first arg is the state
+                for raw_values in product([False, True], repeat=len(tau_desc.inputs)-1): #first arg is the state
                     values = [str(v).lower() for v in raw_values]
-                    smt_lines += get_value(call_func(tau_desc[0], [s] + values))
+                    smt_lines += get_value(call_func(tau_desc.name, [s] + values))
 
         processed_outputs = []
-        for proc_index, outputs in enumerate(impl.outputs):
+        for proc_index, outputs in enumerate(impl.all_outputs):
             for output_var in outputs:
                 output_func = impl.get_output_func_name(output_var)
                 if output_func in processed_outputs:
@@ -242,7 +255,7 @@ class GenericEncoder:
 
 
     def _get_free_vars(self, label, impl):
-        free_vars = set(chain(*[build_values_from_label(impl.inputs[proc_index], label)[1]
+        free_vars = set(chain(*[build_values_from_label(impl.orig_inputs[proc_index], label)[1]
                                 for proc_index in range(impl.nof_processes)]))
 
         free_vars.update(impl.get_free_sched_vars(label))
@@ -253,16 +266,16 @@ class GenericEncoder:
     def parse_model(self, get_value_lines, impl):
         models = []
         processed_tau_descs = []
-        for proc_index, (tau_desc, outputs_descs) in enumerate(zip(impl.model_taus_descs, impl.outputs_descs)):
+        for proc_index, (tau_desc, outputs_descs) in enumerate(zip(impl.model_taus_descs, impl.all_outputs_descs)):
             if tau_desc in processed_tau_descs:
                 continue
             processed_tau_descs.append(tau_desc)
 
-            tau_get_value_lines = list(filter(lambda l: tau_desc[0] in l, get_value_lines))
+            tau_get_value_lines = list(filter(lambda l: tau_desc.name in l, get_value_lines))
 
             outputs_get_value_lines = StrAwareList()
             for output_desc in outputs_descs:
-                outputs_get_value_lines += list(filter(lambda l: output_desc[0] in l, get_value_lines))
+                outputs_get_value_lines += list(filter(lambda l: output_desc.name in l, get_value_lines))
 
             init_state = impl.proc_states_descs[proc_index][1][1] #first process starts in state 1, others - in 0
             state_to_input_to_new_state = self._get_tau_model(tau_get_value_lines, tau_desc)
@@ -276,11 +289,11 @@ class GenericEncoder:
     def _get_tau_model(self, tau_lines, tau_desc):
         state_to_input_to_new_state = defaultdict(lambda: defaultdict(lambda: {}))
         for l in tau_lines:
-            parts = l.replace("(", "").replace(")", "").replace(tau_desc[0], "").strip().split()
+            parts = l.replace("(", "").replace(")", "").replace(tau_desc.name, "").strip().split()
 
             old_state_part = parts[0]
             input_vals = list(map(lambda v: v=='true', parts[1:-1]))
-            input_vars = list(map(lambda arg: arg[0], tau_desc[1][1:])) #[1:] due to first var being the state
+            input_vars = list(map(lambda arg: arg[0], tau_desc.inputs[1:])) #[1:] due to first var being the state
             inputs = HashableDict(zip(input_vars, input_vals))
             new_state_part = parts[-1]
             state_to_input_to_new_state[old_state_part][inputs] = new_state_part
@@ -323,21 +336,21 @@ class GenericEncoder:
         return smt_lines
 
 
-    def _define_declare_functions(self, func_defs):
+    def _define_declare_functions(self, func_descs):
         smt_lines = StrAwareList()
         declared_funcs = set()
-
-        for func_name, input_args, output_type, body in func_defs:
-            if func_name in declared_funcs:
+        for func_desc in func_descs:
+#            func_name, input_args, output_type, body
+            if func_desc.name in declared_funcs:
                 continue
 
-            if body is not None:
-                smt_lines += body
+            if func_desc.definition is not None:
+                smt_lines += func_desc.definition
             else:
-                input_types = map(lambda arg: arg[1], input_args)
-                smt_lines += declare_fun(func_name, input_types, output_type)
+                input_types = map(lambda i_t: i_t[1], func_desc.inputs)
+                smt_lines += declare_fun(func_desc.name, input_types, func_desc.output)
 
-            declared_funcs.add(func_name)
+            declared_funcs.add(func_desc.name)
 
         return smt_lines
 
