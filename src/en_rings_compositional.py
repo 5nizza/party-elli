@@ -1,5 +1,7 @@
 import argparse
+import cProfile
 from itertools import chain
+import pstats
 import sys
 import tempfile
 from helpers.main_helper import setup_logging, create_spec_converter_z3
@@ -77,7 +79,8 @@ def _get_spec(spec_type):
     return specs[spec_type]
 
 
-def _run(logic,
+def _run(logger,
+         logic,
          global_automatae_pairs, loc_automaton,
          anon_inputs, anon_outputs,
          bounds,
@@ -146,7 +149,8 @@ def main_with_async_hub(smt_file_prefix,
 
     global_automatae_pairs = [(global_automaton, cutoff), (ring_with_hub_automaton, 1)]
 
-    _run(logic,
+    _run(logger,
+        logic,
         global_automatae_pairs,
         None,
         anon_inputs, anon_outputs,
@@ -182,7 +186,8 @@ def main_with_sync_hub(smt_file_name, logic, spec_type, dot_files_prefix, bounds
 
     global_automatae_pairs = [(global_automaton, cutoff)]
 
-    _run(logic,
+    _run(logger,
+        logic,
         global_automatae_pairs,
         loc_automaton,
         anon_inputs, anon_outputs,
@@ -218,7 +223,8 @@ def main_compo(smt_file_prefix, logic, spec_type, dot_files_prefix, bounds, cuto
 
     automatae = [(loc_automaton, 2), (global_automaton, cutoff)]
 
-    _run(logic, automatae, None, anon_inputs, anon_outputs,
+    _run(logger,
+        logic, automatae, None, anon_inputs, anon_outputs,
         bounds,
         solver,
         smt_file_prefix, dot_files_prefix)
@@ -243,7 +249,8 @@ def main_global(smt_file_name, logic, spec_type, dot_files_prefix, bounds, cutof
 
     automaton_size_pairs = [(automaton, cutoff)]
 
-    _run(logic, automaton_size_pairs,
+    _run(logger,
+        logic, automaton_size_pairs,
         None,
         anon_inputs, anon_outputs,
         bounds,
@@ -257,7 +264,7 @@ _OPT_TO_MAIN = {'sync_hub':main_with_sync_hub,
                 'glob':main_global}
 
 
-if __name__ == '__main__':
+def tmp():
     parser = argparse.ArgumentParser(description='Parametrized Synthesis Tool for token rings architecture')
     parser.add_argument('ltl', metavar='ltl', type=str,
         help='type of LTL formula: acceptable are: pnueli, full, simple')
@@ -295,3 +302,14 @@ if __name__ == '__main__':
     main_func(smt_file_name, logic,
         {'pnueli': pnueli, 'full':full, 'simple':simple, 'xarb': xarb}[args.ltl],
         args.dot, bounds, args.cutoff, ltl2ucw_converter, z3solver, logger)
+
+
+if __name__ == '__main__':
+    tmp()
+
+#    profile_file_name = 'profile_data'
+#
+#    cProfile.run('tmp()', filename=profile_file_name)
+#    p = pstats.Stats(profile_file_name)
+#
+#    p.sort_stats('cumulative').print_stats(15)

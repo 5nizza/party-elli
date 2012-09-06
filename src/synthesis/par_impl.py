@@ -1,5 +1,6 @@
 from itertools import permutations, chain
 import math
+from helpers.cached_property import cached_property
 from helpers.python_ext import bin_fixed_list, StrAwareList, index_of
 from interfaces.automata import Label
 from parsing.en_rings_parser import anonymize_concr_var, concretize_anon_vars, parametrize_anon_var, concretize_anon_var
@@ -56,7 +57,7 @@ class ParImpl: #TODO: separate architecture from the spec
         self._equals_second_args, _= get_bits_definition('y', self._nof_bits)
 
 
-    @property
+    @cached_property
     def aux_func_descs(self):
         """ Return func_name, input_types, output_type, body[optional]
         """
@@ -64,7 +65,7 @@ class ParImpl: #TODO: separate architecture from the spec
                 self._get_desc_prev_is_sched(),
                 self._get_desc_is_active()]
 
-    @property
+    @cached_property
     def all_outputs_descs(self):
         descs = []
         for o in self._anon_outputs:
@@ -77,12 +78,12 @@ class ParImpl: #TODO: separate architecture from the spec
         return [descs]*self.nof_processes
 
 
-    @property
+    @cached_property
     def taus_descs(self):
         return [self._get_desc_tau_sched_wrapper()]*self.nof_processes
 
 
-    @property
+    @cached_property
     def model_taus_descs(self):
         return [self._get_desc_local_tau()]*self.nof_processes
 
@@ -380,7 +381,7 @@ class ParImpl: #TODO: separate architecture from the spec
         return smt_lines
 
 
-    @property
+    @cached_property
     def init_states(self):
         #TODO: hardcoded knowledge: state 0 no tok, state 1 tok
 

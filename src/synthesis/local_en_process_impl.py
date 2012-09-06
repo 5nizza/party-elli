@@ -1,3 +1,4 @@
+from helpers.cached_property import cached_property
 from helpers.python_ext import StrAwareList
 from interfaces.automata import Label
 from synthesis.func_description import FuncDescription
@@ -30,11 +31,11 @@ class LocalENImpl:
         self._init_states = init_states
         self._sends_var_name = sends_var_name
 
-    @property
+    @cached_property
     def aux_func_descs(self):
         return []
 
-    @property
+    @cached_property
     def taus_descs(self):
         argname_to_type = dict([('state', self._state_type)] + list(map(lambda i: (str(i), 'Bool'), self.orig_inputs[0])))
         tau_desc = FuncDescription(self._tau_name,
@@ -45,7 +46,7 @@ class LocalENImpl:
 
         return [tau_desc]
 
-    @property
+    @cached_property
     def model_taus_descs(self):
         return self.taus_descs
 
@@ -88,7 +89,7 @@ class LocalENImpl:
     def convert_global_argnames_to_proc_argnames(self, argname_to_values):
         return argname_to_values
 
-    @property
+    @cached_property
     def init_states(self):
         init_set_of_states = list()
         for state in self._init_states:
