@@ -25,9 +25,13 @@ class ParImpl: #TODO: separate architecture from the spec
 
         self._prev_name = sends_prev_anon_var_name
 
+        #there are 3 kinds of inputs - due to topology (sends_prev), due to synchronicity - sched, and original inputs
+        #anon_inputs are inputs due to topology+original
         self._anon_inputs = list(anon_inputs)
-        self.all_inputs = list(map(lambda i: concretize_anon_vars(self._anon_inputs, i), range(nof_processes)))
-        self.orig_inputs = list(map(lambda i: concretize_anon_vars(filter(lambda input: input != sends_prev_anon_var_name, self._anon_inputs), i), range(nof_processes)))
+        if nof_processes > 1:
+            self.orig_inputs = list(map(lambda i: concretize_anon_vars(filter(lambda input: input != sends_prev_anon_var_name, self._anon_inputs), i), range(nof_processes)))
+        else:
+            self.orig_inputs = list(map(lambda i: concretize_anon_vars(self._anon_inputs, i), range(nof_processes)))
 
         self._anon_outputs = list(anon_outputs)
         self.all_outputs = list(map(lambda i: concretize_anon_vars(self._anon_outputs, i), range(nof_processes)))
@@ -36,7 +40,7 @@ class ParImpl: #TODO: separate architecture from the spec
         self._tau_name = tau_name
         self._is_active_name = 'is_active'+internal_funcs_postfix
         self._equal_bits_name = 'equal_bits'+internal_funcs_postfix
-        self._equal_to_prev_name = 'equal_to_prev'+internal_funcs_postfix
+        self._prev_is_sched_name = 'prev_is_sched'+internal_funcs_postfix
         self._tau_sched_wrapper_name = 'tau_sch'+internal_funcs_postfix
 
         self._proc_id_prefix = 'proc'
@@ -48,13 +52,16 @@ class ParImpl: #TODO: separate architecture from the spec
         self._sched_vars, self._sched_args_defs = get_bits_definition(self._sched_var_prefix, self._nof_bits)
         self._proc_vars, self._proc_args_defs = get_bits_definition(self._proc_id_prefix, self._nof_bits)
 
+        self._equals_first_args, _ = get_bits_definition('x', self._nof_bits)
+        self._equals_second_args, _= get_bits_definition('y', self._nof_bits)
+
 
     @property
     def aux_func_descs(self):
         """ Return func_name, input_types, output_type, body[optional]
         """
         return [self._get_desc_equal_bools(),
-                self._get_desc_equal_to_prev(),
+                self._get_desc_prev_is_sched(),
                 self._get_desc_is_active()]
 
     @property
@@ -101,8 +108,9 @@ class ParImpl: #TODO: separate architecture from the spec
         sched_values = self._get_sched_values(proc_label)
         tau_args.update(sched_values)
 
-        sends_prev = self._get_sends_prev_expr(proc_index, sys_state_vector)
-        tau_args.update(sends_prev)
+        if self.nof_processes > 1:
+            sends_prev = self._get_sends_prev_expr(proc_index, sys_state_vector)
+            tau_args.update(sends_prev)
 
         proc_id_values = self._get_proc_id_values(proc_index)
         tau_args.update(proc_id_values)
@@ -116,6 +124,9 @@ class ParImpl: #TODO: separate architecture from the spec
 
 
     def get_architecture_trans_assumptions(self, label, sys_state_vector):
+        index_of_prev = index_of(lambda var_name: anonymize_concr_var(var_name)[0] == self._prev_name, label.keys())
+        assert not (self.nof_processes > 1 and index_of_prev is not None), 'not implemented'
+
         var_names = list(label.keys())
 
         active_var_index = index_of(lambda concr_var_name: self._active_var_prefix in concr_var_name,
@@ -128,16 +139,22 @@ class ParImpl: #TODO: separate architecture from the spec
         _, proc_index = anonymize_concr_var(concr_active_variable)
 
         proc_id_args = self._get_proc_id_values(proc_index)
-        sends_prev = self._get_sends_prev_expr(proc_index, sys_state_vector)
+        if self.nof_processes > 1:
+            sends_prev_value = self._get_sends_prev_expr(proc_index, sys_state_vector)
+        else:
+            prev = concretize_anon_var(self._prev_name, 0)
+            sends_prev_value = {prev: str(label.get(prev, '?' + prev)).lower()} #TODO: hack: knowledge of format
+
         sched_vals = self._get_sched_values(label)
 
-        is_active_concrt_args_dict = dict(chain(sched_vals.items(), proc_id_args.items(), sends_prev.items()))
+        is_active_concrt_args_dict = dict(chain(sched_vals.items(), proc_id_args.items(), sends_prev_value.items()))
 
         is_active_proc_args_dict = self.convert_global_argnames_to_proc_argnames(is_active_concrt_args_dict)
 
         is_active_args = self._get_desc_is_active().get_args_list(is_active_proc_args_dict)
 
         func = call_func(self._is_active_name, is_active_args)
+
         return func
 
 
@@ -163,13 +180,7 @@ class ParImpl: #TODO: separate architecture from the spec
         local_tau_args = list(map(lambda input_type: input_type[0], local_tau_inputs))
 
         is_active_desc = self._get_desc_is_active()
-        is_active_inputs = list(map(lambda input: input[0], is_active_desc.inputs)) #TODO: hack: knowledge about var names
-
-#        print(is_active_desc)
-#        print(argname_to_type)
-#
-#        print(tau_args)
-#        assert 0
+        is_active_inputs = list(map(lambda input: input[0], is_active_desc.inputs)) #TODO: hack: knowledge: var names are the same
 
         body = """
         (ite ({is_active} {is_active_inputs}) ({tau} {local_tau_inputs}) {state})
@@ -185,29 +196,18 @@ class ParImpl: #TODO: separate architecture from the spec
             self._state_type,
             body)
 
-#        print(description)
-#        assert 0
-
         return description
-
-#        return self._tau_sched_wrapper_name, \
-#               [self._state_type] + ['b', 'Bool']*(len(input_args) + 1 + len(self._sched_args) + len(self._proc_args)), \
-#               self._state_type, \
-#               body
 
 
     def _get_desc_equal_bools(self):
-        first_args, _ = get_bits_definition('x', self._nof_bits)
-        second_args, _= get_bits_definition('y', self._nof_bits)
-
-        cmp_stmnt = op_and(map(lambda p: '(= {0} {1})'.format(p[0],p[1]), zip(first_args, second_args)))
+        cmp_stmnt = op_and(map(lambda p: '(= {0} {1})'.format(p[0],p[1]), zip(self._equals_first_args, self._equals_second_args)))
 
         body = """
         {cmp}
         """.format(cmp = cmp_stmnt)
 
-        inputname_to_type = dict(list(map(lambda i: (str(i), 'Bool'), first_args)) +\
-                                 list(map(lambda i: (str(i), 'Bool'), second_args)))
+        inputname_to_type = dict(list(map(lambda i: (str(i), 'Bool'), self._equals_first_args)) +\
+                                 list(map(lambda i: (str(i), 'Bool'), self._equals_second_args)))
 
         description = FuncDescription(self._equal_bits_name,
             inputname_to_type, set(),
@@ -216,47 +216,61 @@ class ParImpl: #TODO: separate architecture from the spec
 
         return description
 
-#        return self._equal_bits_name, \
-#               list(map(lambda i: (str(i), 'Bool'), first_args)) + list(map(lambda i: (str(i), 'Bool'), second_args)), \
-#               'Bool', \
-#               body
 
-    #do not change order of variables!
     def _get_desc_is_active(self):
+        argname_to_type = dict([(self._prev_name, 'Bool')] + self._sched_args_defs + self._proc_args_defs)
+
+        sched_eq_proc_args_dict = self._get_equal_func_args(self._sched_vars, self._proc_vars)
+        sched_eq_proc_args = self._get_desc_equal_bools().get_args_list(sched_eq_proc_args_dict)
+
+        prev_is_sched_args = map(lambda var_type: var_type[0], self._get_desc_prev_is_sched().inputs) #order is important
+
         body = """
-        (or (and (not {sends_prev}) ({equal_bools} {sched_id} {proc_id})) (and {sends_prev} ({equal_prev} {sched_id} {proc_id})))
-        """.format_map({'equal_bools':self._equal_bits_name,
-                        'equal_prev': self._equal_to_prev_name,
-                        'proc_id': ' '.join(self._proc_vars),
-                        'sched_id': ' '.join(self._sched_vars),
+        (or (and (not {sends_prev}) ({equal_bits} {sched_eq_proc_args})) (and {sends_prev} ({prev_is_sched} {prev_is_sched_args})))
+        """.format_map({'equal_bits':self._equal_bits_name,
+                        'sched_eq_proc_args': ' '.join(sched_eq_proc_args),
+                        'prev_is_sched': self._prev_is_sched_name,
+                        'prev_is_sched_args': ' '.join(prev_is_sched_args),
                         'sends_prev': self._prev_name
         })
 
-        argname_to_type = dict([(self._prev_name, 'Bool')] + self._sched_args_defs + self._proc_args_defs)
         description = FuncDescription(self._is_active_name,
-            argname_to_type, set(), #TODO: is set() a bug?
+            argname_to_type, set(),
             'Bool',
             body)
 
-#        print(description)
-#        assert 0
         return description
 
-#        return self._is_active_name, \
-#               [('b', 'Bool')]*(len(self._proc_args) + len(self._sched_args) + 1), \
-#               'Bool', \
-#               body
+
+    def _get_equal_func_args(self, first_arg_values, second_arg_values):
+        index_to_first_arg = dict(zip(map(lambda a: int(a[-1]), self._equals_first_args), self._equals_first_args))
+        index_to_second_arg = dict(zip(map(lambda a: int(a[-1]), self._equals_second_args), self._equals_second_args))
+
+        equal_func_args = dict()
+        for i in range(len(first_arg_values)):
+            equal_func_args[index_to_first_arg[i]] = first_arg_values[i]
+            equal_func_args[index_to_second_arg[i]] = second_arg_values[i]
+        return equal_func_args
 
 
-    def _get_desc_equal_to_prev(self): #TODO: optimize
+    def _get_desc_prev_is_sched(self): #TODO: optimize
         enum_clauses = []
-        def accumulator(prev_str, crt_str):
-            enum_clauses.append('(and ({equals} {proc} {crt}) ({equals} {sched} {crt_prev}))'
+
+        def accumulator(prev, crt):
+            equal_bits_desc = self._get_desc_equal_bools()
+
+            proc_eq_crt_args_dict = self._get_equal_func_args(self._proc_vars, crt)
+            sched_eq_prev_args_dict = self._get_equal_func_args(self._sched_vars, prev)
+
+            proc_eq_crt_args = equal_bits_desc.get_args_list(proc_eq_crt_args_dict)
+            sched_eq_prev_args = equal_bits_desc.get_args_list(sched_eq_prev_args_dict)
+
+            enum_clauses.append('(and ({equals} {proc_eq_crt}) ({equals} {sched_eq_prev}))'
             .format_map({'equals': self._equal_bits_name,
-                         'sched': ' '.join(self._sched_vars),
-                         'proc': ' '.join(self._proc_vars),
-                         'crt':crt_str,
-                         'crt_prev': prev_str}))
+                         'proc_eq_crt': ' '.join(proc_eq_crt_args),
+                         'sched_eq_prev': ' '.join(sched_eq_prev_args)
+            }))
+
 
         self._ring_modulo_iterate(self.nof_processes, accumulator)
 
@@ -264,34 +278,29 @@ class ParImpl: #TODO: separate architecture from the spec
 
         body = """(or {enum_clauses})""".format(enum_clauses = '\n\t'.join(enum_clauses))
 
-        description = FuncDescription(self._equal_to_prev_name,
+        description = FuncDescription(self._prev_is_sched_name,
             argname_to_type, set(),
             'Bool',
             body)
 
         return description
 
-#        return self._equal_to_prev_name, \
-#               ['b', 'Bool']*(len(self._sched_args)+len(self._proc_args)), \
-#               'Bool', \
-#               body
-
 
     def _ring_modulo_iterate(self, nof_processes, function):
 
         def to_smt_bools(int_val):
-            return ' '.join(map(lambda b: str(b), bin_fixed_list(int_val, self._nof_bits))).lower()
+            return list(map(lambda b: str(b).lower(), bin_fixed_list(int_val, self._nof_bits)))
 
         if nof_processes == 1:
-            crt_str = to_smt_bools(0)
-            prev_str = to_smt_bools(1)
-            function(prev_str, crt_str)
+            crt = to_smt_bools(0)
+            prev = to_smt_bools(1)
+            function(prev, crt)
             return
 
-        for crt in range(nof_processes):
-            crt_str = to_smt_bools(crt)
-            prev_str = to_smt_bools((crt-1) % nof_processes)
-            function(prev_str, crt_str)
+        for crt_index in range(nof_processes):
+            crt = to_smt_bools(crt_index)
+            prev = to_smt_bools((crt_index-1) % nof_processes)
+            function(prev, crt)
 
 
     def _get_desc_local_tau(self):
@@ -299,11 +308,8 @@ class ParImpl: #TODO: separate architecture from the spec
                                list(map(lambda input: (str(input), 'Bool'), self._anon_inputs)))
 
         description = FuncDescription(self._tau_name, argname_to_type, set(), self._state_type, None)
+
         return description
-#        return self._tau_name, \
-#               [('state', self._state_type)] + list(map(lambda i: (str(i), 'Bool'), self._anon_inputs)), \
-#               self._state_type, \
-#               None
 
     #TODO: duplications
     def _get_sched_values(self, label):
@@ -327,6 +333,8 @@ class ParImpl: #TODO: separate architecture from the spec
 
 
     def _get_sends_prev_expr(self, proc_index, sys_states_vector):
+        assert self.nof_processes > 1, 'nonsense'
+
         prev_proc = (proc_index-1) % self.nof_processes
 
         prev_proc_state = sys_states_vector[prev_proc]

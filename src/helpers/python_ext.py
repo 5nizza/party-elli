@@ -1,4 +1,4 @@
-from collections import Iterable, Iterator
+from collections import Iterable
 import math
 
 def get_add(dict, name, default):

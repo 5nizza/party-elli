@@ -51,7 +51,6 @@ class GenericEncoder:
         spec_state_name = self._get_smt_name_spec_state(spec_state)
         sys_state_name = self._get_smt_name_sys_state(sys_state_vector, impl.proc_states_descs)
 
-#        print(label)
         next_sys_state = []
         for i in range(impl.nof_processes):
             tau_concr_args_dict = self._get_proc_tau_args(sys_state_vector, impl.filter_label_by_process(label, i), i, impl)
@@ -60,9 +59,6 @@ class GenericEncoder:
 
             tau_args = impl.taus_descs[i].get_args_list(tau_args_dict)
 
-#            print(i)
-#            print(proc_tau_args)
-#            print()
             next_sys_state.append(call_func(impl.taus_descs[i].name, tau_args))
 
         #TODO: forall is evil!
@@ -201,6 +197,7 @@ class GenericEncoder:
         tau_args.update(impl.get_proc_tau_additional_args(proc_label, sys_state, proc_index))
 
         res = dict(tau_args)
+
         return res
 
 

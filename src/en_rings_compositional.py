@@ -18,6 +18,8 @@ def _is_safety_property(property, automaton_converter):
     return is_safety
 
 
+simple_arb_loc_guarantee = 'G((active_i && r_i) -> Fg_i)'
+
 full_arb_loc_guarantee = """
 (!g_i)
 && G( (active_i && (!r_i) && g_i) -> F((r_i&&g_i) || (!g_i)) )
@@ -25,6 +27,7 @@ full_arb_loc_guarantee = """
 && (!F(g_i && X((!r_i) && !g_i) && X(((!r_i) && !g_i) U (g_i && !r_i) )) )
 && (!(((!r_i) && (!g_i)) U ((!r_i) && g_i)))
 """.strip().replace('\n', ' ')
+
 
 pnueli_arb_loc_assumption = """
 (!r_i) &&
@@ -66,7 +69,7 @@ def _get_spec(spec_type):
     outputs = ['g_'] + par_tok_ring_outputs
 
     specs = [
-        (inputs, outputs, 'true', 'G((active_i && r_i) -> Fg_i)', mutual_exclusion),
+        (inputs, outputs, 'true', simple_arb_loc_guarantee, mutual_exclusion),
         (inputs, outputs, 'true', full_arb_loc_guarantee, mutual_exclusion),
         (inputs, outputs, pnueli_arb_loc_assumption, pnueli_arb_loc_guarantee, mutual_exclusion),
         (inputs, outputs, xarb_loc_assumption, xarb_loc_guarantee, mutual_exclusion)]
@@ -124,15 +127,16 @@ def main_with_async_hub(smt_file_prefix,
 
     anon_inputs, anon_outputs, orig_loc_assumption, orig_loc_guarantee, orig_glob_guarantee = _get_spec(spec_type)
 
-    hub_par_assumption = 'G((!{tok}i) -> F{prev}i) && G({tok}i -> !{prev}i)'.format(
+    hub_par_assumption = 'G((!{tok}i) -> F({prev}i && {active}i)) && G({tok}i -> !{prev}i)'.format(
         tok = HAS_TOK_NAME,
-        prev = SENDS_PREV_NAME)
+        prev = SENDS_PREV_NAME,
+        active = ACTIVE_NAME)
 
-    loc_property = '(({fair_sched} && {orig_loc_assumption} && {hub}) -> ({orig_loc_guarantee} && {tok_ring_guarantee}))'.format(
+    loc_property = '(({fair_sched} && {orig_loc_assumption} && {hub}) -> (({orig_loc_guarantee}) && {tok_ring_guarantee}))'.format(
         fair_sched = get_fair_scheduler_property(1, SCHED_ID_PREFIX),
         orig_loc_assumption = concretize_property(orig_loc_assumption, 1),
         orig_loc_guarantee = concretize_property(orig_loc_guarantee, 1),
-        hub=concretize_property(hub_par_assumption, 1),
+        hub = concretize_property(hub_par_assumption, 1),
         tok_ring_guarantee = concretize_property(get_tok_rings_liveness_par_props()[0], 1))
 
     ring_with_hub_automaton = automaton_converter.convert(loc_property)

@@ -21,7 +21,7 @@ class LocalENImpl:
         self._nof_local_states = nof_local_states
 
         #no architecture => all architecture specific inputs/outputs
-        self.orig_inputs = self.all_inputs = [list(anon_inputs)]
+        self.orig_inputs = [list(anon_inputs)]
         self.orig_outputs = self.all_outputs = [list(anon_outputs)]
 
         self._tau_name = tau_name
@@ -106,7 +106,6 @@ class LocalENImpl:
             has_tok_str = call_func(self._has_tok_var_prefix, [state_str])
             sends_tok_str = call_func(self._sends_var_name, [state_str])
 
-            #TODO: bug
             _, free_vars = build_values_from_label(self.orig_inputs[0], Label({self._sends_prev_var_name:False}))
 
             tau_args_not_sends_prev_raw, _ = build_values_from_label(self.orig_inputs[0], Label({self._sends_prev_var_name:False}))

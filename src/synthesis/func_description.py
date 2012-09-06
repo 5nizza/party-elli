@@ -10,7 +10,6 @@ class FuncDescription:
         self._body = body
         self._architecture_inputs = architecture_inputs
         self._ordered_input_type_pairs = list(argname_to_type.items())
-    #        self._arg_to_index = dict(map(lambda i_name_type: (i_name_type[0], i_name_type[1]), enumerate(argname_to_type.items())))
 
 
     @property
@@ -23,6 +22,7 @@ class FuncDescription:
 
     @property
     def inputs(self):
+        """ Return: ordered input_type pairs """
         return self._ordered_input_type_pairs
 
     @property
