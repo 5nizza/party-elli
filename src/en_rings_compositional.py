@@ -20,50 +20,59 @@ def _is_safety_property(property, automaton_converter):
     return is_safety
 
 
-simple_arb_loc_guarantee = 'G((active_i && r_i) -> Fg_i)'
+simple_liveness_loc_guarantee = 'G((active_i && r_i) -> Fg_i)'
 
-full_arb_loc_guarantee = """
+full_safety_loc_guarantee = """
 (!g_i)
-&& G( (active_i && (!r_i) && g_i) -> F((r_i&&g_i) || (!g_i)) )
-&& G( (active_i && r_i) -> Fg_i )
 && (!F(g_i && X((!r_i) && !g_i) && X(((!r_i) && !g_i) U (g_i && !r_i) )) )
 && (!(((!r_i) && (!g_i)) U ((!r_i) && g_i)))
 """.strip().replace('\n', ' ')
 
+full_liveness_loc_guarantee = """
+G( (active_i && (!r_i) && g_i) -> F((r_i&&g_i) || (!g_i)) )
+&& G( (active_i && r_i) -> Fg_i )
+""".strip().replace('\n', ' ')
 
-pnueli_arb_loc_assumption = """
+
+pnueli_safety_loc_assumption = """
 (!r_i) &&
-G((((!r_i) && g_i) || (r_i && !g_i)) -> (((!r_i) && X(!r_i)) || (r_i && Xr_i))) &&
+G((((!r_i) && g_i) || (r_i && !g_i)) -> (((!r_i) && X(!r_i)) || (r_i && Xr_i)))
+""".strip().replace('\n', ' ')
+
+pnueli_liveness_loc_assumption = """
 GF(!(r_i && g_i))
 """.strip().replace('\n', ' ')
 
-pnueli_arb_loc_guarantee = """
+pnueli_safety_loc_guarantee = """
 (!g_i) &&
-G((((!r_i) && (!g_i)) || (r_i && g_i)) ->  (((!g_i) && (X(!g_i))) || ((g_i) && (X(g_i))))) &&
+G((((!r_i) && (!g_i)) || (r_i && g_i)) ->  (((!g_i) && (X(!g_i))) || ((g_i) && (X(g_i)))))
+""".strip().replace('\n', ' ')
+
+pnueli_liveness_loc_guarantee = """
 GF(((!r_i) && (!g_i)) || (r_i && g_i))
 """.strip().replace('\n', ' ')
 
 
-xarb_loc_assumption = """
-(!r_i) &&
-G(((!r_i)&&Xg_i) -> X(!r_i)) &&
-G((r_i&&X!g_i) -> Xr_i) &&
-G((r_i&&Xg_i) -> X(!r_i))
-""".strip().replace('\n', ' ')
+#xarb_loc_assumption = """
+#(!r_i) &&
+#G(((!r_i)&&Xg_i) -> X(!r_i)) &&
+#G((r_i&&X!g_i) -> Xr_i) &&
+#G((r_i&&Xg_i) -> X(!r_i))
+#""".strip().replace('\n', ' ')
+#
+#xarb_loc_guarantee = """
+#(!g_i) &&
+#G(((!r_i)&&(!g_i))->X!g_i) &&
+#G(r_i->XFg_i) &&
+#G((r_i&&Xg_i) -> (XXg_i && XXXg_i && XXXX!g_i))
+#""".strip().replace('\n', ' ')
 
-xarb_loc_guarantee = """
-(!g_i) &&
-G(((!r_i)&&(!g_i))->X!g_i) &&
-G(r_i->XFg_i) &&
-G((r_i&&Xg_i) -> (XXg_i && XXXg_i && XXXX!g_i))
-""".strip().replace('\n', ' ')
 
-
-simple, full, pnueli, xarb = range(4)
+#simple, full, pnueli, xarb = range(4)
+simple, full, pnueli = range(3)
 
 
 def _get_spec(spec_type):
-    #TODO: the only global property allowed is safety - mutual exclusion
     mutual_exclusion = 'G(!(g_i && g_j))'
 
     par_tok_ring_inputs, par_tok_ring_outputs = get_tok_ring_par_io()
@@ -71,10 +80,19 @@ def _get_spec(spec_type):
     outputs = ['g_'] + par_tok_ring_outputs
 
     specs = [
-        (inputs, outputs, 'true', simple_arb_loc_guarantee, mutual_exclusion),
-        (inputs, outputs, 'true', full_arb_loc_guarantee, mutual_exclusion),
-        (inputs, outputs, pnueli_arb_loc_assumption, pnueli_arb_loc_guarantee, mutual_exclusion),
-        (inputs, outputs, xarb_loc_assumption, xarb_loc_guarantee, mutual_exclusion)]
+        (inputs, outputs,
+         'true', 'true',
+         'true', simple_liveness_loc_guarantee,
+         mutual_exclusion),
+        (inputs, outputs,
+         'true', 'true',
+         full_safety_loc_guarantee,
+         full_liveness_loc_guarantee,
+         mutual_exclusion),
+        (inputs, outputs,
+         pnueli_safety_loc_assumption, pnueli_liveness_loc_assumption,
+         pnueli_safety_loc_guarantee, pnueli_liveness_loc_guarantee,
+         mutual_exclusion)]
 
     return specs[spec_type]
 
@@ -117,72 +135,65 @@ def _run(logger,
                 out.write(dot)
 
 
-def main_with_async_hub(smt_file_prefix,
-                        logic,
-                        spec_type,
-                        dot_files_prefix,
-                        bounds,
-                        cutoff,
-                        automaton_converter,
-                        solver,
-                        logger):
-    logger.info('async_hub')
+def main_with_sync_hub(smt_file_name, logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
+    logger.info('sync hub')
 
-    anon_inputs, anon_outputs, orig_loc_assumption, orig_loc_guarantee, orig_glob_guarantee = _get_spec(spec_type)
+    #TODO: check two cases: when on SMT level and when here
+#    hub_par_assumption = 'G((!{tok}i) -> F{prev}i) && G({tok}i -> !{prev}i)'.format(
+#        tok = HAS_TOK_NAME,
+#        prev = SENDS_PREV_NAME)
+#
+#    loc_property = '(({orig_loc_assumption} && {hub}) -> ({orig_loc_guarantee} && {tok_ring_guarantee}))'.format(
+#        orig_loc_assumption = orig_loc_assumption,
+#        orig_loc_guarantee = orig_loc_guarantee,
+#        hub=hub_par_assumption,
+#        tok_ring_guarantee = get_tok_rings_liveness_par_props()[0])
 
-    hub_par_assumption = 'G((!{tok}i) -> F({prev}i && {active}i)) && G({tok}i -> !{prev}i)'.format(
+
+    anon_inputs, anon_outputs,\
+    safety_loc_assumption, liveness_loc_assumption,\
+    safety_loc_guarantee, liveness_loc_guarantee,\
+    orig_glob_property = _get_spec(spec_type)
+
+    par_hub_safety_ass = 'G({tok}i -> !{prev}i)'.format(
+        tok = HAS_TOK_NAME,
+        prev = SENDS_PREV_NAME)
+
+    loc_safety_part = '(({loc_safety_ass}) && ({loc_hub_safety_ass})) -> ({loc_safety_gua})'.format(
+        loc_safety_ass = safety_loc_assumption,
+        loc_safety_gua = safety_loc_guarantee,
+        loc_hub_safety_ass = par_hub_safety_ass
+    )
+
+    par_hub_liveness_ass = 'G((!{tok}i) -> F({prev}i && {active}i))'.format(
         tok = HAS_TOK_NAME,
         prev = SENDS_PREV_NAME,
         active = ACTIVE_NAME)
 
-    loc_property = '(({fair_sched} && {orig_loc_assumption} && {hub}) -> (({orig_loc_guarantee}) && {tok_ring_guarantee}))'.format(
-        fair_sched = get_fair_scheduler_property(1, SCHED_ID_PREFIX),
-        orig_loc_assumption = concretize_property(orig_loc_assumption, 1),
-        orig_loc_guarantee = concretize_property(orig_loc_guarantee, 1),
-        hub = concretize_property(hub_par_assumption, 1),
-        tok_ring_guarantee = concretize_property(get_tok_rings_liveness_par_props()[0], 1))
+    loc_liveness_part = '(({loc_safety_ass}) && ({loc_liveness_ass}) && ({hub_safety_ass}) && ({hub_liveness_ass})) -> (({loc_spec_liveness_gua}) && ({loc_tok_ring_liveness_gua}))'.format(
+        loc_safety_ass = safety_loc_assumption,
+        loc_liveness_ass = liveness_loc_assumption,
+        loc_spec_liveness_gua = liveness_loc_guarantee,
+        hub_safety_ass = par_hub_safety_ass,
+        hub_liveness_ass = par_hub_liveness_ass,
+        loc_tok_ring_liveness_gua = get_tok_rings_liveness_par_props()[0]
+    )
 
-    ring_with_hub_automaton = automaton_converter.convert(loc_property)
-
-    full_concr_prop = concretize_property(orig_glob_guarantee, cutoff)
-    global_automaton = automaton_converter.convert(full_concr_prop)
-
-    global_automatae_pairs = [(global_automaton, cutoff), (ring_with_hub_automaton, 1)]
-
-    _run(logger,
-        logic,
-        global_automatae_pairs,
-        None,
-        anon_inputs, anon_outputs,
-        bounds,
-        solver,
-        smt_file_prefix, dot_files_prefix)
-
-
-def main_with_sync_hub(smt_file_name, logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
-    logger.info('sync hub')
-
-    anon_inputs, anon_outputs, orig_loc_assumption, orig_loc_guarantee, orig_glob_guarantee = _get_spec(spec_type)
-
-    #TODO: check two cases: when on SMT level and when here
-    hub_par_assumption = 'G((!{tok}i) -> F{prev}i) && G({tok}i -> !{prev}i)'.format(
-        tok = HAS_TOK_NAME,
-        prev = SENDS_PREV_NAME)
-
-    loc_property = '(({orig_loc_assumption} && {hub}) -> ({orig_loc_guarantee} && {tok_ring_guarantee}))'.format(
-        orig_loc_assumption = orig_loc_assumption,
-        orig_loc_guarantee = orig_loc_guarantee,
-        hub=hub_par_assumption,
-        tok_ring_guarantee = get_tok_rings_liveness_par_props()[0])
+    loc_property = '({loc_liveness_part}) && ({loc_safety_part})'.format(
+        loc_liveness_part = loc_liveness_part,
+        loc_safety_part = loc_safety_part
+    )
 
     loc_property = anonymize_property(loc_property, anon_inputs+anon_outputs+list(chain(*get_tok_ring_par_io())))
-    #TODO: hack: no need for active_i in sync_hub version
-    loc_property = loc_property.replace(ACTIVE_NAME+'i', 'true')
+    loc_property = loc_property.replace(ACTIVE_NAME+'i', 'true') #hack: no need for active_i in sync_hub version
+
+    glob_property = '({loc_safety_ass}) -> ({glob})'.format( #hack: i know that glob is a safety property
+        loc_safety_ass = concretize_property(safety_loc_assumption, 1),
+        glob = concretize_property(orig_glob_property, cutoff)
+    )
 
     loc_automaton = automaton_converter.convert(loc_property)
-
-    full_concr_prop = concretize_property(orig_glob_guarantee, cutoff)
-    global_automaton = automaton_converter.convert(full_concr_prop)
+    global_automaton = automaton_converter.convert(glob_property)
 
     global_automatae_pairs = [(global_automaton, cutoff)]
 
@@ -196,30 +207,137 @@ def main_with_sync_hub(smt_file_name, logic, spec_type, dot_files_prefix, bounds
         smt_file_name, dot_files_prefix)
 
 
+def main_with_async_hub(smt_file_prefix,
+                        logic,
+                        spec_type,
+                        dot_files_prefix,
+                        bounds,
+                        cutoff,
+                        automaton_converter,
+                        solver,
+                        logger):
+    logger.info('async_hub')
+
+    anon_inputs, anon_outputs,\
+    safety_loc_assumption, liveness_loc_assumption,\
+    safety_loc_guarantee, liveness_loc_guarantee,\
+    orig_glob_property = _get_spec(spec_type)
+
+    loc_safety_assumption = '{loc_safety_ass}'.format(
+        loc_safety_ass = concretize_property(safety_loc_assumption, 1)
+    )
+
+    loc_safety_guarantee = '{loc_safety_gua}'.format(
+        loc_safety_gua = concretize_property(safety_loc_guarantee, 1)
+    )
+
+    par_hub_safety_ass = 'G({tok}i -> !{prev}i)'.format(
+        tok = HAS_TOK_NAME,
+        prev = SENDS_PREV_NAME)
+
+    loc_safety_part = '(({loc_safety_ass}) && ({loc_hub_safety_ass})) -> ({loc_safety_gua})'.format(
+        loc_safety_ass = loc_safety_assumption,
+        loc_safety_gua = loc_safety_guarantee,
+        loc_hub_safety_ass = concretize_property(par_hub_safety_ass, 1)
+    )
+
+    par_hub_liveness_ass = 'G((!{tok}i) -> F({prev}i && {active}i))'.format(
+        tok = HAS_TOK_NAME,
+        prev = SENDS_PREV_NAME,
+        active = ACTIVE_NAME)
+
+    loc_liveness_part = '(({fair_sched}) && ({loc_safety_ass}) && ({loc_liveness_ass}) && ({hub_safety_ass}) && ({hub_liveness_ass})) -> (({loc_spec_liveness_gua}) && ({loc_tok_ring_liveness_gua}))'.format(
+        fair_sched = get_fair_scheduler_property(1, SCHED_ID_PREFIX),
+        loc_safety_ass = loc_safety_assumption,
+        loc_liveness_ass = concretize_property(liveness_loc_assumption, 1),
+        loc_spec_liveness_gua = concretize_property(liveness_loc_guarantee, 1),
+        hub_safety_ass = concretize_property(par_hub_safety_ass, 1),
+        hub_liveness_ass = concretize_property(par_hub_liveness_ass, 1),
+        loc_tok_ring_liveness_gua = concretize_property(get_tok_rings_liveness_par_props()[0], 1)
+    )
+
+    loc_property = '({loc_liveness_part}) && ({loc_safety_part})'.format(
+        loc_liveness_part = loc_liveness_part,
+        loc_safety_part = loc_safety_part
+    )
+
+    glob_property = '({loc_safety_ass}) -> ({glob})'.format( #hack: i know that glob is a safety property
+        loc_safety_ass = loc_safety_assumption,
+        glob = concretize_property(orig_glob_property, cutoff)
+    )
+
+    ring_with_hub_automaton = automaton_converter.convert(loc_property)
+    global_automaton = automaton_converter.convert(glob_property)
+
+    global_automatae_pairs = [(global_automaton, cutoff), (ring_with_hub_automaton, 1)]
+
+    _run(logger,
+        logic,
+        global_automatae_pairs,
+        None,
+        anon_inputs, anon_outputs,
+        bounds,
+        solver,
+        smt_file_prefix, dot_files_prefix)
+
+
 def main_compo(smt_file_prefix, logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
     logger.info('compositional approach')
 
-    anon_inputs, anon_outputs, orig_loc_assumption, orig_loc_guarantee, orig_glob_guarantee = _get_spec(spec_type)
+    anon_inputs, anon_outputs,\
+    safety_loc_assumption, liveness_loc_assumption,\
+    safety_loc_guarantee, liveness_loc_guarantee,\
+    orig_glob_property = _get_spec(spec_type)
+
+    loc_safety_assumption = '{loc_safety_ass}'.format(
+        loc_safety_ass = concretize_property(safety_loc_assumption, 1)
+    )
+
+    loc_safety_guarantee = '{loc_safety_gua}'.format(
+        loc_safety_gua = concretize_property(safety_loc_guarantee, 1)
+    )
+
+    loc_safety_part = '({loc_safety_ass}) -> ({loc_safety_gua})'.format(
+        loc_safety_ass = loc_safety_assumption,
+        loc_safety_gua = loc_safety_guarantee
+    )
 
     par_fair_token = 'GF({tok}i)'.format(
         tok=HAS_TOK_NAME,
         prev=SENDS_PREV_NAME)
 
-    loc_property_wo_sched = '(({orig_loc_assumption} && {fair_tok}) -> ({orig_loc_guarantee} && {tok_ring_guarantee}))'.format(
-        orig_loc_assumption = orig_loc_assumption,
-        orig_loc_guarantee = orig_loc_guarantee,
-        fair_tok = par_fair_token,
-        tok_ring_guarantee = get_tok_rings_liveness_par_props()[0])
-    loc_property_wo_sched = concretize_property(loc_property_wo_sched, 1)
+    loc_tok_ring_liveness_part = '(({fair_sched}) && ({loc_safety_ass}) && ({loc_liveness_ass})) -> ({loc_tok_ring_liveness_gua})'.format(
+        fair_sched = get_fair_scheduler_property(1, SCHED_ID_PREFIX),
+        loc_safety_ass = loc_safety_assumption,
+        loc_liveness_ass = concretize_property(liveness_loc_assumption, 1),
+        loc_tok_ring_liveness_gua = concretize_property(get_tok_rings_liveness_par_props()[0], 1)
+    )
 
-    loc_property = '({fair_sched}) -> ({loc_property})'.format(
-        fair_sched=get_fair_scheduler_property(2, SCHED_ID_PREFIX),
-        loc_property = loc_property_wo_sched)
+    loc_spec_liveness_part = '(({fair_sched}) && ({fair_tok}) && ({loc_safety_ass}) && ({loc_liveness_ass})) -> ({loc_spec_liveness_gua})'.format(
+        fair_sched = get_fair_scheduler_property(1, SCHED_ID_PREFIX),
+        fair_tok = concretize_property(par_fair_token, 1),
+        loc_safety_ass = loc_safety_assumption,
+        loc_liveness_ass = concretize_property(liveness_loc_assumption, 1),
+        loc_spec_liveness_gua = concretize_property(liveness_loc_guarantee, 1)
+    )
+
+    loc_liveness_part = '({loc_spec_liveness_part}) && ({loc_tok_ring_liveness_part})'.format(
+        loc_spec_liveness_part = loc_spec_liveness_part,
+        loc_tok_ring_liveness_part = loc_tok_ring_liveness_part
+    )
+
+    loc_property = '({loc_liveness_part}) && ({loc_safety_part})'.format(
+        loc_liveness_part = loc_liveness_part ,
+        loc_safety_part = loc_safety_part
+    )
+
+    glob_property = '({loc_safety_ass}) -> ({glob})'.format( #hack: i know that glob is a safety property
+        loc_safety_ass = loc_safety_assumption,
+        glob = concretize_property(orig_glob_property, cutoff)
+    )
 
     loc_automaton = automaton_converter.convert(loc_property)
-
-    full_concr_prop = concretize_property(orig_glob_guarantee, cutoff)
-    global_automaton = automaton_converter.convert(full_concr_prop)
+    global_automaton = automaton_converter.convert(glob_property)
 
     automatae = [(loc_automaton, 2), (global_automaton, cutoff)]
 
@@ -230,20 +348,100 @@ def main_compo(smt_file_prefix, logic, spec_type, dot_files_prefix, bounds, cuto
         smt_file_prefix, dot_files_prefix)
 
 
-def main_global(smt_file_name, logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
-    logger.info('global approach')
+def main_strengthening(smt_file_name, logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
+    logger.info('strengthening approach')
 
-    anon_inputs, anon_outputs, orig_loc_assumption, orig_loc_guarantee, orig_glob_guarantee = _get_spec(spec_type)
+    anon_inputs, anon_outputs,\
+    safety_loc_assumption, liveness_loc_assumption,\
+    safety_loc_guarantee, liveness_loc_guarantee,\
+    orig_glob_property = _get_spec(spec_type)
 
-    glob_property = '({fair_sched}) -> (({loc_assumption}) -> ({loc_guarantee} && {tok_ring_guarantee}))'.format(
-        fair_sched=get_fair_scheduler_property(cutoff, SCHED_ID_PREFIX),
-        loc_assumption = concretize_property(orig_loc_assumption, cutoff if spec_type == pnueli else 1),
-        loc_guarantee = concretize_property(orig_loc_guarantee, 1),
-        tok_ring_guarantee = concretize_property(get_tok_rings_liveness_par_props()[0], 1))
+    loc_safety_assumption = '{loc_safety_ass}'.format(
+        loc_safety_ass = concretize_property(safety_loc_assumption, 1)
+    )
 
-    glob_property = '({0}) && {1}'.format(
-        glob_property,
-        concretize_property(orig_glob_guarantee, cutoff))
+    loc_safety_guarantee = '{loc_safety_gua}'.format(
+        loc_safety_gua = concretize_property(safety_loc_guarantee, 1)
+    )
+
+    loc_safety_part = '({loc_safety_ass}) -> ({loc_safety_gua})'.format(
+        loc_safety_ass = loc_safety_assumption,
+        loc_safety_gua = loc_safety_guarantee
+    )
+
+    par_fair_token = 'GF({tok}i)'.format(
+        tok=HAS_TOK_NAME,
+        prev=SENDS_PREV_NAME)
+
+    loc_tok_ring_liveness_part = '(({fair_sched}) && ({loc_safety_ass}) && ({loc_liveness_ass})) -> ({loc_tok_ring_liveness_gua})'.format(
+        fair_sched = get_fair_scheduler_property(1, SCHED_ID_PREFIX),
+        loc_safety_ass = loc_safety_assumption,
+        loc_liveness_ass = concretize_property(liveness_loc_assumption, 1),
+        loc_tok_ring_liveness_gua = concretize_property(get_tok_rings_liveness_par_props()[0], 1)
+    )
+
+    loc_spec_liveness_part = '(({fair_sched}) && ({fair_tok}) && ({loc_safety_ass}) && ({loc_liveness_ass})) -> ({loc_spec_liveness_gua})'.format(
+        fair_sched = get_fair_scheduler_property(1, SCHED_ID_PREFIX),
+        fair_tok = concretize_property(par_fair_token, 1),
+        loc_safety_ass = loc_safety_assumption,
+        loc_liveness_ass = concretize_property(liveness_loc_assumption, 1),
+        loc_spec_liveness_gua = concretize_property(liveness_loc_guarantee, 1)
+    )
+
+    loc_liveness_part = '({loc_spec_liveness_part}) && ({loc_tok_ring_liveness_part})'.format(
+        loc_spec_liveness_part = loc_spec_liveness_part,
+        loc_tok_ring_liveness_part = loc_tok_ring_liveness_part
+    )
+
+    loc_part = '({loc_liveness_part}) && ({loc_safety_part})'.format(
+        loc_liveness_part = loc_liveness_part,
+        loc_safety_part = loc_safety_part
+    )
+
+    glob_part = '({loc_safety_ass}) -> ({glob})'.format( #hack: i know that glob is a safety property
+        loc_safety_ass = loc_safety_assumption,
+        glob = concretize_property(orig_glob_property, cutoff)
+    )
+
+    glob_property = '({loc_part}) && ({glob_part})'.format(
+        glob_part = glob_part,
+        loc_part = loc_part)
+
+    automaton = automaton_converter.convert(glob_property)
+
+    automaton_size_pairs = [(automaton, cutoff)]
+
+    _run(logger,
+        logic, automaton_size_pairs,
+        None,
+        anon_inputs, anon_outputs,
+        bounds,
+        solver,
+        smt_file_name, dot_files_prefix)
+
+
+def main_bottomup(smt_file_name, logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
+    logger.info('bottom-up approach')
+
+    anon_inputs, anon_outputs, \
+    safety_loc_assumption, liveness_loc_assumption,\
+    safety_loc_guarantee, liveness_loc_guarantee,\
+    orig_glob_property = _get_spec(spec_type)
+
+    ass = '({fair_sched}) && ({safety_ass}) && ({liveness_ass})'.format(
+        fair_sched = get_fair_scheduler_property(cutoff, SCHED_ID_PREFIX),
+        safety_ass = concretize_property(safety_loc_assumption, cutoff),
+        liveness_ass = concretize_property(liveness_loc_assumption, cutoff)
+    )
+
+    gua = '({safety_loc_gua}) && ({liveness_loc_gua}) && ({glob}) && ({tok_ring_gua})'.format(
+        safety_loc_gua = concretize_property(safety_loc_guarantee, 1), #1 - due to isomorphism
+        liveness_loc_gua = concretize_property(liveness_loc_guarantee, 1),
+        glob = concretize_property(orig_glob_property, cutoff),
+        tok_ring_gua = concretize_property(get_tok_rings_liveness_par_props()[0], 1)
+    )
+
+    glob_property = '({ass}) -> ({gua})'.format(ass = ass, gua = gua)
 
     automaton = automaton_converter.convert(glob_property)
 
@@ -261,7 +459,8 @@ def main_global(smt_file_name, logic, spec_type, dot_files_prefix, bounds, cutof
 _OPT_TO_MAIN = {'sync_hub':main_with_sync_hub,
                 'async_hub':main_with_async_hub,
                 'compo':main_compo,
-                'glob':main_global}
+                'strength':main_strengthening,
+                'bottomup':main_bottomup}
 
 
 def tmp():
@@ -300,7 +499,7 @@ def tmp():
 
     main_func = _OPT_TO_MAIN[args.opt]
     main_func(smt_file_name, logic,
-        {'pnueli': pnueli, 'full':full, 'simple':simple, 'xarb': xarb}[args.ltl],
+        {'pnueli': pnueli, 'full':full, 'simple':simple}[args.ltl],
         args.dot, bounds, args.cutoff, ltl2ucw_converter, z3solver, logger)
 
 

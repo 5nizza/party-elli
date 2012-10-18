@@ -11,8 +11,8 @@ class Z3:
     def __init__(self, path, flag='-'):
         self._logger = logging.getLogger(__name__)
         #TODO: RELEVANCY=0 is a temporal workaround z3 bug, remove with z3 4.2
-        self._cmd_with_stdin = path + ' RELEVANCY=0 {0}smt2 {0}in'.format(flag)
-        self._cmd_with_file = path + ' RELEVANCY=0 {0}smt2 '.format(flag)
+        self._cmd_with_stdin = path + ' {0}smt2 {0}in'.format(flag)
+        self._cmd_with_file = path + ' {0}smt2 '.format(flag)
 
 
     def _remove_model_is_not_available(self, err):
