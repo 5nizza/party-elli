@@ -119,17 +119,20 @@ def is_parametrized(ltl_spec):
     or '_i1' in ltl_property
 
 
-def get_fair_scheduler_property(nof_processes, sched_id_prefix):
+def get_fair_proc_scheduling_property(proc_index, nof_processes, sched_id_prefix):
     nof_sched_bits = int(max(math.ceil(math.log(nof_processes, 2)), 1))
 
-    sched_constraints = []
-    for i in range(nof_processes):
-        bits = [int(b) for b in bin_fixed_list(i, nof_sched_bits)]
-        id_as_formula = ' && '.join(['({0}{1}{2})'.format(['!', ''][bit_value], sched_id_prefix, bit_index)
-                                     for bit_index, bit_value in enumerate(bits)])
+    bits = [int(b) for b in bin_fixed_list(proc_index, nof_sched_bits)]
 
-        sched_constraints.append('GF({0})'.format(id_as_formula))
+    id_as_formula = ' && '.join(['({0}{1}{2})'.format(['!', ''][bit_value], sched_id_prefix, bit_index)
+                                 for bit_index, bit_value in enumerate(bits)])
 
+    return 'GF({0})'.format(id_as_formula)
+
+
+def get_fair_scheduler_property(nof_processes, sched_id_prefix):
+    sched_constraints = [get_fair_proc_scheduling_property(i, nof_processes, sched_id_prefix)
+                         for i in range(nof_processes)]
     return ' && '.join(sched_constraints)
 
 

@@ -75,6 +75,7 @@ def search(logic,
         logger.info('smt query has %i lines', len(query_lines))
 
         smt_file.close()
+
         status, data_lines = z3solver.solve_file(smt_file.name)
 
         if status == Z3.SAT:

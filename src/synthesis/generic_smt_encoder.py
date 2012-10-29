@@ -1,5 +1,5 @@
 from collections import defaultdict
-from itertools import product, chain, permutations
+from itertools import product, chain, permutations, combinations_with_replacement
 import logging
 from helpers.hashable import HashableDict
 
@@ -134,10 +134,10 @@ class GenericEncoder:
         for spec_state in spec_states:
             for global_state in global_states:
                 for label, dst_set_list in spec_state.transitions.items():
-                    transition = self._encode_transition(spec_state, global_state, label, state_to_rejecting_scc, impl)
+                    transition_assertions = self._encode_transition(spec_state, global_state, label, state_to_rejecting_scc, impl)
 
                     smt_lines += comment(label)
-                    smt_lines += transition
+                    smt_lines += transition_assertions
 
         return smt_lines
 

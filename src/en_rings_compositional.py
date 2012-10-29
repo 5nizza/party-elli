@@ -7,7 +7,7 @@ import tempfile
 from helpers.main_helper import setup_logging, create_spec_converter_z3
 from helpers.automata_helper import  is_safety_automaton
 from module_generation.dot import to_dot
-from parsing.en_rings_parser import  SCHED_ID_PREFIX, SENDS_NAME, ACTIVE_NAME, concretize_property, get_tok_rings_liveness_par_props, HAS_TOK_NAME, SENDS_PREV_NAME, anonymize_property, get_fair_scheduler_property, get_tok_ring_par_io
+from parsing.en_rings_parser import  SCHED_ID_PREFIX, SENDS_NAME, ACTIVE_NAME, concretize_property, get_tok_rings_liveness_par_props, HAS_TOK_NAME, SENDS_PREV_NAME, anonymize_property, get_fair_scheduler_property, get_tok_ring_par_io, get_fair_proc_scheduling_property
 from synthesis import par_model_searcher
 from synthesis.smt_logic import UFLIA
 
@@ -247,7 +247,7 @@ def main_with_async_hub(smt_file_prefix,
         active = ACTIVE_NAME)
 
     loc_liveness_part = '(({fair_sched}) && ({loc_safety_ass}) && ({loc_liveness_ass}) && ({hub_safety_ass}) && ({hub_liveness_ass})) -> (({loc_spec_liveness_gua}) && ({loc_tok_ring_liveness_gua}))'.format(
-        fair_sched = get_fair_scheduler_property(1, SCHED_ID_PREFIX),
+        fair_sched = get_fair_proc_scheduling_property(0, 1, SCHED_ID_PREFIX),
         loc_safety_ass = loc_safety_assumption,
         loc_liveness_ass = concretize_property(liveness_loc_assumption, 1),
         loc_spec_liveness_gua = concretize_property(liveness_loc_guarantee, 1),
@@ -307,14 +307,14 @@ def main_compo(smt_file_prefix, logic, spec_type, dot_files_prefix, bounds, cuto
         prev=SENDS_PREV_NAME)
 
     loc_tok_ring_liveness_part = '(({fair_sched}) && ({loc_safety_ass}) && ({loc_liveness_ass})) -> ({loc_tok_ring_liveness_gua})'.format(
-        fair_sched = get_fair_scheduler_property(1, SCHED_ID_PREFIX),
+        fair_sched = get_fair_proc_scheduling_property(0, 2, SCHED_ID_PREFIX),
         loc_safety_ass = loc_safety_assumption,
         loc_liveness_ass = concretize_property(liveness_loc_assumption, 1),
         loc_tok_ring_liveness_gua = concretize_property(get_tok_rings_liveness_par_props()[0], 1)
     )
 
     loc_spec_liveness_part = '(({fair_sched}) && ({fair_tok}) && ({loc_safety_ass}) && ({loc_liveness_ass})) -> ({loc_spec_liveness_gua})'.format(
-        fair_sched = get_fair_scheduler_property(1, SCHED_ID_PREFIX),
+        fair_sched = get_fair_proc_scheduling_property(0, 2, SCHED_ID_PREFIX),
         fair_tok = concretize_property(par_fair_token, 1),
         loc_safety_ass = loc_safety_assumption,
         loc_liveness_ass = concretize_property(liveness_loc_assumption, 1),
@@ -374,14 +374,14 @@ def main_strengthening(smt_file_name, logic, spec_type, dot_files_prefix, bounds
         prev=SENDS_PREV_NAME)
 
     loc_tok_ring_liveness_part = '(({fair_sched}) && ({loc_safety_ass}) && ({loc_liveness_ass})) -> ({loc_tok_ring_liveness_gua})'.format(
-        fair_sched = get_fair_scheduler_property(1, SCHED_ID_PREFIX),
+        fair_sched = get_fair_proc_scheduling_property(0, cutoff, SCHED_ID_PREFIX),
         loc_safety_ass = loc_safety_assumption,
         loc_liveness_ass = concretize_property(liveness_loc_assumption, 1),
         loc_tok_ring_liveness_gua = concretize_property(get_tok_rings_liveness_par_props()[0], 1)
     )
 
     loc_spec_liveness_part = '(({fair_sched}) && ({fair_tok}) && ({loc_safety_ass}) && ({loc_liveness_ass})) -> ({loc_spec_liveness_gua})'.format(
-        fair_sched = get_fair_scheduler_property(1, SCHED_ID_PREFIX),
+        fair_sched = get_fair_proc_scheduling_property(0, cutoff, SCHED_ID_PREFIX),
         fair_tok = concretize_property(par_fair_token, 1),
         loc_safety_ass = loc_safety_assumption,
         loc_liveness_ass = concretize_property(liveness_loc_assumption, 1),
@@ -495,7 +495,7 @@ def tmp():
     smt_file_name = smt_file.name
     smt_file.close()
 
-    logger.info('temp file is used %s', smt_file_name)
+    logger.info('temp file prefix used is %s', smt_file_name)
 
     main_func = _OPT_TO_MAIN[args.opt]
     main_func(smt_file_name, logic,
