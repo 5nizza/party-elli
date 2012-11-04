@@ -26,7 +26,7 @@ class Ltl2UCW:
         negated = negate(property)
 
         rc, ba, err = execute_shell('{0} "{1}"'.format(self._execute_cmd, negated))
-        assert rc == 0, rc
+        assert rc == 0, str(rc) + ', err: ' + str(err) + ', out: ' + str(ba)
         assert (err == '') or err is None, err
         self._logger.debug(ba)
 

@@ -21,11 +21,11 @@ def is_absorbing(node):
     true_label = Label({})
 
     sets_of_flagged_nodes = node.transitions.get(true_label)
-    if sets_of_flagged_nodes == None:
+    if sets_of_flagged_nodes is None:
         return False
 
     all_next_flagged_nodes = chain(*sets_of_flagged_nodes)
-    return index_of(lambda node_flag: node_flag[0] == node, all_next_flagged_nodes) != None
+    return index_of(lambda node_flag: node_flag[0] == node, all_next_flagged_nodes) is not None
 
 
 def is_safety_automaton(automaton):
@@ -59,7 +59,7 @@ def satisfied(label, signal_values):
 
 
 def to_dot(automaton):
-    if automaton == None:
+    if automaton is None:
         return ''
 
     rej_header = []

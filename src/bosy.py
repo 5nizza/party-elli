@@ -1,22 +1,31 @@
 import argparse
 import logging
 import sys
+import tempfile
 from helpers.main_helper import setup_logging, create_spec_converter_z3
+from helpers.spec_helper import and_properties
 from module_generation.dot import to_dot
 from parsing.parser import parse_ltl
 from synthesis.solitary_model_searcher import search
 from synthesis.smt_logic import UFLIA
 
 
+
+
 def main(ltl_file, dot_file, bounds, ltl2ucw_converter, z3solver, logger):
     raw_ltl_spec = parse_ltl(ltl_file.read())
     ltl_spec = raw_ltl_spec
 
-    automaton = ltl2ucw_converter.convert(ltl_spec)
+    spec_property = and_properties(ltl_spec.properties)
+
+    automaton = ltl2ucw_converter.convert(spec_property)
     logger.info('spec automaton has {0} states'.format(len(automaton.nodes)))
 
-    models = search(automaton, ltl_spec.inputs, ltl_spec.outputs, bounds, z3solver, UFLIA())
-    assert len(models) == 1
+    with tempfile.NamedTemporaryFile(delete=False, dir='./') as smt_file:
+        smt_file_prefix = smt_file.name
+
+    models = search(automaton, ltl_spec.inputs, ltl_spec.outputs, bounds, z3solver, UFLIA(None), smt_file_prefix)
+    assert models is None or len(models) == 1
 
     logger.info('model %s found', ['', 'not'][models is None])
 

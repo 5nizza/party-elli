@@ -1,7 +1,5 @@
 import argparse
-import cProfile
 from itertools import chain
-import pstats
 import sys
 import tempfile
 from helpers.main_helper import setup_logging, create_spec_converter_z3
@@ -463,7 +461,7 @@ _OPT_TO_MAIN = {'sync_hub':main_with_sync_hub,
                 'bottomup':main_bottomup}
 
 
-def tmp():
+def main():
     parser = argparse.ArgumentParser(description='Parametrized Synthesis Tool for token rings architecture')
     parser.add_argument('ltl', metavar='ltl', type=str,
         help='type of LTL formula: acceptable are: pnueli, full, simple')
@@ -491,9 +489,8 @@ def tmp():
 
     logic = UFLIA(None)
 
-    smt_file = tempfile.NamedTemporaryFile(delete=False, dir='./')
-    smt_file_name = smt_file.name
-    smt_file.close()
+    with tempfile.NamedTemporaryFile(delete=False, dir='./') as smt_file:
+        smt_file_name = smt_file.name
 
     logger.info('temp file prefix used is %s', smt_file_name)
 
@@ -504,7 +501,10 @@ def tmp():
 
 
 if __name__ == '__main__':
-    tmp()
+    main()
+
+
+#    main()
 
 #    profile_file_name = 'profile_data'
 #

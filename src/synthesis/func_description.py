@@ -2,7 +2,7 @@ from helpers.python_ext import index_of
 
 class FuncDescription:
     def __init__(self, func_name,
-                 argname_to_type, architecture_inputs,
+                 argname_to_type, architecture_inputs:"inputs that are managed by Impl?",
                  output,
                  body):
         self._name = func_name
@@ -69,3 +69,10 @@ class FuncDescription:
             output = self._output,
             definition = self.definition
         )
+
+
+    def __eq__(self, other):
+        if not isinstance(other, FuncDescription):
+            return False
+
+        return str(other) == str(self)

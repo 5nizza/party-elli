@@ -151,7 +151,7 @@ class GenericEncoder:
 
 
     def encode_sys_aux_functions(self, impl, smt_lines):
-        func_descs = impl.aux_func_descs + impl.taus_descs
+        func_descs = impl.aux_func_descs + (impl.taus_descs if impl.taus_descs != impl.model_taus_descs else [])
         functions = self._define_declare_functions(func_descs)
         smt_lines += functions
 
