@@ -867,7 +867,7 @@ class AND(DualBase):
     _identity = True
     operator = "*"
 
-
+#
 class OR(DualBase):
     """
     Boolean OR operation.

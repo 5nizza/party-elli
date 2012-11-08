@@ -1,6 +1,9 @@
 from itertools import chain, product
+from helpers.boolean import *
 from helpers.python_ext import index_of
-from interfaces.automata import Label
+from interfaces.automata import Label, LIVE_END, Node, DEAD_END
+
+import unittest
 
 
 def flatten_nodes_in_transition(node_transitions):
@@ -165,3 +168,209 @@ def enumerate_values(variables):
         result.append(values)
     return result
 
+##############################################################################
+
+def is_dead_end(state):
+    if state is DEAD_END:
+        return True
+
+    if Label({}) in state.transitions:
+        next_states_set_list = state.transitions[Label({})]
+        assert len(next_states_set_list) == 1
+        next_states_set = next_states_set_list[0]
+
+        if index_of(lambda node_flag: node_flag[0] == state and node_flag[1], next_states_set) is not None:
+            return True
+
+    return False
+
+
+class DeadEndTest(unittest.TestCase):
+    def test_dead_end(self):
+        node = Node('node')
+        node.add_transition(Label({}), {(node, True)})
+
+        assert is_dead_end(node)
+
+
+##############################################################################
+def convert_to_formula(label, symbol_from_var):
+    formula = TRUE
+    for v in label:
+        s = symbol_from_var[v]
+        if label[v]:
+            formula = AND(formula, s)
+        else:
+            formula = AND(formula, NOT(s))
+
+    return formula
+
+
+def _label_from_clause(clause):
+    """input is AND clause"""
+    label_dict = dict()
+
+    for l in clause.literals:
+        assert len(l.symbols) == 1, str(l.symbols)
+        symbol = next(iter(l.symbols))
+        variable = symbol.obj
+        label_dict[variable] = not isinstance(l, NOT)
+
+    return Label(label_dict)
+
+
+def convert_to_labels(formula):
+    if formula == FALSE:
+        return None
+
+    if formula == TRUE:
+        return {Label({})}
+
+    labels = set()
+    for c in normalize(OR, formula):
+        labels.add(_label_from_clause(c))
+
+    return labels
+
+
+def get_intersection(label1, label2):
+    for v in label1:
+        if v in label2 and label1[v] != label2[v]:
+            return None
+
+    result = dict(label1)
+    result.update(label2)
+    return Label(result)
+#overkill?
+#    formula1 = convert_to_formula(label1)
+#    formula2 = convert_to_formula(label2)
+#
+#    intersection = AND(formula1, formula2)
+#    if intersection == FALSE:
+#        return None
+#
+#    labels = convert_to_labels(intersection)
+#
+#    assert len(labels) == 1, str(labels)
+#
+#    return next(iter(labels))
+
+def complement_node(node, variables):
+    symbol_from_var = dict(zip(variables, symbols(*variables)))
+    labels_as_formulas = [convert_to_formula(label, symbol_from_var) for label in node.transitions]
+
+    if len(labels_as_formulas) == 0:
+        not_any_of_labels = TRUE
+    elif len(labels_as_formulas) == 1:
+        not_any_of_labels = NOT(labels_as_formulas[0])
+    else:
+        not_any_of_labels = NOT(OR(*labels_as_formulas))
+
+    complemented_labels = convert_to_labels(not_any_of_labels)
+    if complemented_labels:
+        for complemented_label in complemented_labels:
+            node.add_transition(complemented_label, {(LIVE_END, False)})
+
+#
+def complement_with_live_ends(automaton, variables):
+    """ Complement nodes with transitions to live_end_nodes """
+
+    automaton.nodes.update({LIVE_END})
+
+    for n in automaton.nodes:
+        complement_node(n, variables)
+
+
+class ComplementTests(unittest.TestCase):
+    def test_complement_node_with_live_ends(self):
+        node = Node('node')
+        node.add_transition(Label({'a':True}), {(node, False)})
+
+        complement_node(node, ['a'])
+
+        assert node.transitions[Label({'a':True})] == [{(node, False)}]
+        assert node.transitions[Label({'a':False})] == [{(LIVE_END, False)}]
+
+    def test_complement_node_with_live_ends2(self):
+        node = Node('node')
+        complement_node(node, ['a'])
+
+        assert node.transitions[Label({})] == [{(LIVE_END, False)}]
+
+    def test_complement_node_with_live_ends3(self):
+        node = Node('node')
+        node.add_transition(Label({}), {(node, False)})
+        complement_node(node, ['a'])
+
+        assert node.transitions[Label({})] == [{(node, False)}]
+
+    def test_complement_node_with_live_ends4(self):
+        node = Node('node')
+        node.add_transition(Label({'a':True, 'b':False}), {(node, False)})
+
+        node.add_transition(Label({'a':False, 'b':True}), {(node, False)})
+
+        complement_node(node, ['a', 'b'])
+
+        assert node.transitions[Label({'a':False, 'b':False})] == [{(LIVE_END, False)}]
+        assert node.transitions[Label({'a':True, 'b':True})] == [{(LIVE_END, False)}]
+        assert node.transitions[Label({'a':True, 'b':False})] == [{(node, False)}]
+        assert node.transitions[Label({'a':False, 'b':True})] == [{(node, False)}]
+
+
+
+##############################################################################
+#def get_partitioned_dst_nodes(node, label, variables):
+#    varval_set = convert_to_varval_set(label, variables)
+#
+#    label_dst_set_pairs = set() #set of pairs (label, dst_set)
+#    for l, dst_set_list in node.transitions.items():
+#        assert len(dst_set_list) == 1
+#        dst_set_flagged = frozenset(dst_set_list[0])
+#
+#        l_varval_set = convert_to_varval_set(l, variables)
+#
+#        common = l_varval_set.intersection(varval_set)
+#        print('intersection of l and label is ', l, label, common)
+#        print(l, ' ', common, ' ', str(dst_set_flagged))
+#        if len(common):
+#            label_dst_set_pairs.add((convert_to_label(common), dst_set_flagged))
+#
+#    return label_dst_set_pairs
+
+
+class PartitioningTests(unittest.TestCase):
+#    def test_partitioning(self):
+#        node = Node('node')
+#        node2 = Node('node2')
+#
+#        node.add_transition(Label({'a':True}), {(node, False)})
+#        node.add_transition(Label({'a':False}), {(node2, False)})
+#
+#        label_dst_set_pairs = get_partitioned_dst_nodes(node, Label({}), ['a'])
+#        assert label_dst_set_pairs == {(Label({'a':True}), frozenset({(node, False)})),
+#                                       (Label({'a':False}), frozenset({(node2, False)}))}, str(label_dst_set_pairs)
+#
+#        assert get_partitioned_dst_nodes(node, Label({'a':True}), ['a']) == \
+#               {(Label({'a':True}), frozenset({(node, False)}))}
+#
+##        print(str(get_partitioned_dst_nodes(node, Label({'a':True}), ['a', 'b'])))
+##        print()
+#        print()
+#        print()
+#
+#        assert get_partitioned_dst_nodes(node, Label({'a':True}), ['a', 'b']) ==\
+#               {(Label({'a':True}), frozenset({(node, False)}))}
+
+
+    def test_convert_to_formula(self):
+        boolean_symbols = dict(zip(['a', 'b'], symbols(*['a', 'b'])))
+        assert convert_to_labels(convert_to_formula(Label({'a':True}), boolean_symbols)) == {Label({'a':True})}
+        assert convert_to_labels(convert_to_formula(Label({'a':True, 'b':False}), boolean_symbols)) == {Label({'a':True, 'b':False})}
+
+    def test_get_intersection(self):
+        assert get_intersection(Label({}), Label({})) == Label({})
+        assert get_intersection(Label({'a':True}), Label({})) == Label({'a':True})
+        assert get_intersection(Label({'a':True}), Label({'b':False})) == Label({'a':True, 'b':False})
+        assert get_intersection(Label({'a':True}), Label({'a':False})) is None
+        assert get_intersection(Label({'a':False}), Label({'a':False, 'b':True})) == Label({'a':False, 'b':True})

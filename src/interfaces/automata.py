@@ -62,14 +62,15 @@ class Node:
 
     def add_transition(self, label, flagged_nodes):
         """ Add transition:
-            flagged_nodes - set of destination nodes, singleton set if non-universal transition.
+            flagged_nodes - set of pairs (node, is_rejecting)
             Several calls with the same label are allowed - this means that transition is non-deterministic.
         """
         label = Label(label)
         label_transitions = self._transitions[label] = self._transitions.get(label, [])
 
         flagged_nodes_set = set(flagged_nodes)
-        assert flagged_nodes_set not in label_transitions
+        assert flagged_nodes_set not in label_transitions, \
+        str(label_transitions) + ', ' + str(flagged_nodes_set) + ', ' + str(label) + ', ' + str(self._name)
 
         label_transitions.append(flagged_nodes_set)
 
@@ -97,7 +98,12 @@ class Node:
 
 #------------------------------CONSTANTS---------------------------------
 DEAD_END = Node('dead')
+DEAD_END.add_transition(Label({}), {(DEAD_END, True)})
+
 LIVE_END = Node('live')
+LIVE_END.add_transition(Label({}), {(LIVE_END, False)})
+
+
 
 
 

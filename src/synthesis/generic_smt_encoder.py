@@ -71,7 +71,7 @@ class GenericEncoder:
         assume_out = self._get_assumption_on_output_vars(label, sys_state_vector, impl)
 
         ##addition: scheduling+topology
-        assume_is_active = impl.get_architecture_trans_assumptions(label, sys_state_vector)
+        assume_is_active = impl.get_architecture_trans_assumption(label, sys_state_vector)
 
         implication_left = op_and([assume_laB, assume_out, assume_is_active])
 
@@ -102,27 +102,34 @@ class GenericEncoder:
 
             and_args.append(implication_right)
 
-        assertion = make_assert(forall_bool(free_input_vars, op_implies(implication_left, op_and(and_args))))
-        return assertion
+#        assertion = make_assert(forall_bool(free_input_vars, op_implies(implication_left, op_and(and_args))))
+        condition = forall_bool(free_input_vars, op_implies(implication_left, op_and(and_args)))
+        return condition
 
 
-    def encode_automaton(self, impl, smt_lines):
-        smt_lines += impl.get_architecture_assertions()
-
+    def encode_run_graph_headers(self, impl, smt_lines):
         if not impl.automaton: #make sense if there are architecture assertions and no automaton
             return smt_lines
 
-        assert len(impl.automaton.initial_sets_list) == 1, 'nondet not supported'
-
         smt_lines += self._define_automaton_states(impl.automaton)
-
         smt_lines += self._define_counters(impl.proc_states_descs)
+        return smt_lines
+
+
+    def get_run_graph_conjunctions(self, impl):
+        conjunction = StrAwareList()
+        conjunction += impl.get_architecture_conditions() #TODO: looks hacky! replace with two different encoders?
+
+        if not impl.automaton: #TODO: see above, make sense if there are architecture assertions and no automaton
+            return conjunction
+
+        assert len(impl.automaton.initial_sets_list) == 1, 'nondet not supported'
 
         init_sys_states = impl.init_states
 
         for init_spec_state in impl.automaton.initial_sets_list[0]:
             for init_sys_state in init_sys_states:
-                smt_lines += self._make_init_states_condition(
+                conjunction += self._make_init_states_condition(
                     self._get_smt_name_spec_state(init_spec_state),
                     self._get_smt_name_sys_state(init_sys_state, impl.proc_states_descs))
 
@@ -134,12 +141,49 @@ class GenericEncoder:
         for spec_state in spec_states:
             for global_state in global_states:
                 for label, dst_set_list in spec_state.transitions.items():
-                    transition_assertions = self._encode_transition(spec_state, global_state, label, state_to_rejecting_scc, impl)
+                    transition_condition = self._encode_transition(spec_state, global_state, label, state_to_rejecting_scc, impl)
 
-                    smt_lines += comment(label)
-                    smt_lines += transition_assertions
+#                    smt_lines += comment(label)
+                    conjunction += transition_condition
 
+        return conjunction
+
+
+    def encode_run_graph(self, impl, smt_lines):
+        conjunctions = self.get_run_graph_conjunctions(impl)
+        for c in conjunctions:
+            smt_lines += make_assert(c)
         return smt_lines
+
+#        smt_lines += impl.get_architecture_assertions() #TODO: looks hacky! replace with two different encoders?
+#
+#        if not impl.automaton: #TODO: see above, make sense if there are architecture assertions and no automaton
+#            return smt_lines
+#
+#        assert len(impl.automaton.initial_sets_list) == 1, 'nondet not supported'
+#
+#        init_sys_states = impl.init_states
+#
+#        for init_spec_state in impl.automaton.initial_sets_list[0]:
+#            for init_sys_state in init_sys_states:
+#                smt_lines += self._make_init_states_condition(
+#                    self._get_smt_name_spec_state(init_spec_state),
+#                    self._get_smt_name_sys_state(init_sys_state, impl.proc_states_descs))
+#
+#        global_states = list(product(*[range(len(proc_states_desc[1])) for proc_states_desc in impl.proc_states_descs]))
+#
+#        state_to_rejecting_scc = build_state_to_rejecting_scc(impl.automaton)
+#
+#        spec_states = impl.automaton.nodes
+#        for spec_state in spec_states:
+#            for global_state in global_states:
+#                for label, dst_set_list in spec_state.transitions.items():
+#                    transition_assertions = self._encode_transition(spec_state, global_state, label, state_to_rejecting_scc, impl)
+#
+#                    smt_lines += comment(label)
+#                    smt_lines += transition_assertions
+#
+#        return smt_lines
 
 
     def encode_sys_model_functions(self, impl, smt_lines):
@@ -162,7 +206,8 @@ class GenericEncoder:
         self.encode_headers(smt_lines)
         self.encode_sys_model_functions(impl, smt_lines)
         self.encode_sys_aux_functions(impl, smt_lines)
-        self.encode_automaton(impl, smt_lines)
+        self.encode_run_graph_headers(impl, smt_lines)
+        self.encode_run_graph(impl, smt_lines)
         self.encode_footings(impl, smt_lines)
 
         return smt_lines
@@ -364,7 +409,8 @@ class GenericEncoder:
 
 
     def _make_init_states_condition(self, init_spec_state_name, init_sys_state_name):
-        return make_assert(call_func(self._laB_name, [init_spec_state_name, init_sys_state_name]))
+        return call_func(self._laB_name, [init_spec_state_name, init_sys_state_name])
+#        return make_assert(call_func(self._laB_name, [init_spec_state_name, init_sys_state_name]))
 
 
     def _laB(self, spec_state_name, sys_state_expression):

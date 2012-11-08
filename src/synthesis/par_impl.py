@@ -4,57 +4,48 @@ from helpers.cached_property import cached_property
 from helpers.python_ext import bin_fixed_list, StrAwareList, index_of
 from interfaces.automata import Label
 from parsing.en_rings_parser import anonymize_concr_var, concretize_anon_vars, parametrize_anon_var, concretize_anon_var
+from synthesis.blank_impl import BlankImpl
 from synthesis.func_description import FuncDescription
 from synthesis.smt_helper import call_func, op_and, get_bits_definition, make_assert, op_not
 
 
-class ParImpl: #TODO: separate architecture from the spec
-    def __init__(self, automaton, anon_inputs, anon_outputs, nof_processes,
-                 nof_local_states,
-                 sched_var_prefix, active_anon_var_name, sends_anon_var_name, sends_prev_anon_var_name, has_tok_var_prefix,
-                 state_type,
-                 tau_name,
-                 internal_funcs_postfix):
+class ParImpl(BlankImpl): #TODO: separate architecture from the spec
+    def __init__(self, automaton, anon_inputs, anon_outputs, nof_processes, nof_local_states, sched_var_prefix,
+                 active_anon_var_name, sends_anon_var_name, sends_prev_anon_var_name, has_tok_var_prefix, state_type,
+                 tau_name, internal_funcs_postfix):
+        super().__init__()
+
         self.automaton = automaton
-
         self.nof_processes = nof_processes
-
         self._state_type = state_type
         self.proc_states_descs = self._create_proc_descs(nof_local_states)
-
         self._nof_bits = int(max(1, math.ceil(math.log(self.nof_processes, 2))))
-
         self._prev_name = sends_prev_anon_var_name
-
-        #there are 3 kinds of inputs - due to topology (sends_prev), due to synchronicity - sched, and original inputs
-        #anon_inputs are inputs due to topology+original
         self._anon_inputs = list(anon_inputs)
         if nof_processes > 1:
-            self.orig_inputs = list(map(lambda i: concretize_anon_vars(filter(lambda input: input != sends_prev_anon_var_name, self._anon_inputs), i), range(nof_processes)))
+            self.orig_inputs = list(map(lambda i: concretize_anon_vars(
+                filter(lambda input: input != sends_prev_anon_var_name, self._anon_inputs), i), range(nof_processes)))
         else:
             self.orig_inputs = list(map(lambda i: concretize_anon_vars(self._anon_inputs, i), range(nof_processes)))
-
         self._anon_outputs = list(anon_outputs)
         self.all_outputs = list(map(lambda i: concretize_anon_vars(self._anon_outputs, i), range(nof_processes)))
-        self.orig_outputs = list(map(lambda i: concretize_anon_vars(filter(lambda out: out not in [has_tok_var_prefix, sends_anon_var_name], self._anon_outputs), i), range(nof_processes)))
-
+        self.orig_outputs = list(map(lambda i: concretize_anon_vars(
+            filter(lambda out: out not in [has_tok_var_prefix, sends_anon_var_name], self._anon_outputs), i),
+            range(nof_processes)))
         self._tau_name = tau_name
-        self._is_active_name = 'is_active'+internal_funcs_postfix
-        self._equal_bits_name = 'equal_bits'+internal_funcs_postfix
-        self._prev_is_sched_name = 'prev_is_sched'+internal_funcs_postfix
-        self._tau_sched_wrapper_name = 'tau_sch'+internal_funcs_postfix
-
+        self._is_active_name = 'is_active' + internal_funcs_postfix
+        self._equal_bits_name = 'equal_bits' + internal_funcs_postfix
+        self._prev_is_sched_name = 'prev_is_sched' + internal_funcs_postfix
+        self._tau_sched_wrapper_name = 'tau_sch' + internal_funcs_postfix
         self._proc_id_prefix = 'proc'
         self._active_var_prefix = active_anon_var_name[:-1]
         self._sends_name = sends_anon_var_name
         self._has_tok_var_prefix = has_tok_var_prefix
-
         self._sched_var_prefix = sched_var_prefix
         self._sched_vars, self._sched_args_defs = get_bits_definition(self._sched_var_prefix, self._nof_bits)
         self._proc_vars, self._proc_args_defs = get_bits_definition(self._proc_id_prefix, self._nof_bits)
-
         self._equals_first_args, _ = get_bits_definition('x', self._nof_bits)
-        self._equals_second_args, _= get_bits_definition('y', self._nof_bits)
+        self._equals_second_args, _ = get_bits_definition('y', self._nof_bits)
 
 
     @cached_property
@@ -124,7 +115,7 @@ class ParImpl: #TODO: separate architecture from the spec
         return par_var_name
 
 
-    def get_architecture_trans_assumptions(self, label, sys_state_vector):
+    def get_architecture_trans_assumption(self, label, sys_state_vector):
         index_of_prev = index_of(lambda var_name: anonymize_concr_var(var_name)[0] == self._prev_name, label.keys())
         assert not (self.nof_processes > 1 and index_of_prev is not None), 'not implemented'
 
@@ -369,16 +360,16 @@ class ParImpl: #TODO: separate architecture from the spec
         return Label(filtered_label)
 
 
-    def get_architecture_assertions(self):
-        smt_lines = StrAwareList()
+    def get_architecture_conditions(self):
+        conditions = StrAwareList()
 
         #TODO: hack: why does the order matter?
-        smt_lines += make_assert(call_func(self._has_tok_var_prefix, [self.proc_states_descs[0][1][self.init_states[0][0]]]))
+        conditions += call_func(self._has_tok_var_prefix, [self.proc_states_descs[0][1][self.init_states[0][0]]])
 
         for i in range(1, self.nof_processes):
-            smt_lines += make_assert(op_not(call_func(self._has_tok_var_prefix, [self.proc_states_descs[i][1][self.init_states[0][i]]])))
+            conditions += op_not(call_func(self._has_tok_var_prefix, [self.proc_states_descs[i][1][self.init_states[0][i]]]))
 
-        return smt_lines
+        return conditions
 
 
     @cached_property

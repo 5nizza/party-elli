@@ -63,12 +63,14 @@ def search(logic,
                     impl.init_states[0])
 
                 local_encoder = GenericEncoder(logic, 'LQ', 'l')
-                local_encoder.encode_automaton(local_impl, query_lines)
+                local_encoder.encode_run_graph_headers(local_impl, query_lines)
+                local_encoder.encode_run_graph(local_impl, query_lines)
 
             query_lines += comment('global_encoder' + sys_intern_funcs_postfix)
 
             encoder.encode_sys_aux_functions(impl, query_lines)
-            encoder.encode_automaton(impl, query_lines)
+            encoder.encode_run_graph_headers(impl, query_lines)
+            encoder.encode_run_graph(impl, query_lines)
 
         encoder.encode_footings(impl, query_lines)
 

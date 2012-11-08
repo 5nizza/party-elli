@@ -1,7 +1,8 @@
 from itertools import chain
 from helpers import boolean
 from helpers.boolean import AND, normalize, FALSE, TRUE
-from interfaces.automata import Automaton, Node, DEAD_END, LIVE_END
+from helpers.python_ext import index_of
+from interfaces.automata import Automaton, Node, DEAD_END, LIVE_END, Label
 from helpers.automata_helper import get_next_states, enumerate_values
 
 

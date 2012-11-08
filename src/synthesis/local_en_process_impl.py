@@ -59,7 +59,7 @@ class LocalENImpl:
         return concr_var_name
 
 
-    def get_architecture_trans_assumptions(self, label, sys_state_vector):
+    def get_architecture_trans_assumption(self, label, sys_state_vector):
         # ignoring active_i in transition labels
 
         proc_state = self.proc_states_descs[0][1][sys_state_vector[0]]
@@ -124,20 +124,20 @@ class LocalENImpl:
             next_tok_sends_prev_str = call_func(self._has_tok_var_prefix, [tau_sends_prev_str])
 
             #
-            tok_dont_disappear = make_assert(forall_bool(free_vars,
-                op_implies(op_and([has_tok_str, op_not(sends_tok_str)]), next_tok_not_sends_prev_str)))
+            tok_dont_disappear = forall_bool(free_vars,
+                op_implies(op_and([has_tok_str, op_not(sends_tok_str)]), next_tok_not_sends_prev_str))
 
-            sends_with_token_only = make_assert(forall_bool(free_vars,
-                op_implies(sends_tok_str, has_tok_str)))
+            sends_with_token_only = forall_bool(free_vars,
+                op_implies(sends_tok_str, has_tok_str))
 
-            sends_means_release = make_assert(forall_bool(free_vars,
-                op_implies(sends_tok_str, op_not(next_tok_not_sends_prev_str))))
+            sends_means_release = forall_bool(free_vars,
+                op_implies(sends_tok_str, op_not(next_tok_not_sends_prev_str)))
 
-            sends_prev_means_acquire = make_assert(forall_bool(free_vars,
-                next_tok_sends_prev_str))
+            sends_prev_means_acquire = forall_bool(free_vars,
+                next_tok_sends_prev_str)
 
-            no_sends_prev_no_tok_means_no_next_tok = make_assert(forall_bool(free_vars,
-                op_implies(op_not(has_tok_str), op_not(next_tok_not_sends_prev_str))))
+            no_sends_prev_no_tok_means_no_next_tok = forall_bool(free_vars,
+                op_implies(op_not(has_tok_str), op_not(next_tok_not_sends_prev_str)))
 
             smt_lines += [tok_dont_disappear,
                           sends_with_token_only,
