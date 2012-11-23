@@ -47,17 +47,21 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
         self._equals_first_args, _ = get_bits_definition('x', self._nof_bits)
         self._equals_second_args, _ = get_bits_definition('y', self._nof_bits)
 
+        self.init_states = self._build_init_states()
+        self.aux_func_descs = self._build_aux_func_descs()
+        self.all_outputs_descs = self._build_all_outputs_descs()
+        self.taus_descs = self._build_taus_descs()
+        self.model_taus_descs = self._build_model_taus_descs()
 
-    @cached_property
-    def aux_func_descs(self):
+
+    def _build_aux_func_descs(self):
         """ Return func_name, input_types, output_type, body[optional]
         """
         return [self._get_desc_equal_bools(),
                 self._get_desc_prev_is_sched(),
                 self._get_desc_is_active()]
 
-    @cached_property
-    def all_outputs_descs(self):
+    def _build_all_outputs_descs(self):
         descs = []
         for o in self._anon_outputs:
             argname_to_type = {'state': self._state_type}
@@ -69,13 +73,11 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
         return [descs]*self.nof_processes
 
 
-    @cached_property
-    def taus_descs(self):
+    def _build_taus_descs(self):
         return [self._get_desc_tau_sched_wrapper()]*self.nof_processes
 
 
-    @cached_property
-    def model_taus_descs(self):
+    def _build_model_taus_descs(self):
         return [self._get_desc_local_tau()]*self.nof_processes
 
 
@@ -372,8 +374,7 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
         return conditions
 
 
-    @cached_property
-    def init_states(self):
+    def _build_init_states(self):
         #TODO: hardcoded knowledge: state 0 no tok, state 1 tok
 
         if len(self.proc_states_descs) == 1:

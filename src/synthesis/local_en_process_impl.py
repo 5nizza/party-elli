@@ -1,42 +1,47 @@
-from helpers.cached_property import cached_property
 from helpers.python_ext import StrAwareList
 from interfaces.automata import Label
+from synthesis.blank_impl import BlankImpl
 from synthesis.func_description import FuncDescription
-from synthesis.smt_helper import op_and, call_func, op_not, op_implies, forall_bool, build_values_from_label, make_assert
+from synthesis.smt_helper import op_and, call_func, op_not, op_implies, forall_bool, build_values_from_label
 
-class LocalENImpl:
+class LocalENImpl(BlankImpl):
     def __init__(self, automaton, anon_inputs, anon_outputs, nof_local_states, sys_state_type,
                  has_tok_var_prefix,
                  sends_var_name,
                  sends_prev_var_name,
                  tau_name,
                  init_states):
-        #TODO: if introduce has_tok optimization - be careful about initial states! (case of HOT encoding)
-        self.automaton = automaton
-
-        self._state_type = sys_state_type
-
-        self.nof_processes = 1
-        self.proc_states_descs = self._create_proc_descs(nof_local_states)
-
-        self._nof_local_states = nof_local_states
-
-        #no architecture => all architecture specific inputs/outputs
-        self.orig_inputs = [list(anon_inputs)]
-        self.orig_outputs = self.all_outputs = [list(anon_outputs)]
+        super().__init__()
 
         self._tau_name = tau_name
         self._has_tok_var_prefix = has_tok_var_prefix
         self._sends_prev_var_name = sends_prev_var_name
-        self._init_states = init_states
         self._sends_var_name = sends_var_name
+        self._state_type = sys_state_type
+        self._nof_local_states = nof_local_states
 
-    @cached_property
-    def aux_func_descs(self):
-        return []
+        self.automaton = automaton
+        self.nof_processes = 1
 
-    @cached_property
-    def taus_descs(self):
+        self.proc_states_descs = self._build_proc_descs()
+
+        self.orig_inputs = [list(anon_inputs)]
+        self.inputs = [self.orig_inputs]
+
+        self.orig_outputs = self.all_outputs = [list(anon_outputs)]
+        self.all_outputs = [self.orig_outputs]
+
+        self.init_states = self._build_init_states(init_states)
+        self.aux_func_descs = []
+
+        self.outputs_descs = None
+        self.all_outputs_descs = None
+
+        self.taus_descs = self._build_taus_descs()
+        self.model_taus_descs = self._build_model_taus_descs()
+
+
+    def _build_taus_descs(self):
         argname_to_type = dict([('state', self._state_type)] + list(map(lambda i: (str(i), 'Bool'), self.orig_inputs[0])))
         tau_desc = FuncDescription(self._tau_name,
             argname_to_type,
@@ -46,8 +51,8 @@ class LocalENImpl:
 
         return [tau_desc]
 
-    @cached_property
-    def model_taus_descs(self):
+
+    def _build_model_taus_descs(self):
         return self.taus_descs
 
 
@@ -77,7 +82,8 @@ class LocalENImpl:
         return []
 
 
-    def _create_proc_descs(self, nof_local_states):
+    def _build_proc_descs(self):
+        nof_local_states = self._nof_local_states
         return list(map(lambda proc_i: (self._state_type, list(map(lambda s: self._state_type.lower()+str(s), range(nof_local_states)))),
                         range(self.nof_processes)))
 
@@ -86,13 +92,14 @@ class LocalENImpl:
         assert proc_index == 0, str(proc_index)
         return label
 
+
     def convert_global_argnames_to_proc_argnames(self, argname_to_values):
         return argname_to_values
 
-    @cached_property
-    def init_states(self):
+
+    def _build_init_states(self, init_states):
         init_set_of_states = list()
-        for state in self._init_states:
+        for state in init_states:
             init_set_of_states.append([state])
         return init_set_of_states
 
@@ -148,7 +155,7 @@ class LocalENImpl:
         return smt_lines
 
 
-    def get_architecture_assertions(self):
+    def get_architecture_conditions(self):
         smt_lines = self._get_tok_rings_safety_props()
 
 #        smt_lines += '(assert (and (not (tok_ lt2)) (g_ lt2)))'

@@ -84,13 +84,3 @@ def search(logic,
             return encoder.parse_model(data_lines, impl)
 
     return None
-
-#
-#    local_impl = LocalENImpl(local_automaton, inputs, outputs, bound, sys_state_type,
-#        has_tok_var_prefix, sends_anon_var_name, sends_prev_var_name, impl.init_states[0][0:2])
-#
-#    local_query_lines = StrAwareList()
-#
-#    local_query_lines += comment('local_encoder')
-#    local_encoder = GenericEncoder(UFLIA(), 'LQ', 'l')
-#    local_encoder.encode_automaton(local_impl, local_query_lines)
