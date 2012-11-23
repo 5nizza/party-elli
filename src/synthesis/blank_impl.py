@@ -8,16 +8,13 @@ class BlankImpl:
 
         self.proc_states_descs = []
 
-        self.inputs = [[]]
+#        self.inputs = [[]]
         self.orig_inputs = []
-
-        self.outputs = [[]]
-        self.all_outputs = [[]]
 
         self.init_states = []
         self.aux_func_descs = []
 
-        self.outputs_descs = []
+        self.all_outputs = [[]]
         self.all_outputs_descs = [[]]
 
         self.taus_descs = []

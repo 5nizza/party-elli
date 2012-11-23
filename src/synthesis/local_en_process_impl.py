@@ -28,12 +28,10 @@ class LocalENImpl(BlankImpl):
         self.orig_inputs = [list(anon_inputs)]
         self.inputs = [self.orig_inputs]
 
-        self.all_outputs = [list(anon_outputs)]
-
         self.init_states = self._build_init_states(init_states)
         self.aux_func_descs = []
 
-        self.outputs_descs = None
+        self.all_outputs = [list(anon_outputs)]
         self.all_outputs_descs = None
 
         self.taus_descs = self._build_taus_descs()

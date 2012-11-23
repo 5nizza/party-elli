@@ -1,12 +1,11 @@
 from itertools import permutations, chain
 import math
-from helpers.cached_property import cached_property
 from helpers.python_ext import bin_fixed_list, StrAwareList, index_of
 from interfaces.automata import Label
-from parsing.en_rings_parser import anonymize_concr_var, concretize_anon_vars, parametrize_anon_var, concretize_anon_var
+from parsing.en_rings_parser import anonymize_concr_var, concretize_anon_vars, concretize_anon_var
 from synthesis.blank_impl import BlankImpl
 from synthesis.func_description import FuncDescription
-from synthesis.smt_helper import call_func, op_and, get_bits_definition, make_assert, op_not
+from synthesis.smt_helper import call_func, op_and, get_bits_definition, op_not
 
 
 class ParImpl(BlankImpl): #TODO: separate architecture from the spec
@@ -15,25 +14,8 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
                  tau_name, internal_funcs_postfix):
         super().__init__()
 
-        self.automaton = automaton
-        self.nof_processes = nof_processes
         self._state_type = state_type
-        self.proc_states_descs = self._create_proc_descs(nof_local_states)
-        self._nof_bits = int(max(1, math.ceil(math.log(self.nof_processes, 2))))
         self._prev_name = sends_prev_anon_var_name
-        self._anon_inputs = list(anon_inputs)
-        if nof_processes > 1:
-            self.orig_inputs = list(map(lambda i: concretize_anon_vars(
-                filter(lambda input: input != sends_prev_anon_var_name, self._anon_inputs), i), range(nof_processes)))
-        else:
-            self.orig_inputs = list(map(lambda i: concretize_anon_vars(self._anon_inputs, i), range(nof_processes)))
-        self._anon_outputs = list(anon_outputs)
-        self.all_outputs = list(map(lambda i: concretize_anon_vars(self._anon_outputs, i), range(nof_processes)))
-
-#        self.orig_outputs = list(map(lambda i: concretize_anon_vars(
-#            filter(lambda out: out not in [has_tok_var_prefix, sends_anon_var_name], self._anon_outputs), i),
-#            range(nof_processes)))
-        
         self._tau_name = tau_name
         self._is_active_name = 'is_active' + internal_funcs_postfix
         self._equal_bits_name = 'equal_bits' + internal_funcs_postfix
@@ -44,16 +26,41 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
         self._sends_name = sends_anon_var_name
         self._has_tok_var_prefix = has_tok_var_prefix
         self._sched_var_prefix = sched_var_prefix
+
+        self._nof_bits = int(max(1, math.ceil(math.log(nof_processes, 2))))
         self._sched_vars, self._sched_args_defs = get_bits_definition(self._sched_var_prefix, self._nof_bits)
         self._proc_vars, self._proc_args_defs = get_bits_definition(self._proc_id_prefix, self._nof_bits)
         self._equals_first_args, _ = get_bits_definition('x', self._nof_bits)
         self._equals_second_args, _ = get_bits_definition('y', self._nof_bits)
 
+        self.automaton = automaton
+        self.nof_processes = nof_processes
+
+        self.proc_states_descs = self._create_proc_descs(nof_local_states)
+
+        self._anon_inputs = list(anon_inputs)
+        self.orig_inputs = self._build_orig_inputs(nof_processes, self._anon_inputs, sends_prev_anon_var_name)
+
         self.init_states = self._build_init_states()
         self.aux_func_descs = self._build_aux_func_descs()
+
+        self._anon_outputs = list(anon_outputs)
+        self.all_outputs = [concretize_anon_vars(self._anon_outputs, i) for i in range(nof_processes)]
         self.all_outputs_descs = self._build_all_outputs_descs()
-        self.taus_descs = self._build_taus_descs()
-        self.model_taus_descs = self._build_model_taus_descs()
+
+        self.taus_descs = self._build_taus_descs(self._anon_inputs)
+        self.model_taus_descs = self._build_model_taus_descs(self._anon_inputs)
+
+
+    def _build_orig_inputs(self, nof_processes, anon_inputs, prev_name):
+        assert nof_processes >= 0
+
+        if nof_processes > 1:
+            inputs = [i for i in anon_inputs if input != prev_name]
+        else: #case of async hub
+            inputs = anon_inputs
+
+        return [concretize_anon_vars(inputs, i) for i in range(nof_processes)]
 
 
     def _build_aux_func_descs(self):
@@ -75,12 +82,12 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
         return [descs]*self.nof_processes
 
 
-    def _build_taus_descs(self):
-        return [self._get_desc_tau_sched_wrapper()]*self.nof_processes
+    def _build_taus_descs(self, anon_inputs):
+        return [self._get_desc_tau_sched_wrapper(anon_inputs)]*self.nof_processes
 
 
-    def _build_model_taus_descs(self):
-        return [self._get_desc_local_tau()]*self.nof_processes
+    def _build_model_taus_descs(self, anon_inputs):
+        return [self._get_desc_local_tau(anon_inputs)]*self.nof_processes
 
 
     def convert_global_argnames_to_proc_argnames(self, arg_values_dict):
@@ -164,10 +171,10 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
         return free_sched_vars
 
 
-    def _get_desc_tau_sched_wrapper(self):
+    def _get_desc_tau_sched_wrapper(self, anon_inputs):
         state_var_name = 'state'
 
-        local_tau_inputs = self._get_desc_local_tau().inputs
+        local_tau_inputs = self._get_desc_local_tau(anon_inputs).inputs
 
         argname_to_type = dict(local_tau_inputs + \
                                list(map(lambda sch_arg: (sch_arg, 'Bool'), self._sched_vars)) +\
@@ -299,9 +306,9 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
             function(prev, crt)
 
 
-    def _get_desc_local_tau(self):
+    def _get_desc_local_tau(self, anon_inputs):
         argname_to_type = dict([('state', self._state_type)] + \
-                               list(map(lambda input: (str(input), 'Bool'), self._anon_inputs)))
+                               list(map(lambda input: (str(input), 'Bool'), anon_inputs)))
 
         description = FuncDescription(self._tau_name, argname_to_type, set(), self._state_type, None)
 
