@@ -47,7 +47,6 @@ class FuncDescription:
             body = self._body
         )
 
-
     def get_args_list(self, argname_to_value):
         args = dict()
         for argname, value in argname_to_value.items():
@@ -60,7 +59,6 @@ class FuncDescription:
         ordered_values = list(map(lambda i_a: i_a[1], args_list))
         return ordered_values
 
-
     def __str__(self):
         return 'name: {name}, inputs: {inputs} (archit. inputs: {archi_inputs}), output: {output}, definition: \n{definition}'.format(
             name=self._name,
@@ -70,9 +68,13 @@ class FuncDescription:
             definition = self.definition
         )
 
-
     def __eq__(self, other):
         if not isinstance(other, FuncDescription):
             return False
 
         return str(other) == str(self)
+
+    def __hash__(self):
+        return hash(str(self))
+
+    __repr__ = __str__

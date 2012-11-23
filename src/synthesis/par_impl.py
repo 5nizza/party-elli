@@ -70,6 +70,7 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
                 self._get_desc_prev_is_sched(),
                 self._get_desc_is_active()]
 
+
     def _build_all_outputs_descs(self):
         descs = []
         for o in self._anon_outputs:

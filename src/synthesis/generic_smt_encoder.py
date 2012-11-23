@@ -28,7 +28,7 @@ class GenericEncoder:
         and_args = []
         for i in range(impl.nof_processes):
             for var_name, value in label.items():
-                if var_name not in impl.all_outputs[i]:
+                if var_name not in impl.all_outputs[i]: #CURRENT!
                     continue
 
                 state_name = self._get_smt_name_proc_state(i, sys_state_vector, impl.proc_states_descs)
@@ -283,15 +283,16 @@ class GenericEncoder:
                     smt_lines += get_value(call_func(tau_desc.name, [s] + values))
 
         processed_outputs = []
-        for proc_index, outputs in enumerate(impl.all_outputs):
-            for output_var in outputs:
-                output_func = impl.get_output_func_name(output_var)
-                if output_func in processed_outputs:
+
+
+        for proc_index, output_descs in enumerate(impl.all_outputs_descs):
+            for output_desc in output_descs:
+                if output_desc in processed_outputs:
                     continue
-                processed_outputs.append(output_func)
+                processed_outputs.append(output_desc)
 
                 for s in impl.proc_states_descs[proc_index][1]:
-                    smt_lines += get_value(call_func(output_func, [s]))
+                    smt_lines += get_value(call_func(output_desc.name, output_desc.get_args_list({'state':s})))
 
         return '\n'.join(smt_lines)
 
