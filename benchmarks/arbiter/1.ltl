@@ -1,0 +1,23 @@
+[ENV_INITIAL]
+r0=0;
+
+[SYS_INITIAL]
+g0=0;
+
+[ENV_TRANSITIONS]
+G(((r0=1)*(g0=0)->X(r0=1)) * ((r0=0)*(g0=1)->X(r0=0)));
+
+[ENV_FAIRNESS]
+G(F((r0=0)+(g0=0)));
+
+[SYS_TRANSITIONS]
+G(((((r0=0)*(g0=0))->X(g0=0)) * (((r0=1)*(g0=1))->X(g0=1))));
+
+[SYS_FAIRNESS]
+G(F(((r0=1)*(g0=1)) + ((r0=0)*(g0=0))));
+
+[INPUT_VARIABLES]
+r0;
+
+[OUTPUT_VARIABLES]
+g0;

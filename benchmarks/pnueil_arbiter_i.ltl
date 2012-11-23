@@ -1,0 +1,20 @@
+INPUT:r_
+OUTPUT:g_
+PROPERTY:
+(
+(!r_i) && 
+G((((!r_i) && g_i) || (r_i && !g_i)) -> (((!r_i) && X(!r_i)) || (r_i && Xr_i))) && 
+GF(!(r_i && g_i))
+)
+
+-> 
+
+(
+(!g_i) && 
+G((((!r_i) && (!g_i)) || (r_i && g_i)) ->  (((!g_i) && (X(!g_i))) || ((g_i) && (X(g_i))))) && 
+GF(((!r_i) && (!g_i)) || (r_i && g_i)) &&  
+G(has_tok_i -> Fsends_i) && 
+)
+
+PROPERTY: 
+G(!(g_i && g_j))
