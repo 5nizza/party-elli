@@ -9,10 +9,13 @@ from synthesis.smt_helper import call_func, op_and, get_bits_definition, op_not
 
 
 class ParImpl(BlankImpl): #TODO: separate architecture from the spec
-    def __init__(self, automaton, anon_inputs, anon_outputs, nof_processes, nof_local_states, sched_var_prefix,
-                 active_anon_var_name, sends_anon_var_name, sends_prev_anon_var_name, has_tok_var_prefix, state_type,
+    def __init__(self, automaton, anon_inputs, anon_outputs, nof_processes, nof_local_states,
+                 sched_var_prefix, active_anon_var_name, sends_anon_var_name, sends_prev_anon_var_name, has_tok_var_prefix, state_type,
                  tau_name, internal_funcs_postfix):
         super().__init__()
+
+        anon_inputs = list(anon_inputs)
+        anon_outputs = list(anon_outputs)
 
         self._state_type = state_type
         self._prev_name = sends_prev_anon_var_name
@@ -38,18 +41,32 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
 
         self.proc_states_descs = self._create_proc_descs(nof_local_states)
 
-        self._anon_inputs = list(anon_inputs)
-        self.orig_inputs = self._build_orig_inputs(nof_processes, self._anon_inputs, sends_prev_anon_var_name)
+        self.orig_inputs = self._build_orig_inputs(nof_processes, anon_inputs, sends_prev_anon_var_name)
 
         self.init_states = self._build_init_states()
         self.aux_func_descs = self._build_aux_func_descs()
 
-        self._anon_outputs = list(anon_outputs)
-        self.all_outputs = [concretize_anon_vars(self._anon_outputs, i) for i in range(nof_processes)]
-        self.all_outputs_descs = self._build_all_outputs_descs()
+        self.outvar_desc_by_process = self._build_outvar_desc_by_process(anon_outputs, nof_processes)
 
-        self.taus_descs = self._build_taus_descs(self._anon_inputs)
-        self.model_taus_descs = self._build_model_taus_descs(self._anon_inputs)
+        self.taus_descs = self._build_taus_descs(anon_inputs)
+        self.model_taus_descs = self._build_model_taus_descs(anon_inputs)
+
+
+    def _build_outvar_desc_by_process(self, anon_outputs, nof_processes):
+        all_var_desc = []
+        for i in range(nof_processes):
+            var_desc = []
+            for o in anon_outputs:
+                argname_to_type = {'state': self._state_type}
+
+                description = FuncDescription(str(o), argname_to_type, set(), 'Bool', None)
+
+                label_var = concretize_anon_var(o, i)
+                var_desc.append((label_var, description))
+
+            all_var_desc.append(tuple(var_desc))
+
+        return tuple(all_var_desc)
 
 
     def _build_orig_inputs(self, nof_processes, anon_inputs, prev_name):
@@ -71,22 +88,6 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
                 self._get_desc_is_active()]
 
 
-    def _build_all_outputs_descs(self):
-        descs = []
-        for o in self._anon_outputs:
-            argname_to_type = {'state': self._state_type}
-
-            description = FuncDescription(str(o), argname_to_type, set(), 'Bool', None)
-
-            descs.append(description)
-
-        return [descs]*self.nof_processes
-
-
-    def _build_taus_descs(self, anon_inputs):
-        return [self._get_desc_tau_sched_wrapper(anon_inputs)]*self.nof_processes
-
-
     def _build_model_taus_descs(self, anon_inputs):
         return [self._get_desc_local_tau(anon_inputs)]*self.nof_processes
 
@@ -96,13 +97,11 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
         # should they know? but they are 'local', they know nothing about global system
         anon_args_dict = dict()
 
-#        print('pi 164 ', arg_values_dict)
         for argname, argvalue in arg_values_dict.items():
             if argname not in self._sched_vars and argname != 'state' and argname not in self._proc_vars: #todo: hack: state
                 argname, _ = anonymize_concr_var(argname)
             anon_args_dict[argname] = argvalue
 
-#        print('pi 170 ', anon_args_dict)
         return anon_args_dict
 
 

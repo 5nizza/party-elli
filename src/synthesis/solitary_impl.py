@@ -5,6 +5,9 @@ class SolitaryImpl(BlankImpl):
     def __init__(self, automaton, inputs, outputs, nof_local_states, sys_state_type):
         super().__init__()
 
+        inputs = tuple(inputs)
+        outputs = tuple(outputs)
+
         self._state_type = sys_state_type
         self._tau_name = 'tau'
 
@@ -17,23 +20,22 @@ class SolitaryImpl(BlankImpl):
         self.orig_inputs = [inputs]
         self.aux_func_descs = []
 
-        self.all_outputs =  [outputs]
-        self.all_outputs_descs = self._get_all_outputs_descs(outputs)
+        self.outvar_desc_by_process = self._build_outvar_desc_by_process(outputs)
 
         self.taus_descs = self._get_taus_descs(inputs)
         self.model_taus_descs = self.taus_descs
 
 
-    def _get_all_outputs_descs(self, outputs):
+    def _build_outvar_desc_by_process(self, outputs):
         descs = []
         for o in outputs:
             argname_to_type = {'state': self._state_type}
 
             description = FuncDescription(str(o), argname_to_type, set(), 'Bool', None)
 
-            descs.append(description)
+            descs.append((o, description))
 
-        return [descs]
+        return tuple([descs])
 
     def _get_taus_descs(self, inputs):
         tau_desc = FuncDescription('tau',

@@ -4,7 +4,7 @@ import logging
 from helpers.hashable import HashableDict
 
 from helpers.logging import log_entrance
-from helpers.python_ext import StrAwareList
+from helpers.python_ext import StrAwareList, index_of
 from interfaces.automata import  DEAD_END
 from interfaces.lts import LTS
 from synthesis.rejecting_states_finder import build_state_to_rejecting_scc
@@ -23,17 +23,23 @@ class GenericEncoder:
         self._laC_name = 'laC'+counters_postfix
 
 
-
     def _get_assumption_on_output_vars(self, label, sys_state_vector, impl):
         and_args = []
         for i in range(impl.nof_processes):
+            outvar_desc = impl.outvar_desc_by_process[i]
             for var_name, value in label.items():
-                if var_name not in impl.all_outputs[i]: #CURRENT!
+#                if var_name not in impl.all_outputs[i]: #CURRENT!
+
+                index = index_of(lambda var_desc: var_name == var_desc[0], outvar_desc)
+                if index is None:
                     continue
+
+                _, outfunc_desc = outvar_desc[index]
 
                 state_name = self._get_smt_name_proc_state(i, sys_state_vector, impl.proc_states_descs)
 
-                out_condition = call_func(impl.get_output_func_name(var_name), [state_name]) #TODO: hack
+#                out_condition = call_func(impl.get_output_func_name(var_name), [state_name]) #TODO: hack
+                out_condition = call_func(outfunc_desc.name, outfunc_desc.get_args_list({'state':state_name})) #TODO: hack
                 if not label[var_name]:
                     out_condition = op_not(out_condition)
 
@@ -189,7 +195,7 @@ class GenericEncoder:
     def encode_sys_model_functions(self, impl, smt_lines):
         self._define_sys_states(impl.proc_states_descs, smt_lines)
 
-        func_descs = list(chain(*impl.all_outputs_descs)) + impl.model_taus_descs
+        func_descs = list(chain(*impl.get_outputs_descs())) + impl.model_taus_descs
         smt_lines += self._define_declare_functions(func_descs)
         return smt_lines
 
@@ -285,7 +291,7 @@ class GenericEncoder:
         processed_outputs = []
 
 
-        for proc_index, output_descs in enumerate(impl.all_outputs_descs):
+        for proc_index, output_descs in enumerate(impl.get_outputs_descs()):
             for output_desc in output_descs:
                 if output_desc in processed_outputs:
                     continue
@@ -309,7 +315,7 @@ class GenericEncoder:
     def parse_model(self, get_value_lines, impl):
         models = []
         processed_tau_descs = []
-        for proc_index, (tau_desc, outputs_descs) in enumerate(zip(impl.model_taus_descs, impl.all_outputs_descs)):
+        for proc_index, (tau_desc, outputs_descs) in enumerate(zip(impl.model_taus_descs, impl.get_outputs_descs())):
             if tau_desc in processed_tau_descs:
                 continue
             processed_tau_descs.append(tau_desc)

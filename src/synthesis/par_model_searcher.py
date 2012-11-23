@@ -5,7 +5,7 @@ import tempfile
 from helpers.logging import log_entrance
 from helpers.python_ext import StrAwareList, FileAsStringEmulator
 from synthesis.generic_smt_encoder import GenericEncoder
-from synthesis.local_en_process_impl import LocalENImpl
+from synthesis.local_en_process_impl import SyncImpl
 from synthesis.par_impl import ParImpl
 from synthesis.smt_helper import comment
 from synthesis.smt_logic import UFLIA
@@ -55,7 +55,7 @@ def search(logic,
 
                 query_lines += comment('local_encoder')
 
-                local_impl = LocalENImpl(local_automaton, anon_inputs, anon_outputs,
+                local_impl = SyncImpl(local_automaton, anon_inputs, anon_outputs,
                     bound,
                     sys_state_type,
                     has_tok_var_prefix, sends_anon_var_name, sends_prev_var_name,

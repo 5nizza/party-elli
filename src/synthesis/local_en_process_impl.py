@@ -4,7 +4,7 @@ from synthesis.blank_impl import BlankImpl
 from synthesis.func_description import FuncDescription
 from synthesis.smt_helper import op_and, call_func, op_not, op_implies, forall_bool, build_values_from_label
 
-class LocalENImpl(BlankImpl):
+class SyncImpl(BlankImpl):
     def __init__(self, automaton, anon_inputs, anon_outputs, nof_local_states, sys_state_type,
                  has_tok_var_prefix,
                  sends_var_name,
@@ -31,11 +31,14 @@ class LocalENImpl(BlankImpl):
         self.init_states = self._build_init_states(init_states)
         self.aux_func_descs = []
 
-        self.all_outputs = [list(anon_outputs)]
-        self.all_outputs_descs = None
+        self.outvar_desc_by_process = self._build_outvar_func_by_process(anon_outputs)
 
         self.taus_descs = self._build_taus_descs()
         self.model_taus_descs = self._build_model_taus_descs()
+
+
+    def _build_outvar_func_by_process(self, anon_outputs):
+        return tuple([tuple((a, FuncDescription(a, {'state':self._state_type}, set(), 'Bool', None)) for a in anon_outputs)])
 
 
     def _build_taus_descs(self):
