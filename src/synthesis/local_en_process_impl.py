@@ -28,8 +28,7 @@ class LocalENImpl(BlankImpl):
         self.orig_inputs = [list(anon_inputs)]
         self.inputs = [self.orig_inputs]
 
-        self.orig_outputs = self.all_outputs = [list(anon_outputs)]
-        self.all_outputs = [self.orig_outputs]
+        self.all_outputs = [list(anon_outputs)]
 
         self.init_states = self._build_init_states(init_states)
         self.aux_func_descs = []

@@ -29,9 +29,11 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
             self.orig_inputs = list(map(lambda i: concretize_anon_vars(self._anon_inputs, i), range(nof_processes)))
         self._anon_outputs = list(anon_outputs)
         self.all_outputs = list(map(lambda i: concretize_anon_vars(self._anon_outputs, i), range(nof_processes)))
-        self.orig_outputs = list(map(lambda i: concretize_anon_vars(
-            filter(lambda out: out not in [has_tok_var_prefix, sends_anon_var_name], self._anon_outputs), i),
-            range(nof_processes)))
+
+#        self.orig_outputs = list(map(lambda i: concretize_anon_vars(
+#            filter(lambda out: out not in [has_tok_var_prefix, sends_anon_var_name], self._anon_outputs), i),
+#            range(nof_processes)))
+        
         self._tau_name = tau_name
         self._is_active_name = 'is_active' + internal_funcs_postfix
         self._equal_bits_name = 'equal_bits' + internal_funcs_postfix
