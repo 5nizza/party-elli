@@ -398,6 +398,3 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
 
         return result
 
-
-
-

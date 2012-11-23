@@ -1,4 +1,3 @@
-from helpers.cached_property import cached_property
 from synthesis.blank_impl import BlankImpl
 from synthesis.func_description import FuncDescription
 
@@ -9,30 +8,25 @@ class SolitaryImpl(BlankImpl):
         self._state_type = sys_state_type
         self._tau_name = 'tau'
 
-
         self.automaton = automaton
         self.nof_processes = 1
+
         self.init_states = [(0,)]
         self.proc_states_descs = self._get_proc_descs(nof_local_states)
 
-        self.inputs = [inputs]
-        self.orig_inputs = self.inputs
-
-        self.outputs = [outputs]
-        self.all_outputs = self.outputs
-
+        self.orig_inputs = [inputs]
         self.aux_func_descs = []
 
-        self.outputs_descs = [[FuncDescription(str(o), {'state': self._state_type}, set(), 'Bool', None) for o in self.outputs[0]]]
-        self.all_outputs_descs = self._get_all_outputs_descs()
+        self.all_outputs =  [outputs]
+        self.all_outputs_descs = self._get_all_outputs_descs(outputs)
 
-        self.taus_descs = self._get_taus_descs()
+        self.taus_descs = self._get_taus_descs(inputs)
         self.model_taus_descs = self.taus_descs
 
 
-    def _get_all_outputs_descs(self):
+    def _get_all_outputs_descs(self, outputs):
         descs = []
-        for o in self.outputs[0]:
+        for o in outputs:
             argname_to_type = {'state': self._state_type}
 
             description = FuncDescription(str(o), argname_to_type, set(), 'Bool', None)
@@ -41,9 +35,9 @@ class SolitaryImpl(BlankImpl):
 
         return [descs]
 
-    def _get_taus_descs(self):
+    def _get_taus_descs(self, inputs):
         tau_desc = FuncDescription('tau',
-            dict([('state', self._state_type)] + list(map(lambda i: (str(i), 'Bool'), self.inputs[0]))),
+            dict([('state', self._state_type)] + list(map(lambda i: (str(i), 'Bool'), inputs))),
             set(),
             self._state_type,
             None)
