@@ -3,19 +3,10 @@ from itertools import chain
 import sys
 import tempfile
 from helpers.main_helper import setup_logging, create_spec_converter_z3
-from helpers.automata_helper import  is_safety_automaton
 from module_generation.dot import to_dot
 from parsing.en_rings_parser import  SCHED_ID_PREFIX, SENDS_NAME, ACTIVE_NAME, concretize_property, get_tok_rings_liveness_par_props, HAS_TOK_NAME, SENDS_PREV_NAME, anonymize_property, get_fair_scheduler_property, get_tok_ring_par_io, get_fair_proc_scheduling_property
 from synthesis import par_model_searcher
 from synthesis.smt_logic import UFLIA
-
-
-def _is_safety_property(property, automaton_converter):
-    #TODO: bug! negation of safety is not necessary a safety property!
-    automaton = automaton_converter.convert(property)
-    is_safety = is_safety_automaton(automaton)
-
-    return is_safety
 
 
 simple_liveness_loc_guarantee = 'G((active_i && r_i) -> Fg_i)'
