@@ -68,6 +68,8 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
 
         return tuple(all_var_desc)
 
+    def _build_taus_descs(self, anon_inputs):
+        return [self._get_desc_tau_sched_wrapper(anon_inputs)]*self.nof_processes
 
     def _build_orig_inputs(self, nof_processes, anon_inputs, prev_name):
         assert nof_processes >= 0
