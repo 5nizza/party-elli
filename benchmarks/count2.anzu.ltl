@@ -1,0 +1,43 @@
+[ENV_INITIAL]
+true;
+
+[SYS_INITIAL]
+c0=0;
+c1=0;
+
+[ENV_TRANSITIONS]
+true;
+
+[ENV_FAIRNESS]
+true;
+
+[SYS_TRANSITIONS]
+G(stop=1 -> ((c0=1 <-> Xc0=1) * (c1=1 <-> Xc1=1)));
+G((stop=0 * c1=0 * c0=0) -> X(c1=0 * c0=1));
+G((stop=0 * c1=0 * c0=1) -> X(c1=1 * c0=0));
+G((stop=0 * c1=1 * c0=0) -> X(c1=0 * c0=0));
+
+[SYS_FAIRNESS]
+true;
+
+[INPUT_VARIABLES]
+stop;
+
+[OUTPUT_VARIABLES]
+c0;
+c1;
+
+
+
+
+
+# INPUT:stop
+# OUTPUT:c0
+# OUTPUT:c1
+# PROPERTY:
+# ! c0 && ! c1 &&
+# [](
+# 	(stop->(((c0)<->X(c0)) && ((c1)<->X(c1)))) && 
+# 	((! stop && ! c1 && ! c0)->(X(! c1 && c0))) && 
+# 	((! stop && ! c1 && c0)->(X( c1 && ! c0))) && 
+# 	((! stop && c1 && ! c0)->(X(! c1 && ! c0))))

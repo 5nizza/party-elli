@@ -27,12 +27,6 @@ def _get_liveness_property_automaton(data_from_section_name, automaton_converter
 
     return liveness_property_automaton
 
-def _convert_asts_to_ltl3ba_format(asts, remove_G=False):
-    properties = list(map(lambda a: convert_ast_to_ltl3ba_format(a)[int(remove_G):], asts)) +\
-                 list(map(lambda a: convert_ast_to_ltl3ba_format(a)[int(remove_G):], asts))
-    property = and_properties(properties)
-    return property
-
 def _convert_asts_to_automaton(asts, automaton_converter):
     property = _convert_asts_to_ltl3ba_format(asts)
     automaton = automaton_converter.convert(property)

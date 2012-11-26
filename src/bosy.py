@@ -2,21 +2,58 @@ import argparse
 import logging
 import sys
 import tempfile
+
 from helpers.main_helper import setup_logging, create_spec_converter_z3
 from helpers.spec_helper import and_properties
 from module_generation.dot import to_dot
+from parsing.anzu_spec import anzu_spec_parser
+from parsing.anzu_spec.anzu_spec_parser import convert_asts_to_ltl3ba_format
+from parsing.anzu_spec.syntax_desc import S_INPUT_VARIABLES, S_ENV_FAIRNESS, S_ENV_INITIAL,S_ENV_TRANSITIONS, S_OUTPUT_VARIABLES, S_SYS_TRANSITIONS, S_SYS_FAIRNESS, S_SYS_INITIAL
 from parsing.parser import parse_ltl
 from synthesis.solitary_model_searcher import search
 from synthesis.smt_logic import UFLIA
 
 
+def get_asts(data_from_section_name):
+    inputs = data_from_section_name[S_INPUT_VARIABLES]
+    outputs = data_from_section_name[S_OUTPUT_VARIABLES]
+
+    env_initials_asts = data_from_section_name[S_ENV_INITIAL]
+    sys_initials_asts = data_from_section_name[S_SYS_INITIAL]
+
+    env_transitions_asts = data_from_section_name[S_ENV_TRANSITIONS]
+    sys_transitions_asts = data_from_section_name[S_SYS_TRANSITIONS]
+
+    env_fairness_asts = data_from_section_name[S_ENV_FAIRNESS]
+    sys_fairness_asts = data_from_section_name[S_SYS_FAIRNESS]
+
+    return inputs, outputs, env_initials_asts, sys_initials_asts, env_transitions_asts, sys_transitions_asts, env_fairness_asts, sys_fairness_asts
 
 
-def main(ltl_file, dot_file, bounds, ltl2ucw_converter, z3solver, logger):
-    raw_ltl_spec = parse_ltl(ltl_file.read())
-    ltl_spec = raw_ltl_spec
+def main(ltl_text, dot_file, bounds, ltl2ucw_converter, z3solver, logger):
+    data_from_sections = anzu_spec_parser.parse_ltl(ltl_text)
 
-    spec_property = and_properties(ltl_spec.properties)
+    input_signals, output_signals, \
+    env_initials_asts, sys_initials_asts, \
+    env_transitions_asts, sys_transitions_asts, \
+    env_fairness_asts, sys_fairness_asts = get_asts(data_from_sections)
+
+    #TODO: hidden dependence: ltl3ba treats upper letters wrongly
+    inputs = [i.name.lower() for i in input_signals]
+    outputs = [o.name.lower() for o in output_signals]
+
+    vars = {'Ie':convert_asts_to_ltl3ba_format(env_initials_asts),
+            'Is':convert_asts_to_ltl3ba_format(sys_initials_asts),
+            'Se':convert_asts_to_ltl3ba_format(env_transitions_asts, True),
+            'Ss':convert_asts_to_ltl3ba_format(sys_transitions_asts, True),
+            'Le':convert_asts_to_ltl3ba_format(env_fairness_asts),
+            'Ls':convert_asts_to_ltl3ba_format(sys_fairness_asts)}
+
+    ass = '(({Ie}) && (G({Se})) && ({Le}))'.format_map(vars)
+    gua = '(({Is}) && (G({Ss})) && ({Ls}))'.format_map(vars)
+
+    spec_property = '({ass}) -> ({gua})'.format(ass = ass, gua = gua)
+    logger.info('the specification property (in ltl3ba format) is: ' + spec_property)
 
     automaton = ltl2ucw_converter.convert(spec_property)
     logger.info('spec automaton has {0} states'.format(len(automaton.nodes)))
@@ -24,7 +61,7 @@ def main(ltl_file, dot_file, bounds, ltl2ucw_converter, z3solver, logger):
     with tempfile.NamedTemporaryFile(delete=False, dir='./') as smt_file:
         smt_file_prefix = smt_file.name
 
-    models = search(automaton, ltl_spec.inputs, ltl_spec.outputs, bounds, z3solver, UFLIA(None), smt_file_prefix)
+    models = search(automaton, inputs, outputs, bounds, z3solver, UFLIA(None), smt_file_prefix)
     assert models is None or len(models) == 1
 
     logger.info('model %s found', ['', 'not'][models is None])
@@ -55,7 +92,7 @@ if __name__ == "__main__":
 
     bounds = list(range(1, args.bound + 1) if args.size is None else range(args.size, args.size + 1))
 
-    main(args.ltl, args.dot, bounds, ltl2ucw_converter, z3solver, logging.getLogger(__name__))
+    main(args.ltl.read(), args.dot, bounds, ltl2ucw_converter, z3solver, logging.getLogger(__name__))
 
     args.ltl.close()
 

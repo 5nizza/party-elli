@@ -1,4 +1,5 @@
 from helpers.ply import yacc
+from helpers.spec_helper import and_properties
 from parsing.anzu_spec.interface import *
 
 
@@ -28,6 +29,15 @@ class Visitor:
     def visit_number(self, number): raise NotImplementedError()
 
 
+def parse_ltl(anzu_text):
+    """ Return {section:data}, see sections in syntax_desc """
+    section_name_to_data = dict(yacc.parse(anzu_text))
+    return section_name_to_data
+
+
+
+########################################################################
+# helpers
 class ConverterToLtl2BaFormatVisitor(Visitor):
     def visit_binary_op(self, binary_op):
         arg1 = self.dispatch(binary_op._arg1)
@@ -67,54 +77,16 @@ def convert_ast_to_ltl3ba_format(property_ast):
     return result
 
 
-def parse_ltl(anzu_text):
-    section_name_to_data = dict(yacc.parse(anzu_text))
-    return section_name_to_data
+def convert_asts_to_ltl3ba_format(asts, remove_G=False):
+    properties = list(map(lambda a: convert_ast_to_ltl3ba_format(a)[int(remove_G):], asts)) +\
+                 list(map(lambda a: convert_ast_to_ltl3ba_format(a)[int(remove_G):], asts))
+    property = and_properties(properties)
 
-#    inputs = []
-#    outputs = []
-#    assumptions = []
-#    guarantees = []
-#
-#    sections_with_properties = ('ENV_INITIAL', 'SYS_INITIAL',
-#                                'ENV_TRANSITIONS', 'SYS_TRANSITIONS',
-#                                'ENV_FAIRNESS', 'SYS_FAIRNESS')
-#
-#    for section_name, data in section_name_to_data.items():
-#        if section_name in sections_with_properties:
-#            for property_ast in data:
-#                property = convert_ast_to_ltl3ba_format(property_ast)
-#
-#                if section_name.startswith('ENV'):
-#                    assumptions.append(property)
-#                elif section_name.startswith('SYS'):
-#                    guarantees.append(property)
-#                else:
-#                    assert 0, section_name
-#
-#        elif section_name == 'INPUT_VARIABLES':
-#            inputs.extend(data)
-#        elif section_name == 'OUTPUT_VARIABLES':
-#            outputs.extend(data)
-#        else:
-#            assert 0, section_name
-#
-#    def and_props(props):
-#        return ' && '.join(['(' + str(p) + ')' for p in props+['true']])
-#
-#    print('assumptions are')
-#    print(assumptions)
-#    print()
-#    print(guarantees)
-#    print()
-#    property = '({ass}) -> ({gua})'.format(ass = and_props(assumptions), gua = and_props(guarantees))
-#
-#    ltl_spec = Spec(inputs, outputs, property)
-#
-#    return ltl_spec
+    return property
 
 
 ########################################################################
+# tests
 
 test_string = """
 ###############################################
