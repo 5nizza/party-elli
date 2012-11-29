@@ -294,7 +294,7 @@ class GenericEncoder:
 
                 models.append(LTS(init_state, state_to_outname_to_value, state_to_input_to_new_state))
 
-        return models #TODO: should return nof_processes models?
+        return models #TODO: should return nof_processes models??
 
 
     def _get_tau_model(self, tau_lines, tau_desc):
