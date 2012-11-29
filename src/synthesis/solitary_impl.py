@@ -14,8 +14,11 @@ class SolitaryImpl(BlankImpl):
         self.automaton = automaton
         self.nof_processes = 1
 
-        self.init_states = [(0,)]
-        self.proc_states_descs = self._get_proc_descs(nof_local_states)
+        self.states_by_process = [tuple(self._get_state_name(self._state_type, s)
+                                        for s in range(nof_local_states))]
+        self.state_types_by_process = [self._state_type]
+
+        self.init_states = [self.states_by_process[0][0]]
 
         self.orig_inputs = [inputs]
         self.aux_func_descs = []
@@ -37,6 +40,7 @@ class SolitaryImpl(BlankImpl):
 
         return tuple([descs])
 
+
     def _get_taus_descs(self, inputs):
         tau_desc = FuncDescription('tau',
             dict([('state', self._state_type)] + list(map(lambda i: (str(i), 'Bool'), inputs))),
@@ -46,6 +50,8 @@ class SolitaryImpl(BlankImpl):
 
         return [tau_desc]
 
-    def _get_proc_descs(self, nof_local_states):
-        result = [(self._state_type, ['t'+str(s) for s in range(nof_local_states)])] * self.nof_processes
-        return result
+
+#    def _get_proc_descs(self, nof_local_states):
+#        result = [(self._state_type, ['t'+str(s) for s in range(nof_local_states)])] * self.nof_processes
+#        return result
+

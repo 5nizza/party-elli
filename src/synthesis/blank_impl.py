@@ -6,8 +6,6 @@ class BlankImpl:
 
         self.nof_processes = 0
 
-        self.proc_states_descs = ()
-
         self.orig_inputs = ()
 
         self.init_states = ()
@@ -17,6 +15,12 @@ class BlankImpl:
 
         self.taus_descs = ()
         self.model_taus_descs = ()
+
+        self.states_by_process = ()
+
+
+    def _get_state_name(self, state_type:str, state_number:int):
+        return '{type_lower}{number}'.format(type_lower=state_type.lower(), number=str(state_number))
 
 
     def get_outputs_descs(self):

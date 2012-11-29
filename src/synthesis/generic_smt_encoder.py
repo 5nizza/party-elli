@@ -1,8 +1,7 @@
 from collections import defaultdict
-from itertools import product, chain, permutations, combinations_with_replacement
+from itertools import product, chain
 import logging
 from helpers.hashable import HashableDict
-
 from helpers.logging import log_entrance
 from helpers.python_ext import StrAwareList, index_of
 from interfaces.automata import  DEAD_END
@@ -28,7 +27,6 @@ class GenericEncoder:
         for i in range(impl.nof_processes):
             outvar_desc = impl.outvar_desc_by_process[i]
             for var_name, value in label.items():
-#                if var_name not in impl.all_outputs[i]: #CURRENT!
 
                 index = index_of(lambda var_desc: var_name == var_desc[0], outvar_desc)
                 if index is None:
@@ -36,9 +34,8 @@ class GenericEncoder:
 
                 _, outfunc_desc = outvar_desc[index]
 
-                state_name = self._get_smt_name_proc_state(i, sys_state_vector, impl.proc_states_descs)
+                state_name = sys_state_vector[i]
 
-#                out_condition = call_func(impl.get_output_func_name(var_name), [state_name]) #TODO: hack
                 out_condition = call_func(outfunc_desc.name, outfunc_desc.get_args_list({'state':state_name})) #TODO: hack
                 if not label[var_name]:
                     out_condition = op_not(out_condition)
@@ -55,7 +52,7 @@ class GenericEncoder:
                            state_to_rejecting_scc,
                            impl):
         spec_state_name = self._get_smt_name_spec_state(spec_state)
-        sys_state_name = self._get_smt_name_sys_state(sys_state_vector, impl.proc_states_descs)
+        sys_state_name = self._get_smt_name_sys_state(sys_state_vector)
 
         next_sys_state = []
         for i in range(impl.nof_processes):
@@ -108,7 +105,6 @@ class GenericEncoder:
 
             and_args.append(implication_right)
 
-#        assertion = make_assert(forall_bool(free_input_vars, op_implies(implication_left, op_and(and_args))))
         condition = forall_bool(free_input_vars, op_implies(implication_left, op_and(and_args)))
         return condition
 
@@ -118,7 +114,7 @@ class GenericEncoder:
             return smt_lines
 
         smt_lines += self._define_automaton_states(impl.automaton)
-        smt_lines += self._define_counters(impl.proc_states_descs)
+        smt_lines += self._define_counters(impl.state_types_by_process)
         return smt_lines
 
 
@@ -137,9 +133,9 @@ class GenericEncoder:
             for init_sys_state in init_sys_states:
                 conjunction += self._make_init_states_condition(
                     self._get_smt_name_spec_state(init_spec_state),
-                    self._get_smt_name_sys_state(init_sys_state, impl.proc_states_descs))
+                    init_sys_state)
 
-        global_states = list(product(*[range(len(proc_states_desc[1])) for proc_states_desc in impl.proc_states_descs]))
+        global_states = list(product(*impl.states_by_process))
 
         state_to_rejecting_scc = build_state_to_rejecting_scc(impl.automaton)
 
@@ -161,39 +157,9 @@ class GenericEncoder:
             smt_lines += make_assert(c)
         return smt_lines
 
-#        smt_lines += impl.get_architecture_assertions() #TODO: looks hacky! replace with two different encoders?
-#
-#        if not impl.automaton: #TODO: see above, make sense if there are architecture assertions and no automaton
-#            return smt_lines
-#
-#        assert len(impl.automaton.initial_sets_list) == 1, 'nondet not supported'
-#
-#        init_sys_states = impl.init_states
-#
-#        for init_spec_state in impl.automaton.initial_sets_list[0]:
-#            for init_sys_state in init_sys_states:
-#                smt_lines += self._make_init_states_condition(
-#                    self._get_smt_name_spec_state(init_spec_state),
-#                    self._get_smt_name_sys_state(init_sys_state, impl.proc_states_descs))
-#
-#        global_states = list(product(*[range(len(proc_states_desc[1])) for proc_states_desc in impl.proc_states_descs]))
-#
-#        state_to_rejecting_scc = build_state_to_rejecting_scc(impl.automaton)
-#
-#        spec_states = impl.automaton.nodes
-#        for spec_state in spec_states:
-#            for global_state in global_states:
-#                for label, dst_set_list in spec_state.transitions.items():
-#                    transition_assertions = self._encode_transition(spec_state, global_state, label, state_to_rejecting_scc, impl)
-#
-#                    smt_lines += comment(label)
-#                    smt_lines += transition_assertions
-#
-#        return smt_lines
-
 
     def encode_sys_model_functions(self, impl, smt_lines):
-        self._define_sys_states(impl.proc_states_descs, smt_lines)
+        self._define_sys_states(impl, smt_lines)
 
         func_descs = list(chain(*impl.get_outputs_descs())) + impl.model_taus_descs
         smt_lines += self._define_declare_functions(func_descs)
@@ -223,13 +189,8 @@ class GenericEncoder:
         return '{0}_{1}'.format(self._spec_states_type.lower(), spec_state.name)
 
 
-    def _get_smt_name_sys_state(self, sys_state_vector, proc_states_descs):
-        proc_states = map(lambda iv: proc_states_descs[iv[0]][1][iv[1]], enumerate(sys_state_vector))
-        return ' '.join(proc_states)
-
-
-    def _get_smt_name_proc_state(self, proc_index, sys_state_vector, proc_states_descs):
-        return proc_states_descs[proc_index][1][sys_state_vector[proc_index]]
+    def _get_smt_name_sys_state(self, sys_state_vector):
+        return ' '.join(sys_state_vector)
 
 
     def _get_proc_tau_args(self, sys_state, proc_label, proc_index, impl):
@@ -239,7 +200,7 @@ class GenericEncoder:
 
         tau_args = dict()
 
-        proc_state = self._get_smt_name_proc_state(proc_index, sys_state, impl.proc_states_descs)
+        proc_state = sys_state[proc_index]
         tau_args.update({'state':proc_state}) #TODO: hack: name 'state'
 
         label_vals_dict, _ = build_values_from_label(impl.orig_inputs[proc_index], proc_label)
@@ -283,7 +244,7 @@ class GenericEncoder:
                 continue
             unique_tau_descs.append(tau_desc)
 
-            for s in impl.proc_states_descs[proc_index][1]:
+            for s in impl.states_by_process[proc_index]:
                 for raw_values in product([False, True], repeat=len(tau_desc.inputs)-1): #first arg is the state
                     values = [str(v).lower() for v in raw_values]
                     smt_lines += get_value(call_func(tau_desc.name, [s] + values))
@@ -297,7 +258,7 @@ class GenericEncoder:
                     continue
                 processed_outputs.append(output_desc)
 
-                for s in impl.proc_states_descs[proc_index][1]:
+                for s in impl.states_by_process[proc_index]:
                     smt_lines += get_value(call_func(output_desc.name, output_desc.get_args_list({'state':s})))
 
         return '\n'.join(smt_lines)
@@ -331,8 +292,7 @@ class GenericEncoder:
                 state_to_input_to_new_state = self._get_tau_model(tau_get_value_lines, tau_desc)
                 state_to_outname_to_value = self._get_output_model(outputs_get_value_lines)
 
-                init_state_name = self._get_smt_name_sys_state(init_state, impl.proc_states_descs)
-                models.append(LTS(init_state_name, state_to_outname_to_value, state_to_input_to_new_state))
+                models.append(LTS(init_state, state_to_outname_to_value, state_to_input_to_new_state))
 
         return models #TODO: should return nof_processes models?
 
@@ -371,16 +331,14 @@ class GenericEncoder:
         return smt_lines
 
 
-    def _define_sys_states(self, proc_states_descs, smt_lines):
+    def _define_sys_states(self, impl, smt_lines):
         declared_enums = set()
-        for proc_states_desc in proc_states_descs:
-            enum_name = proc_states_desc[0]
+        for state_type, states in zip(impl.state_types_by_process, impl.states_by_process):
+            enum_name = state_type
             if enum_name in declared_enums:
                 continue
 
-            sys_state_names = proc_states_desc[1]
-
-            smt_lines += declare_enum(enum_name, sys_state_names)
+            smt_lines += declare_enum(enum_name, states)
 
             declared_enums.add(enum_name)
 
@@ -391,7 +349,6 @@ class GenericEncoder:
         smt_lines = StrAwareList()
         declared_funcs = set()
         for func_desc in func_descs:
-#            func_name, input_args, output_type, body
             if func_desc.name in declared_funcs:
                 continue
 
@@ -406,10 +363,10 @@ class GenericEncoder:
         return smt_lines
 
 
-    def _define_counters(self, proc_states_descs):
+    def _define_counters(self, state_types_by_process):
         smt_lines = StrAwareList()
 
-        counters_args = [self._spec_states_type] + list(map(lambda desc: desc[0], proc_states_descs))
+        counters_args = [self._spec_states_type] + list(state_types_by_process)
 
         smt_lines += declare_fun(self._laB_name, counters_args, 'Bool')
         smt_lines += declare_fun(self._laC_name, counters_args, self._logic.counters_type())
