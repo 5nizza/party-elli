@@ -1,6 +1,5 @@
 from parsing.anzu_spec.interface import *
 
-
 #TODO: cannot parse original GenBuf specification due to the conflict(?) in the word FULL
 #TODO: add negation sign (used in arbiter examples)
 tokens = (
@@ -8,7 +7,7 @@ tokens = (
     'TEMPORAL_UNARY', 'TEMPORAL_BINARY',
     'OR','AND','IMPLIES', 'EQUIV', 'EQUALS',
     'LPAREN','RPAREN', 'LBRACKET', 'RBRACKET',
-    'SEPARATOR'
+    'SEP'
     )
 
 #constant to ensure consistency of the code
@@ -26,7 +25,7 @@ t_RPAREN  = r'\)'
 t_LBRACKET  = r'\['
 t_RBRACKET  = r'\]'
 
-t_SEPARATOR = r';+'
+t_SEP = r';+'
 
 t_ignore = " \t"
 t_ignore_comment = r"\#.*"
@@ -99,65 +98,81 @@ lex.lex()
 
 
 ########################################################################
-
-
 precedence = (
     ('left','OR'),
     ('left','IMPLIES','EQUIV'),
     ('left','AND'),
     ('left', 'TEMPORAL_BINARY'),
-    ('right', 'TEMPORAL_UNARY'), #TODO: right or left or ??
-    ('right','EQUALS') #TODO: right or left or ??
+    ('left', 'TEMPORAL_UNARY'), #left - right should not matter..
+    ('nonassoc','EQUALS')
     )
+
 
 def p_start(p):
     """start :  empty
-             |  section
-             |  start section"""
-#    print('p_start')
-    if len(p) == 3:
-        p[0] = p[1] + [p[2]]
+             |  sections """
+    if p[1] is not None:
+        p[0] = p[1]
     else:
-        p[0] = [p[1]]
+        p[0] = []
+
 
 def p_empty(p):
     r"""empty :"""
     pass
 
+
+def p_sections(p):
+    """sections : section
+                | sections section"""
+    if len(p) == 2:
+        p[0] = [p[1]]
+    else:
+        p[0] = p[1] + [p[2]]
+
+
 def p_section(p):
-    """section : section_header section_data"""
+    """section : section_header section_data """
     p[0] = (p[1], p[2])
+
 
 def p_section_header(p):
     """section_header : LBRACKET SECTION_NAME RBRACKET"""
-#    print('p_section_header')
     p[0] = p[2]
 
-def p_section_data_signal_definitions(p):
-    """section_data : SIGNAL_NAME SEPARATOR
-                    | SIGNAL_NAME SEPARATOR section_data"""
-#    print('p_section_data_signal_definitions')
+
+def p_section_data(p):
+    """section_data : empty
+                    | signals
+                    | properties """
+    if p[1] is None:
+        p[0] = []
+    else:
+        p[0] = p[1]
+
+
+def p_section_data_signals_definitions2(p):
+    """signals : SIGNAL_NAME SEP
+               | signals SIGNAL_NAME SEP """
+    if len(p) == 4:
+        p[0] = p[1] + [p[2]]
+    else:
+        p[0] = [p[1]]
+
+
+def p_section_data_properties(p):
+    """properties : property SEP
+                  | properties property SEP"""
     if len(p) == 3:
         p[0] = [p[1]]
     else:
-        p[0] = p[3] + [p[1]]
+        p[0] = p[1] + [p[2]]
 
-def p_section_data_properties(p): #TODO: separate cases of signal definitions and properties
-    """section_data : property SEPARATOR
-                    | property SEPARATOR section_data"""
-#    print('p_section_data_properties')
-    if len(p) == 3:
-        p[0] = [p[1]]
-    else:
-        p[0] = p[3] + [p[1]]
-
-def get_whole_right_line(p):
-    all_except_zero = [p for i, p in enumerate(p) if i != 0]
-    return ' '.join(all_except_zero)
 
 def p_section_data_property_bool(p):
     """property   : BOOL"""
     p[0] = p[1]
+
 
 def p_section_data_property_binary_operation(p):
     """property   : SIGNAL_NAME EQUALS NUMBER
@@ -170,13 +185,16 @@ def p_section_data_property_binary_operation(p):
     assert p[2] in BIN_OPS
     p[0] = BinOp(p[2], p[1], p[3])
 
+
 def p_section_data_property_unary(p):
     """property   : TEMPORAL_UNARY property"""
     p[0] = UnaryOp(p[1], p[2])
 
+
 def p_section_data_property_grouping(p):
     """property   : LPAREN property RPAREN"""
     p[0] = p[2]
+
 
 def p_error(p):
     if p:

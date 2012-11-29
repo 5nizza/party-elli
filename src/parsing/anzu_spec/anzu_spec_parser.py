@@ -35,7 +35,6 @@ def parse_ltl(anzu_text):
     return section_name_to_data
 
 
-
 ########################################################################
 # helpers
 class ConverterToLtl2BaFormatVisitor(Visitor):
