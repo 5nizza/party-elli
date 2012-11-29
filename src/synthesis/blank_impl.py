@@ -17,6 +17,7 @@ class BlankImpl:
         self.model_taus_descs = ()
 
         self.states_by_process = ()
+        self.state_types_by_process = ()
 
 
     def _get_state_name(self, state_type:str, state_number:int):

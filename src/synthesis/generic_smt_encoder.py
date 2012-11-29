@@ -133,7 +133,7 @@ class GenericEncoder:
             for init_sys_state in init_sys_states:
                 conjunction += self._make_init_states_condition(
                     self._get_smt_name_spec_state(init_spec_state),
-                    init_sys_state)
+                    self._get_smt_name_sys_state(init_sys_state))
 
         global_states = list(product(*impl.states_by_process))
 

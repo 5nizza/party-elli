@@ -18,7 +18,7 @@ class SolitaryImpl(BlankImpl):
                                         for s in range(nof_local_states))]
         self.state_types_by_process = [self._state_type]
 
-        self.init_states = [self.states_by_process[0][0]]
+        self.init_states = [(self.states_by_process[0][0],)]
 
         self.orig_inputs = [inputs]
         self.aux_func_descs = []

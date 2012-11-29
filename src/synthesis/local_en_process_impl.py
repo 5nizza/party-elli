@@ -23,7 +23,8 @@ class SyncImpl(BlankImpl):
         self.automaton = automaton
         self.nof_processes = 1
 
-        self.proc_states_descs = self._build_proc_descs()
+        self.states_by_process = [tuple(self._get_state_name(self._state_type, i) for i in range(nof_local_states))]
+        self.state_types_by_process = [self._state_type]
 
         self.orig_inputs = [list(anon_inputs)]
         self.inputs = [self.orig_inputs]
@@ -35,6 +36,7 @@ class SyncImpl(BlankImpl):
 
         self.taus_descs = self._build_taus_descs()
         self.model_taus_descs = self._build_model_taus_descs()
+
 
 
     def _build_outvar_func_by_process(self, anon_outputs):
@@ -67,7 +69,7 @@ class SyncImpl(BlankImpl):
     def get_architecture_trans_assumption(self, label, sys_state_vector):
         # ignoring active_i in transition labels
 
-        proc_state = self.proc_states_descs[0][1][sys_state_vector[0]]
+        proc_state = sys_state_vector[0]
 
         sends_prev_value = label.get(self._sends_prev_var_name, '?' + self._sends_prev_var_name)
         sends_prev_value = str(sends_prev_value).lower()
@@ -82,12 +84,6 @@ class SyncImpl(BlankImpl):
         return []
 
 
-    def _build_proc_descs(self):
-        nof_local_states = self._nof_local_states
-        return list(map(lambda proc_i: (self._state_type, list(map(lambda s: self._state_type.lower()+str(s), range(nof_local_states)))),
-                        range(self.nof_processes)))
-
-
     def filter_label_by_process(self, label, proc_index):
         assert proc_index == 0, str(proc_index)
         return label
@@ -100,7 +96,7 @@ class SyncImpl(BlankImpl):
     def _build_init_states(self, init_states):
         init_set_of_states = list()
         for state in init_states:
-            init_set_of_states.append([state])
+            init_set_of_states.append((state,))
         return init_set_of_states
 
 
@@ -108,8 +104,9 @@ class SyncImpl(BlankImpl):
         smt_lines = StrAwareList()
         tau_desc = self.taus_descs[0]
 
-        for state in range(self._nof_local_states):
-            state_str = self.proc_states_descs[0][1][state]
+        states = self.states_by_process[0]
+        for state in states:
+            state_str = state
 
             has_tok_str = call_func(self._has_tok_var_prefix, [state_str])
             sends_tok_str = call_func(self._sends_var_name, [state_str])

@@ -39,7 +39,9 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
         self.automaton = automaton
         self.nof_processes = nof_processes
 
-        self.proc_states_descs = self._create_proc_descs(nof_local_states)
+        self.states_by_process = [tuple([self._get_state_name(self._state_type, i) for i in range(nof_local_states)])]\
+                                 * self.nof_processes
+        self.state_types_by_process = [self._state_type] * self.nof_processes
 
         self.orig_inputs = self._build_orig_inputs(nof_processes, anon_inputs, sends_prev_anon_var_name)
 
@@ -345,14 +347,9 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
         prev_proc_state = sys_states_vector[prev_proc]
 
         expr = '({sends} {state})'.format_map({'sends': self._sends_name,
-                                               'state': self.proc_states_descs[0][1][prev_proc_state]})
+                                               'state': prev_proc_state})
 
         return {concretize_anon_var(self._prev_name, proc_index): expr} #TODO: bad reversed dependence
-
-
-    def _create_proc_descs(self, nof_local_states):
-        return list(map(lambda proc_i: (self._state_type, list(map(lambda s: self._state_type.lower()+str(s), range(nof_local_states)))),
-                        range(self.nof_processes)))
 
 
     def filter_label_by_process(self, label, proc_index): #TODO: hack
@@ -376,22 +373,28 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
     def get_architecture_conditions(self):
         conditions = StrAwareList()
 
-        #TODO: hack: why does the order matter?
-        conditions += call_func(self._has_tok_var_prefix, [self.proc_states_descs[0][1][self.init_states[0][0]]])
+        #first process possesses the token, others - don't
+        #consider the only init state - others are isomorphic and don't add to the conditions
 
-        for i in range(1, self.nof_processes):
-            conditions += op_not(call_func(self._has_tok_var_prefix, [self.proc_states_descs[i][1][self.init_states[0][i]]]))
+        state_by_proc = self.init_states[0]
+
+        #TODO: hack - don't use get_args
+        conditions += call_func(self._has_tok_var_prefix, [state_by_proc[0]])
+
+        if self.nof_processes > 1:
+            conditions += op_not(call_func(self._has_tok_var_prefix, [state_by_proc[1]]))
 
         return conditions
 
 
     def _build_init_states(self):
-        #TODO: hardcoded knowledge: state 0 no tok, state 1 tok
+        #TODO: hardcoded: state 0 no tok, state 1 tok
 
-        if len(self.proc_states_descs) == 1:
-            return [(1,), (0,)] #TODO: the order matters
+        states = self.states_by_process[0]
+        if self.nof_processes == 1:
+            return [(states[1],), (states[0],)] #TODO: the order matters
 
-        init_sys_state = [1] + [0] * (self.nof_processes-1)
+        init_sys_state = [states[1]] + [states[0]] * (self.nof_processes-1) #states of all processes are the same
         permutations_of_init_state = list(permutations(init_sys_state))
 
         result = []
