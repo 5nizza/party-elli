@@ -1,6 +1,5 @@
 from parsing.anzu_spec.interface import *
 
-#TODO: cannot parse original GenBuf specification due to the conflict(?) in the word FULL
 #TODO: add negation sign (used in arbiter examples)
 tokens = (
     'SIGNAL_NAME', 'SECTION_NAME', 'NUMBER', 'BOOL',
@@ -52,16 +51,15 @@ def t_BOOL(t):
         print("Unknown boolean valueInteger value too large %d", t.value)
 
 def t_TEMPORAL_UNARY(t):
-    r"""G|F|X"""
+    r"""(G|F|X)(?=[ \t]*\()""" #temporal operators require parenthesis
     return t
 
 def t_TEMPORAL_BINARY(t):
-    r"""U"""
+    r"""U(?=[ \t]*\()""" #temporal operators require parenthesis
     return t
 
 def t_SIGNAL_NAME(t):
     r"""[a-zA-Z_][a-zA-Z0-9_]*"""
-    #    print('t_SIGNAL_NAME', t)
     t.value = Signal(t.value)
     return t
 
@@ -103,6 +101,7 @@ precedence = (
     ('left','IMPLIES','EQUIV'),
     ('left','AND'),
     ('left', 'TEMPORAL_BINARY'),
+#    ('left', 'NEG'), #left - right should not matter..
     ('left', 'TEMPORAL_UNARY'), #left - right should not matter..
     ('nonassoc','EQUALS')
     )

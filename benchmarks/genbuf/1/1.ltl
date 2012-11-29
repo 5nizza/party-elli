@@ -5,7 +5,7 @@
 StoB_REQ0;
 RtoB_ACK0;
 RtoB_ACK1;
-full;
+FULL;
 empty;
 
 ###############################################
@@ -29,7 +29,7 @@ SLC0;
 StoB_REQ0=0;
 RtoB_ACK0=0;
 RtoB_ACK1=0;
-full=0;
+FULL=0;
 empty=1;
 
 [ENV_TRANSITIONS]
@@ -40,8 +40,8 @@ G((BtoR_REQ0=1 * RtoB_ACK0=1) -> X(RtoB_ACK0=1));	#A4
 G(BtoR_REQ1=0 -> X(RtoB_ACK1=0));	#A3
 G((BtoR_REQ1=1 * RtoB_ACK1=1) -> X(RtoB_ACK1=1));	#A4
 G((enq=1 * deq=0) -> X(empty=0));	#A4
-G((deq=1 * enq=0) -> X(full=0));	#A4
-G((enq=1 <-> deq=1) -> ((full=1 <-> X(full=1)) *
+G((deq=1 * enq=0) -> X(FULL=0));	#A4
+G((enq=1 <-> deq=1) -> ((FULL=1 <-> X(FULL=1)) *
                         (empty=1 <-> X(empty=1))));	#A4
 
 [ENV_FAIRNESS]
@@ -89,7 +89,7 @@ G((RtoB_ACK0=1 * X(RtoB_ACK0=0)) -> X(deq=1));	#G10
 G((RtoB_ACK1=1 * X(RtoB_ACK1=0)) -> X(deq=1));	#G10
 G(((RtoB_ACK0=0 + X(RtoB_ACK0=1)) *
    (RtoB_ACK1=0 + X(RtoB_ACK1=1))) -> X(deq=0));	#G10
-G((full=1 * deq=0) -> enq=0);	#G11
+G((FULL=1 * deq=0) -> enq=0);	#G11
 G(empty=1 -> deq=0);	#G11
 G((stateG12=0 * empty=1) -> X(stateG12=0));	#G12
 G((stateG12=0 * deq=1  ) -> X(stateG12=0));	#G12
