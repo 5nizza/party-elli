@@ -2,6 +2,8 @@ class BlankImpl:
     """ Blank implementation which does nothing but still can be fed to GenericEncoder """
 
     def __init__(self):
+        self.state_var_name = 'state'
+
         self.automaton = None
 
         self.nof_processes = 0
@@ -51,5 +53,6 @@ class BlankImpl:
     def get_architecture_conditions(self):
         return tuple()
 
-    def convert_global_argnames_to_proc_argnames(self, arg_values_dict):
+    def convert_global_args_to_local(self, arg_values_dict):
+        """ global args dictionary has global names, local - local names """
         return arg_values_dict

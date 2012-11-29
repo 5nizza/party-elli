@@ -32,7 +32,7 @@ class SolitaryImpl(BlankImpl):
     def _build_outvar_desc_by_process(self, outputs):
         descs = []
         for o in outputs:
-            argname_to_type = {'state': self._state_type}
+            argname_to_type = {self.state_var_name: self._state_type}
 
             description = FuncDescription(str(o), argname_to_type, set(), 'Bool', None)
 
@@ -43,7 +43,7 @@ class SolitaryImpl(BlankImpl):
 
     def _get_taus_descs(self, inputs):
         tau_desc = FuncDescription('tau',
-            dict([('state', self._state_type)] + list(map(lambda i: (str(i), 'Bool'), inputs))),
+            dict([(self.state_var_name, self._state_type)] + list(map(lambda i: (str(i), 'Bool'), inputs))),
             set(),
             self._state_type,
             None)

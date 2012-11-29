@@ -65,7 +65,7 @@ class AssumeGuaranteeEncoder: #TODO: current - new counting construction?
                 i,
                 gua_impl)
 
-            tau_args_dict = gua_impl.convert_global_argnames_to_proc_argnames(tau_concr_args_dict)
+            tau_args_dict = gua_impl.convert_global_args_to_local(tau_concr_args_dict)
 
             tau_args = gua_impl.taus_descs[i].get_args_list(tau_args_dict)
 

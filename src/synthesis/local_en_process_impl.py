@@ -40,11 +40,11 @@ class SyncImpl(BlankImpl):
 
 
     def _build_outvar_func_by_process(self, anon_outputs):
-        return tuple([tuple((a, FuncDescription(a, {'state':self._state_type}, set(), 'Bool', None)) for a in anon_outputs)])
+        return tuple([tuple((a, FuncDescription(a, {self.state_var_name:self._state_type}, set(), 'Bool', None)) for a in anon_outputs)])
 
 
     def _build_taus_descs(self):
-        argname_to_type = dict([('state', self._state_type)] + list(map(lambda i: (str(i), 'Bool'), self.orig_inputs[0])))
+        argname_to_type = dict([(self.state_var_name, self._state_type)] + list(map(lambda i: (str(i), 'Bool'), self.orig_inputs[0])))
         tau_desc = FuncDescription(self._tau_name,
             argname_to_type,
             set(),
@@ -89,7 +89,7 @@ class SyncImpl(BlankImpl):
         return label
 
 
-    def convert_global_argnames_to_proc_argnames(self, argname_to_values):
+    def convert_global_args_to_local(self, argname_to_values):
         return argname_to_values
 
 
@@ -114,11 +114,11 @@ class SyncImpl(BlankImpl):
             _, free_vars = build_values_from_label(self.orig_inputs[0], Label({self._sends_prev_var_name:False}))
 
             tau_args_not_sends_prev_raw, _ = build_values_from_label(self.orig_inputs[0], Label({self._sends_prev_var_name:False}))
-            tau_args_not_sends_prev_raw.update({'state':state_str})
+            tau_args_not_sends_prev_raw.update({self.state_var_name:state_str})
             tau_args_not_sends_prev = tau_desc.get_args_list(tau_args_not_sends_prev_raw)
 
             tau_args_sends_prev_raw, _ = build_values_from_label(self.orig_inputs[0], Label({self._sends_prev_var_name:True}))
-            tau_args_sends_prev_raw.update({'state':state_str})
+            tau_args_sends_prev_raw.update({self.state_var_name:state_str})
             tau_args_sends_prev = tau_desc.get_args_list(tau_args_sends_prev_raw)
 
             tau_not_sends_prev_str = call_func(tau_desc.name, tau_args_not_sends_prev)

@@ -36,7 +36,9 @@ class GenericEncoder:
 
                 state_name = sys_state_vector[i]
 
-                out_condition = call_func(outfunc_desc.name, outfunc_desc.get_args_list({'state':state_name})) #TODO: hack
+                #TODO: hack: state variable
+                outfunc_args = {impl.state_var_name:state_name}
+                out_condition = call_func(outfunc_desc.name, outfunc_desc.get_args_list(outfunc_args))
                 if not label[var_name]:
                     out_condition = op_not(out_condition)
 
@@ -56,11 +58,9 @@ class GenericEncoder:
 
         next_sys_state = []
         for i in range(impl.nof_processes):
-            tau_concr_args_dict = self._get_proc_tau_args(sys_state_vector, impl.filter_label_by_process(label, i), i, impl)
+            proc_tau_args = self._get_proc_tau_args(sys_state_vector, label, i, impl)
 
-            tau_args_dict = impl.convert_global_argnames_to_proc_argnames(tau_concr_args_dict)
-
-            tau_args = impl.taus_descs[i].get_args_list(tau_args_dict)
+            tau_args = impl.taus_descs[i].get_args_list(proc_tau_args)
 
             next_sys_state.append(call_func(impl.taus_descs[i].name, tau_args))
 
@@ -193,24 +193,25 @@ class GenericEncoder:
         return ' '.join(sys_state_vector)
 
 
-    def _get_proc_tau_args(self, sys_state, proc_label, proc_index, impl):
+    def _get_proc_tau_args(self, sys_state, label, proc_index, impl):
         """ Return dict: name->value
             free variables (to be enumerated) has called ?var_name value.
         """
 
-        tau_args = dict()
+        proc_label = impl.filter_label_by_process(label, proc_index)
+
+        glob_tau_args = dict()
 
         proc_state = sys_state[proc_index]
-        tau_args.update({'state':proc_state}) #TODO: hack: name 'state'
+        glob_tau_args.update({impl.state_var_name:proc_state})
 
         label_vals_dict, _ = build_values_from_label(impl.orig_inputs[proc_index], proc_label)
-        tau_args.update(label_vals_dict)
+        glob_tau_args.update(label_vals_dict)
 
-        tau_args.update(impl.get_proc_tau_additional_args(proc_label, sys_state, proc_index))
+        glob_tau_args.update(impl.get_proc_tau_additional_args(proc_label, sys_state, proc_index))
 
-        res = dict(tau_args)
-
-        return res
+        proc_tau_args = impl.convert_global_args_to_local(glob_tau_args)
+        return proc_tau_args
 
 
     def _get_implication_right_counter(self, spec_state, next_spec_state,
@@ -259,7 +260,7 @@ class GenericEncoder:
                 processed_outputs.append(output_desc)
 
                 for s in impl.states_by_process[proc_index]:
-                    smt_lines += get_value(call_func(output_desc.name, output_desc.get_args_list({'state':s})))
+                    smt_lines += get_value(call_func(output_desc.name, output_desc.get_args_list({impl.state_var_name:s})))
 
         return '\n'.join(smt_lines)
 

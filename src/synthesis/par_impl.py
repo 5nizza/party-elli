@@ -59,7 +59,7 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
         for i in range(nof_processes):
             var_desc = []
             for o in anon_outputs:
-                argname_to_type = {'state': self._state_type}
+                argname_to_type = {self.state_var_name: self._state_type}
 
                 description = FuncDescription(str(o), argname_to_type, set(), 'Bool', None)
 
@@ -96,13 +96,16 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
         return [self._get_desc_local_tau(anon_inputs)]*self.nof_processes
 
 
-    def convert_global_argnames_to_proc_argnames(self, arg_values_dict):
+    def convert_global_args_to_local(self, arg_values_dict):
         # all tau desc accept anon values, they know nothing about concrete values
         # should they know? but they are 'local', they know nothing about global system
         anon_args_dict = dict()
 
         for argname, argvalue in arg_values_dict.items():
-            if argname not in self._sched_vars and argname != 'state' and argname not in self._proc_vars: #todo: hack: state
+            #TODO: hack: state
+            if argname not in self._sched_vars \
+               and argname not in self._proc_vars \
+               and argname != self.state_var_name:
                 argname, _ = anonymize_concr_var(argname)
             anon_args_dict[argname] = argvalue
 
@@ -156,7 +159,7 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
 
         is_active_concrt_args_dict = dict(chain(sched_vals.items(), proc_id_args.items(), sends_prev_value.items()))
 
-        is_active_proc_args_dict = self.convert_global_argnames_to_proc_argnames(is_active_concrt_args_dict)
+        is_active_proc_args_dict = self.convert_global_args_to_local(is_active_concrt_args_dict)
 
         is_active_args = self._get_desc_is_active().get_args_list(is_active_proc_args_dict)
 
@@ -176,8 +179,6 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
 
 
     def _get_desc_tau_sched_wrapper(self, anon_inputs):
-        state_var_name = 'state'
-
         local_tau_inputs = self._get_desc_local_tau(anon_inputs).inputs
 
         argname_to_type = dict(local_tau_inputs + \
@@ -193,7 +194,7 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
         (ite ({is_active} {is_active_inputs}) ({tau} {local_tau_inputs}) {state})
         """.format_map({'tau': self._tau_name,
                         'local_tau_inputs': ' '.join(local_tau_args),
-                        'state':state_var_name,
+                        'state':self.state_var_name,
                         'is_active': self._is_active_name,
                         'is_active_inputs': ' '.join(is_active_inputs)})
 
@@ -311,7 +312,7 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
 
 
     def _get_desc_local_tau(self, anon_inputs):
-        argname_to_type = dict([('state', self._state_type)] + \
+        argname_to_type = dict([(self.state_var_name, self._state_type)] + \
                                list(map(lambda input: (str(input), 'Bool'), anon_inputs)))
 
         description = FuncDescription(self._tau_name, argname_to_type, set(), self._state_type, None)
