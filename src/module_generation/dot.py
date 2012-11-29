@@ -16,8 +16,6 @@ def to_dot(lts):
 
     for state in lts.states:
         for input_args, new_state in lts.next_states(state).items():
-            print(new_state)
-            print(input_args)
             inputs = map(lambda arg: '{0}{1}'.format(['-', ''][arg[1]], arg[0]), input_args.items())
             dot_lines += '"{state}" -> "{new_state}" [label="{label}"]'.format_map({'state': state,
                                                                                     'new_state': new_state,

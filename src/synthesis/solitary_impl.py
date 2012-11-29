@@ -47,5 +47,5 @@ class SolitaryImpl(BlankImpl):
         return [tau_desc]
 
     def _get_proc_descs(self, nof_local_states):
-        return list(map(lambda proc_i: (self._state_type, list(map(lambda s: 't'+str(s), range(nof_local_states)))),
-            range(self.nof_processes)))
+        result = [(self._state_type, ['t'+str(s) for s in range(nof_local_states)])] * self.nof_processes
+        return result

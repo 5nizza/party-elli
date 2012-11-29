@@ -1,6 +1,5 @@
 from parsing.anzu_spec.interface import *
 
-#TODO: add negation sign (used in arbiter examples)
 tokens = (
     'SIGNAL_NAME', 'SECTION_NAME', 'NUMBER', 'BOOL',
     'TEMPORAL_UNARY', 'NEG', 'TEMPORAL_BINARY',

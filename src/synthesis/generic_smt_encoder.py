@@ -223,8 +223,8 @@ class GenericEncoder:
         return '{0}_{1}'.format(self._spec_states_type.lower(), spec_state.name)
 
 
-    def _get_smt_name_sys_state(self, sys_state_vector, proc_states_desc):
-        proc_states = map(lambda iv: proc_states_desc[iv[0]][1][iv[1]], enumerate(sys_state_vector))
+    def _get_smt_name_sys_state(self, sys_state_vector, proc_states_descs):
+        proc_states = map(lambda iv: proc_states_descs[iv[0]][1][iv[1]], enumerate(sys_state_vector))
         return ' '.join(proc_states)
 
 
@@ -326,16 +326,13 @@ class GenericEncoder:
             for output_desc in outputs_descs:
                 outputs_get_value_lines += list(filter(lambda l: output_desc.name in l, get_value_lines))
 
-            #TODO: hack
-            #first process starts in state 1, others - in 0
-            if len(impl.proc_states_descs[proc_index][1]) > 1:
-                init_state = impl.proc_states_descs[proc_index][1][1]
-            else:
-                init_state = impl.proc_states_descs[proc_index][1][0]
-            state_to_input_to_new_state = self._get_tau_model(tau_get_value_lines, tau_desc)
-            state_to_outname_to_value = self._get_output_model(outputs_get_value_lines)
+            unique_init_states = set(impl.init_states)
+            for init_state in unique_init_states:
+                state_to_input_to_new_state = self._get_tau_model(tau_get_value_lines, tau_desc)
+                state_to_outname_to_value = self._get_output_model(outputs_get_value_lines)
 
-            models.append(LTS(init_state, state_to_outname_to_value, state_to_input_to_new_state))
+                init_state_name = self._get_smt_name_sys_state(init_state, impl.proc_states_descs)
+                models.append(LTS(init_state_name, state_to_outname_to_value, state_to_input_to_new_state))
 
         return models #TODO: should return nof_processes models?
 
