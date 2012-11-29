@@ -3,7 +3,7 @@ from parsing.anzu_spec.interface import *
 #TODO: add negation sign (used in arbiter examples)
 tokens = (
     'SIGNAL_NAME', 'SECTION_NAME', 'NUMBER', 'BOOL',
-    'TEMPORAL_UNARY', 'TEMPORAL_BINARY',
+    'TEMPORAL_UNARY', 'NEG', 'TEMPORAL_BINARY',
     'OR','AND','IMPLIES', 'EQUIV', 'EQUALS',
     'LPAREN','RPAREN', 'LBRACKET', 'RBRACKET',
     'SEP'
@@ -17,6 +17,7 @@ t_AND     = r'\*'
 t_IMPLIES = r'->'
 t_EQUIV   = r'<->'
 t_EQUALS  = r'='
+t_NEG     = r'\!'
 
 t_LPAREN  = r'\('
 t_RPAREN  = r'\)'
@@ -101,7 +102,7 @@ precedence = (
     ('left','IMPLIES','EQUIV'),
     ('left','AND'),
     ('left', 'TEMPORAL_BINARY'),
-#    ('left', 'NEG'), #left - right should not matter..
+    ('left', 'NEG'),            #left - right should not matter..
     ('left', 'TEMPORAL_UNARY'), #left - right should not matter..
     ('nonassoc','EQUALS')
     )
@@ -186,7 +187,8 @@ def p_section_data_property_binary_operation(p):
 
 
 def p_section_data_property_unary(p):
-    """property   : TEMPORAL_UNARY property"""
+    """property   : TEMPORAL_UNARY property
+                  | NEG property """
     p[0] = UnaryOp(p[1], p[2])
 
 

@@ -58,7 +58,7 @@ class ConverterToLtl2BaFormatVisitor(Visitor):
 
     def visit_unary_op(self, unary_op):
         arg = self.dispatch(unary_op._arg)
-        assert unary_op.name in ('G', 'F', 'X'), 'unknown unary operator: ' + str(unary_op.name)
+        assert unary_op.name in ('G', 'F', 'X', '!'), 'unknown unary operator: ' + str(unary_op.name)
         return '{op}({arg})'.format(op = unary_op.name, arg = arg)
 
     def visit_bool(self, bool_const):
@@ -76,9 +76,9 @@ def convert_ast_to_ltl3ba_format(property_ast):
     return result
 
 
-def convert_asts_to_ltl3ba_format(asts, remove_G=False):
-    properties = list(map(lambda a: convert_ast_to_ltl3ba_format(a)[int(remove_G):], asts)) +\
-                 list(map(lambda a: convert_ast_to_ltl3ba_format(a)[int(remove_G):], asts))
+def convert_asts_to_ltl3ba_format(asts):
+    properties = list(map(lambda a: convert_ast_to_ltl3ba_format(a), asts)) +\
+                 list(map(lambda a: convert_ast_to_ltl3ba_format(a), asts))
     property = and_properties(properties)
 
     return property

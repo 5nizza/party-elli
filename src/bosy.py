@@ -14,6 +14,9 @@ from synthesis.solitary_model_searcher import search
 from synthesis.smt_logic import UFLIA
 
 
+#TODO: empty sections should be handled correctly: conditions replaced by true/false, etc.
+
+
 def get_asts(data_from_section_name):
     inputs = data_from_section_name[S_INPUT_VARIABLES]
     outputs = data_from_section_name[S_OUTPUT_VARIABLES]
@@ -44,13 +47,13 @@ def main(ltl_text, dot_file, bounds, ltl2ucw_converter, z3solver, logger):
 
     vars = {'Ie':convert_asts_to_ltl3ba_format(env_initials_asts),
             'Is':convert_asts_to_ltl3ba_format(sys_initials_asts),
-            'Se':convert_asts_to_ltl3ba_format(env_transitions_asts, True),
-            'Ss':convert_asts_to_ltl3ba_format(sys_transitions_asts, True),
+            'Se':convert_asts_to_ltl3ba_format(env_transitions_asts),
+            'Ss':convert_asts_to_ltl3ba_format(sys_transitions_asts),
             'Le':convert_asts_to_ltl3ba_format(env_fairness_asts),
             'Ls':convert_asts_to_ltl3ba_format(sys_fairness_asts)}
 
-    ass = '(({Ie}) && (G({Se})) && ({Le}))'.format_map(vars)
-    gua = '(({Is}) && (G({Ss})) && ({Ls}))'.format_map(vars)
+    ass = '(({Ie}) && ({Se}) && ({Le}))'.format_map(vars)
+    gua = '(({Is}) && ({Ss}) && ({Ls}))'.format_map(vars)
 
     spec_property = '({ass}) -> ({gua})'.format(ass = ass, gua = gua)
     logger.info('the specification property (in ltl3ba format) is: ' + spec_property)
