@@ -1,8 +1,10 @@
 class BlankImpl:
     """ Blank implementation which does nothing but still can be fed to GenericEncoder """
 
-    def __init__(self):
-        self.state_var_name = 'state'
+    def __init__(self, is_mealy):
+        self.is_mealy = is_mealy
+
+        self.state_arg_name = 'state'
 
         self.automaton = None
 

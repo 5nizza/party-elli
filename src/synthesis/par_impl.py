@@ -9,10 +9,12 @@ from synthesis.smt_helper import call_func, op_and, get_bits_definition, op_not
 
 
 class ParImpl(BlankImpl): #TODO: separate architecture from the spec
-    def __init__(self, automaton, anon_inputs, anon_outputs, nof_processes, nof_local_states,
+    def __init__(self, automaton,
+                 is_mealy,
+                 anon_inputs, anon_outputs, nof_processes, nof_local_states,
                  sched_var_prefix, active_anon_var_name, sends_anon_var_name, sends_prev_anon_var_name, has_tok_var_prefix, state_type,
                  tau_name, internal_funcs_postfix):
-        super().__init__()
+        super().__init__(is_mealy)
 
         anon_inputs = list(anon_inputs)
         anon_outputs = list(anon_outputs)
@@ -59,7 +61,7 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
         for i in range(nof_processes):
             var_desc = []
             for o in anon_outputs:
-                argname_to_type = {self.state_var_name: self._state_type}
+                argname_to_type = {self.state_arg_name: self._state_type}
 
                 description = FuncDescription(str(o), argname_to_type, set(), 'Bool', None)
 
@@ -105,7 +107,7 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
             #TODO: hack: state
             if argname not in self._sched_vars \
                and argname not in self._proc_vars \
-               and argname != self.state_var_name:
+               and argname != self.state_arg_name:
                 argname, _ = anonymize_concr_var(argname)
             anon_args_dict[argname] = argvalue
 
@@ -194,7 +196,7 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
         (ite ({is_active} {is_active_inputs}) ({tau} {local_tau_inputs}) {state})
         """.format_map({'tau': self._tau_name,
                         'local_tau_inputs': ' '.join(local_tau_args),
-                        'state':self.state_var_name,
+                        'state':self.state_arg_name,
                         'is_active': self._is_active_name,
                         'is_active_inputs': ' '.join(is_active_inputs)})
 
@@ -312,7 +314,7 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
 
 
     def _get_desc_local_tau(self, anon_inputs):
-        argname_to_type = dict([(self.state_var_name, self._state_type)] + \
+        argname_to_type = dict([(self.state_arg_name, self._state_type)] + \
                                list(map(lambda input: (str(input), 'Bool'), anon_inputs)))
 
         description = FuncDescription(self._tau_name, argname_to_type, set(), self._state_type, None)

@@ -1,23 +1,25 @@
+from interfaces.automata import Label
+
+
 class LTS:
-    def __init__(self, init_state, state_to_outname_to_value, state_to_input_to_new_state):
-        self._state_to_outname_to_value = state_to_outname_to_value
-        self._state_to_input_to_new_state = state_to_input_to_new_state
-        self._init_state = init_state
+    def __init__(self, init_states, output_models:dict, tau_model:dict):
+        self._output_models = output_models
+        self._tau_model = tau_model
+        self._init_states = set(init_states)
 
-
-    def outputs(self, state):
-        return dict(self._state_to_outname_to_value[state])
-
-
-    def next_states(self, state):
-        return dict(self._state_to_input_to_new_state[state])
-
+    @property
+    def init_states(self):
+        return self._init_states
 
     @property
     def states(self):
-        return list(self._state_to_input_to_new_state.keys())
+        states = set(k['state'] for k in self._tau_model.keys()) #TODO: hack!
 
+        return states
 
     @property
-    def init_state(self):
-        return self._init_state
+    def tau_model(self):
+        return dict(self._tau_model)
+
+    def get_outputs(self, label:Label):
+        return dict((outvar, transitions[label]) for outvar, transitions in self._output_models.items())

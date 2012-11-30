@@ -47,11 +47,15 @@ class FuncDescription:
             body = self._body
         )
 
+
     def get_args_list(self, argname_to_value):
+        assert set([p[0] for p in self._ordered_input_type_pairs]).issubset(set(argname_to_value.keys()))
+
         args = dict()
         for argname, value in argname_to_value.items():
             index = index_of(lambda in_ty_pair: in_ty_pair[0]==argname, self._ordered_input_type_pairs)
-            assert index is not None, argname
+            if index is None:
+                continue
 
             args[index] = value
 
@@ -59,8 +63,22 @@ class FuncDescription:
         ordered_values = list(map(lambda i_a: i_a[1], args_list))
         return ordered_values
 
+
+    def get_args_dict(self, values):
+        result = dict()
+        print()
+        print(values)
+        print(self._ordered_input_type_pairs)
+        for i, v in enumerate(values):
+
+            arg, type = self._ordered_input_type_pairs[i]
+            result[arg] = v
+
+        return result
+
+
     def __str__(self):
-        return 'name: {name}, inputs: {inputs} (archit. inputs: {archi_inputs}), output: {output}, definition: \n{definition}'.format(
+        return '<name: {name}, inputs: {inputs} (archit. inputs: {archi_inputs}), output: {output}, definition: \n{definition}>'.format(
             name=self._name,
             inputs = str(self._ordered_input_type_pairs),
             archi_inputs = str(self._architecture_inputs),

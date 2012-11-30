@@ -8,7 +8,7 @@ from synthesis.z3 import Z3
 
 
 @log_entrance(logging.getLogger(), logging.INFO)
-def search(automaton, inputs, outputs, bounds, z3solver, logic, smt_file_prefix):
+def search(automaton, is_mealy, inputs, outputs, bounds, z3solver, logic, smt_file_prefix):
     logger = logging.getLogger()
 
     logger.debug(automaton)
@@ -26,12 +26,12 @@ def search(automaton, inputs, outputs, bounds, z3solver, logic, smt_file_prefix)
             sys_states_type = 'T'
 
             encoder = GenericEncoder(logic, spec_states_type, '')
-            impl = SolitaryImpl(automaton, inputs, outputs, bound, sys_states_type)
+            impl = SolitaryImpl(automaton, is_mealy, inputs, outputs, bound, sys_states_type)
             encoder.encode(impl, query_lines)
 
         status, data = z3solver.solve_file(smt_file.name)
 
         if status == Z3.SAT:
-            return encoder.parse_model(data, impl)
+            return encoder._parse_sys_model(data, impl)
 
     return None

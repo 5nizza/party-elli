@@ -1,11 +1,10 @@
-from collections import defaultdict
 from itertools import product, chain
 import logging
-from helpers.hashable import HashableDict
 from helpers.logging import log_entrance
 from helpers.python_ext import StrAwareList, index_of
-from interfaces.automata import  DEAD_END
-from interfaces.lts import LTS
+from interfaces.automata import  DEAD_END, Label
+from interfaces.lts import LTS, Moore
+from synthesis.func_description import FuncDescription
 from synthesis.rejecting_states_finder import build_state_to_rejecting_scc
 from synthesis.smt_helper import *
 
@@ -34,10 +33,9 @@ class GenericEncoder:
 
                 _, outfunc_desc = outvar_desc[index]
 
-                state_name = sys_state_vector[i]
+                outfunc_glob_args = self._get_proc_tau_args(sys_state_vector, label, i, impl)
+                outfunc_args = impl.convert_global_args_to_local(outfunc_glob_args)
 
-                #TODO: hack: state variable
-                outfunc_args = {impl.state_var_name:state_name}
                 out_condition = call_func(outfunc_desc.name, outfunc_desc.get_args_list(outfunc_args))
                 if not label[var_name]:
                     out_condition = op_not(out_condition)
@@ -203,7 +201,7 @@ class GenericEncoder:
         glob_tau_args = dict()
 
         proc_state = sys_state[proc_index]
-        glob_tau_args.update({impl.state_var_name:proc_state})
+        glob_tau_args.update({impl.state_arg_name:proc_state})
 
         label_vals_dict, _ = build_values_from_label(impl.orig_inputs[proc_index], proc_label)
         glob_tau_args.update(label_vals_dict)
@@ -236,31 +234,42 @@ class GenericEncoder:
         return greater(next_sharp, crt_sharp, self._logic)
 
 
-    def _make_get_values(self, impl):
+    #TODO: introduce class Type: values, type_name and remove states arg
+    def _get_all_possible_inputs(self, states, func_desc:FuncDescription):
+        arg_to_type = func_desc.inputs
+
+        value_records = product(*[('true', 'false') if i_t[1] == 'Bool' else states for i_t in arg_to_type])
+
+        args_list = list()
+        for vr in value_records:
+            typed_values_record = dict((arg_to_type[i][0], v) for i,v in enumerate(vr))
+            args_list.append(func_desc.get_args_list(typed_values_record))
+
+        return args_list
+
+
+    def _make_get_values_func_descs(self, impl, func_descs_by_proc):
         smt_lines = StrAwareList()
 
-        unique_tau_descs = []
-        for proc_index, tau_desc in enumerate(impl.model_taus_descs):
-            if tau_desc in unique_tau_descs:
-                continue
-            unique_tau_descs.append(tau_desc)
+        unique_func_descs = set()
 
-            for s in impl.states_by_process[proc_index]:
-                for raw_values in product([False, True], repeat=len(tau_desc.inputs)-1): #first arg is the state
-                    values = [str(v).lower() for v in raw_values]
-                    smt_lines += get_value(call_func(tau_desc.name, [s] + values))
+        for proc_index, func_descs in enumerate(func_descs_by_proc):
+            states = impl.states_by_process[proc_index]
 
-        processed_outputs = []
+            for func_desc in func_descs:
+                if func_desc in unique_func_descs: continue
+
+                unique_func_descs.add(func_desc)
+
+                for input in self._get_all_possible_inputs(states, func_desc):
+                    smt_lines += get_value(call_func(func_desc.name, input))
+
+        return smt_lines
 
 
-        for proc_index, output_descs in enumerate(impl.get_outputs_descs()):
-            for output_desc in output_descs:
-                if output_desc in processed_outputs:
-                    continue
-                processed_outputs.append(output_desc)
-
-                for s in impl.states_by_process[proc_index]:
-                    smt_lines += get_value(call_func(output_desc.name, output_desc.get_args_list({impl.state_var_name:s})))
+    def _make_get_values(self, impl):
+        smt_lines = self._make_get_values_func_descs(impl, ((m,) for m in impl.model_taus_descs))
+        smt_lines += self._make_get_values_func_descs(impl, impl.get_outputs_descs())
 
         return '\n'.join(smt_lines)
 
@@ -273,55 +282,99 @@ class GenericEncoder:
 
         return free_vars
 
+    def _parse_values(self, values): #TODO: introduce type class
+        return [v=='true' if v == 'true' or v=='false' else v for v in values]
 
-    def parse_model(self, get_value_lines, impl):
-        models = []
-        processed_tau_descs = []
-        for proc_index, (tau_desc, outputs_descs) in enumerate(zip(impl.model_taus_descs, impl.get_outputs_descs())):
-            if tau_desc in processed_tau_descs:
+    def _build_func_model_from_smt(self, func_smt_lines, func_desc:FuncDescription):
+        """ Return {Label:output} """
+        func_model = {}
+
+        for l in func_smt_lines:
+#            (get-value ((tau t0 true true)))
+            l = l.replace('get-value', '').replace('(', '').replace(')', '')
+            tokens = l.split()
+            if tokens[0] != func_desc.name:
                 continue
-            processed_tau_descs.append(tau_desc)
 
-            tau_get_value_lines = list(filter(lambda l: tau_desc.name in l, get_value_lines))
+            values = self._parse_values(tokens[1:]) #the very first - func_name
+            args = Label(func_desc.get_args_dict(values[:-1]))
+            func_model[args] = values[-1]
 
-            outputs_get_value_lines = StrAwareList()
+        return func_model
+
+
+    def _parse_sys_model(self, get_value_lines, impl):
+        models = []
+        for i in range(impl.nof_processes):
+            tau_func_desc = impl.model_taus_descs[i]
+
+            tau_model = self._build_func_model_from_smt(get_value_lines, tau_func_desc)
+
+            outputs_descs = impl.get_outputs_descs()[i]
+            output_models = dict()
             for output_desc in outputs_descs:
-                outputs_get_value_lines += list(filter(lambda l: output_desc.name in l, get_value_lines))
+                output_func_model = self._build_func_model_from_smt(get_value_lines, output_desc)
 
-            unique_init_states = set(impl.init_states)
-            for init_state in unique_init_states:
-                state_to_input_to_new_state = self._get_tau_model(tau_get_value_lines, tau_desc)
-                state_to_outname_to_value = self._get_output_model(outputs_get_value_lines)
+                output_models[output_desc.name] = output_func_model
 
-                models.append(LTS(init_state, state_to_outname_to_value, state_to_input_to_new_state))
+            init_states = set(sys_init_state[i] for sys_init_state in impl.init_states)
 
-        return models #TODO: should return nof_processes models??
+            models.append(LTS(init_states, output_models, tau_model))
+
+        return models
+#
+#        models = []
+#        processed_tau_descs = []
+#        for proc_index, (tau_desc, outputs_descs) in enumerate(zip(impl.model_taus_descs, impl.get_outputs_descs())):
+#            if tau_desc in processed_tau_descs:
+#                continue
+#            processed_tau_descs.append(tau_desc)
+#
+#
+#
+#            outputs_get_value_lines = StrAwareList()
+#            for output_desc in outputs_descs:
+#                outputs_get_value_lines += list(filter(lambda l: output_desc.name in l, get_value_lines))
+#
+#
+#            tau_get_value_lines = list(filter(lambda l: tau_desc.name in l, get_value_lines))
+#
+#
+#            state_to_input_to_new_state = self._get_tau_model(tau_get_value_lines, tau_desc)
+#            state_to_outname_to_value = self._get_output_model(outputs_get_value_lines)
+#
+#
+#            unique_init_states = set(impl.init_states) #TODO: looks shitty
+#            for init_state in unique_init_states:
+#                models.append(LTS(init_state, state_to_outname_to_value, state_to_input_to_new_state))
+#
+#        return models #TODO: should return nof_processes models??
 
 
-    def _get_tau_model(self, tau_lines, tau_desc):
-        state_to_input_to_new_state = defaultdict(lambda: defaultdict(lambda: {}))
-        for l in tau_lines:
-            parts = l.replace("(", "").replace(")", "").replace(tau_desc.name, "").strip().split()
+#    def _get_tau_model(self, tau_lines, tau_desc):
+#        state_to_input_to_new_state = defaultdict(lambda: defaultdict(lambda: {}))
+#        for l in tau_lines:
+#            parts = l.replace("(", "").replace(")", "").replace(tau_desc.name, "").strip().split()
+#
+#            old_state_part = parts[0]
+#            input_vals = list(map(lambda v: v=='true', parts[1:-1]))
+#            input_vars = list(map(lambda arg: arg[0], tau_desc.inputs[1:])) #[1:] due to first var being the state
+#            inputs = HashableDict(zip(input_vars, input_vals))
+#            new_state_part = parts[-1]
+#            state_to_input_to_new_state[old_state_part][inputs] = new_state_part
+#
+#        return state_to_input_to_new_state
 
-            old_state_part = parts[0]
-            input_vals = list(map(lambda v: v=='true', parts[1:-1]))
-            input_vars = list(map(lambda arg: arg[0], tau_desc.inputs[1:])) #[1:] due to first var being the state
-            inputs = HashableDict(zip(input_vars, input_vals))
-            new_state_part = parts[-1]
-            state_to_input_to_new_state[old_state_part][inputs] = new_state_part
 
-        return state_to_input_to_new_state
-
-
-    def _get_output_model(self, output_lines):
-        state_to_outname_to_value = defaultdict(lambda: defaultdict(lambda: {}))
-        for l in output_lines:
-            parts  = l.replace("(", "").replace(")", "").strip().split()
-            assert len(parts) == 3, str(parts)
-            outname, state, outvalue = parts
-            state_to_outname_to_value[state][outname] = outvalue
-
-        return state_to_outname_to_value
+#    def _get_output_model(self, output_lines):
+#        state_to_outname_to_value = defaultdict(lambda: defaultdict(lambda: {}))
+#        for l in output_lines:
+#            parts  = l.replace("(", "").replace(")", "").strip().split()
+#            assert len(parts) == 3, str(parts)
+#            outname, state, outvalue = parts
+#            state_to_outname_to_value[state][outname] = outvalue
+#
+#        return state_to_outname_to_value
 
 
     def _define_automaton_states(self, automaton):

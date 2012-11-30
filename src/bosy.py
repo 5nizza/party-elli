@@ -5,7 +5,7 @@ import tempfile
 
 from helpers.main_helper import setup_logging, create_spec_converter_z3
 from helpers.spec_helper import and_properties
-from module_generation.dot import to_dot
+from module_generation.dot import mealy_to_dot, moore_to_dot
 from parsing.anzu_spec import anzu_spec_parser
 from parsing.anzu_spec.anzu_spec_parser import convert_asts_to_ltl3ba_format
 from parsing.anzu_spec.syntax_desc import S_INPUT_VARIABLES, S_ENV_FAIRNESS, S_ENV_INITIAL,S_ENV_TRANSITIONS, S_OUTPUT_VARIABLES, S_SYS_TRANSITIONS, S_SYS_FAIRNESS, S_SYS_INITIAL
@@ -33,7 +33,7 @@ def get_asts(data_from_section_name):
     return inputs, outputs, env_initials_asts, sys_initials_asts, env_transitions_asts, sys_transitions_asts, env_fairness_asts, sys_fairness_asts
 
 
-def main(ltl_text, dot_file, bounds, ltl2ucw_converter, z3solver, logger):
+def main(ltl_text, is_moore, dot_file, bounds, ltl2ucw_converter, z3solver, logger):
     data_from_sections = anzu_spec_parser.parse_ltl(ltl_text)
 
     input_signals, output_signals, \
@@ -64,14 +64,17 @@ def main(ltl_text, dot_file, bounds, ltl2ucw_converter, z3solver, logger):
     with tempfile.NamedTemporaryFile(delete=False, dir='./') as smt_file:
         smt_file_prefix = smt_file.name
 
-    models = search(automaton, inputs, outputs, bounds, z3solver, UFLIA(None), smt_file_prefix)
+    models = search(automaton, not is_moore, inputs, outputs, bounds, z3solver, UFLIA(None), smt_file_prefix)
     assert models is None or len(models) == 1
 
     logger.info('model %s found', ['', 'not'][models is None])
 
     if dot_file is not None and models is not None:
         for lts in models:
-            dot = to_dot(lts)
+            if is_moore:
+                dot = moore_to_dot(lts)
+            else:
+                dot = mealy_to_dot(lts)
             dot_file.write(dot)
 
 
@@ -79,6 +82,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='BOunded SYnthesis Tool')
     parser.add_argument('ltl', metavar='ltl', type=argparse.FileType(),
         help='loads the LTL formula from the given input file')
+    parser.add_argument('--moore', action='store_true', required=False, default=False,
+        help='treat the spec as Moore and produce Moore machine')
     parser.add_argument('--dot', metavar='dot', type=argparse.FileType('w'), required=False,
         help='writes the output into a dot graph file')
     parser.add_argument('--bound', metavar='bound', type=int, default=2, required=False,
@@ -86,6 +91,7 @@ if __name__ == "__main__":
     parser.add_argument('--size', metavar='size', type=int, default=None, required=False,
         help='exact size of the process implementation(default: %(default)i)')
     parser.add_argument('-v', '--verbose', action='count', default=0)
+
 
     args = parser.parse_args(sys.argv[1:])
 
@@ -95,7 +101,7 @@ if __name__ == "__main__":
 
     bounds = list(range(1, args.bound + 1) if args.size is None else range(args.size, args.size + 1))
 
-    main(args.ltl.read(), args.dot, bounds, ltl2ucw_converter, z3solver, logging.getLogger(__name__))
+    main(args.ltl.read(), args.moore, args.dot, bounds, ltl2ucw_converter, z3solver, logging.getLogger(__name__))
 
     args.ltl.close()
 
