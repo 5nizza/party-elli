@@ -3,7 +3,7 @@ import logging
 from helpers.logging import log_entrance
 from helpers.python_ext import StrAwareList, index_of
 from interfaces.automata import  DEAD_END, Label
-from interfaces.lts import LTS, Moore
+from interfaces.lts import LTS
 from synthesis.func_description import FuncDescription
 from synthesis.rejecting_states_finder import build_state_to_rejecting_scc
 from synthesis.smt_helper import *
@@ -33,8 +33,7 @@ class GenericEncoder:
 
                 _, outfunc_desc = outvar_desc[index]
 
-                outfunc_glob_args = self._get_proc_tau_args(sys_state_vector, label, i, impl)
-                outfunc_args = impl.convert_global_args_to_local(outfunc_glob_args)
+                outfunc_args  = self._get_proc_tau_args(sys_state_vector, label, i, impl)
 
                 out_condition = call_func(outfunc_desc.name, outfunc_desc.get_args_list(outfunc_args))
                 if not label[var_name]:
@@ -303,7 +302,7 @@ class GenericEncoder:
         return func_model
 
 
-    def _parse_sys_model(self, get_value_lines, impl):
+    def parse_sys_model(self, get_value_lines, impl):
         models = []
         for i in range(impl.nof_processes):
             tau_func_desc = impl.model_taus_descs[i]

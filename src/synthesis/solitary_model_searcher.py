@@ -32,6 +32,6 @@ def search(automaton, is_mealy, inputs, outputs, bounds, z3solver, logic, smt_fi
         status, data = z3solver.solve_file(smt_file.name)
 
         if status == Z3.SAT:
-            return encoder._parse_sys_model(data, impl)
+            return encoder.parse_sys_model(data, impl)
 
     return None

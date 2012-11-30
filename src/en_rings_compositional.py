@@ -3,7 +3,7 @@ from itertools import chain
 import sys
 import tempfile
 from helpers.main_helper import setup_logging, create_spec_converter_z3
-from module_generation.dot import to_dot
+from module_generation.dot import moore_to_dot, mealy_to_dot
 from parsing.en_rings_parser import  SCHED_ID_PREFIX, SENDS_NAME, ACTIVE_NAME, concretize_property, get_tok_rings_liveness_par_props, HAS_TOK_NAME, SENDS_PREV_NAME, anonymize_property, get_fair_scheduler_property, get_tok_ring_par_io, get_fair_proc_scheduling_property
 from synthesis import par_model_searcher
 from synthesis.smt_logic import UFLIA
@@ -87,6 +87,7 @@ def _get_spec(spec_type):
 
 
 def _run(logger,
+         is_moore,
          logic,
          global_automatae_pairs, loc_automaton,
          anon_inputs, anon_outputs,
@@ -96,6 +97,7 @@ def _run(logger,
          dot_files_prefix):
 
     logger.info('# of global automatae %i', len(global_automatae_pairs))
+
     for glob_automaton, cutoff in global_automatae_pairs:
         logger.info('global automaton %s', glob_automaton.name)
         logger.info('corresponding cutoff=%i', cutoff)
@@ -107,7 +109,7 @@ def _run(logger,
     else:
         logger.info('no local automaton')
 
-    models = par_model_searcher.search(logic,
+    models = par_model_searcher.search(logic,is_moore,
         global_automatae_pairs,
         loc_automaton,
         anon_inputs, anon_outputs,
@@ -120,11 +122,14 @@ def _run(logger,
     if dot_files_prefix is not None and models is not None:
         for i, lts in enumerate(models):
             with open(dot_files_prefix + str(i) + '.dot', mode='w') as out:
-                dot = to_dot(lts)
+                if is_moore:
+                    dot = moore_to_dot(lts)
+                else:
+                    dot = mealy_to_dot(lts)
                 out.write(dot)
 
 
-def main_with_sync_hub(smt_file_name, logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
+def main_with_sync_hub(smt_file_name, logic, spec_type, is_moore, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
     logger.info('sync hub')
 
     #TODO: check two cases: when on SMT level and when here
@@ -187,6 +192,7 @@ def main_with_sync_hub(smt_file_name, logic, spec_type, dot_files_prefix, bounds
     global_automatae_pairs = [(global_automaton, cutoff)]
 
     _run(logger,
+        is_moore,
         logic,
         global_automatae_pairs,
         loc_automaton,
@@ -198,7 +204,7 @@ def main_with_sync_hub(smt_file_name, logic, spec_type, dot_files_prefix, bounds
 
 def main_with_async_hub(smt_file_prefix,
                         logic,
-                        spec_type,
+                        spec_type,is_moore,
                         dot_files_prefix,
                         bounds,
                         cutoff,
@@ -261,6 +267,7 @@ def main_with_async_hub(smt_file_prefix,
     global_automatae_pairs = [(global_automaton, cutoff), (ring_with_hub_automaton, 1)]
 
     _run(logger,
+        is_moore,
         logic,
         global_automatae_pairs,
         None,
@@ -270,7 +277,7 @@ def main_with_async_hub(smt_file_prefix,
         smt_file_prefix, dot_files_prefix)
 
 
-def main_compo(smt_file_prefix, logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
+def main_compo(smt_file_prefix, logic, spec_type, is_moore, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
     logger.info('compositional approach')
 
     anon_inputs, anon_outputs,\
@@ -331,13 +338,14 @@ def main_compo(smt_file_prefix, logic, spec_type, dot_files_prefix, bounds, cuto
     automatae = [(loc_automaton, 2), (global_automaton, cutoff)]
 
     _run(logger,
+        is_moore,
         logic, automatae, None, anon_inputs, anon_outputs,
         bounds,
         solver,
         smt_file_prefix, dot_files_prefix)
 
 
-def main_strengthening(smt_file_name, logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
+def main_strengthening(smt_file_name, logic, spec_type, is_moore, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
     logger.info('strengthening approach')
 
     anon_inputs, anon_outputs,\
@@ -401,6 +409,7 @@ def main_strengthening(smt_file_name, logic, spec_type, dot_files_prefix, bounds
     automaton_size_pairs = [(automaton, cutoff)]
 
     _run(logger,
+        is_moore,
         logic, automaton_size_pairs,
         None,
         anon_inputs, anon_outputs,
@@ -409,7 +418,7 @@ def main_strengthening(smt_file_name, logic, spec_type, dot_files_prefix, bounds
         smt_file_name, dot_files_prefix)
 
 
-def main_bottomup(smt_file_name, logic, spec_type, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
+def main_bottomup(smt_file_name, logic, spec_type,is_moore, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
     logger.info('bottom-up approach')
 
     anon_inputs, anon_outputs, \
@@ -436,7 +445,7 @@ def main_bottomup(smt_file_name, logic, spec_type, dot_files_prefix, bounds, cut
 
     automaton_size_pairs = [(automaton, cutoff)]
 
-    _run(logger,
+    _run(is_moore, logger,
         logic, automaton_size_pairs,
         None,
         anon_inputs, anon_outputs,
@@ -456,6 +465,8 @@ def main():
     parser = argparse.ArgumentParser(description='Parametrized Synthesis Tool for token rings architecture')
     parser.add_argument('ltl', metavar='ltl', type=str,
         help='type of LTL formula: acceptable are: pnueli, full, simple')
+    parser.add_argument('--moore', action='store_true', required=False, default=False,
+        help='treat the spec as Moore and produce Moore machine')
     parser.add_argument('--dot', metavar='dot', type=str, required=False,
         help='writes the output into a dot graph files prefixed with this prefix')
     parser.add_argument('--bound', metavar='bound', type=int, default=2, required=False,
@@ -488,6 +499,7 @@ def main():
     main_func = _OPT_TO_MAIN[args.opt]
     main_func(smt_file_name, logic,
         {'pnueli': pnueli, 'full':full, 'simple':simple}[args.ltl],
+        args.moore,
         args.dot, bounds, args.cutoff, ltl2ucw_converter, z3solver, logger)
 
 

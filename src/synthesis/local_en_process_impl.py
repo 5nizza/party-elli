@@ -5,13 +5,15 @@ from synthesis.func_description import FuncDescription
 from synthesis.smt_helper import op_and, call_func, op_not, op_implies, forall_bool, build_values_from_label
 
 class SyncImpl(BlankImpl):
-    def __init__(self, automaton, anon_inputs, anon_outputs, nof_local_states, sys_state_type,
+    def __init__(self, automaton,
+                 is_mealy,
+                 anon_inputs, anon_outputs, nof_local_states, sys_state_type,
                  has_tok_var_prefix,
                  sends_var_name,
                  sends_prev_var_name,
                  tau_name,
                  init_states):
-        super().__init__()
+        super().__init__(is_mealy)
 
         self._tau_name = tau_name
         self._has_tok_var_prefix = has_tok_var_prefix
@@ -32,15 +34,19 @@ class SyncImpl(BlankImpl):
         self.init_states = self._build_init_states(init_states)
         self.aux_func_descs = []
 
-        self.outvar_desc_by_process = self._build_outvar_func_by_process(anon_outputs)
+        self.outvar_desc_by_process = self._build_outvar_func_by_process(anon_outputs, anon_inputs)
 
         self.taus_descs = self._build_taus_descs()
         self.model_taus_descs = self._build_model_taus_descs()
 
 
 
-    def _build_outvar_func_by_process(self, anon_outputs):
-        return tuple([tuple((a, FuncDescription(a, {self.state_arg_name:self._state_type}, set(), 'Bool', None)) for a in anon_outputs)])
+    def _build_outvar_func_by_process(self, anon_outputs, anon_inputs):
+        inputvals = {self.state_arg_name:self._state_type}
+        if self.is_mealy:
+            inputvals.update((i, 'Bool') for i in anon_inputs)
+
+        return tuple([tuple((a, FuncDescription(a, inputvals, set(), 'Bool', None)) for a in anon_outputs)])
 
 
     def _build_taus_descs(self):
@@ -106,19 +112,22 @@ class SyncImpl(BlankImpl):
 
         states = self.states_by_process[0]
         for state in states:
-            state_str = state
+            CURRENT:
+            1) incorrect arguments to tok
+            2) should tok depend on prev/other_inputs or tok should depend on the state only?
+            3) should send depend on the state only?
 
-            has_tok_str = call_func(self._has_tok_var_prefix, [state_str])
-            sends_tok_str = call_func(self._sends_var_name, [state_str])
+            has_tok_str = call_func(self._has_tok_var_prefix, [state])
+            sends_tok_str = call_func(self._sends_var_name, [state])
 
             _, free_vars = build_values_from_label(self.orig_inputs[0], Label({self._sends_prev_var_name:False}))
 
             tau_args_not_sends_prev_raw, _ = build_values_from_label(self.orig_inputs[0], Label({self._sends_prev_var_name:False}))
-            tau_args_not_sends_prev_raw.update({self.state_arg_name:state_str})
+            tau_args_not_sends_prev_raw.update({self.state_arg_name:state})
             tau_args_not_sends_prev = tau_desc.get_args_list(tau_args_not_sends_prev_raw)
 
             tau_args_sends_prev_raw, _ = build_values_from_label(self.orig_inputs[0], Label({self._sends_prev_var_name:True}))
-            tau_args_sends_prev_raw.update({self.state_arg_name:state_str})
+            tau_args_sends_prev_raw.update({self.state_arg_name:state})
             tau_args_sends_prev = tau_desc.get_args_list(tau_args_sends_prev_raw)
 
             tau_not_sends_prev_str = call_func(tau_desc.name, tau_args_not_sends_prev)

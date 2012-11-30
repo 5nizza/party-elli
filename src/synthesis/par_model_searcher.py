@@ -14,6 +14,7 @@ from synthesis.z3 import Z3
 
 @log_entrance(logging.getLogger(), logging.INFO)
 def search(logic,
+           is_moore,
            global_automata_nof_processes_pairs,
            local_automaton,
            anon_inputs, anon_outputs,
@@ -43,7 +44,7 @@ def search(logic,
 
             encoder = GenericEncoder(logic, spec_states_type, counters_postfix)
 
-            impl = ParImpl(automaton, anon_inputs, anon_outputs, nof_processes, bound,
+            impl = ParImpl(automaton, not is_moore, anon_inputs, anon_outputs, nof_processes, bound,
                 sched_id_prefix, active_var_name, sends_anon_var_name, sends_prev_var_name, has_tok_var_prefix,
                 sys_state_type,
                 tau_name,
@@ -55,7 +56,7 @@ def search(logic,
 
                 query_lines += comment('local_encoder')
 
-                local_impl = SyncImpl(local_automaton, anon_inputs, anon_outputs,
+                local_impl = SyncImpl(local_automaton, not is_moore, anon_inputs, anon_outputs,
                     bound,
                     sys_state_type,
                     has_tok_var_prefix, sends_anon_var_name, sends_prev_var_name,
@@ -81,6 +82,6 @@ def search(logic,
         status, data_lines = z3solver.solve_file(smt_file.name)
 
         if status == Z3.SAT:
-            return encoder.parse_model(data_lines, impl)
+            return encoder.parse_sys_model(data_lines, impl)
 
     return None
