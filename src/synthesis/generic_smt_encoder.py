@@ -1,5 +1,6 @@
 from itertools import product, chain
 import logging
+from helpers.labels_map import LabelsMap
 from helpers.logging import log_entrance
 from helpers.python_ext import StrAwareList, index_of
 from interfaces.automata import  DEAD_END, Label
@@ -307,14 +308,14 @@ class GenericEncoder:
         for i in range(impl.nof_processes):
             tau_func_desc = impl.model_taus_descs[i]
 
-            tau_model = self._build_func_model_from_smt(get_value_lines, tau_func_desc)
+            tau_model = LabelsMap(self._build_func_model_from_smt(get_value_lines, tau_func_desc))
 
             outputs_descs = impl.get_outputs_descs()[i]
             output_models = dict()
             for output_desc in outputs_descs:
                 output_func_model = self._build_func_model_from_smt(get_value_lines, output_desc)
 
-                output_models[output_desc.name] = output_func_model
+                output_models[output_desc.name] = LabelsMap(output_func_model)
 
             init_states = set(sys_init_state[i] for sys_init_state in impl.init_states)
 

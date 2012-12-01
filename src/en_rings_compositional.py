@@ -109,7 +109,8 @@ def _run(logger,
     else:
         logger.info('no local automaton')
 
-    models = par_model_searcher.search(logic,is_moore,
+    models = par_model_searcher.search(logic,
+        is_moore,
         global_automatae_pairs,
         loc_automaton,
         anon_inputs, anon_outputs,
@@ -445,7 +446,8 @@ def main_bottomup(smt_file_name, logic, spec_type,is_moore, dot_files_prefix, bo
 
     automaton_size_pairs = [(automaton, cutoff)]
 
-    _run(is_moore, logger,
+    _run(logger,
+        is_moore,
         logic, automaton_size_pairs,
         None,
         anon_inputs, anon_outputs,

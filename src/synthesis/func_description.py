@@ -66,11 +66,7 @@ class FuncDescription:
 
     def get_args_dict(self, values):
         result = dict()
-        print()
-        print(values)
-        print(self._ordered_input_type_pairs)
         for i, v in enumerate(values):
-
             arg, type = self._ordered_input_type_pairs[i]
             result[arg] = v
 

@@ -12,7 +12,10 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
     def __init__(self, automaton,
                  is_mealy,
                  anon_inputs, anon_outputs, nof_processes, nof_local_states,
-                 sched_var_prefix, active_anon_var_name, sends_anon_var_name, sends_prev_anon_var_name, has_tok_var_prefix, state_type,
+                 sched_var_prefix, active_anon_var_name,
+                 sends_anon_var_name,
+                 sends_prev_anon_var_name,
+                 has_tok_var_prefix, state_type,
                  tau_name, internal_funcs_postfix):
         super().__init__(is_mealy)
 
@@ -50,19 +53,23 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
         self.init_states = self._build_init_states()
         self.aux_func_descs = self._build_aux_func_descs()
 
-        self.outvar_desc_by_process = self._build_outvar_desc_by_process(anon_outputs, anon_inputs, nof_processes)
+        self.outvar_desc_by_process = self._build_outvar_desc_by_process(anon_outputs,
+            sends_anon_var_name, has_tok_var_prefix,
+            anon_inputs, nof_processes)
 
         self.taus_descs = self._build_taus_descs(anon_inputs)
         self.model_taus_descs = self._build_model_taus_descs(anon_inputs)
 
 
-    def _build_outvar_desc_by_process(self, anon_outputs, anon_inputs, nof_processes):
+    def _build_outvar_desc_by_process(self, anon_outputs,
+                                      sends_anon_var_name, has_tok_var_prefix,
+                                      anon_inputs, nof_processes):
         all_var_desc = []
         for i in range(nof_processes):
             var_desc = []
             for o in anon_outputs:
                 argname_to_type = {self.state_arg_name:self._state_type}
-                if self.is_mealy:
+                if self.is_mealy and o not in (sends_anon_var_name, has_tok_var_prefix):
                     argname_to_type.update((i, 'Bool') for i in anon_inputs)
 
                 description = FuncDescription(str(o), argname_to_type, set(), 'Bool', None)

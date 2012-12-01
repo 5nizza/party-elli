@@ -34,19 +34,27 @@ class SyncImpl(BlankImpl):
         self.init_states = self._build_init_states(init_states)
         self.aux_func_descs = []
 
-        self.outvar_desc_by_process = self._build_outvar_func_by_process(anon_outputs, anon_inputs)
+        self.outvar_desc_by_process = self._build_outvar_func_by_process(anon_outputs,
+            sends_var_name, has_tok_var_prefix,
+            anon_inputs)
 
         self.taus_descs = self._build_taus_descs()
         self.model_taus_descs = self._build_model_taus_descs()
 
 
 
-    def _build_outvar_func_by_process(self, anon_outputs, anon_inputs):
-        inputvals = {self.state_arg_name:self._state_type}
-        if self.is_mealy:
-            inputvals.update((i, 'Bool') for i in anon_inputs)
+    def _build_outvar_func_by_process(self, anon_outputs,
+                                      sends_var_name, has_tok_var_prefix,
+                                      anon_inputs):
+        result = []
+        for o in anon_outputs:
+            inputvals = {self.state_arg_name:self._state_type}
+            if self.is_mealy and o not in (sends_var_name, has_tok_var_prefix):
+                inputvals.update((i, 'Bool') for i in anon_inputs)
 
-        return tuple([tuple((a, FuncDescription(a, inputvals, set(), 'Bool', None)) for a in anon_outputs)])
+            result.append((o, FuncDescription(o, inputvals, set(), 'Bool', None)))
+
+        return result
 
 
     def _build_taus_descs(self):
@@ -112,11 +120,6 @@ class SyncImpl(BlankImpl):
 
         states = self.states_by_process[0]
         for state in states:
-            CURRENT:
-            1) incorrect arguments to tok
-            2) should tok depend on prev/other_inputs or tok should depend on the state only?
-            3) should send depend on the state only?
-
             has_tok_str = call_func(self._has_tok_var_prefix, [state])
             sends_tok_str = call_func(self._sends_var_name, [state])
 

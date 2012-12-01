@@ -13,13 +13,13 @@ class LTS:
 
     @property
     def states(self):
-        states = set(k['state'] for k in self._tau_model.keys()) #TODO: hack!
+        states = set(k['state'] for k in self._tau_model) #TODO: hack!
 
         return states
 
     @property
     def tau_model(self):
-        return dict(self._tau_model)
+        return self._tau_model
 
     def get_outputs(self, label:Label):
         return dict((outvar, transitions[label]) for outvar, transitions in self._output_models.items())
