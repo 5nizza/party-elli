@@ -5,7 +5,7 @@ import tempfile
 
 from helpers.main_helper import setup_logging, create_spec_converter_z3
 from helpers.spec_helper import and_properties
-from module_generation.dot import mealy_to_dot, moore_to_dot
+from module_generation.dot import to_dot, moore_to_dot
 from parsing.anzu_spec import anzu_spec_parser
 from parsing.anzu_spec.anzu_spec_parser import convert_asts_to_ltl3ba_format
 from parsing.anzu_spec.syntax_desc import S_INPUT_VARIABLES, S_ENV_FAIRNESS, S_ENV_INITIAL,S_ENV_TRANSITIONS, S_OUTPUT_VARIABLES, S_SYS_TRANSITIONS, S_SYS_FAIRNESS, S_SYS_INITIAL
@@ -74,7 +74,7 @@ def main(ltl_text, is_moore, dot_file, bounds, ltl2ucw_converter, z3solver, logg
             if is_moore:
                 dot = moore_to_dot(lts)
             else:
-                dot = mealy_to_dot(lts)
+                dot = to_dot(lts)
             dot_file.write(dot)
 
 

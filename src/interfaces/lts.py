@@ -21,5 +21,9 @@ class LTS:
     def tau_model(self):
         return self._tau_model
 
+    @property
+    def output_models(self):
+        return self._output_models
+
     def get_outputs(self, label:Label):
         return dict((outvar, transitions[label]) for outvar, transitions in self._output_models.items())
