@@ -4,17 +4,12 @@ import sys
 import tempfile
 
 from helpers.main_helper import setup_logging, create_spec_converter_z3
-from helpers.spec_helper import and_properties
 from module_generation.dot import to_dot, moore_to_dot
 from parsing.anzu_spec import anzu_spec_parser
 from parsing.anzu_spec.anzu_spec_parser import convert_asts_to_ltl3ba_format
 from parsing.anzu_spec.syntax_desc import S_INPUT_VARIABLES, S_ENV_FAIRNESS, S_ENV_INITIAL,S_ENV_TRANSITIONS, S_OUTPUT_VARIABLES, S_SYS_TRANSITIONS, S_SYS_FAIRNESS, S_SYS_INITIAL
-from parsing.parser import parse_ltl
 from synthesis.solitary_model_searcher import search
 from synthesis.smt_logic import UFLIA
-
-
-#TODO: empty sections should be handled correctly: conditions replaced by true/false, etc.
 
 
 def get_asts(data_from_section_name):
