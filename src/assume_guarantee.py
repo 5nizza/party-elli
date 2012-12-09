@@ -2,11 +2,10 @@ import argparse
 import tempfile
 import sys
 from helpers.main_helper import setup_logging, create_spec_converter_z3
-from helpers.spec_helper import and_properties
 from module_generation.dot import to_dot
-from parsing.anzu_spec import anzu_spec_parser
-from parsing.anzu_spec.anzu_spec_parser import convert_ast_to_ltl3ba_format
-from parsing.anzu_spec.syntax_desc import S_ENV_TRANSITIONS, S_ENV_INITIAL, S_SYS_INITIAL, S_SYS_TRANSITIONS, S_INPUT_VARIABLES, S_OUTPUT_VARIABLES, S_ENV_FAIRNESS, S_SYS_FAIRNESS
+from parsing import anzu_parser
+from parsing.anzu_parser import convert_ast_to_ltl3ba_format
+from parsing.anzu_syntax_desc import S_ENV_TRANSITIONS, S_ENV_INITIAL, S_SYS_INITIAL, S_SYS_TRANSITIONS, S_INPUT_VARIABLES, S_OUTPUT_VARIABLES, S_ENV_FAIRNESS, S_SYS_FAIRNESS
 from synthesis.assume_guarantee import assume_guarantee_searcher
 from synthesis.smt_logic import UFLIA
 
@@ -34,7 +33,7 @@ def _convert_asts_to_automaton(asts, automaton_converter):
 
 
 def assume_guarantee_case(anzu_ltl_spec, smt_files_prefix, dot_file, bounds, automaton_converter, z3solver, logger):
-    data_from_section_name = anzu_spec_parser.parse_ltl(anzu_ltl_spec)
+    data_from_section_name = anzu_parser.parse_ltl(anzu_ltl_spec)
 
     #ltl3ba treats upper letters wrongly
     inputs = [n.name.lower() for n in data_from_section_name[S_INPUT_VARIABLES]]

@@ -4,8 +4,8 @@ import sys
 from helpers.main_helper import setup_logging, create_spec_converter_z3
 from interfaces.spec import Spec
 from module_generation.dot import to_dot
-from parsing.en_rings_parser import is_parametrized, SCHED_ID_PREFIX, SENDS_NAME, ACTIVE_NAME, add_concretize_fair_sched
-from parsing.parser import parse_ltl
+from parsing.simple_par_parser import is_parametrized, SCHED_ID_PREFIX, SENDS_NAME, ACTIVE_NAME, add_concretize_fair_sched
+from parsing.simple_parser import parse_ltl
 from synthesis.par_model_searcher import search
 
 

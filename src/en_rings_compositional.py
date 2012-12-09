@@ -4,7 +4,7 @@ import sys
 import tempfile
 from helpers.main_helper import setup_logging, create_spec_converter_z3
 from module_generation.dot import moore_to_dot, to_dot
-from parsing.en_rings_parser import  SCHED_ID_PREFIX, SENDS_NAME, ACTIVE_NAME, concretize_property, get_tok_rings_liveness_par_props, HAS_TOK_NAME, SENDS_PREV_NAME, anonymize_property, get_fair_scheduler_property, get_tok_ring_par_io, get_fair_proc_scheduling_property
+from parsing.simple_par_parser import  SCHED_ID_PREFIX, SENDS_NAME, ACTIVE_NAME, concretize_property, get_tok_rings_liveness_par_props, HAS_TOK_NAME, SENDS_PREV_NAME, anonymize_property, get_fair_scheduler_property, get_tok_ring_par_io, get_fair_proc_scheduling_property
 from synthesis import par_model_searcher
 from synthesis.smt_logic import UFLIA
 
