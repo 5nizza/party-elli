@@ -6,8 +6,8 @@ import tempfile
 from helpers.main_helper import setup_logging, create_spec_converter_z3
 from module_generation.dot import to_dot, moore_to_dot
 from parsing import anzu_parser
-from parsing.anzu_parser import convert_asts_to_ltl3ba_format
 from parsing.anzu_parser_desc import S_INPUT_VARIABLES, S_ENV_FAIRNESS, S_ENV_INITIAL,S_ENV_TRANSITIONS, S_OUTPUT_VARIABLES, S_SYS_TRANSITIONS, S_SYS_FAIRNESS, S_SYS_INITIAL
+from parsing.helpers import convert_asts_to_ltl3ba_format
 from synthesis.solitary_model_searcher import search
 from synthesis.smt_logic import UFLIA
 
