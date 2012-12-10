@@ -6,24 +6,24 @@ import tempfile
 from helpers.main_helper import setup_logging, create_spec_converter_z3
 from module_generation.dot import to_dot, moore_to_dot
 from parsing import anzu_parser
-from parsing.anzu_parser_desc import S_INPUT_VARIABLES, S_ENV_FAIRNESS, S_ENV_INITIAL,S_ENV_TRANSITIONS, S_OUTPUT_VARIABLES, S_SYS_TRANSITIONS, S_SYS_FAIRNESS, S_SYS_INITIAL
+from parsing.anzu_parser_desc import ANZU_INPUT_VARIABLES, ANZU_ENV_FAIRNESS, ANZU_ENV_INITIAL,ANZU_ENV_TRANSITIONS, ANZU_OUTPUT_VARIABLES, ANZU_SYS_TRANSITIONS, ANZU_SYS_FAIRNESS, ANZU_SYS_INITIAL
 from parsing.helpers import convert_asts_to_ltl3ba_format
 from synthesis.solitary_model_searcher import search
 from synthesis.smt_logic import UFLIA
 
 
 def get_asts(data_from_section_name):
-    inputs = data_from_section_name[S_INPUT_VARIABLES]
-    outputs = data_from_section_name[S_OUTPUT_VARIABLES]
+    inputs = data_from_section_name[ANZU_INPUT_VARIABLES]
+    outputs = data_from_section_name[ANZU_OUTPUT_VARIABLES]
 
-    env_initials_asts = data_from_section_name[S_ENV_INITIAL]
-    sys_initials_asts = data_from_section_name[S_SYS_INITIAL]
+    env_initials_asts = data_from_section_name[ANZU_ENV_INITIAL]
+    sys_initials_asts = data_from_section_name[ANZU_SYS_INITIAL]
 
-    env_transitions_asts = data_from_section_name[S_ENV_TRANSITIONS]
-    sys_transitions_asts = data_from_section_name[S_SYS_TRANSITIONS]
+    env_transitions_asts = data_from_section_name[ANZU_ENV_TRANSITIONS]
+    sys_transitions_asts = data_from_section_name[ANZU_SYS_TRANSITIONS]
 
-    env_fairness_asts = data_from_section_name[S_ENV_FAIRNESS]
-    sys_fairness_asts = data_from_section_name[S_SYS_FAIRNESS]
+    env_fairness_asts = data_from_section_name[ANZU_ENV_FAIRNESS]
+    sys_fairness_asts = data_from_section_name[ANZU_SYS_FAIRNESS]
 
     return inputs, outputs, env_initials_asts, sys_initials_asts, env_transitions_asts, sys_transitions_asts, env_fairness_asts, sys_fairness_asts
 

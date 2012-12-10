@@ -4,7 +4,7 @@ import sys
 from helpers.main_helper import setup_logging, create_spec_converter_z3
 from module_generation.dot import to_dot
 from parsing import anzu_parser
-from parsing.anzu_parser_desc import S_ENV_TRANSITIONS, S_ENV_INITIAL, S_SYS_INITIAL, S_SYS_TRANSITIONS, S_INPUT_VARIABLES, S_OUTPUT_VARIABLES, S_ENV_FAIRNESS, S_SYS_FAIRNESS
+from parsing.anzu_parser_desc import ANZU_ENV_TRANSITIONS, ANZU_ENV_INITIAL, ANZU_SYS_INITIAL, ANZU_SYS_TRANSITIONS, ANZU_INPUT_VARIABLES, ANZU_OUTPUT_VARIABLES, ANZU_ENV_FAIRNESS, ANZU_SYS_FAIRNESS
 from parsing.helpers import convert_ast_to_ltl3ba_format
 from synthesis.assume_guarantee import assume_guarantee_searcher
 from synthesis.smt_logic import UFLIA
@@ -36,16 +36,16 @@ def assume_guarantee_case(anzu_ltl_spec, smt_files_prefix, dot_file, bounds, aut
     data_from_section_name = anzu_parser.parse_ltl(anzu_ltl_spec)
 
     #ltl3ba treats upper letters wrongly
-    inputs = [n.name.lower() for n in data_from_section_name[S_INPUT_VARIABLES]]
-    outputs = [n.name.lower() for n in data_from_section_name[S_OUTPUT_VARIABLES]]
+    inputs = [n.name.lower() for n in data_from_section_name[ANZU_INPUT_VARIABLES]]
+    outputs = [n.name.lower() for n in data_from_section_name[ANZU_OUTPUT_VARIABLES]]
 
-    env_initials_asts = data_from_section_name[S_ENV_INITIAL]
-    env_transitions_asts = data_from_section_name[S_ENV_TRANSITIONS]
-    env_fairness_asts = data_from_section_name[S_ENV_FAIRNESS]
+    env_initials_asts = data_from_section_name[ANZU_ENV_INITIAL]
+    env_transitions_asts = data_from_section_name[ANZU_ENV_TRANSITIONS]
+    env_fairness_asts = data_from_section_name[ANZU_ENV_FAIRNESS]
 
-    sys_initials_asts = data_from_section_name[S_SYS_INITIAL]
-    sys_transitions_asts = data_from_section_name[S_SYS_TRANSITIONS]
-    sys_fairness_asts = data_from_section_name[S_SYS_FAIRNESS]
+    sys_initials_asts = data_from_section_name[ANZU_SYS_INITIAL]
+    sys_transitions_asts = data_from_section_name[ANZU_SYS_TRANSITIONS]
+    sys_fairness_asts = data_from_section_name[ANZU_SYS_FAIRNESS]
 
     #temporarily: remove me!
     vars = {'Ie':_convert_asts_to_ltl3ba_format(env_initials_asts),

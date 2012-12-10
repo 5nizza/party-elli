@@ -1,6 +1,6 @@
 from helpers.ply import yacc
-from parsing.anzu_parser_desc import anzu_parser
-from parsing.par_lexer_desc import par_lexer
+from parsing.par_lexer_desc import par_lexer, PAR_INPUT_VARIABLES, PAR_OUTPUT_VARIABLES, PAR_ASSUMPTIONS, PAR_GUARANTEES
+from parsing.par_parser_desc import par_parser
 
 pnueli_arbiter_spec = """
 [INPUT_VARIABLES] #no support of global variables => all the variables are assumed to be indexed!
@@ -54,7 +54,7 @@ Forall (i,j) G(!(g_i=1 * g_j=1));
 
 def parse_ltl(par_text):
     """ Return {section:data}, see sections in syntax_desc """
-    section_name_to_data = dict(anzu_parser.parse(par_text, lexer=par_lexer))
+    section_name_to_data = dict(par_parser.parse(par_text, lexer=par_lexer))
     return section_name_to_data
 
 
@@ -63,22 +63,25 @@ def parse_ltl(par_text):
 
 from unittest import TestCase
 class Test(TestCase):
-    def test_pnueli_spec(self):
-        print('pnueli spec')
-        result = yacc.parse(pnueli_arbiter_spec)
+    def _do_test(self, test_name, spec, expected_result):
+        print(test_name)
+        result = yacc.parse(spec)
 
         section_name_to_data = dict(result)
         for (k, v) in result:
             print(k, v)
 
-        expected_results = {'INPUT_VARIABLES':1, 'OUTPUT_VARIABLES':1,
-                            'ASSUMPTIONS':1, 'SYS_TRANSITIONS':3,
-                            'GUARANTEES':1, 'ENV_TRANSITIONS':2}
-
         for section_name, data in section_name_to_data.items():
             actual = len(data)
-            expected = expected_results[section_name]
+            expected = expected_result[section_name]
             assert actual == expected, '{actual} != {expected}: {section}'.format(
                 actual = actual, expected =expected, section = section_name)
 
 
+    def test_pnueli(self):
+        self._do_test('pnueli', pnueli_arbiter_spec,
+            {PAR_INPUT_VARIABLES:1, PAR_OUTPUT_VARIABLES:1, PAR_ASSUMPTIONS:3, PAR_GUARANTEES:4})
+
+    def test_full(self):
+        self._do_test('full', pnueli_arbiter_spec,
+            {PAR_INPUT_VARIABLES:1, PAR_OUTPUT_VARIABLES:1, PAR_ASSUMPTIONS:1, PAR_GUARANTEES:6})

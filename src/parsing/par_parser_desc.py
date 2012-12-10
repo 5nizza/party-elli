@@ -1,4 +1,4 @@
-from parsing.anzu_lexer_desc import *
+from parsing.par_lexer_desc import *
 
 precedence = (
     ('right', 'QUANTIFIERS'),
