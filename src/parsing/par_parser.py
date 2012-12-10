@@ -9,20 +9,18 @@ r;
 [OUTPUT_VARIABLES]
 g;
 
-[ENV_TRANSITIONS]
+[ASSUMPTIONS]
 Forall (i) r_i=0;
 Forall (i) G(((r_i=1)*(g_i=0)->X(r_i=1)) * ((r_i=0)*(g_i=1)->X(r_i=0)));
 
-[SYS_TRANSITIONS]
+Forall (i) G(F((r_i=0)+(g_i=0)));
+
+[GUARANTEES]
 Forall (i) g_i=0;
 Forall (i,j) G(!((g_i=1) * (g_j=1)));
 Forall (i) G((((r_i=0)*(g_i=0))->X(g_i=0)) * (((r_i=1)*(g_i=1))->X(g_i=1)));
 
-[ASSUMPTIONS]
-Forall (i) G(F((r_i=0)+(g_i=0)));
-
-[GUARANTEES]
-Forall(i) G(F(((r_i=1)*(g_i=1)) + ((r_i=0)*(g_i=0))));
+Forall (i) G(F(((r_i=1)*(g_i=1)) + ((r_i=0)*(g_i=0))));
 """
 
 
@@ -63,22 +61,19 @@ def parse_ltl(par_text):
 ########################################################################
 # tests
 
-
-
-
-
 from unittest import TestCase
 class Test(TestCase):
-    def tests_all(self):
-        result = yacc.parse(test_string)
+    def test_pnueli_spec(self):
+        print('pnueli spec')
+        result = yacc.parse(pnueli_arbiter_spec)
 
         section_name_to_data = dict(result)
         for (k, v) in result:
             print(k, v)
 
-        expected_results = {'INPUT_VARIABLES':9, 'OUTPUT_VARIABLES':18,
-                            'SYS_FAIRNESS':5, 'SYS_TRANSITIONS':5, 'SYS_INITIAL':18,
-                            'ENV_FAIRNESS':2, 'ENV_TRANSITIONS':3, 'ENV_INITIAL':9}
+        expected_results = {'INPUT_VARIABLES':1, 'OUTPUT_VARIABLES':1,
+                            'ASSUMPTIONS':1, 'SYS_TRANSITIONS':3,
+                            'GUARANTEES':1, 'ENV_TRANSITIONS':2}
 
         for section_name, data in section_name_to_data.items():
             actual = len(data)
