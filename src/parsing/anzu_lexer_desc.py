@@ -1,9 +1,29 @@
 from parsing.interface import *
 
+ANZU_SECTIONS = 'INPUT_VARIABLES OUTPUT_VARIABLES ENV_INITIAL SYS_INITIAL ENV_TRANSITIONS SYS_TRANSITIONS ENV_FAIRNESS SYS_FAIRNESS'.split()
+ANZU_INPUT_VARIABLES, ANZU_OUTPUT_VARIABLES,\
+ANZU_ENV_INITIAL, ANZU_SYS_INITIAL,\
+ANZU_ENV_TRANSITIONS, ANZU_SYS_TRANSITIONS,\
+ANZU_ENV_FAIRNESS, ANZU_SYS_FAIRNESS = ANZU_SECTIONS
+
+#reserved words: syntactic sugar to help to match exactly reserved word
+reserved_section_names = dict((s, s) for s in ANZU_SECTIONS)
+reserved_bools =  dict((s, s) for s in ('TRUE', 'FALSE'))
+
+tokens = [
+             'SIGNAL_NAME', 'NUMBER', 'BOOL',
+             'TEMPORAL_UNARY', 'NEG', 'TEMPORAL_BINARY',
+             'OR','AND','IMPLIES', 'EQUIV', 'EQUALS',
+             'LPAREN','RPAREN', 'LBRACKET', 'RBRACKET',
+             'SEP'
+         ] + list(reserved_section_names.values())
+#             list(reserved_bools.values()) #i use BOOL currently
 
 #constant to ensure consistency of the code
 BIN_OPS = ('+','*','->','<->','=','U')
 
+
+############################################################
 t_OR      = r'\+'
 t_AND     = r'\*'
 t_IMPLIES = r'->'
@@ -22,35 +42,13 @@ t_SEP = r';+'
 t_ignore = " \t"
 t_ignore_comment = r"\#.*"
 
-tokens = (
-    'SIGNAL_NAME', 'SECTION_NAME', 'NUMBER', 'BOOL',
-    'TEMPORAL_UNARY', 'NEG', 'TEMPORAL_BINARY',
-    'OR','AND','IMPLIES', 'EQUIV', 'EQUALS',
-    'LPAREN','RPAREN', 'LBRACKET', 'RBRACKET',
-    'SEP'
-    )
-
-RESERVED_WORDS to solve the problem of priorities?
-
-ANZU_SECTIONS = 'INPUT_VARIABLES OUTPUT_VARIABLES ENV_INITIAL SYS_INITIAL ENV_TRANSITIONS SYS_TRANSITIONS ENV_FAIRNESS SYS_FAIRNESS'.split()
-ANZU_INPUT_VARIABLES, ANZU_OUTPUT_VARIABLES,\
-ANZU_ENV_INITIAL, ANZU_SYS_INITIAL,\
-ANZU_ENV_TRANSITIONS, ANZU_SYS_TRANSITIONS,\
-ANZU_ENV_FAIRNESS, ANZU_SYS_FAIRNESS = ANZU_SECTIONS
-
-def t_SECTION_NAME(t):
-    return t
-t_SECTION_NAME.__doc__ = '|'.join(ANZU_SECTIONS)
-
-def t_BOOL(t):
-    r"""TRUE|FALSE"""
-    try:
-        if not (t.value == 'FALSE' or t.value == 'TRUE'):
-            raise ValueError()
-        t.value = Bool(t.value == 'TRUE')
-        return t
-    except ValueError:
-        print("Unknown boolean valueInteger value too large %d", t.value)
+#def t_BOOL(t):
+#    r"""TRUE|FALSE"""
+#    try:
+#        t.value = Bool(t.value == 'TRUE')
+#        return t
+#    except ValueError:
+#        print("Unknown boolean valueInteger value too large %d", t.value)
 
 def t_TEMPORAL_UNARY(t):
     r"""(G|F|X)(?=[ \t]*\()""" #temporal operators require parenthesis
@@ -60,10 +58,22 @@ def t_TEMPORAL_BINARY(t):
     r"""U(?=[ \t]*\()""" #temporal operators require parenthesis
     return t
 
+
 def t_SIGNAL_NAME(t):
     r"""[a-zA-Z_][a-zA-Z0-9_]*"""
+
+    # Check for reserved words
+    if t.value in reserved_section_names:
+        t.type = reserved_section_names[t.value]
+        return t
+    if t.value in reserved_bools:
+        t.type = 'BOOL'
+        t.value = Bool(t.value == 'TRUE')
+        return t
+
     t.value = Signal(t.value)
     return t
+
 
 def t_NUMBER(t):
     r"""\d+"""

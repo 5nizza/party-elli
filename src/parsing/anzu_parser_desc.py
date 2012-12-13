@@ -1,3 +1,4 @@
+from helpers.ply.lex import TOKEN
 from parsing.anzu_lexer_desc import *
 
 precedence = (
@@ -40,8 +41,13 @@ def p_section(p):
 
 
 def p_section_header(p):
-    """section_header : LBRACKET SECTION_NAME RBRACKET"""
+    """section_header : LBRACKET section_name RBRACKET"""
     p[0] = p[2]
+
+
+def p_section_name(p):
+    p[0] = p[1]
+p_section_name.__doc__ = 'section_name : ' + ANZU_SECTIONS[0] + ' \n  | ' + '\n  | '.join(ANZU_SECTIONS[1:])
 
 
 def p_section_data(p):

@@ -4,13 +4,13 @@
 # A simple calculator with variables -- all in one file.
 # -----------------------------------------------------------------------------
 
-# NOTE on using reserved words:
+# NOTE on using concept 'reserved':
 # we want to have constant PI
 # solution1: specify token PI explicitly by r'PI' -- cex1 is : PIk is recognized as 314k -> syntax error
 # solution2: as solution1 but switch the priority PI-name -- cex1 is ok, but cex2: PI is recognized as name
 # solution3: use 'reserved' and check explicitly in all ambiguous points(t_NAME) t.type=reserved.get(t.value, 'NAME')
 # solution3 solves cex1, cex2
-
+# ..ply does not do anything implicit with reserved
 
 reserved = {'PI': 'PI'}
 
