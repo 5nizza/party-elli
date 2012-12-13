@@ -1,7 +1,8 @@
+from parsing.interface import *
 from parsing.par_lexer_desc import *
 
 precedence = (
-    ('right', 'QUANTIFIERS'),
+    ('right', 'QUANTIFIER'),
     ('left','OR'),
     ('left','IMPLIES','EQUIV'),
     ('left','AND'),
@@ -41,8 +42,13 @@ def p_section(p):
 
 
 def p_section_header(p):
-    """section_header : LBRACKET SECTION_NAME RBRACKET"""
+    """section_header : LBRACKET section_name RBRACKET"""
     p[0] = p[2]
+
+
+def p_section_name(p):
+    p[0] = p[1]
+p_section_name.__doc__ = 'section_name : ' + PAR_SECTIONS[0] + ' \n  | ' + '\n  | '.join(PAR_SECTIONS[1:])
 
 
 def p_section_data(p):
@@ -56,12 +62,18 @@ def p_section_data(p):
 
 
 def p_section_data_signals_definitions2(p):
-    """signals : SIGNAL_NAME SEP
-               | signals SIGNAL_NAME SEP """
+    """signals : signal_name SEP
+               | signals signal_name SEP """
     if len(p) == 4:
         p[0] = p[1] + [p[2]]
     else:
         p[0] = [p[1]]
+
+
+def p_signal_name(p):
+    """ signal_name : SIGNAL_NAME
+    """
+    p[0] = Signal(p[1])
 
 
 def p_section_data_properties(p):
@@ -75,11 +87,11 @@ def p_section_data_properties(p):
 
 def p_section_data_property_bool(p):
     """property   : BOOL"""
-    p[0] = p[1]
+    p[0] = Bool(p[1] == 'TRUE')
 
 
 def p_section_data_property_binary_operation(p):
-    """property   : SIGNAL_NAME EQUALS NUMBER
+    """property   : signal_name EQUALS number
                   | property AND property
                   | property OR property
                   | property IMPLIES property
@@ -88,6 +100,46 @@ def p_section_data_property_binary_operation(p):
                   | property TEMPORAL_BINARY property"""
     assert p[2] in BIN_OPS
     p[0] = BinOp(p[2], p[1], p[3])
+
+def p_section_data_par_property(p):
+    """property : par_property """
+    p[0] = p[1]
+
+
+def p_par_property(p):
+    """par_property : QUANTIFIER binding_args property
+    """
+    p[0] = QuantifiedExpr(p[1], p[2], p[3])
+
+
+def p_binding_args(p):
+    """ binding_args : LPAREN vars RPAREN
+    """
+    p[0] = p[2]
+
+
+def p_vars_one(p):
+    """ vars : var_name
+    """
+    p[0] = [p[1]]
+
+
+def p_vars_many(p):
+    """ vars : vars COMMA var_name
+    """
+    p[0] = p[1] + [p[3]]
+
+
+def p_var_name(p):
+    """ var_name : SIGNAL_NAME
+    """
+    p[0] = p[1] #just a string name without type
+
+
+def p_number(p):
+    """ number : NUMBER
+    """
+    p[0] = Number(p[1])
 
 
 def p_section_data_property_unary(p):

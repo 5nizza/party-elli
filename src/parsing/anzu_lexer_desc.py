@@ -42,17 +42,11 @@ t_SEP = r';+'
 t_ignore = " \t"
 t_ignore_comment = r"\#.*"
 
-#def t_BOOL(t):
-#    r"""TRUE|FALSE"""
-#    try:
-#        t.value = Bool(t.value == 'TRUE')
-#        return t
-#    except ValueError:
-#        print("Unknown boolean valueInteger value too large %d", t.value)
 
 def t_TEMPORAL_UNARY(t):
     r"""(G|F|X)(?=[ \t]*\()""" #temporal operators require parenthesis
     return t
+
 
 def t_TEMPORAL_BINARY(t):
     r"""U(?=[ \t]*\()""" #temporal operators require parenthesis

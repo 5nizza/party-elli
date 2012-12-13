@@ -50,3 +50,13 @@ class UnaryOp(Expr):
         self._arg = arg
     def __repr__(self):
         return self.name + str(self._arg)
+
+
+class QuantifiedExpr(BinOp):
+    def __init__(self, name, arg1:'binding indices', arg2:Expr):
+        super().__init__(name, arg1, arg2)
+
+    def __str__(self):
+        return self.name + str(self._arg1) + ' ' + str(self._arg2)
+
+    __repr__ = __str__

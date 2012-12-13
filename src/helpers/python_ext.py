@@ -1,6 +1,13 @@
 from collections import Iterable
 import math
 
+def add_dicts(*dicts):
+    resulting_items = []
+    for d in dicts:
+        resulting_items += list(d.items())
+    return dict(resulting_items)
+
+
 def get_add(dict, name, default):
     res = dict[name] = dict.get(name, default)
     return res

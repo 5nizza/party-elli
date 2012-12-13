@@ -45,7 +45,7 @@ Forall (i) (!(((r_i=0) * (g_i=0)) U ((r_i=0) * g_i=1)));
 Forall (i) (!F(g_i=1 * X((r_i=0) * g_i=0) * X(((r_i=0) * g_i=0) U (g_i=1 * r_i=0) )) );
 
 #every grant is lowered unless request keeps staying high
-Forall (i) G( (active_i=1 * (r_i=0) * g_i=1) -> F((r_i=1 * g_i=1) || (g_i=0)) );
+Forall (i) G( (active_i=1 * (r_i=0) * g_i=1) -> F((r_i=1 * g_i=1) + (g_i=0)) );
 
 Forall (i) G( (active_i=1 * (r_i=1)) -> F(g_i=1) );
 
@@ -74,8 +74,11 @@ class Test(TestCase):
         for section_name, data in section_name_to_data.items():
             actual = len(data)
             expected = expected_result[section_name]
-            assert actual == expected, '{actual} != {expected}: {section}'.format(
-                actual = actual, expected =expected, section = section_name)
+            assert actual == expected, '{actual} != {expected}: {section}: {section_data}'.format(
+                actual = actual,
+                expected =expected,
+                section = section_name,
+                section_data=str(section_name_to_data[section_name]))
 
 
     def test_pnueli(self):
@@ -83,5 +86,5 @@ class Test(TestCase):
             {PAR_INPUT_VARIABLES:1, PAR_OUTPUT_VARIABLES:1, PAR_ASSUMPTIONS:3, PAR_GUARANTEES:4})
 
     def test_full(self):
-        self._do_test('full', pnueli_arbiter_spec,
+        self._do_test('full', full_arbiter_spec,
             {PAR_INPUT_VARIABLES:1, PAR_OUTPUT_VARIABLES:1, PAR_ASSUMPTIONS:1, PAR_GUARANTEES:6})
