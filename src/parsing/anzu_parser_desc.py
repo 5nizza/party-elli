@@ -1,4 +1,3 @@
-from helpers.ply.lex import TOKEN
 from parsing.anzu_lexer_desc import *
 
 precedence = (

@@ -5,6 +5,11 @@ class Signal:
     def __repr__(self):
         return str(self.name)
 
+    def __eq__(self, other):
+        if not isinstance(other, Signal):
+            return False
+        return str(self) == str(other)
+
 
 class Number:
     def __init__(self, number):
@@ -38,18 +43,18 @@ class Bool(Expr):
 class BinOp(Expr):
     def __init__(self, name, arg1, arg2):
         super().__init__(name)
-        self._arg1 = arg1
-        self._arg2 = arg2
+        self.arg1 = arg1
+        self.arg2 = arg2
     def __repr__(self):
-        return str(self._arg1) + ' ' + self.name + ' ' + str(self._arg2)
+        return str(self.arg1) + ' ' + self.name + ' ' + str(self.arg2)
 
 
 class UnaryOp(Expr):
     def __init__(self, name, arg):
         super().__init__(name)
-        self._arg = arg
+        self.arg = arg
     def __repr__(self):
-        return self.name + str(self._arg)
+        return self.name + str(self.arg)
 
 
 class QuantifiedExpr(BinOp):
@@ -57,6 +62,6 @@ class QuantifiedExpr(BinOp):
         super().__init__(name, arg1, arg2)
 
     def __str__(self):
-        return self.name + str(self._arg1) + ' ' + str(self._arg2)
+        return self.name + str(self.arg1) + ' ' + str(self.arg2)
 
     __repr__ = __str__

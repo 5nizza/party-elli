@@ -5,7 +5,7 @@ import tempfile
 
 from helpers.main_helper import setup_logging, create_spec_converter_z3
 from module_generation.dot import to_dot, moore_to_dot
-from parsing import anzu_parser
+import parsing.anzu_parser as anzu_parser
 from parsing.anzu_parser_desc import ANZU_INPUT_VARIABLES, ANZU_ENV_FAIRNESS, ANZU_ENV_INITIAL,ANZU_ENV_TRANSITIONS, ANZU_OUTPUT_VARIABLES, ANZU_SYS_TRANSITIONS, ANZU_SYS_FAIRNESS, ANZU_SYS_INITIAL
 from parsing.helpers import convert_asts_to_ltl3ba_format
 from synthesis.solitary_model_searcher import search
@@ -29,7 +29,9 @@ def get_asts(data_from_section_name):
 
 
 def main(ltl_text, is_moore, dot_file, bounds, ltl2ucw_converter, z3solver, logger):
-    data_from_sections = anzu_parser.parse_ltl(ltl_text)
+    data_from_sections = anzu_parser.parse_ltl(ltl_text, logger)
+    if data_from_sections is None:
+        return
 
     input_signals, output_signals, \
     env_initials_asts, sys_initials_asts, \
@@ -75,20 +77,20 @@ def main(ltl_text, is_moore, dot_file, bounds, ltl2ucw_converter, z3solver, logg
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='BOunded SYnthesis Tool')
-    anzu_parser.add_argument('ltl', metavar='ltl', type=argparse.FileType(),
+    parser.add_argument('ltl', metavar='ltl', type=argparse.FileType(),
         help='loads the LTL formula from the given input file')
-    anzu_parser.add_argument('--moore', action='store_true', required=False, default=False,
+    parser.add_argument('--moore', action='store_true', required=False, default=False,
         help='treat the spec as Moore and produce Moore machine')
-    anzu_parser.add_argument('--dot', metavar='dot', type=argparse.FileType('w'), required=False,
+    parser.add_argument('--dot', metavar='dot', type=argparse.FileType('w'), required=False,
         help='writes the output into a dot graph file')
-    anzu_parser.add_argument('--bound', metavar='bound', type=int, default=2, required=False,
+    parser.add_argument('--bound', metavar='bound', type=int, default=2, required=False,
         help='upper bound on the size of local process (default: %(default)i)')
-    anzu_parser.add_argument('--size', metavar='size', type=int, default=None, required=False,
+    parser.add_argument('--size', metavar='size', type=int, default=None, required=False,
         help='exact size of the process implementation(default: %(default)i)')
-    anzu_parser.add_argument('-v', '--verbose', action='count', default=0)
+    parser.add_argument('-v', '--verbose', action='count', default=0)
 
 
-    args = anzu_parser.parse_args(sys.argv[1:])
+    args = parser.parse_args(sys.argv[1:])
 
     setup_logging(args.verbose)
 

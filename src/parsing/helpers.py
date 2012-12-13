@@ -22,17 +22,17 @@ class Visitor:
 
         assert 0, 'unknown node type' + str(node)
 
-    def visit_binary_op(self, binary_op): raise NotImplementedError()
-    def visit_unary_op(self, unary_op): raise NotImplementedError()
+    def visit_binary_op(self, binary_op:BinOp): raise NotImplementedError()
+    def visit_unary_op(self, unary_op:UnaryOp): raise NotImplementedError()
     def visit_bool(self, bool_const): raise NotImplementedError()
-    def visit_signal(self, signal): raise NotImplementedError()
-    def visit_number(self, number): raise NotImplementedError()
+    def visit_signal(self, signal:Signal): raise NotImplementedError()
+    def visit_number(self, number:Number): raise NotImplementedError()
 
 
 class ConverterToLtl2BaFormatVisitor(Visitor):
-    def visit_binary_op(self, binary_op):
-        arg1 = self.dispatch(binary_op._arg1)
-        arg2 = self.dispatch(binary_op._arg2)
+    def visit_binary_op(self, binary_op:BinOp):
+        arg1 = self.dispatch(binary_op.arg1)
+        arg2 = self.dispatch(binary_op.arg2)
 
         if binary_op.name == '*':
             return '({arg1}) && ({arg2})'.format(arg1 = arg1, arg2 = arg2)
@@ -48,8 +48,8 @@ class ConverterToLtl2BaFormatVisitor(Visitor):
 
         assert 0, 'unknown binary operator: ' + "'" + str(binary_op.name) + "'"
 
-    def visit_unary_op(self, unary_op):
-        arg = self.dispatch(unary_op._arg)
+    def visit_unary_op(self, unary_op:UnaryOp):
+        arg = self.dispatch(unary_op.arg)
         assert unary_op.name in ('G', 'F', 'X', '!'), 'unknown unary operator: ' + str(unary_op.name)
         return '{op}({arg})'.format(op = unary_op.name, arg = arg)
 
