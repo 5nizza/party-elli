@@ -57,11 +57,12 @@ class UnaryOp(Expr):
         return self.name + str(self.arg)
 
 
-class QuantifiedExpr(BinOp):
-    def __init__(self, name, arg1:'binding indices', arg2:Expr):
-        super().__init__(name, arg1, arg2)
+class ForallExpr(BinOp):
+    def __init__(self, binding_indices:'binding indices', expr:Expr):
+        super().__init__('Forall', binding_indices, expr)
 
     def __str__(self):
         return self.name + str(self.arg1) + ' ' + str(self.arg2)
 
     __repr__ = __str__
+

@@ -29,14 +29,14 @@ def get_asts(data_from_section_name):
 
 
 def main(ltl_text, is_moore, dot_file, bounds, ltl2ucw_converter, z3solver, logger):
-    data_from_sections = anzu_parser.parse_ltl(ltl_text, logger)
-    if data_from_sections is None:
+    data_by_section = anzu_parser.parse_ltl(ltl_text, logger)
+    if data_by_section is None:
         return
 
     input_signals, output_signals, \
     env_initials_asts, sys_initials_asts, \
     env_transitions_asts, sys_transitions_asts, \
-    env_fairness_asts, sys_fairness_asts = get_asts(data_from_sections)
+    env_fairness_asts, sys_fairness_asts = get_asts(data_by_section)
 
     #TODO: hidden dependence: ltl3ba treats upper letters wrongly
     inputs = [i.name.lower() for i in input_signals]

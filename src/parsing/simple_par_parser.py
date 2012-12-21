@@ -95,10 +95,12 @@ def anonymize_property(ltl_property, anon_vars):
     return prop
 
 
-def concretize_property(ltl_property, nof_processes):
+#TODO: change input to expression!
+def instantiate_formula(ltl_property, nof_processes):
     """ Works for the conjunction of properties only!
     """
     assert nof_processes > 0, str(nof_processes)
+
     if ltl_property == 'true':
         return 'true'
 
@@ -119,7 +121,10 @@ def is_parametrized(ltl_spec):
     or '_i1' in ltl_property
 
 
-def get_fair_proc_scheduling_property(proc_index, nof_processes, sched_id_prefix):
+def get_inf_sched_prop(proc_index, nof_processes, sched_id_prefix):
+    assert nof_processes > 0
+    assert proc_index <= nof_processes - 1
+
     nof_sched_bits = int(max(math.ceil(math.log(nof_processes, 2)), 1))
 
     bits = [int(b) for b in bin_fixed_list(proc_index, nof_sched_bits)]
@@ -130,8 +135,8 @@ def get_fair_proc_scheduling_property(proc_index, nof_processes, sched_id_prefix
     return 'GF({0})'.format(id_as_formula)
 
 
-def get_fair_scheduler_property(nof_processes, sched_id_prefix):
-    sched_constraints = [get_fair_proc_scheduling_property(i, nof_processes, sched_id_prefix)
+def get_fair_sched_prop(nof_processes, sched_id_prefix):
+    sched_constraints = [get_inf_sched_prop(i, nof_processes, sched_id_prefix)
                          for i in range(nof_processes)]
     return ' && '.join(sched_constraints)
 
@@ -190,8 +195,8 @@ def get_par_io(raw_ltl_spec):
 def add_concretize_fair_sched(props, nof_processes):
     #init token distr is hardcoded into ParImpl
 
-    fair_sched_prop = get_fair_scheduler_property(nof_processes, SCHED_ID_PREFIX)
-    concr_original_prop = concretize_property(get_solid_property(props), nof_processes)
+    fair_sched_prop = get_fair_sched_prop(nof_processes, SCHED_ID_PREFIX)
+    concr_original_prop = instantiate_formula(get_solid_property(props), nof_processes)
 
     full_concr_prop = '({sched}) -> ({original})'.format_map(
             {'sched': fair_sched_prop,

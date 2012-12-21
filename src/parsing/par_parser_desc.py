@@ -109,7 +109,7 @@ def p_section_data_par_property(p):
 def p_par_property(p):
     """par_property : QUANTIFIER binding_args property
     """
-    p[0] = QuantifiedExpr(p[1], p[2], p[3])
+    p[0] = ForallExpr(p[2], p[3])
 
 
 def p_binding_args(p):

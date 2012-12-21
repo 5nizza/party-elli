@@ -1,6 +1,8 @@
+from logging import Logger
 from helpers.ply import yacc
 from parsing.par_lexer_desc import par_lexer, PAR_INPUT_VARIABLES, PAR_OUTPUT_VARIABLES, PAR_ASSUMPTIONS, PAR_GUARANTEES
 from parsing.par_parser_desc import par_parser
+
 
 pnueli_arbiter_spec = """
 [INPUT_VARIABLES] #no support of global variables => all the variables are assumed to be indexed!
@@ -52,9 +54,20 @@ Forall (i) G( (active_i=1 * (r_i=1)) -> F(g_i=1) );
 Forall (i,j) G(!(g_i=1 * g_j=1));
 """
 
-def parse_ltl(par_text):
+def parse_ltl(par_text:str, logger:Logger) -> dict:
+    #TODO: current version of parser is very restrictive: it allows only the specs of the form:
+    # Forall (i,j..) ass_i_j -> (Forall(k) gua_k ^ Forall(l,m) gua_l_m)
+    # it is impossible to have:
+    # (Forall(i) a_i  ->  Forall(k) g_k) ^ (Forall(i,j) a_i_j  ->  Forall(i) g_i)
+    # what we can have is:
+    # (Forall(i,j,k) ((a_i -> g_i)) ^ (Forall(i,j) a_i_j -> g_i)
+
     """ Return {section:data}, see sections in syntax_desc """
+
+    logger.info('parsing input spec..')
     section_name_to_data = dict(par_parser.parse(par_text, lexer=par_lexer))
+
+    #TODO: check unknown signals
     return section_name_to_data
 
 

@@ -107,11 +107,10 @@ def p_section_data_property_grouping(p):
 
 def p_error(p):
     if p:
-        print("Syntax error at '%s'" % p.value)
+        print("----> Syntax error at '%s'" % p.value)
     else:
-        print('Syntax error, t is None')
+        print('----> Syntax error, t is None')
     assert 0
-
 
 
 from helpers.ply.yacc import yacc

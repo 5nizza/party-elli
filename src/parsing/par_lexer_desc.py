@@ -10,8 +10,7 @@ PAR_SECTIONS = (PAR_INPUT_VARIABLES, PAR_OUTPUT_VARIABLES, PAR_ASSUMPTIONS, PAR_
 #reserved words: syntactic sugar to help to match exactly reserved word
 reserved_section_names = dict((s, s) for s in PAR_SECTIONS)
 reserved_bools =  dict((s, s) for s in ('TRUE', 'FALSE'))
-reserved_quantifiers = {'Forall' : 'QUANTIFIER',
-                        'Exists': 'QUANTIFIER'}
+reserved_quantifiers = {'Forall' : 'QUANTIFIER'}
 
 reserved_all = add_dicts(reserved_bools, reserved_quantifiers, reserved_section_names)
 
@@ -26,7 +25,7 @@ tokens = [
 #             list(reserved_bools.values()) #i use BOOL currently
 
 #constant to ensure consistency of the code
-BIN_OPS = ('+','*','->','<->','=','U')
+BIN_OPS = ('+','*','->','<->','=','U') #TODO: what about Forall?
 
 
 ############################################################
