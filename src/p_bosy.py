@@ -78,7 +78,7 @@ def _get_rank(expr) -> int:
     return len(expr.arg1)
 
 
-def _get_spec(ltl_text:str, logger:Logger):
+def _get_spec(ltl_text:str, logger:Logger) -> (list, list, list, list):
     #all the assumptions are conjugated together
     #the guarantees are separated into different SpecProperty objects
 
@@ -343,9 +343,6 @@ class TokRingArchitecture:
     def spec_rank(self): #TODO: dirty
         return 1
 
-    def assumptions(self, nof_processes):
-        return []
-
     def guarantees(self):
         #TODO: dirty -- introduce Globally/Finally class
         expr = UnaryOp('G', BinOp('->', Signal(HAS_TOK_NAME+'i'), UnaryOp('F', SENDS_NAME+'i')))
@@ -356,6 +353,9 @@ class TokRingArchitecture:
         expr = UnaryOp('G', UnaryOp('F', Signal(HAS_TOK_NAME + 'i')))
         fair_tok_sched = ForallExpr(['i'], expr)
         return [fair_tok_sched]
+
+    def get_cutoff(self, rank:int):
+        assert 0
 
 
 def _build_archi_property(archi:TokRingArchitecture, loc_assumptions):
@@ -431,12 +431,6 @@ def _build_loc_property_with_archi(loc_property:SpecProperty,
 
     return updated_property
 
-class OptConfig:
-    def __init__(self, localize:bool, strengthen:bool, add_archi_implications:bool):
-        self.localize = localize
-        self.strengthen = strengthen
-        self.add_archi_implications = add_archi_implications
-
 
 def _strengthen(properties):
     assert 0
@@ -446,13 +440,16 @@ def _localize(properties):
     assert 0
 
 
+def _instantiate_exprs(expressions, size):
+    assert 0
+
+
 def main(spec_text, is_moore,
          smt_files_prefix, dot_files_prefix,
          bounds,
          ltl2ucw_converter,
          z3solver, logic,
-         logger,
-         opt:OptConfig):
+         logger):
     logger.info('compositional approach')
     #TODO: check which optimizations are used
 
@@ -461,32 +458,37 @@ def main(spec_text, is_moore,
     archi = TokRingArchitecture()
     scheduler = InterleavingScheduler()
 
-    guarantees += [archi.guarantees()]
+    archi_properties = [SpecProperty(assumptions, g) for g in archi.guarantees()]
+    spec_properties = [SpecProperty(assumptions+archi.implications(), g) for g in guarantees]
+    properties = archi_properties + spec_properties
 
-    if opt.add_archi_implications:
-        assumptions += [archi.implications()]
+    #TODO: add scheduler assumptions
 
-    assert all(map(lambda e: _get_rank(e) == 1, assumptions)), 'only local assumptions are supported now'
+    properties = _localize(properties)
+    pseudo_safety_properties, pseudo_liveness_properties = _strengthen(properties)
 
-    properties = [SpecProperty(assumptions, g) for g in guarantees]
+    #instantiations TODO: move out?
+    inst_properties = []
 
-    if opt.localize:
-        properties = _localize(properties)
+    for p in pseudo_safety_properties:
+        p_rank = archi.get_cutoff(_get_rank(p))
+        inst_a = _instantiate_exprs(p.assumptions, p_rank)
+        inst_g = _instantiate_exprs(p.guarantees, p_rank)
+        inst_p = SpecProperty(inst_a, inst_g)
+        inst_properties.append((inst_p, p_rank))
 
-    current: draw picture where cutoff can change, where you need concrete, where paramaterized spec..
+    for p in pseudo_liveness_properties:
+        ass_rank = _get_rank(p.assumptions) if _get_rank(p.assumptions) != 0 else 1 #+scheduler assumptions
+        p_rank = ass_rank + _get_rank(p.guarantees)
 
-    if opt.strengthen:
-        properties = _strengthen(properties)
+        inst_a = _instantiate_exprs(p.assumptions, archi.get_cutoff(p_rank)) + \
+                 scheduler.inst_ass(archi.get_cutoff(p_rank))
+        inst_g = _instantiate_exprs(p.guarantees, p_rank)
+        inst_p = SpecProperty(inst_a, inst_g)
+        inst_properties.append((inst_p, p_rank))
 
-    loc_properties = list(filter(lambda p: _get_rank(p.assumptions) + _get_rank(p.guarantees)==1, properties))
-    other_properties = [p for p in properties if p not in loc_properties]
-    CURRENT
-
-    modified_loc_property = join_properties(_build_loc_property_with_archi(p, archi, logger) for p in loc_properties)
     print()
-    print(archi_property)
-    print()
-    print(modified_loc_property)
+    print(inst_properties)
     exit(0)
 #    modified_glob_properties = CURRENT
 
