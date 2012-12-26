@@ -20,13 +20,29 @@ class Visitor:
         if isinstance(node, Number):
             return self.visit_number(node)
 
-        assert 0, 'unknown node type' + str(node)
+        if isinstance(node, list):
+            return self.visit_list(node)
 
-    def visit_binary_op(self, binary_op:BinOp): raise NotImplementedError()
-    def visit_unary_op(self, unary_op:UnaryOp): raise NotImplementedError()
-    def visit_bool(self, bool_const): raise NotImplementedError()
-    def visit_signal(self, signal:Signal): raise NotImplementedError()
-    def visit_number(self, number:Number): raise NotImplementedError()
+        assert 0, 'unknown node type ' + str(node)
+
+
+    def visit_binary_op(self, binary_op:BinOp):
+        return BinOp(binary_op.name, self.dispatch(binary_op.arg1), self.dispatch(binary_op.arg2))
+
+    def visit_unary_op(self, unary_op:UnaryOp):
+        return UnaryOp(unary_op.name, self.dispatch(unary_op.arg))
+
+    def visit_bool(self, bool_const:Bool):
+        return bool_const
+
+    def visit_signal(self, signal:Signal):
+        return signal
+
+    def visit_number(self, number:Number):
+        return number
+
+    def visit_list(self, node:list):
+        return node
 
 
 class ConverterToLtl2BaFormatVisitor(Visitor):

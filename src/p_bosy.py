@@ -7,13 +7,13 @@ import sys
 import tempfile
 from helpers.main_helper import setup_logging, create_spec_converter_z3
 from helpers.spec_helper import is_safety, and_properties
+from interfaces.spec import SpecProperty
 from module_generation.dot import moore_to_dot, to_dot
+from optimizations import localize, strengthen, instantiate_exprs, get_rank
 from parsing import par_parser
-from parsing.anzu_lexer_desc import BIN_OPS
-from parsing.helpers import Visitor
-from parsing.interface import BinOp, UnaryOp, Signal, Number, ForallExpr, Expr
+from parsing.interface import BinOp, UnaryOp, Signal, ForallExpr
 from parsing.par_lexer_desc import PAR_INPUT_VARIABLES, PAR_OUTPUT_VARIABLES, PAR_ASSUMPTIONS, PAR_GUARANTEES
-from parsing.simple_par_parser import  SCHED_ID_PREFIX, SENDS_NAME, ACTIVE_NAME, instantiate_formula, get_tok_rings_liveness_par_props, HAS_TOK_NAME, SENDS_PREV_NAME, anonymize_property, get_fair_sched_prop, get_tok_ring_par_io, get_inf_sched_prop, parametrize_anon_var
+from parsing.simple_par_parser import  SCHED_ID_PREFIX, SENDS_NAME, ACTIVE_NAME, instantiate_formula, HAS_TOK_NAME, SENDS_PREV_NAME, get_fair_sched_prop
 from synthesis import par_model_searcher
 from synthesis.smt_logic import UFLIA
 
@@ -68,14 +68,6 @@ GF(((!r_i) && (!g_i)) || (r_i && g_i))
 
 #simple, full, pnueli, xarb = range(4)
 simple, full, pnueli = range(3)
-
-
-def _get_rank(expr) -> int:
-    if not isinstance(expr, ForallExpr):
-        return 0
-    #: :type: QuantifiedExpr
-    expr = expr
-    return len(expr.arg1)
 
 
 def _get_spec(ltl_text:str, logger:Logger) -> (list, list, list, list):
@@ -310,25 +302,11 @@ def _run(is_moore,
 #        smt_file_prefix, dot_files_prefix)
 
 
-class SpecProperty:
-    def __init__(self, assumptions, guarantees):
-        self.assumptions = assumptions
-        self.guarantees = guarantees
-
-    def __str__(self):
-        return '  (SpecProperty: assumptions={ass}, guarantees={gua})  '.format(
-            ass = str(self.assumptions),
-            gua = str(self.guarantees))
-
-    __repr__ = __str__
-
-
 def join_properties(properties:Iterable):
     properties = list(properties)
     all_ass = list(chain(p.assumptions for p in properties))
     all_gua = list(chain(p.guarantees for p in properties))
-    largest_rank = max(p.rank for p in properties)
-    return SpecProperty(all_ass, all_gua, largest_rank)
+    return SpecProperty(all_ass, all_gua)
 
 
 class InterleavingScheduler:
@@ -432,18 +410,6 @@ def _build_loc_property_with_archi(loc_property:SpecProperty,
     return updated_property
 
 
-def _strengthen(properties):
-    assert 0
-
-
-def _localize(properties):
-    assert 0
-
-
-def _instantiate_exprs(expressions, size):
-    assert 0
-
-
 def main(spec_text, is_moore,
          smt_files_prefix, dot_files_prefix,
          bounds,
@@ -464,26 +430,26 @@ def main(spec_text, is_moore,
 
     #TODO: add scheduler assumptions
 
-    properties = _localize(properties)
-    pseudo_safety_properties, pseudo_liveness_properties = _strengthen(properties)
+    properties = [localize(p) for p in properties]
+    pseudo_safety_properties, pseudo_liveness_properties = strengthen(properties)
 
     #instantiations TODO: move out?
     inst_properties = []
 
     for p in pseudo_safety_properties:
-        p_rank = archi.get_cutoff(_get_rank(p))
-        inst_a = _instantiate_exprs(p.assumptions, p_rank)
-        inst_g = _instantiate_exprs(p.guarantees, p_rank)
+        p_rank = archi.get_cutoff(get_rank(p))
+        inst_a = instantiate_exprs(p.assumptions, p_rank)
+        inst_g = instantiate_exprs(p.guarantees, p_rank)
         inst_p = SpecProperty(inst_a, inst_g)
         inst_properties.append((inst_p, p_rank))
 
     for p in pseudo_liveness_properties:
-        ass_rank = _get_rank(p.assumptions) if _get_rank(p.assumptions) != 0 else 1 #+scheduler assumptions
-        p_rank = ass_rank + _get_rank(p.guarantees)
+        ass_rank = get_rank(p.assumptions) if get_rank(p.assumptions) != 0 else 1 #+scheduler assumptions
+        p_rank = ass_rank + get_rank(p.guarantees)
 
-        inst_a = _instantiate_exprs(p.assumptions, archi.get_cutoff(p_rank)) + \
+        inst_a = instantiate_exprs(p.assumptions, archi.get_cutoff(p_rank)) + \
                  scheduler.inst_ass(archi.get_cutoff(p_rank))
-        inst_g = _instantiate_exprs(p.guarantees, p_rank)
+        inst_g = instantiate_exprs(p.guarantees, p_rank)
         inst_p = SpecProperty(inst_a, inst_g)
         inst_properties.append((inst_p, p_rank))
 
