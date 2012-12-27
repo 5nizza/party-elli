@@ -212,6 +212,28 @@ class Test(unittest.TestCase):
             str(localized_prop)))
 
 
+    def test_localize_one_ass_two_gua(self):
+        """ forall(i,j) a_i ->  forall(i, j) b_i_j
+         replaced by
+            forall(i,j) (a_i ->  b_i_j)
+        """
+
+        a_i_is_true, a_k_is_true, a_j_is_true = self._get_is_true('a', 'i'), self._get_is_true('a', 'k'), self._get_is_true('a', 'j')
+        b_k_j_is_true = self._get_is_true('b', 'k', 'j')
+
+        prop = SpecProperty(
+            [ForallExpr(['i'], a_i_is_true)],
+            [ForallExpr(['k', 'j'], b_k_j_is_true)])
+
+        localized_prop = localize(prop)
+        expected_prop_k_j1 = SpecProperty([Bool(True)], [ForallExpr(['k', 'j'], BinOp('->', a_k_is_true, b_k_j_is_true))])
+        expected_prop_k_j2 = SpecProperty([Bool(True)], [ForallExpr(['k', 'j'], BinOp('->', a_j_is_true, b_k_j_is_true))])
+
+        assert str(localized_prop) == str(expected_prop_k_j1), str('expected {0}, but got {1}'.format(
+            str(expected_prop_k_j2),
+            str(localized_prop)))
+
+
 
 
 
