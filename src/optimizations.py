@@ -6,7 +6,8 @@ from parsing.interface import ForallExpr, BinOp, Signal, Expr, Bool, QuantifiedS
 def get_rank(expr) -> int:
     if not isinstance(expr, ForallExpr):
         return 0
-        #: :type: QuantifiedExpr
+
+    #: :type: ForallExpr
     expr = expr
     return len(expr.arg1)
 
@@ -18,6 +19,9 @@ def _normalize_conjuncts(expressions:list) -> Expr:
     """
     if len(expressions) == 0:
         return Bool(True)
+
+    if len(expressions) == 1 and isinstance(expressions[0], Bool):
+        return expressions[0]
 
     for e in expressions:
         assert isinstance(e, ForallExpr), 'global non-parameterized properties are not supported'
@@ -189,13 +193,13 @@ class Test(unittest.TestCase):
         localized_prop_str = str(localized_prop)
 
         assert localized_prop_str == expected_prop_str_i\
-            or localized_prop_str == expected_prop_str_j, str('expected {0}, but got {1}'.format(expected_prop_str_i,
-                                                                                             localized_prop_str))
+            or localized_prop_str == expected_prop_str_j, str(localized_prop_str)
 
     def test_localize_two_ass_one_gua(self):
-        """ forall(i,j) a_i_j ->  forall(i) b_i
-         replaced by
-            forall(i,j) (a_i_j ->  b_i)
+        """
+        forall(i,j) a_i_j ->  forall(i) b_i
+        replaced by
+        forall(i,j) (a_i_j ->  b_i)
         """
 
         a_i_j_is_true, b_i_is_true = self._get_is_true('a', 'i', 'j'), self._get_is_true('b', 'i')
@@ -213,9 +217,10 @@ class Test(unittest.TestCase):
 
 
     def test_localize_one_ass_two_gua(self):
-        """ forall(i,j) a_i ->  forall(i, j) b_i_j
-         replaced by
-            forall(i,j) (a_i ->  b_i_j)
+        """
+        forall(i,j) a_i ->  forall(i, j) b_i_j
+        replaced by
+        forall(i,j) (a_i ->  b_i_j)
         """
 
         a_i_is_true, a_k_is_true, a_j_is_true = self._get_is_true('a', 'i'), self._get_is_true('a', 'k'), self._get_is_true('a', 'j')
@@ -229,9 +234,28 @@ class Test(unittest.TestCase):
         expected_prop_k_j1 = SpecProperty([Bool(True)], [ForallExpr(['k', 'j'], BinOp('->', a_k_is_true, b_k_j_is_true))])
         expected_prop_k_j2 = SpecProperty([Bool(True)], [ForallExpr(['k', 'j'], BinOp('->', a_j_is_true, b_k_j_is_true))])
 
-        assert str(localized_prop) == str(expected_prop_k_j1), str('expected {0}, but got {1}'.format(
-            str(expected_prop_k_j2),
-            str(localized_prop)))
+        assert str(localized_prop) == str(expected_prop_k_j1)\
+            or str(localized_prop) == str(expected_prop_k_j2), str(localized_prop)
+
+
+    def test_localize_zero_ass(self):
+        """
+        true -> forall(i) b_i
+        replaced by
+        forall(i) (true -> b_i)
+        """
+
+        b_i_is_true = self._get_is_true('b', 'i')
+
+        prop = SpecProperty(
+            [Bool(True)],
+            [ForallExpr(['i'], b_i_is_true)])
+
+        localized_prop = localize(prop)
+        expected_prop = SpecProperty([Bool(True)], [ForallExpr(['i'], BinOp('->', Bool(True), b_i_is_true))])
+
+        assert str(localized_prop) == str(expected_prop), str(localized_prop)
+
 
 
 
