@@ -12,7 +12,7 @@ class Signal:
 
 
 class QuantifiedSignal(Signal):
-    def __init__(self, base_name:str, binding_indices:list):
+    def __init__(self, base_name:str, binding_indices:tuple):
         super().__init__(base_name)
         self.binding_indices = binding_indices
 
