@@ -11,6 +11,12 @@ class Signal:
         return str(self) == str(other)
 
 
+class QuantifiedSignal(Signal):
+    def __init__(self, base_name:str, binding_indices:list):
+        super().__init__(base_name)
+        self.binding_indices = binding_indices
+
+
 class Number:
     def __init__(self, number):
         self._number = number

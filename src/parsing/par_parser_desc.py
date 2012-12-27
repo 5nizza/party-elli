@@ -1,3 +1,4 @@
+from parsing.helpers import Visitor
 from parsing.interface import *
 from parsing.par_lexer_desc import *
 
@@ -70,6 +71,7 @@ def p_section_data_signals_definitions2(p):
         p[0] = [p[1]]
 
 
+#TODO: currently we treat all the signals with _ as parameterized?
 def p_signal_name(p):
     """ signal_name : SIGNAL_NAME
     """
@@ -106,10 +108,29 @@ def p_section_data_par_property(p):
     p[0] = p[1]
 
 
+class QuantifiedSignalsCreatorVisitor(Visitor):
+    def __init__(self, binding_indices:list):
+        self.binding_indices = binding_indices
+
+    def visit_signal(self, signal:Signal):
+        tokens = signal.name.split('_')
+
+        base_name_tokens = [t for t in tokens if t not in self.binding_indices]
+        indices_tokens = [t for t in tokens if t not in base_name_tokens]
+
+        return QuantifiedSignal('_'.join(base_name_tokens), indices_tokens)
+
+
+def _update_expr_with_quantified_signals(quantified_expr:Expr, binding_indices:list) -> Expr:
+    quantified_signals_creator = QuantifiedSignalsCreatorVisitor(binding_indices)
+    expr_with_quantified_signals = quantified_signals_creator.dispatch(quantified_expr)
+    return expr_with_quantified_signals
+
+
 def p_par_property(p):
     """par_property : QUANTIFIER binding_args property
     """
-    p[0] = ForallExpr(p[2], p[3])
+    p[0] = _update_expr_with_quantified_signals(p[3], p[2])
 
 
 def p_binding_args(p):

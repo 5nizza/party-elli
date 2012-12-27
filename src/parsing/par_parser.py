@@ -1,5 +1,7 @@
 from logging import Logger
 from helpers.ply import yacc
+from parsing.helpers import Visitor
+from parsing.interface import Signal, QuantifiedSignal
 from parsing.par_lexer_desc import par_lexer, PAR_INPUT_VARIABLES, PAR_OUTPUT_VARIABLES, PAR_ASSUMPTIONS, PAR_GUARANTEES
 from parsing.par_parser_desc import par_parser
 
@@ -75,8 +77,18 @@ def parse_ltl(par_text:str, logger:Logger) -> dict:
 # tests
 
 from unittest import TestCase
+
+class QuantifiedSignalsFinderVisitor(Visitor):
+    def __init__(self):
+        self.quantified_signal_names = set()
+
+    def visit_signal(self, signal:Signal):
+        if isinstance(signal, QuantifiedSignal):
+            self.quantified_signal_names.add(signal.name)
+
+
 class Test(TestCase):
-    def _do_test(self, test_name, spec, expected_result):
+    def _do_test(self, test_name:str, spec:str, quantified_signal_names_expected:set, expected_result):
         print(test_name)
         result = yacc.parse(spec)
 
@@ -93,11 +105,25 @@ class Test(TestCase):
                 section = section_name,
                 section_data=str(section_name_to_data[section_name]))
 
+        quantified_signals_finder = QuantifiedSignalsFinderVisitor()
+        all_properties = self._get_all_properties(section_name_to_data)
+
+        [quantified_signals_finder.dispatch(p) for p in all_properties]
+
+        assert quantified_signal_names_expected == quantified_signals_finder.quantified_signal_names, \
+               'expected {0}, got {1}'.format(quantified_signal_names_expected, quantified_signals_finder.quantified_signal_names)
+
+
 
     def test_pnueli(self):
-        self._do_test('pnueli', pnueli_arbiter_spec,
+        self._do_test('pnueli', pnueli_arbiter_spec, {'r', 'g'},
             {PAR_INPUT_VARIABLES:1, PAR_OUTPUT_VARIABLES:1, PAR_ASSUMPTIONS:3, PAR_GUARANTEES:4})
 
+
     def test_full(self):
-        self._do_test('full', full_arbiter_spec,
+        self._do_test('full', full_arbiter_spec, {'active', 'r', 'g'},
             {PAR_INPUT_VARIABLES:1, PAR_OUTPUT_VARIABLES:1, PAR_ASSUMPTIONS:1, PAR_GUARANTEES:6})
+
+
+    def _get_all_properties(self, section_name_to_data:dict):
+        return list(section_name_to_data[PAR_ASSUMPTIONS]) + list(section_name_to_data[PAR_GUARANTEES])
