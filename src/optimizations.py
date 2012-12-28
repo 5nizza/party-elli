@@ -5,6 +5,12 @@ from parsing.interface import ForallExpr, BinOp, Signal, Expr, Bool, QuantifiedS
 from translation2uct.ltl2automaton import Ltl2UCW
 
 
+def _safe_isinstance(o, class_name):
+    if isinstance(o, class_name):
+        return True
+    return False
+
+
 def is_safety(expr:Expr, ltl2ba_converter) -> bool:
     expr_to_ltl2ba_converter = ConverterToLtl2BaFormatVisitor()
     ltl2ba_formula = expr_to_ltl2ba_converter.dispatch(expr)
@@ -208,13 +214,16 @@ class TestStrengthen(unittest.TestCase):
 
 
     def test_strengthen1(self):
-        #TODO: should it work with parameterized properties?
-        """ GFa -> G(b * c)"""
+        """
+        Forall(i) GFa_i -> Forall(j) G(b_j)
+        replaced by
+        Forall(j) Forall(j) G(b_j)
+        """
 
-        a, b, c = Signal('a'), Signal('b'), Signal('c')
+        a_i, b_j = QuantifiedSignal('a', ('i',)), QuantifiedSignal('b', ('j',))
 
-        liveness_ass = UnaryOp('G', UnaryOp('F', a))
-        safety_gua = UnaryOp('G', BinOp('*', b, c))
+        liveness_ass = ForallExpr(['i'], UnaryOp('G', UnaryOp('F', a_i)))
+        safety_gua = ForallExpr(['j'], UnaryOp('G', b_j))
 
         property = SpecProperty([liveness_ass], [safety_gua])
 
@@ -229,7 +238,7 @@ class TestStrengthen(unittest.TestCase):
 
 
     def test_strengthen2(self):
-        pass
+        assert 0
 
 
 class TestLocalize(unittest.TestCase):

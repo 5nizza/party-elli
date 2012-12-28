@@ -6,7 +6,7 @@ from logging import Logger
 import sys
 import tempfile
 from helpers.main_helper import setup_logging, create_spec_converter_z3
-from helpers.spec_helper import is_safety, and_properties
+from helpers.spec_helper import and_properties
 from interfaces.spec import SpecProperty
 from module_generation.dot import moore_to_dot, to_dot
 from optimizations import localize, strengthen, instantiate_exprs, get_rank

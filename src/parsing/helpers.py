@@ -1,5 +1,5 @@
 from helpers.spec_helper import and_properties
-from parsing.interface import Number, BinOp, UnaryOp, Bool, Signal
+from parsing.interface import Number, BinOp, UnaryOp, Bool, Signal, ForallExpr
 
 __author__ = 'art_haali'
 
@@ -23,6 +23,9 @@ class Visitor:
         if isinstance(node, list):
             return self.visit_list(node)
 
+        if isinstance(node, ForallExpr):
+            return self.visit_forall(node)
+
         assert 0, 'unknown node type ' + str(node)
 
 
@@ -42,6 +45,9 @@ class Visitor:
         return number
 
     def visit_list(self, node:list):
+        return node
+
+    def visit_forall(self, node:ForallExpr):
         return node
 
 
@@ -77,6 +83,10 @@ class ConverterToLtl2BaFormatVisitor(Visitor):
 
     def visit_number(self, number):
         return number
+
+    def visit_forall(self, node:ForallExpr):
+        return self.dispatch(node.arg2) #TODO: default behaviour is to ignore Forall
+
 
 
 def convert_asts_to_ltl3ba_format(asts):

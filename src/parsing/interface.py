@@ -63,9 +63,10 @@ class UnaryOp(Expr):
         return self.name + str(self.arg)
 
 
-class ForallExpr(BinOp):
+class ForallExpr(Expr):
     def __init__(self, binding_indices:'binding indices', expr:Expr):
-        super().__init__('Forall', binding_indices, expr)
+        super().__init__('Forall')
+        self.arg1, self.arg2 = binding_indices, expr #TODO: rename fields
 
     def __str__(self):
         return self.name + str(self.arg1) + ' ' + str(self.arg2)
