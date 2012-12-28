@@ -31,14 +31,14 @@ def is_absorbing(node):
     return index_of(lambda node_flag: node_flag[0] == node, all_next_flagged_nodes) is not None
 
 
-def is_safety_automaton(automaton):
-    #TODO: better ways to identify safety props than checking corresponding UCW?
+def is_safety_automaton(ucw_automaton):
+    #TODO: are there better ways to identify safety props than checking corresponding UCW?
     from synthesis.rejecting_states_finder import build_state_to_rejecting_scc #TODO: bad circular dependence
 
     #ltl3ba creates transitional rejecting nodes, so filter them
-    node_to_rej_scc = build_state_to_rejecting_scc(automaton)
+    node_to_rej_scc = build_state_to_rejecting_scc(ucw_automaton)
 
-    for node in automaton.rejecting_nodes: #TODO: does not work with rejecting edges automaton
+    for node in ucw_automaton.rejecting_nodes: #TODO: does not work with rejecting edges automaton
         if node not in node_to_rej_scc: #shitty transitional rejecting node
             continue
 

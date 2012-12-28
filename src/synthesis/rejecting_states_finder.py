@@ -45,6 +45,7 @@ def find_rejecting_sccs(automaton):
     return rejecting_sccs
 
 
+#TODO: move to helpers? (to avoid circular dependence)
 def build_state_to_rejecting_scc(automaton):
     """ Helper function: builds dict node->SCC """
     rejecting_sccs = find_rejecting_sccs(automaton)

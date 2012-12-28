@@ -1,6 +1,15 @@
+from helpers.automata_helper import is_safety_automaton
 from interfaces.spec import SpecProperty
-from parsing.helpers import Visitor
-from parsing.interface import ForallExpr, BinOp, Signal, Expr, Bool, QuantifiedSignal
+from parsing.helpers import Visitor, ConverterToLtl2BaFormatVisitor
+from parsing.interface import ForallExpr, BinOp, Signal, Expr, Bool, QuantifiedSignal, UnaryOp
+from translation2uct.ltl2automaton import Ltl2UCW
+
+
+def is_safety(expr:Expr, ltl2ba_converter) -> bool:
+    expr_to_ltl2ba_converter = ConverterToLtl2BaFormatVisitor()
+    ltl2ba_formula = expr_to_ltl2ba_converter.dispatch(expr)
+    automaton = ltl2ba_converter.convert(ltl2ba_formula)
+    return is_safety_automaton(automaton)
 
 
 def get_rank(expr) -> int:
@@ -156,14 +165,74 @@ def localize(property:SpecProperty):
     return new_property
 
 
-def strengthen(properties):
-    assert 0
+def strengthen(properties:list, ltl2ucw_converter) -> (list, list):
+    """
+    Return:
+        'safety' properties (a_s -> g_s),
+        'liveness' properties (a_s and a_l -> g_l)
+    """
+
+    safety_properties = []
+    liveness_properties = []
+    for p_ in properties:
+        #: :type: SpecProperty
+        p = p_
+        safety_assumptions = [a for a in p.assumptions if is_safety(a, ltl2ucw_converter)]
+        liveness_assumptions = [a for a in p.assumptions if a not in safety_assumptions]
+
+        for g in p.guarantees:
+            if is_safety(g, ltl2ucw_converter):
+                safety_p = SpecProperty(safety_assumptions, [g])
+                safety_properties.append(safety_p)
+            else:
+                liveness_p = SpecProperty(safety_assumptions+liveness_assumptions, [g])
+                liveness_properties.append(liveness_p)
+
+    return safety_properties, liveness_properties
+
+
 
 
 
 import unittest
+import os
 
-class Test(unittest.TestCase):
+class TestStrengthen(unittest.TestCase):
+    def _get_converter(self):
+        me_abs_path = str(os.path.abspath(__file__))
+        root_dir_toks = me_abs_path.split(os.sep)[:-1]
+        root_dir = os.sep.join(root_dir_toks)
+        ltl2ba_path = root_dir + '/../lib/ltl3ba/ltl3ba-1.0.1/ltl3ba'
+
+        return Ltl2UCW(ltl2ba_path)
+
+
+    def test_strengthen1(self):
+        #TODO: should it work with parameterized properties?
+        """ GFa -> G(b * c)"""
+
+        a, b, c = Signal('a'), Signal('b'), Signal('c')
+
+        liveness_ass = UnaryOp('G', UnaryOp('F', a))
+        safety_gua = UnaryOp('G', BinOp('*', b, c))
+
+        property = SpecProperty([liveness_ass], [safety_gua])
+
+        safety_properties, liveness_properties = strengthen([property], self._get_converter())
+
+        assert len(liveness_properties) == 0, str(liveness_properties)
+        assert len(safety_properties) == 1, str(safety_properties)
+
+        actual = safety_properties[0]
+        expected = SpecProperty([], [safety_gua])
+        assert str(actual) == str(expected), str(actual) + ' vs ' + str(expected)
+
+
+    def test_strengthen2(self):
+        pass
+
+
+class TestLocalize(unittest.TestCase):
 
     def _get_is_true(self, signal_name:str, *binding_indices):
         if len(binding_indices) == 0:

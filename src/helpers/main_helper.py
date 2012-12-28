@@ -25,7 +25,8 @@ def create_spec_converter_z3(use_acw): #TODO: add config file
     """ Return ltl to automaton converter, Z3 solver """
 
     #make paths independent of current working directory
-    bosy_dir_toks = ['./'] + os.path.relpath(__file__).split(os.sep) #abspath returns 'windows' (not cygwin) path
+    rel_path = str(os.path.relpath(__file__))
+    bosy_dir_toks = ['./'] + rel_path.split(os.sep) #abspath returns 'windows' (not cygwin) path
     root_dir = ('/'.join(bosy_dir_toks[:-1]) + '/..') #root dir is one level up compared to bosy.py
 
     z3_path = 'z3' #assume it is in the PATH

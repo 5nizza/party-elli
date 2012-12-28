@@ -431,7 +431,7 @@ def main(spec_text, is_moore,
     #TODO: add scheduler assumptions
 
     properties = [localize(p) for p in properties]
-    pseudo_safety_properties, pseudo_liveness_properties = strengthen(properties)
+    pseudo_safety_properties, pseudo_liveness_properties = strengthen(properties, ltl2ucw_converter)
 
     #instantiations TODO: move out?
     inst_properties = []
