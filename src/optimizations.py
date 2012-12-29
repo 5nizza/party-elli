@@ -68,15 +68,21 @@ class SignalsReplacerVisitor(Visitor):
 
 
     def visit_signal(self, signal:Signal):
-        old_index, original_signal_name = self._get_index_name(signal)
-
-        if old_index is None:
+        if not isinstance(signal, QuantifiedSignal):
             return signal
 
-        return Signal(original_signal_name + '_' + str(self._new_by_old_index[old_index])) #TODO: use ParameterizedSignal and don't use this hack
+        #noinspection PyUnresolvedReferences
+        old_indices = signal.binding_indices
+        print('dispatching the signal ', str(signal))
+        print(old_indices)
+        print(self._new_by_old_index)
+        new_indices = tuple(self._new_by_old_index[i] for i in old_indices)
+
+        new_signal = QuantifiedSignal(signal.name, new_indices)
+        return new_signal
 
 
-    def _get_index_name(self, signal:Signal):
+    def _get_index_name(self, signal:QuantifiedSignal)-> (int, str):
         old_indices = self._new_by_old_index.keys()
         for index in old_indices:
             if signal.name.endswith('_'+index): #TODO: hack: use class ParameterizedSignal
@@ -94,7 +100,6 @@ def _replace_indices(newindex_by_oldindex:dict, expr):
     if not isinstance(expr, ForallExpr):
         return expr
 
-    assert isinstance(expr, ForallExpr)
     assert len(expr.arg1) <= len(set(newindex_by_oldindex.values()))
 
     underlying_expr = expr.arg2
@@ -160,7 +165,15 @@ def localize(property:SpecProperty):
     ass_newindex_by_old = dict((o, max_binding_indices[i]) for i,o in enumerate(binding_indices_ass))
     gua_newindex_by_old = dict((o, max_binding_indices[i]) for i,o in enumerate(binding_indices_gua))
 
+    print('ass')
+    print(normalized_ass)
+    print(binding_indices_ass)
+    print(ass_newindex_by_old)
     replaced_underlying_ass = _replace_indices(ass_newindex_by_old, normalized_ass)
+    print('gua')
+    print(normalized_gua)
+    print(binding_indices_gua)
+    print(gua_newindex_by_old)
     replaced_underlying_gua = _replace_indices(gua_newindex_by_old, normalized_gua)
 
     new_gua = ForallExpr(max_binding_indices,
@@ -238,7 +251,7 @@ class TestStrengthen(unittest.TestCase):
 
 
     def test_strengthen2(self):
-        assert 0
+        assert 0, ''
 
 
 class TestLocalize(unittest.TestCase):
@@ -280,18 +293,20 @@ class TestLocalize(unittest.TestCase):
         forall(i,j) (a_i_j ->  b_i)
         """
 
-        a_i_j_is_true, b_i_is_true = self._get_is_true('a', 'i', 'j'), self._get_is_true('b', 'i')
+        a_i_j_is_true, b_j_is_true = self._get_is_true('a', 'i', 'j'), self._get_is_true('b', 'j')
+        b_i_is_true = self._get_is_true('b', 'i')
 
         prop = SpecProperty(
             [ForallExpr(['i', 'j'], a_i_j_is_true)],
-            [ForallExpr(['j'], b_i_is_true)])
+            [ForallExpr(['j'], b_j_is_true)])
 
         localized_prop = localize(prop)
-        expected_prop_i_j = SpecProperty([Bool(True)], [ForallExpr(['i', 'j'], BinOp('->', a_i_j_is_true, b_i_is_true))])
+        expected_prop_i_j1 = SpecProperty([Bool(True)], [ForallExpr(['i', 'j'], BinOp('->', a_i_j_is_true, b_j_is_true))])
+        expected_prop_i_j2 = SpecProperty([Bool(True)], [ForallExpr(['i', 'j'], BinOp('->', a_i_j_is_true, b_i_is_true))])
 
-        assert str(localized_prop) == str(expected_prop_i_j), str('expected {0}, but got {1}'.format(
-            str(expected_prop_i_j),
-            str(localized_prop)))
+        assert str(localized_prop) == str(expected_prop_i_j1) or\
+               str(localized_prop) == str(expected_prop_i_j2), \
+        str(localized_prop)
 
 
     def test_localize_one_ass_two_gua(self):

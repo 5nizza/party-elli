@@ -16,6 +16,9 @@ class QuantifiedSignal(Signal):
         super().__init__(base_name)
         self.binding_indices = binding_indices
 
+    def __repr__(self):
+        return self.name + ', quantified over ' + str(self.binding_indices)
+
 
 class Number:
     def __init__(self, number):
