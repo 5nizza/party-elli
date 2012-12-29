@@ -85,8 +85,8 @@ class SignalsReplacerVisitor(Visitor):
     def _get_index_name(self, signal:QuantifiedSignal)-> (int, str):
         old_indices = self._new_by_old_index.keys()
         for index in old_indices:
-            if signal.name.endswith('_'+index): #TODO: hack: use class ParameterizedSignal
-                original_name = '_'.join(signal.name.split('_')[:-2]) #TODO: current: problems with _i_j, _j_i, etc..
+            if signal.name.endswith('_'+index):
+                original_name = '_'.join(signal.name.split('_')[:-2])
                 return index, original_name
 
         return None, None
@@ -251,6 +251,63 @@ class TestStrengthen(unittest.TestCase):
 
 
     def test_strengthen2(self):
+        """
+        Forall(i) GFa_i -> Forall(j) GF(b_j)
+        is left as it is
+        """
+        a_i, b_j = QuantifiedSignal('a', ('i',)), QuantifiedSignal('b', ('j',))
+
+        liveness_ass = ForallExpr(['i'], UnaryOp('G', UnaryOp('F', a_i)))
+        liveness_gua = ForallExpr(['j'], UnaryOp('G', UnaryOp('F', b_j)))
+
+        property = SpecProperty([liveness_ass], [liveness_gua])
+
+        safety_properties, liveness_properties = strengthen([property], self._get_converter())
+
+        assert len(liveness_properties) == 1, str(liveness_properties)
+        assert len(safety_properties) == 0, str(safety_properties)
+
+        actual = liveness_properties[0]
+        expected = property
+        assert str(actual) == str(expected), str(actual) + ' vs ' + str(expected)
+
+
+    def test_strengthen2(self):
+        """
+        Forall(i) GFa_i and G(b_i)  ->  Forall(j) GF(c_j) and G(d_j)
+        replaced by
+        'liveness': Forall(i) GFa_i and G(b_i)  ->  Forall(j) GF(c_j)
+        and
+        'safety': Forall(i) G(b_i)  ->  Forall(j) G(d_j)
+        """
+        a_i, b_i = QuantifiedSignal('a', ('i',)), QuantifiedSignal('b', ('i',))
+        c_j, d_j = QuantifiedSignal('c', ('j',)), QuantifiedSignal('d', ('j',))
+
+        liveness_ass = ForallExpr(['i'], UnaryOp('G', UnaryOp('F', a_i)))
+        safety_ass = ForallExpr(['i'], UnaryOp('G', b_i))
+        liveness_gua = ForallExpr(['j'], UnaryOp('G', UnaryOp('F', c_j)))
+        safety_gua = ForallExpr(['j'], UnaryOp('G', d_j))
+
+        property = SpecProperty([liveness_ass, safety_ass], [liveness_gua, safety_gua])
+
+        safety_properties, liveness_properties = strengthen([property], self._get_converter())
+
+        assert len(liveness_properties) == 1, str(liveness_properties)
+        assert len(safety_properties) == 1, str(safety_properties)
+
+        #: :type: SpecProperty
+        liveness_prop = liveness_properties[0]
+        #TODO: questionable -- should two Foralls be merged into the one common?
+        assert str(sorted(map(str, liveness_prop.assumptions))) == str(sorted(map(str, [safety_ass, liveness_ass]))), \
+        str(liveness_prop)
+        assert str(liveness_prop.guarantees) == str([liveness_gua])
+
+        safety_prop = safety_properties[0]
+        expected_safety_prop = SpecProperty([safety_ass], [safety_gua])
+        assert str(expected_safety_prop) == str(safety_prop), str(safety_prop)
+
+    def test_strengthen3(self):
+        """ Involved test that includes several safety and liveness properties """
         assert 0, ''
 
 
