@@ -1,14 +1,8 @@
+from itertools import chain
 from helpers.automata_helper import is_safety_automaton
 from interfaces.spec import SpecProperty
 from parsing.helpers import Visitor, ConverterToLtl2BaFormatVisitor
 from parsing.interface import ForallExpr, BinOp, Signal, Expr, Bool, QuantifiedSignal, UnaryOp
-from translation2uct.ltl2automaton import Ltl2UCW
-
-
-def _safe_isinstance(o, class_name):
-    if isinstance(o, class_name):
-        return True
-    return False
 
 
 def is_safety(expr:Expr, ltl2ba_converter) -> bool:
@@ -27,7 +21,7 @@ def get_rank(expr) -> int:
     return len(expr.arg1)
 
 
-def _normalize_conjuncts(expressions:list) -> Expr:
+def normalize_conjuncts(expressions:list) -> Expr:
     """ sound, complete
     forall(i,j) a_i_j and forall(i) b_i  ----> forall(i,j) (a_i_j and b_i)
     forall(i) a_i and forall(j) b_j      ----> forall(i) (a_i and b_i)
@@ -129,6 +123,8 @@ def _is_quantified_property(property:SpecProperty) -> Bool: #TODO: does not allo
     for i in property.assumptions + property.guarantees:
         if isinstance(i, ForallExpr):
             return True
+        else:
+            assert i.__class__ in [ForallExpr, BinOp, UnaryOp, Bool], 'unknown class'
 
     return False
 
@@ -146,8 +142,8 @@ def localize(property:SpecProperty):
     if not _is_quantified_property(property):
         return property
 
-    normalized_ass = _normalize_conjuncts(property.assumptions)
-    normalized_gua = _normalize_conjuncts(property.guarantees)
+    normalized_ass = normalize_conjuncts(property.assumptions)
+    normalized_gua = normalize_conjuncts(property.guarantees)
 
     binding_indices_ass = _get_indices(normalized_ass)
     binding_indices_gua = _get_indices(normalized_gua)
@@ -184,20 +180,67 @@ def localize(property:SpecProperty):
     return new_property
 
 
+def _get_conjuncts(expr:Expr) -> list:
+    assert 0
+
+
+def _reduce_quantifiers(expr:ForallExpr):
+    assert 0
+
+
+def _denormalize(conjunct:Expr) -> list:
+    """
+    Forall(i) a_i and b_i
+    replaced by
+    Forall(i) a_i and Forall(i) b_i
+    """
+
+    normalized_conjunct = normalize_conjuncts([conjunct])
+
+    if not _is_quantified_property(SpecProperty([normalized_conjunct], [])):
+        return normalized_conjunct
+
+    #: :type: ForallExpr
+    forall_expr = conjunct
+    quantified_expr = forall_expr.arg2
+
+    conjunctions = _get_conjuncts(quantified_expr)
+
+    return [_reduce_quantifiers(ForallExpr(forall_expr.arg1, c)) for c in conjunctions]
+
+
+
 def strengthen(properties:list, ltl2ucw_converter) -> (list, list):
     """
     Return:
         'safety' properties (a_s -> g_s),
         'liveness' properties (a_s and a_l -> g_l)
+    Also removes ground variables that becomes useless
     """
+
+    # property assumption may be of the form: forall(i) (safety_i and liveness_i)
+    # we introduce 'forall(i)' for each safety_i and liveness_i
+    denormalized_props = []
+    for p in properties:
+        denormalized_assumptions = list(chain(_denormalize(a) for a in p.assumptions))
+        denormalized_guarantees = list(chain(_denormalize(g) for g in p.guarantees))
+        for g in denormalized_guarantees:
+            new_p = SpecProperty(denormalized_assumptions, [g])
+            denormalized_props.append(new_p)
 
     safety_properties = []
     liveness_properties = []
-    for p_ in properties:
+    for p_ in denormalized_props:
         #: :type: SpecProperty
         p = p_
+        print(p)
+        print(p.assumptions)
+        print(p.guarantees)
         safety_assumptions = [a for a in p.assumptions if is_safety(a, ltl2ucw_converter)]
         liveness_assumptions = [a for a in p.assumptions if a not in safety_assumptions]
+
+        print('safety_assumptions', safety_assumptions)
+        print('liveness_assumptions', liveness_assumptions)
 
         for g in p.guarantees:
             if is_safety(g, ltl2ucw_converter):
@@ -208,220 +251,3 @@ def strengthen(properties:list, ltl2ucw_converter) -> (list, list):
                 liveness_properties.append(liveness_p)
 
     return safety_properties, liveness_properties
-
-
-
-
-
-import unittest
-import os
-
-class TestStrengthen(unittest.TestCase):
-    def _get_converter(self):
-        me_abs_path = str(os.path.abspath(__file__))
-        root_dir_toks = me_abs_path.split(os.sep)[:-1]
-        root_dir = os.sep.join(root_dir_toks)
-        ltl2ba_path = root_dir + '/../lib/ltl3ba/ltl3ba-1.0.1/ltl3ba'
-
-        return Ltl2UCW(ltl2ba_path)
-
-
-    def test_strengthen1(self):
-        """
-        Forall(i) GFa_i -> Forall(j) G(b_j)
-        replaced by
-        Forall(j) Forall(j) G(b_j)
-        """
-
-        a_i, b_j = QuantifiedSignal('a', ('i',)), QuantifiedSignal('b', ('j',))
-
-        liveness_ass = ForallExpr(['i'], UnaryOp('G', UnaryOp('F', a_i)))
-        safety_gua = ForallExpr(['j'], UnaryOp('G', b_j))
-
-        property = SpecProperty([liveness_ass], [safety_gua])
-
-        safety_properties, liveness_properties = strengthen([property], self._get_converter())
-
-        assert len(liveness_properties) == 0, str(liveness_properties)
-        assert len(safety_properties) == 1, str(safety_properties)
-
-        actual = safety_properties[0]
-        expected = SpecProperty([], [safety_gua])
-        assert str(actual) == str(expected), str(actual) + ' vs ' + str(expected)
-
-
-    def test_strengthen2(self):
-        """
-        Forall(i) GFa_i -> Forall(j) GF(b_j)
-        is left as it is
-        """
-        a_i, b_j = QuantifiedSignal('a', ('i',)), QuantifiedSignal('b', ('j',))
-
-        liveness_ass = ForallExpr(['i'], UnaryOp('G', UnaryOp('F', a_i)))
-        liveness_gua = ForallExpr(['j'], UnaryOp('G', UnaryOp('F', b_j)))
-
-        property = SpecProperty([liveness_ass], [liveness_gua])
-
-        safety_properties, liveness_properties = strengthen([property], self._get_converter())
-
-        assert len(liveness_properties) == 1, str(liveness_properties)
-        assert len(safety_properties) == 0, str(safety_properties)
-
-        actual = liveness_properties[0]
-        expected = property
-        assert str(actual) == str(expected), str(actual) + ' vs ' + str(expected)
-
-
-    def test_strengthen2(self):
-        """
-        Forall(i) GFa_i and G(b_i)  ->  Forall(j) GF(c_j) and G(d_j)
-        replaced by
-        'liveness': Forall(i) GFa_i and G(b_i)  ->  Forall(j) GF(c_j)
-        and
-        'safety': Forall(i) G(b_i)  ->  Forall(j) G(d_j)
-        """
-        a_i, b_i = QuantifiedSignal('a', ('i',)), QuantifiedSignal('b', ('i',))
-        c_j, d_j = QuantifiedSignal('c', ('j',)), QuantifiedSignal('d', ('j',))
-
-        liveness_ass = ForallExpr(['i'], UnaryOp('G', UnaryOp('F', a_i)))
-        safety_ass = ForallExpr(['i'], UnaryOp('G', b_i))
-        liveness_gua = ForallExpr(['j'], UnaryOp('G', UnaryOp('F', c_j)))
-        safety_gua = ForallExpr(['j'], UnaryOp('G', d_j))
-
-        property = SpecProperty([liveness_ass, safety_ass], [liveness_gua, safety_gua])
-
-        safety_properties, liveness_properties = strengthen([property], self._get_converter())
-
-        assert len(liveness_properties) == 1, str(liveness_properties)
-        assert len(safety_properties) == 1, str(safety_properties)
-
-        #: :type: SpecProperty
-        liveness_prop = liveness_properties[0]
-        #TODO: questionable -- should two Foralls be merged into the one common?
-        assert str(sorted(map(str, liveness_prop.assumptions))) == str(sorted(map(str, [safety_ass, liveness_ass]))), \
-        str(liveness_prop)
-        assert str(liveness_prop.guarantees) == str([liveness_gua])
-
-        safety_prop = safety_properties[0]
-        expected_safety_prop = SpecProperty([safety_ass], [safety_gua])
-        assert str(expected_safety_prop) == str(safety_prop), str(safety_prop)
-
-    def test_strengthen3(self):
-        """ Involved test that includes several safety and liveness properties """
-        assert 0, ''
-
-
-class TestLocalize(unittest.TestCase):
-
-    def _get_is_true(self, signal_name:str, *binding_indices):
-        if len(binding_indices) == 0:
-            signal = Signal(signal_name)
-        else:
-            signal = QuantifiedSignal(signal_name, binding_indices)
-        return BinOp('=', signal, Bool(True))
-
-
-    def test_localize_one_ass_one_gua(self):
-        """ forall(i) a_i -> forall(j) b_j
-         replaced by
-            forall(i) (a_i -> b_i)
-        """
-
-        a_i_is_true, a_j_is_true, b_j_is_true, b_i_is_true = self._get_is_true('a', 'i'), self._get_is_true('a', 'j'), \
-                                                             self._get_is_true('b', 'j'), self._get_is_true('b', 'i')
-
-        prop = SpecProperty([ForallExpr(['i'], a_i_is_true)], [ForallExpr(['j'], b_j_is_true)])
-
-        localized_prop = localize(prop)
-        expected_prop_i = SpecProperty([Bool(True)], [ForallExpr(['i'], BinOp('->', a_i_is_true, b_i_is_true))])
-        expected_prop_j = SpecProperty([Bool(True)], [ForallExpr(['j'], BinOp('->', a_j_is_true, b_j_is_true))])
-
-        expected_prop_str_i = str(expected_prop_i)
-        expected_prop_str_j = str(expected_prop_j)
-        localized_prop_str = str(localized_prop)
-
-        assert localized_prop_str == expected_prop_str_i\
-            or localized_prop_str == expected_prop_str_j, str(localized_prop_str)
-
-    def test_localize_two_ass_one_gua(self):
-        """
-        forall(i,j) a_i_j ->  forall(i) b_i
-        replaced by
-        forall(i,j) (a_i_j ->  b_i)
-        """
-
-        a_i_j_is_true, b_j_is_true = self._get_is_true('a', 'i', 'j'), self._get_is_true('b', 'j')
-        b_i_is_true = self._get_is_true('b', 'i')
-
-        prop = SpecProperty(
-            [ForallExpr(['i', 'j'], a_i_j_is_true)],
-            [ForallExpr(['j'], b_j_is_true)])
-
-        localized_prop = localize(prop)
-        expected_prop_i_j1 = SpecProperty([Bool(True)], [ForallExpr(['i', 'j'], BinOp('->', a_i_j_is_true, b_j_is_true))])
-        expected_prop_i_j2 = SpecProperty([Bool(True)], [ForallExpr(['i', 'j'], BinOp('->', a_i_j_is_true, b_i_is_true))])
-
-        assert str(localized_prop) == str(expected_prop_i_j1) or\
-               str(localized_prop) == str(expected_prop_i_j2), \
-        str(localized_prop)
-
-
-    def test_localize_one_ass_two_gua(self):
-        """
-        forall(i,j) a_i ->  forall(i, j) b_i_j
-        replaced by
-        forall(i,j) (a_i ->  b_i_j)
-        """
-
-        a_i_is_true, a_k_is_true, a_j_is_true = self._get_is_true('a', 'i'), self._get_is_true('a', 'k'), self._get_is_true('a', 'j')
-        b_k_j_is_true = self._get_is_true('b', 'k', 'j')
-
-        prop = SpecProperty(
-            [ForallExpr(['i'], a_i_is_true)],
-            [ForallExpr(['k', 'j'], b_k_j_is_true)])
-
-        localized_prop = localize(prop)
-        expected_prop_k_j1 = SpecProperty([Bool(True)], [ForallExpr(['k', 'j'], BinOp('->', a_k_is_true, b_k_j_is_true))])
-        expected_prop_k_j2 = SpecProperty([Bool(True)], [ForallExpr(['k', 'j'], BinOp('->', a_j_is_true, b_k_j_is_true))])
-
-        assert str(localized_prop) == str(expected_prop_k_j1)\
-            or str(localized_prop) == str(expected_prop_k_j2), str(localized_prop)
-
-
-    def test_localize_zero_ass(self):
-        """
-        true -> forall(i) b_i
-        replaced by
-        forall(i) (true -> b_i)
-        """
-
-        b_i_is_true = self._get_is_true('b', 'i')
-
-        prop = SpecProperty(
-            [Bool(True)],
-            [ForallExpr(['i'], b_i_is_true)])
-
-        localized_prop = localize(prop)
-        expected_prop = SpecProperty([Bool(True)], [ForallExpr(['i'], BinOp('->', Bool(True), b_i_is_true))])
-
-        assert str(localized_prop) == str(expected_prop), str(localized_prop)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
