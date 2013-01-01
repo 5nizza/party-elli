@@ -20,13 +20,13 @@ class Visitor:
         if isinstance(node, Number):
             return self.visit_number(node)
 
-        if isinstance(node, list):
-            return self.visit_list(node)
+        if isinstance(node, tuple):
+            return self.visit_tuple(node)
 
         if isinstance(node, ForallExpr):
             return self.visit_forall(node)
 
-        assert 0, 'unknown node type ' + str(node)
+        assert 0, 'unknown node type ' + str(node.__class__)
 
 
     def visit_binary_op(self, binary_op:BinOp):
@@ -44,10 +44,12 @@ class Visitor:
     def visit_number(self, number:Number):
         return number
 
-    def visit_list(self, node:list):
+    def visit_tuple(self, node:tuple):
         return node
 
     def visit_forall(self, node:ForallExpr):
+        self.dispatch(node.arg2)
+        self.dispatch(node.arg1)
         return node
 
 

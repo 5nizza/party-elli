@@ -1,7 +1,8 @@
+from itertools import chain
 import unittest
 import os
 from interfaces.spec import SpecProperty
-from optimizations import strengthen, localize
+from optimizations import strengthen, localize, _reduce_quantifiers, _get_conjuncts, _denormalize
 from parsing.interface import QuantifiedSignal, ForallExpr, UnaryOp, BinOp, Bool, Signal
 from translation2uct.ltl2automaton import Ltl2UCW
 
@@ -39,14 +40,14 @@ class TestStrengthen(unittest.TestCase):
 
         property = SpecProperty([liveness_ass], [safety_gua])
 
-        safety_properties, liveness_properties = strengthen([property], self._get_converter())
+        safety_properties, liveness_properties = strengthen(property, self._get_converter())
 
         assert len(liveness_properties) == 0, str(liveness_properties)
         assert len(safety_properties) == 1, str(safety_properties)
 
-        actual = safety_properties[0]
-        expected = SpecProperty([], [safety_gua])
-        assert str(actual) == str(expected), str(actual) + ' vs ' + str(expected)
+        actual_guarantees = safety_properties[0].guarantees
+        assert str(actual_guarantees) == str([safety_gua]), \
+        '\n' + str(actual_guarantees) + '\nvs\n' + str([safety_gua])
 
 
     def test_strengthen2(self):
@@ -61,7 +62,7 @@ class TestStrengthen(unittest.TestCase):
 
         property = SpecProperty([liveness_ass], [liveness_gua])
 
-        safety_properties, liveness_properties = strengthen([property], self._get_converter())
+        safety_properties, liveness_properties = strengthen(property, self._get_converter())
 
         assert len(liveness_properties) == 1, str(liveness_properties)
         assert len(safety_properties) == 0, str(safety_properties)
@@ -95,7 +96,7 @@ class TestStrengthen(unittest.TestCase):
 
         property = SpecProperty([ass], [gua])
 
-        safety_properties, liveness_properties = strengthen([property], self._get_converter())
+        safety_properties, liveness_properties = strengthen(property, self._get_converter())
 
         assert len(liveness_properties) == 1, str(liveness_properties)
         assert len(safety_properties) == 1, str(safety_properties)
@@ -117,32 +118,91 @@ class TestStrengthen(unittest.TestCase):
 
 
     def test_strengthen3(self):
-        """ Forall(i,j) GFa_i * GFb_i_j * Gc_i_j -> Forall(k,m) GF(d_k_m) * G(e_k)
+        """
+        Forall(i,j) GFa_i * GFb_i_j * Gc_i_j -> Forall(k,m) GF(d_k_m) * G(e_k)
         replaced by
-        'safety':   Forall(i) Gc_i  ->  Forall(k) G(e_k)
+        'safety':   Forall(i) Gc_i_j  ->  Forall(k) G(e_k)
         'liveness': Forall(i,j) GFa_i * GFb_i_j * Gc_i  ->  Forall(k,m) GF(d_k_m)
         """
-        assert 0, 'todo'
+        a_i, b_i_j, c_i_j = _get_is_true('a', 'i'), _get_is_true('b', 'i', 'j'), _get_is_true('c', 'i', 'j')
+        ass = ForallExpr(['i', 'j'],
+            BinOp('*', UnaryOp('G', UnaryOp('F', a_i)),
+                       BinOp('*', UnaryOp('G', UnaryOp('F', b_i_j)),
+                                  UnaryOp('G', c_i_j))))
+
+        d_k_m = _get_is_true('d', 'k','m')
+        e_k = _get_is_true('e', 'k')
+        gua = ForallExpr(['k', 'm'],
+            BinOp('*',
+                UnaryOp('G', UnaryOp('F', d_k_m)),
+                UnaryOp('G', e_k)))
+
+        property = SpecProperty([ass], [gua])
+        safety_properties, liveness_properties = strengthen(property, self._get_converter())
+
+        #lazy..
+        print('safety_properties', safety_properties)
+        assert len(safety_properties) == 1, str(safety_properties)
+        assert len(list(chain(*[sp.assumptions for sp in safety_properties]))) == 1
+        assert len(list(chain(*[sp.guarantees for sp in safety_properties]))) == 1
+
+        print('liveness_properties', liveness_properties)
+
+
+
+class TestDenormalize(unittest.TestCase):
+    def test_denormalize(self):
+        a_i, b_i = _get_is_true('a', 'i'), _get_is_true('b', 'i')
+
+        expr = ForallExpr(['i'], BinOp('*', a_i, b_i))
+
+        denormalized_expressions = _denormalize(expr)
+        assert len(denormalized_expressions) == 2, str(denormalized_expressions)
+
+
+class TestGetConjucts(unittest.TestCase):
+    def test_get_conjuncts_and_op(self):
+        a, b = Signal('a'), Signal('b')
+        conjunction_expr = BinOp('*', a, b)
+        conjuncts = _get_conjuncts(conjunction_expr)
+
+        assert len(conjuncts) == 2
+        assert a in conjuncts
+        assert b in conjuncts
+
+
+    def test_get_conjuncts_no_conjuncts(self):
+        a, b = Signal('a'), Signal('b')
+        conjunction_expr = BinOp('+', a, b)
+        conjuncts = _get_conjuncts(conjunction_expr)
+
+        assert conjuncts== [conjunction_expr], str(conjunction_expr)
+
+
+    def test_get_conjuncts_recursion(self):
+        a, b, c = Signal('a'), Signal('b'), Signal('c')
+        conjunction_expr = BinOp('*', a, BinOp('*', b, c))
+        conjuncts = _get_conjuncts(conjunction_expr)
+
+        assert len(conjuncts) == 3
 
 
 class TestReduceQuantifiers(unittest.TestCase):
     def test_reduce(self):
-        """ Forall(i,j) Ga_i -> Forall(k,m,l) Gb_k_m
+        """
+        Forall(k,m,l) Gb_k_m
         replaced by
-        Forall(i) Ga_i -> Forall(k,m) Gb_k_m
+        Forall(k,m) Gb_k_m
         """
 
-        a_i = _get_is_true('a', 'i')
         b_k_m = _get_is_true('b', 'k', 'm')
 
-        ass = ForallExpr(['i','j'], UnaryOp('G', a_i))
-        gua = ForallExpr(['k','m','l'], UnaryOp('G', b_k_m))
-        property = SpecProperty([ass], [gua])
+        expr = ForallExpr(['k','m','l'], UnaryOp('G', b_k_m))
 
-        actual_p = _reduce_quantifiers(property)
-        expected_p = SpecProperty([ForallExpr(['i'], a_i)], [ForallExpr(['k', 'm'], b_k_m)])
+        actual_expr = _reduce_quantifiers(expr)
+        expected_expr = ForallExpr(['k', 'm'], UnaryOp('G', b_k_m))
 
-        assert str(actual_p) == str(expected_p), str(actual_p)
+        assert str(actual_expr) == str(expected_expr), str(actual_expr)
 
 
 class TestLocalize(unittest.TestCase):

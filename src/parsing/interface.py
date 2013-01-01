@@ -10,6 +10,9 @@ class Signal:
             return False
         return str(self) == str(other)
 
+    def __hash__(self):
+        return hash(str(self))
+
 
 class QuantifiedSignal(Signal):
     def __init__(self, base_name:str, binding_indices:tuple):
@@ -69,7 +72,7 @@ class UnaryOp(Expr):
 class ForallExpr(Expr):
     def __init__(self, binding_indices:'binding indices', expr:Expr):
         super().__init__('Forall')
-        self.arg1, self.arg2 = binding_indices, expr #TODO: rename fields
+        self.arg1, self.arg2 = tuple(binding_indices), expr #TODO: rename fields
 
     def __str__(self):
         return self.name + str(self.arg1) + ' ' + str(self.arg2)

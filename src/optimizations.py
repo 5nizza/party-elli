@@ -1,3 +1,4 @@
+from functools import lru_cache
 from itertools import chain
 from helpers.automata_helper import is_safety_automaton
 from interfaces.spec import SpecProperty
@@ -5,6 +6,7 @@ from parsing.helpers import Visitor, ConverterToLtl2BaFormatVisitor
 from parsing.interface import ForallExpr, BinOp, Signal, Expr, Bool, QuantifiedSignal, UnaryOp
 
 
+@lru_cache()
 def is_safety(expr:Expr, ltl2ba_converter) -> bool:
     expr_to_ltl2ba_converter = ConverterToLtl2BaFormatVisitor()
     ltl2ba_formula = expr_to_ltl2ba_converter.dispatch(expr)
@@ -180,12 +182,36 @@ def localize(property:SpecProperty):
     return new_property
 
 
-def _get_conjuncts(expr:Expr) -> list:
-    assert 0
+def _get_conjuncts(conjunction_expr:Expr) -> list:
+    if not isinstance(conjunction_expr, BinOp):
+        return [conjunction_expr]
+
+    if not conjunction_expr.name == '*':
+        return [conjunction_expr]
+
+    conjuncts = list(chain(_get_conjuncts(conjunction_expr.arg1), _get_conjuncts(conjunction_expr.arg2)))
+    return conjuncts
 
 
-def _reduce_quantifiers(expr:ForallExpr):
-    assert 0
+class QuantifiedSignalsFinderVisitor(Visitor):
+    def __init__(self):
+        self.quantified_signals = set()
+
+    def visit_signal(self, signal:Signal):
+        if isinstance(signal, QuantifiedSignal):
+            self.quantified_signals.add(signal)
+        return super().visit_signal(signal)
+
+
+def _reduce_quantifiers(expr:ForallExpr) -> Expr:
+    """ Remove useless binding indices """
+    quantified_signals_finder = QuantifiedSignalsFinderVisitor()
+    quantified_signals_finder.dispatch(expr)
+    quantified_signals = quantified_signals_finder.quantified_signals
+
+    indices_used = set(chain(*[qs.binding_indices for qs in quantified_signals]))
+
+    return ForallExpr(indices_used, expr.arg2)
 
 
 def _denormalize(conjunct:Expr) -> list:
@@ -206,48 +232,53 @@ def _denormalize(conjunct:Expr) -> list:
 
     conjunctions = _get_conjuncts(quantified_expr)
 
-    return [_reduce_quantifiers(ForallExpr(forall_expr.arg1, c)) for c in conjunctions]
+    return [_reduce_quantifiers(ForallExpr(forall_expr.arg1, c))
+            for c in conjunctions]
 
 
+def _get_denormalized_property(property:SpecProperty) -> list:
+    """
+    Property assumption may be of the form: forall(i) (safety_i and liveness_i)
+    we introduce 'forall(i)' for each safety_i and liveness_i and therefore get:
+    forall(i) safety_i and forall(i) liveness_i
+    """
 
-def strengthen(properties:list, ltl2ucw_converter) -> (list, list):
+    denormalized_props = []
+
+    denormalized_assumptions = list(chain(*[_denormalize(a) for a in property.assumptions]))
+    denormalized_guarantees = list(chain(*[_denormalize(g) for g in property.guarantees]))
+    for g in denormalized_guarantees:
+        new_p = SpecProperty(denormalized_assumptions, [g])
+        denormalized_props.append(new_p)
+
+    return denormalized_props
+
+
+def strengthen(property:SpecProperty, ltl2ucw_converter) -> (list, list):
     """
     Return:
         'safety' properties (a_s -> g_s),
         'liveness' properties (a_s and a_l -> g_l)
-    Also removes ground variables that becomes useless
+    Also removes ground variables that becomes useless.
     """
-
-    # property assumption may be of the form: forall(i) (safety_i and liveness_i)
-    # we introduce 'forall(i)' for each safety_i and liveness_i
-    denormalized_props = []
-    for p in properties:
-        denormalized_assumptions = list(chain(_denormalize(a) for a in p.assumptions))
-        denormalized_guarantees = list(chain(_denormalize(g) for g in p.guarantees))
-        for g in denormalized_guarantees:
-            new_p = SpecProperty(denormalized_assumptions, [g])
-            denormalized_props.append(new_p)
 
     safety_properties = []
     liveness_properties = []
+
+    denormalized_props = _get_denormalized_property(property)
     for p_ in denormalized_props:
         #: :type: SpecProperty
         p = p_
-        print(p)
-        print(p.assumptions)
-        print(p.guarantees)
-        safety_assumptions = [a for a in p.assumptions if is_safety(a, ltl2ucw_converter)]
-        liveness_assumptions = [a for a in p.assumptions if a not in safety_assumptions]
 
-        print('safety_assumptions', safety_assumptions)
-        print('liveness_assumptions', liveness_assumptions)
+        safety_ass = normalize_conjuncts([a for a in p.assumptions if is_safety(a, ltl2ucw_converter)])
+        all_ass = normalize_conjuncts(p.assumptions)
 
-        for g in p.guarantees:
-            if is_safety(g, ltl2ucw_converter):
-                safety_p = SpecProperty(safety_assumptions, [g])
-                safety_properties.append(safety_p)
-            else:
-                liveness_p = SpecProperty(safety_assumptions+liveness_assumptions, [g])
-                liveness_properties.append(liveness_p)
+        safety_guarantees = [g for g in p.guarantees if is_safety(g, ltl2ucw_converter)]
+        liveness_guarantees = [g for g in p.guarantees if not is_safety(g, ltl2ucw_converter)]
+
+        safety_properties += [SpecProperty([safety_ass], [sg])
+                             for sg in safety_guarantees]
+        liveness_properties += [SpecProperty([all_ass], [lg])
+                               for lg in liveness_guarantees]
 
     return safety_properties, liveness_properties

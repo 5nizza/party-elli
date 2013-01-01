@@ -410,6 +410,16 @@ def _build_loc_property_with_archi(loc_property:SpecProperty,
     return updated_property
 
 
+def _strengthen_many(properties:list, ltl2ucw_converter) -> (list, list):
+    pseudo_safety_properties, pseudo_liveness_properties = [], []
+    for p in properties:
+        safety_props, liveness_props = strengthen(p, ltl2ucw_converter)
+        pseudo_safety_properties += safety_props
+        pseudo_liveness_properties += liveness_props
+
+    return pseudo_safety_properties, pseudo_liveness_properties
+
+
 def main(spec_text, is_moore,
          smt_files_prefix, dot_files_prefix,
          bounds,
@@ -431,7 +441,7 @@ def main(spec_text, is_moore,
     #TODO: add scheduler assumptions
 
     properties = [localize(p) for p in properties]
-    pseudo_safety_properties, pseudo_liveness_properties = strengthen(properties, ltl2ucw_converter)
+    pseudo_safety_properties, pseudo_liveness_properties = _strengthen_many(properties, ltl2ucw_converter)
 
     #instantiations TODO: move out?
     inst_properties = []
