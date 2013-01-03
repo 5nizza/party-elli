@@ -110,10 +110,6 @@ def _replace_indices(newindex_by_oldindex:dict, expr):
     return replaced_expr
 
 
-def instantiate_exprs(expressions, size):
-    assert 0
-
-
 def _get_indices(normalized_ass:Expr):
     if isinstance(normalized_ass, ForallExpr):
         return normalized_ass.arg1

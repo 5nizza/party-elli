@@ -9,7 +9,7 @@ from helpers.main_helper import setup_logging, create_spec_converter_z3
 from helpers.spec_helper import and_properties
 from interfaces.spec import SpecProperty
 from module_generation.dot import moore_to_dot, to_dot
-from optimizations import localize, strengthen, instantiate_exprs, get_rank
+from optimizations import localize, strengthen, get_rank
 from parsing import par_parser
 from parsing.interface import BinOp, UnaryOp, Signal, ForallExpr
 from parsing.par_lexer_desc import PAR_INPUT_VARIABLES, PAR_OUTPUT_VARIABLES, PAR_ASSUMPTIONS, PAR_GUARANTEES
@@ -420,6 +420,28 @@ def _strengthen_many(properties:list, ltl2ucw_converter) -> (list, list):
     return pseudo_safety_properties, pseudo_liveness_properties
 
 
+def _inst_properties(archi, pseudo_liveness_properties, pseudo_safety_properties, scheduler):
+    prop_cutoff_pairs = []
+    for p in pseudo_safety_properties:
+        cutoff = archi.get_cutoff(get_rank(p))
+        inst_a = instantiate_exprs(p.assumptions, cutoff)
+        inst_g = instantiate_exprs(p.guarantees, cutoff)
+        inst_p = SpecProperty(inst_a, inst_g)
+        prop_cutoff_pairs.append((inst_p, cutoff))
+
+    for p in pseudo_liveness_properties:
+        ass_rank = max(get_rank(p.assumptions), 1) #+scheduler assumptions
+        p_rank = ass_rank + get_rank(p.guarantees)
+        cutoff = archi.get_cutoff(p_rank)
+
+        inst_a = instantiate_exprs(p.assumptions, cutoff) + scheduler.inst_ass(cutoff)
+        inst_g = instantiate_exprs(p.guarantees, cutoff)
+        inst_p = SpecProperty(inst_a, inst_g)
+        prop_cutoff_pairs.append((inst_p, cutoff))
+
+    return prop_cutoff_pairs
+
+
 def main(spec_text, is_moore,
          smt_files_prefix, dot_files_prefix,
          bounds,
@@ -439,32 +461,13 @@ def main(spec_text, is_moore,
     properties = archi_properties + spec_properties
 
     #TODO: add scheduler assumptions
-
     properties = [localize(p) for p in properties]
     pseudo_safety_properties, pseudo_liveness_properties = _strengthen_many(properties, ltl2ucw_converter)
 
-    #instantiations TODO: move out?
-    inst_properties = []
-
-    for p in pseudo_safety_properties:
-        p_rank = archi.get_cutoff(get_rank(p))
-        inst_a = instantiate_exprs(p.assumptions, p_rank)
-        inst_g = instantiate_exprs(p.guarantees, p_rank)
-        inst_p = SpecProperty(inst_a, inst_g)
-        inst_properties.append((inst_p, p_rank))
-
-    for p in pseudo_liveness_properties:
-        ass_rank = get_rank(p.assumptions) if get_rank(p.assumptions) != 0 else 1 #+scheduler assumptions
-        p_rank = ass_rank + get_rank(p.guarantees)
-
-        inst_a = instantiate_exprs(p.assumptions, archi.get_cutoff(p_rank)) + \
-                 scheduler.inst_ass(archi.get_cutoff(p_rank))
-        inst_g = instantiate_exprs(p.guarantees, p_rank)
-        inst_p = SpecProperty(inst_a, inst_g)
-        inst_properties.append((inst_p, p_rank))
+    prop_cutoff_pairs = _inst_properties(archi, pseudo_liveness_properties, pseudo_safety_properties, scheduler)
 
     print()
-    print(inst_properties)
+    print(prop_cutoff_pairs)
     exit(0)
 #    modified_glob_properties = CURRENT
 
