@@ -20,7 +20,9 @@ class QuantifiedSignal(Signal):
         self.binding_indices = binding_indices
 
     def __repr__(self):
-        return self.name + ', quantified over ' + str(self.binding_indices)
+        return self.name + '_' + '_'.join(self.binding_indices)
+
+    __str__ = __repr__
 
 
 class Number:

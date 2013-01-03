@@ -456,11 +456,12 @@ def main(spec_text, is_moore,
     archi = TokRingArchitecture()
     scheduler = InterleavingScheduler()
 
-    archi_properties = [SpecProperty(assumptions, g) for g in archi.guarantees()]
-    spec_properties = [SpecProperty(assumptions+archi.implications(), g) for g in guarantees]
+    archi_properties = [SpecProperty(assumptions, [g]) for g in archi.guarantees()]
+    spec_properties = [SpecProperty(assumptions+archi.implications(), [g]) for g in guarantees]
     properties = archi_properties + spec_properties
 
     #TODO: add scheduler assumptions
+
     properties = [localize(p) for p in properties]
     pseudo_safety_properties, pseudo_liveness_properties = _strengthen_many(properties, ltl2ucw_converter)
 

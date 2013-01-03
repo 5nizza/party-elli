@@ -116,7 +116,7 @@ class QuantifiedSignalsCreatorVisitor(Visitor):
         tokens = signal.name.split('_')
 
         base_name_tokens = [t for t in tokens if t not in self.binding_indices]
-        indices_tokens = [t for t in tokens if t not in base_name_tokens]
+        indices_tokens = tuple(t for t in tokens if t not in base_name_tokens)
 
         return QuantifiedSignal('_'.join(base_name_tokens), indices_tokens)
 
@@ -124,13 +124,15 @@ class QuantifiedSignalsCreatorVisitor(Visitor):
 def _update_expr_with_quantified_signals(quantified_expr:Expr, binding_indices:list) -> Expr:
     quantified_signals_creator = QuantifiedSignalsCreatorVisitor(binding_indices)
     expr_with_quantified_signals = quantified_signals_creator.dispatch(quantified_expr)
+
     return expr_with_quantified_signals
 
 
 def p_par_property(p):
     """par_property : QUANTIFIER binding_args property
     """
-    p[0] = _update_expr_with_quantified_signals(p[3], p[2])
+    binding_indices = p[2]
+    p[0] = ForallExpr(binding_indices, _update_expr_with_quantified_signals(p[3], p[2]))
 
 
 def p_binding_args(p):
