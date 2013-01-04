@@ -81,3 +81,16 @@ class ForallExpr(Expr):
 
     __repr__ = __str__
 
+
+########################################################################################
+# helpers
+
+def and_expressions(conjuncts):
+    if len(conjuncts) == 1:
+        return conjuncts[0]
+
+    res = conjuncts[0]
+    for c in conjuncts[1:]:
+        res = BinOp('*', res, c)
+
+    return res

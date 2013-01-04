@@ -1,5 +1,5 @@
 from parsing.helpers import Visitor
-from parsing.interface import *
+from interfaces.parser_expr import *
 from parsing.par_lexer_desc import *
 
 precedence = (

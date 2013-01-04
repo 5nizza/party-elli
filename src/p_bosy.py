@@ -1,19 +1,21 @@
 import argparse
+import sys
+import tempfile
+
 from argparse import FileType
 from collections import Iterable
 from itertools import chain
 from logging import Logger
-import sys
-import tempfile
+
 from helpers.main_helper import setup_logging, create_spec_converter_z3
 from helpers.spec_helper import and_properties
 from interfaces.spec import SpecProperty
 from module_generation.dot import moore_to_dot, to_dot
 from optimizations import localize, strengthen, get_rank
 from parsing import par_parser
-from parsing.interface import BinOp, UnaryOp, Signal, ForallExpr, QuantifiedSignal
 from parsing.par_lexer_desc import PAR_INPUT_VARIABLES, PAR_OUTPUT_VARIABLES, PAR_ASSUMPTIONS, PAR_GUARANTEES
-from parsing.simple_par_parser import  SCHED_ID_PREFIX, SENDS_NAME, ACTIVE_NAME, instantiate_formula, HAS_TOK_NAME, SENDS_PREV_NAME, get_fair_sched_prop, HAS_TOK_NAME_MY, SENDS_NAME_MY
+from parsing.par_parser import SCHED_ID_PREFIX, ACTIVE_NAME_MY, SENDS_NAME_MY, HAS_TOK_NAME_MY, SENDS_PREV_NAME_MY
+from parsing.simple_par_parser import  instantiate_formula, get_fair_sched_prop
 from synthesis import par_model_searcher
 from synthesis.smt_logic import UFLIA
 
@@ -86,30 +88,6 @@ def _get_spec(ltl_text:str, logger:Logger) -> (list, list, list, list):
 
     return anon_inputs, anon_outputs, assumptions, guarantees
 
-#    mutual_exclusion = 'G(!(g_i && g_j))'
-#
-#    par_tok_ring_inputs, par_tok_ring_outputs = get_tok_ring_par_io()
-#    inputs = ['r_'] + par_tok_ring_inputs
-#    outputs = ['g_'] + par_tok_ring_outputs
-#
-#    specs = [
-#        (inputs, outputs,
-#         'true', 'true',
-#         'true', simple_liveness_loc_guarantee,
-#         mutual_exclusion),
-#        (inputs, outputs,
-#         'true', 'true',
-#         full_safety_loc_guarantee,
-#         full_liveness_loc_guarantee,
-#         mutual_exclusion),
-#        (inputs, outputs,
-#         pnueli_safety_loc_assumption, pnueli_liveness_loc_assumption,
-#         pnueli_safety_loc_guarantee, pnueli_liveness_loc_guarantee,
-#         mutual_exclusion)]
-#
-#    return specs[spec_type]
-
-
 
 def _run(is_moore,
          anon_inputs, anon_outputs,
@@ -139,7 +117,7 @@ def _run(is_moore,
         loc_automaton,
         anon_inputs, anon_outputs,
         bounds,
-        solver, SCHED_ID_PREFIX, ACTIVE_NAME, SENDS_NAME, HAS_TOK_NAME, SENDS_PREV_NAME,
+        solver, SCHED_ID_PREFIX, ACTIVE_NAME_MY, SENDS_NAME_MY, HAS_TOK_NAME_MY, SENDS_PREV_NAME_MY,
         smt_files_prefix)
 
     logger.info('model%s found', ['', ' not'][models is None])
@@ -150,7 +128,7 @@ def _run(is_moore,
                 if is_moore:
                     dot = moore_to_dot(lts)
                 else:
-                    dot = to_dot(lts, [SENDS_NAME, HAS_TOK_NAME])
+                    dot = to_dot(lts, [SENDS_NAME_MY, HAS_TOK_NAME_MY])
                 out.write(dot)
 
 
@@ -308,33 +286,6 @@ def join_properties(properties:Iterable):
     all_gua = list(chain(p.guarantees for p in properties))
     return SpecProperty(all_ass, all_gua)
 
-
-class InterleavingScheduler:
-    """ The only process is active. """
-
-    def inst_ass(self, nof_processes):
-        return get_fair_sched_prop(nof_processes, SCHED_ID_PREFIX)
-
-
-class TokRingArchitecture:
-    @property
-    def spec_rank(self): #TODO: dirty
-        return 1
-
-    def guarantees(self):
-        #TODO: dirty -- introduce Globally/Finally class
-        expr = UnaryOp('G', BinOp('->', QuantifiedSignal(HAS_TOK_NAME_MY, 'i'),
-                                        UnaryOp('F', QuantifiedSignal(SENDS_NAME_MY, 'i'))))
-        tok_released = ForallExpr(['i'], expr)
-        return [tok_released]
-
-    def implications(self):
-        expr = UnaryOp('G', UnaryOp('F', QuantifiedSignal(HAS_TOK_NAME_MY, 'i')))
-        fair_tok_sched = ForallExpr(['i'], expr)
-        return [fair_tok_sched]
-
-    def get_cutoff(self, rank:int):
-        assert 0
 
 
 def _build_archi_property(archi:TokRingArchitecture, loc_assumptions):

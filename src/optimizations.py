@@ -3,7 +3,7 @@ from itertools import chain
 from helpers.automata_helper import is_safety_automaton
 from interfaces.spec import SpecProperty
 from parsing.helpers import Visitor, ConverterToLtl2BaFormatVisitor
-from parsing.interface import ForallExpr, BinOp, Signal, Expr, Bool, QuantifiedSignal, UnaryOp
+from interfaces.parser_expr import ForallExpr, BinOp, Signal, Expr, Bool, QuantifiedSignal, UnaryOp
 
 
 @lru_cache()

@@ -1,5 +1,5 @@
 from helpers.spec_helper import and_properties
-from parsing.interface import Number, BinOp, UnaryOp, Bool, Signal, ForallExpr
+from interfaces.parser_expr import Number, BinOp, UnaryOp, Bool, Signal, ForallExpr
 
 __author__ = 'art_haali'
 

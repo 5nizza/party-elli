@@ -3,7 +3,7 @@ import unittest
 import os
 from interfaces.spec import SpecProperty
 from optimizations import strengthen, localize, _reduce_quantifiers, _get_conjuncts, _denormalize
-from parsing.interface import QuantifiedSignal, ForallExpr, UnaryOp, BinOp, Bool, Signal
+from interfaces.parser_expr import QuantifiedSignal, ForallExpr, UnaryOp, BinOp, Bool, Signal
 from translation2uct.ltl2automaton import Ltl2UCW
 
 

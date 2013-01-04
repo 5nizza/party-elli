@@ -369,7 +369,7 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
         filtered_label = dict()
 
         for var_name, var_value in label.items():
-            if var_name.startswith(self._sched_var_prefix):
+            if var_name.startswith(self._sched_var_prefix): #TODO: use Signal instead of these hacks
                 filtered_label[var_name] = var_value
 
             elif var_name.startswith(self._active_var_prefix):

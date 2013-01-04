@@ -1,7 +1,7 @@
 from logging import Logger
 from helpers.ply import yacc
 from parsing.helpers import Visitor
-from parsing.interface import Signal, QuantifiedSignal
+from interfaces.parser_expr import Signal, QuantifiedSignal
 from parsing.par_lexer_desc import par_lexer, PAR_INPUT_VARIABLES, PAR_OUTPUT_VARIABLES, PAR_ASSUMPTIONS, PAR_GUARANTEES
 from parsing.par_parser_desc import par_parser
 
