@@ -26,7 +26,7 @@ class Visitor:
         if isinstance(node, ForallExpr):
             return self.visit_forall(node)
 
-        assert 0, 'unknown node type ' + str(node.__class__)
+        assert 0, 'unknown node type ' + str(node.__class__) + ': ' + str(node)
 
 
     def visit_binary_op(self, binary_op:BinOp):

@@ -118,7 +118,7 @@ class QuantifiedSignalsCreatorVisitor(Visitor):
         base_name_tokens = [t for t in tokens if t not in self.binding_indices]
         indices_tokens = tuple(t for t in tokens if t not in base_name_tokens)
 
-        return QuantifiedSignal('_'.join(base_name_tokens), indices_tokens)
+        return QuantifiedSignal('_'.join(base_name_tokens), *indices_tokens)
 
 
 def _update_expr_with_quantified_signals(quantified_expr:Expr, binding_indices:list) -> Expr:

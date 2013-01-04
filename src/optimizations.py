@@ -74,7 +74,7 @@ class SignalsReplacerVisitor(Visitor):
         print(self._new_by_old_index)
         new_indices = tuple(self._new_by_old_index[i] for i in old_indices)
 
-        new_signal = QuantifiedSignal(signal.name, new_indices)
+        new_signal = QuantifiedSignal(signal.name, *new_indices)
         return new_signal
 
 

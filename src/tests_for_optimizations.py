@@ -11,7 +11,7 @@ def _get_is_true(signal_name:str, *binding_indices):
     if len(binding_indices) == 0:
         signal = Signal(signal_name)
     else:
-        signal = QuantifiedSignal(signal_name, binding_indices)
+        signal = QuantifiedSignal(signal_name, *binding_indices)
     return BinOp('=', signal, Bool(True))
 
 
@@ -33,7 +33,7 @@ class TestStrengthen(unittest.TestCase):
         'liveness': []
         """
 
-        a_i, b_j = QuantifiedSignal('a', ('i',)), QuantifiedSignal('b', ('j',))
+        a_i, b_j = QuantifiedSignal('a', 'i'), QuantifiedSignal('b', 'j')
 
         liveness_ass = ForallExpr(['i'], UnaryOp('G', UnaryOp('F', a_i)))
         safety_gua = ForallExpr(['j'], UnaryOp('G', b_j))
@@ -55,7 +55,7 @@ class TestStrengthen(unittest.TestCase):
         Forall(i) GFa_i -> Forall(j) GF(b_j)
         is left as it is
         """
-        a_i, b_j = QuantifiedSignal('a', ('i',)), QuantifiedSignal('b', ('j',))
+        a_i, b_j = QuantifiedSignal('a', 'i'), QuantifiedSignal('b', 'j')
 
         liveness_ass = ForallExpr(['i'], UnaryOp('G', UnaryOp('F', a_i)))
         liveness_gua = ForallExpr(['j'], UnaryOp('G', UnaryOp('F', b_j)))
@@ -81,8 +81,8 @@ class TestStrengthen(unittest.TestCase):
         'safety': Forall(i) G(b_i)  ->  Forall(j) G(d_j)
         """
 
-        a_i, b_i = QuantifiedSignal('a', ('i',)), QuantifiedSignal('b', ('i',))
-        c_j, d_j = QuantifiedSignal('c', ('j',)), QuantifiedSignal('d', ('j',))
+        a_i, b_i = QuantifiedSignal('a', 'i'), QuantifiedSignal('b', 'i')
+        c_j, d_j = QuantifiedSignal('c', 'j'), QuantifiedSignal('d', 'j')
 
         ass = ForallExpr(['i'],
             BinOp('*',

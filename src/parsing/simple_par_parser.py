@@ -9,6 +9,9 @@ SCHED_ID_PREFIX = 'sch'
 ACTIVE_NAME = 'active_'
 SENDS_NAME, SENDS_PREV_NAME, HAS_TOK_NAME = 'sends_', 'prev_', 'tok_'
 
+ACTIVE_NAME_MY = 'active'
+SENDS_NAME_MY, SENDS_PREV_NAME_MY, HAS_TOK_NAME_MY= 'sends', 'prev', 'tok'
+
 
 def concretize_anon_var(anon_var, process_index):
     assert not anon_var.endswith('_i')

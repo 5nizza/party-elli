@@ -15,9 +15,9 @@ class Signal:
 
 
 class QuantifiedSignal(Signal):
-    def __init__(self, base_name:str, binding_indices:tuple):
+    def __init__(self, base_name:str, *binding_indices):
         super().__init__(base_name)
-        self.binding_indices = binding_indices
+        self.binding_indices = tuple(binding_indices)
 
     def __repr__(self):
         return self.name + '_' + '_'.join(self.binding_indices)

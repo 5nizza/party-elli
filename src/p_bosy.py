@@ -11,9 +11,9 @@ from interfaces.spec import SpecProperty
 from module_generation.dot import moore_to_dot, to_dot
 from optimizations import localize, strengthen, get_rank
 from parsing import par_parser
-from parsing.interface import BinOp, UnaryOp, Signal, ForallExpr
+from parsing.interface import BinOp, UnaryOp, Signal, ForallExpr, QuantifiedSignal
 from parsing.par_lexer_desc import PAR_INPUT_VARIABLES, PAR_OUTPUT_VARIABLES, PAR_ASSUMPTIONS, PAR_GUARANTEES
-from parsing.simple_par_parser import  SCHED_ID_PREFIX, SENDS_NAME, ACTIVE_NAME, instantiate_formula, HAS_TOK_NAME, SENDS_PREV_NAME, get_fair_sched_prop
+from parsing.simple_par_parser import  SCHED_ID_PREFIX, SENDS_NAME, ACTIVE_NAME, instantiate_formula, HAS_TOK_NAME, SENDS_PREV_NAME, get_fair_sched_prop, HAS_TOK_NAME_MY, SENDS_NAME_MY
 from synthesis import par_model_searcher
 from synthesis.smt_logic import UFLIA
 
@@ -323,12 +323,13 @@ class TokRingArchitecture:
 
     def guarantees(self):
         #TODO: dirty -- introduce Globally/Finally class
-        expr = UnaryOp('G', BinOp('->', Signal(HAS_TOK_NAME+'i'), UnaryOp('F', SENDS_NAME+'i')))
+        expr = UnaryOp('G', BinOp('->', QuantifiedSignal(HAS_TOK_NAME_MY, 'i'),
+                                        UnaryOp('F', QuantifiedSignal(SENDS_NAME_MY, 'i'))))
         tok_released = ForallExpr(['i'], expr)
         return [tok_released]
 
     def implications(self):
-        expr = UnaryOp('G', UnaryOp('F', Signal(HAS_TOK_NAME + 'i')))
+        expr = UnaryOp('G', UnaryOp('F', QuantifiedSignal(HAS_TOK_NAME_MY, 'i')))
         fair_tok_sched = ForallExpr(['i'], expr)
         return [fair_tok_sched]
 
