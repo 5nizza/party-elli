@@ -5,7 +5,7 @@ from helpers.python_ext import get_add
 from interfaces.automata import Node, Label, DEAD_END
 
 
-def _get_cases(toks):
+def _get_blocks(toks):
     start = None
     blocks_indices = []
     for i, t in enumerate(toks):
@@ -105,6 +105,21 @@ def _conform2acw(initial_nodes, rejecting_nodes, nodes, vars):
     return new_init_nodes, new_rejecting_nodes, new_name_to_node.values()
 
 
+def _parse_trans_tok(trans:str, src:Node, name_to_node, initial_nodes, rejecting_nodes) -> (Node, list):
+
+    if trans == 'false;':
+        #dead end -- rejecting state with self-loop
+        dst = src
+        labels = [{}] #empty label means 'true'
+        rejecting_nodes.add(src)
+    else:
+        label_tok, dst_tok = [x.strip() for x in trans.split('-> goto')]
+        dst = _get_create(dst_tok, name_to_node, initial_nodes, rejecting_nodes)
+        labels = parse_label_tok(label_tok)
+
+    return dst, labels
+
+
 def _get_hacked_ucw(text): #TODO: bad smell - it is left for testing purposes only
     """
         Return: initial_nodes:set, rejecting_nodes:set, nodes:set, label variables:set
@@ -119,7 +134,7 @@ def _get_hacked_ucw(text): #TODO: bad smell - it is left for testing purposes on
     toks = [x.strip() for x in toks][1:-1]
     assert len(toks) > 1
 
-    cases = _get_cases(toks)
+    blocks = _get_blocks(toks)
 
     # accept_init: /* .. */
     # if
@@ -135,8 +150,8 @@ def _get_hacked_ucw(text): #TODO: bad smell - it is left for testing purposes on
     rejecting_nodes = set()
     name_to_node = {}
 
-    for c in cases:
-        lines = c.strip().split('\n')
+    for b in blocks:
+        lines = b.strip().split('\n')
 
         src_tok = lines[0].split(':')[0].strip()
         src = _get_create(src_tok, name_to_node, initial_nodes, rejecting_nodes)
@@ -148,13 +163,10 @@ def _get_hacked_ucw(text): #TODO: bad smell - it is left for testing purposes on
             continue
 
         for trans in trans_toks:
-            label_tok, dst_tok = [x.strip() for x in trans.split('-> goto')]
-
-            labels = parse_label_tok(label_tok)
-            vars.update(*[l.keys() for l in labels])
+            dst, labels = _parse_trans_tok(trans, src, name_to_node, initial_nodes, rejecting_nodes)
+            vars.update(itertools.chain(*[l.keys() for l in labels]))
 
             for l in labels:
-                dst = _get_create(dst_tok, name_to_node, initial_nodes, rejecting_nodes)
                 #that is not correct - there are no ORs in UCT => this is corrected in _conform2acw
                 src.add_transition(l, {(dst, dst in rejecting_nodes)})
 
@@ -166,7 +178,6 @@ def parse_ltl2ba_ba(text):
     """ Parse ltl2ba output
         Return (initial_nodes, rejecting nodes, nodes of Node class)
     """
-
     initial_nodes, rejecting_nodes, nodes, vars = _get_hacked_ucw(text)
 
     ucw_init_nodes, ucw_rej_nodes, ucw_nodes =  _conform2acw(initial_nodes, rejecting_nodes, nodes, vars)

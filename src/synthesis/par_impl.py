@@ -2,7 +2,6 @@ from itertools import permutations, chain
 import math
 from helpers.python_ext import bin_fixed_list, StrAwareList, index_of
 from interfaces.automata import Label
-from parsing.simple_par_parser import anonymize_concr_var, concretize_anon_vars, concretize_anon_var
 from synthesis.blank_impl import BlankImpl
 from synthesis.func_description import FuncDescription
 from synthesis.smt_helper import call_func, op_and, get_bits_definition, op_not

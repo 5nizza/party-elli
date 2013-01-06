@@ -8,10 +8,16 @@ from interfaces.parser_expr import ForallExpr, BinOp, Signal, Expr, Bool, Quanti
 
 @lru_cache()
 def is_safety(expr:Expr, ltl2ba_converter) -> bool:
+    print('is: is_safety')
+    print('is:', expr)
+
     expr_to_ltl2ba_converter = ConverterToLtl2BaFormatVisitor()
     ltl2ba_formula = expr_to_ltl2ba_converter.dispatch(expr)
     automaton = ltl2ba_converter.convert(ltl2ba_formula)
-    return is_safety_automaton(automaton)
+    res = is_safety_automaton(automaton)
+    print('is: res =', res)
+    print()
+    return res
 
 
 def get_rank(expr) -> int:
@@ -69,9 +75,6 @@ class SignalsReplacerVisitor(Visitor):
 
         #noinspection PyUnresolvedReferences
         old_indices = signal.binding_indices
-        print('dispatching the signal ', str(signal))
-        print(old_indices)
-        print(self._new_by_old_index)
         new_indices = tuple(self._new_by_old_index[i] for i in old_indices)
 
         new_signal = QuantifiedSignal(signal.name, *new_indices)
@@ -100,12 +103,12 @@ def _replace_indices(newindex_by_oldindex:dict, expr):
 
     underlying_expr = expr.arg2
 
-    print()
-    print(underlying_expr)
+#    print()
+#    print(underlying_expr)
 
     replacer = SignalsReplacerVisitor(newindex_by_oldindex)
     replaced_expr = replacer.dispatch(underlying_expr)
-    print(replaced_expr)
+#    print(replaced_expr)
 
     return replaced_expr
 
@@ -128,7 +131,9 @@ def _is_quantified_property(property:SpecProperty) -> Bool: #TODO: does not allo
 
 
 def localize(property:SpecProperty):
-    """ sound, but incomplete """
+    """ sound, but incomplete
+        returns set of QuantifiedSpecProperties
+    """
     ## forall(i) a_i -> forall(j) g_j
     # forall(i) (a_i -> g_i)
     ## forall(i,j) a_i_j -> forall(k) g_k
@@ -136,7 +141,7 @@ def localize(property:SpecProperty):
     ## forall(i) a_i -> forall(k,m) g_k_m
     #
     ## forall(i,j) a_i_j -> forall(k,m) g_k_m
-
+    print('loca: before:', property)
     if not _is_quantified_property(property):
         return property
 
@@ -159,22 +164,24 @@ def localize(property:SpecProperty):
     ass_newindex_by_old = dict((o, max_binding_indices[i]) for i,o in enumerate(binding_indices_ass))
     gua_newindex_by_old = dict((o, max_binding_indices[i]) for i,o in enumerate(binding_indices_gua))
 
-    print('ass')
-    print(normalized_ass)
-    print(binding_indices_ass)
-    print(ass_newindex_by_old)
+#    print('ass')
+#    print(normalized_ass)
+#    print(binding_indices_ass)
+#    print(ass_newindex_by_old)
     replaced_underlying_ass = _replace_indices(ass_newindex_by_old, normalized_ass)
-    print('gua')
-    print(normalized_gua)
-    print(binding_indices_gua)
-    print(gua_newindex_by_old)
+#    print('gua')
+#    print(normalized_gua)
+#    print(binding_indices_gua)
+#    print(gua_newindex_by_old)
     replaced_underlying_gua = _replace_indices(gua_newindex_by_old, normalized_gua)
 
     new_gua = ForallExpr(max_binding_indices,
-                         BinOp('->', replaced_underlying_ass, replaced_underlying_gua))
+        BinOp('->', replaced_underlying_ass, replaced_underlying_gua))
 
     new_property = SpecProperty([Bool(True)], [new_gua])
 
+    print('loca:after', new_property)
+    print()
     return new_property
 
 
@@ -220,7 +227,7 @@ def _denormalize(conjunct:Expr) -> list:
     normalized_conjunct = normalize_conjuncts([conjunct])
 
     if not _is_quantified_property(SpecProperty([normalized_conjunct], [])):
-        return normalized_conjunct
+        return [normalized_conjunct]
 
     #: :type: ForallExpr
     forall_expr = conjunct
@@ -263,13 +270,17 @@ def strengthen(property:SpecProperty, ltl2ucw_converter) -> (list, list):
 
     denormalized_props = _get_denormalized_property(property)
     for p_ in denormalized_props:
+        print('stre: p=', p_)
         #: :type: SpecProperty
         p = p_
 
         safety_ass = normalize_conjuncts([a for a in p.assumptions if is_safety(a, ltl2ucw_converter)])
+        print('stre: ==================== safety_ass=', safety_ass)
+
         all_ass = normalize_conjuncts(p.assumptions)
 
         safety_guarantees = [g for g in p.guarantees if is_safety(g, ltl2ucw_converter)]
+        print('stre: ==================== safety_gua=', '\n'.join(map(str,safety_guarantees)))
         liveness_guarantees = [g for g in p.guarantees if not is_safety(g, ltl2ucw_converter)]
 
         safety_properties += [SpecProperty([safety_ass], [sg])

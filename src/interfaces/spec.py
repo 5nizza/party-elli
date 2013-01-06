@@ -1,3 +1,5 @@
+from collections import Iterable
+
 class Spec:
     def __init__(self, inputs, outputs, properties):
         assert properties

@@ -1,6 +1,4 @@
-from io import StringIO
 import logging
-import tempfile
 
 from helpers.logging import log_entrance
 from helpers.python_ext import StrAwareList, FileAsStringEmulator
@@ -8,7 +6,6 @@ from synthesis.generic_smt_encoder import GenericEncoder
 from synthesis.local_en_process_impl import SyncImpl
 from synthesis.par_impl import ParImpl
 from synthesis.smt_helper import comment
-from synthesis.smt_logic import UFLIA
 from synthesis.z3 import Z3
 
 

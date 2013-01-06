@@ -6,70 +6,17 @@ from argparse import FileType
 from collections import Iterable
 from itertools import chain
 from logging import Logger
+from architecture.scheduler import InterleavingScheduler, SCHED_ID_PREFIX, ACTIVE_NAME_MY
+from architecture.tok_ring import TokRingArchitecture, SENDS_NAME_MY, HAS_TOK_NAME_MY, SENDS_PREV_NAME_MY
 
 from helpers.main_helper import setup_logging, create_spec_converter_z3
-from helpers.spec_helper import and_properties
 from interfaces.spec import SpecProperty
 from module_generation.dot import moore_to_dot, to_dot
 from optimizations import localize, strengthen, get_rank
 from parsing import par_parser
 from parsing.par_lexer_desc import PAR_INPUT_VARIABLES, PAR_OUTPUT_VARIABLES, PAR_ASSUMPTIONS, PAR_GUARANTEES
-from parsing.par_parser import SCHED_ID_PREFIX, ACTIVE_NAME_MY, SENDS_NAME_MY, HAS_TOK_NAME_MY, SENDS_PREV_NAME_MY
-from parsing.simple_par_parser import  instantiate_formula, get_fair_sched_prop
 from synthesis import par_model_searcher
 from synthesis.smt_logic import UFLIA
-
-
-simple_liveness_loc_guarantee = 'G((active_i && r_i) -> Fg_i)'
-
-full_safety_loc_guarantee = """
-(!g_i)
-&& (!F(g_i && X((!r_i) && !g_i) && X(((!r_i) && !g_i) U (g_i && !r_i) )) )
-&& (!(((!r_i) && (!g_i)) U ((!r_i) && g_i)))
-""".strip().replace('\n', ' ')
-
-full_liveness_loc_guarantee = """
-G( (active_i && (!r_i) && g_i) -> F((r_i&&g_i) || (!g_i)) )
-&& G( (active_i && r_i) -> Fg_i )
-""".strip().replace('\n', ' ')
-
-
-pnueli_safety_loc_assumption = """
-(!r_i) &&
-G((((!r_i) && g_i) || (r_i && !g_i)) -> (((!r_i) && X(!r_i)) || (r_i && Xr_i)))
-""".strip().replace('\n', ' ')
-
-pnueli_liveness_loc_assumption = """
-GF(!(r_i && g_i))
-""".strip().replace('\n', ' ')
-
-pnueli_safety_loc_guarantee = """
-(!g_i) &&
-G((((!r_i) && (!g_i)) || (r_i && g_i)) ->  (((!g_i) && (X(!g_i))) || ((g_i) && (X(g_i)))))
-""".strip().replace('\n', ' ')
-
-pnueli_liveness_loc_guarantee = """
-GF(((!r_i) && (!g_i)) || (r_i && g_i))
-""".strip().replace('\n', ' ')
-
-
-#xarb_loc_assumption = """
-#(!r_i) &&
-#G(((!r_i)&&Xg_i) -> X(!r_i)) &&
-#G((r_i&&X!g_i) -> Xr_i) &&
-#G((r_i&&Xg_i) -> X(!r_i))
-#""".strip().replace('\n', ' ')
-#
-#xarb_loc_guarantee = """
-#(!g_i) &&
-#G(((!r_i)&&(!g_i))->X!g_i) &&
-#G(r_i->XFg_i) &&
-#G((r_i&&Xg_i) -> (XXg_i && XXXg_i && XXXX!g_i))
-#""".strip().replace('\n', ' ')
-
-
-#simple, full, pnueli, xarb = range(4)
-simple, full, pnueli = range(3)
 
 
 def _get_spec(ltl_text:str, logger:Logger) -> (list, list, list, list):
@@ -288,78 +235,106 @@ def join_properties(properties:Iterable):
 
 
 
-def _build_archi_property(archi:TokRingArchitecture, loc_assumptions):
-    # Safety properties of token rings architecture are added on SMT level
-    # they are conjuncted to the original spec
-    assert archi.spec_rank == 1, 'unsupported: architecture spec is _not 1-indexed'
+#def _build_archi_property(archi:TokRingArchitecture, loc_assumptions):
+#    # Safety properties of token rings architecture are added on SMT level
+#    # they are conjuncted to the original spec
+#    assert archi.spec_rank == 1, 'unsupported: architecture spec is _not 1-indexed'
+#
+#    loc_assumptions = list(loc_assumptions)
+#
+#    s_ass_list = [a for a in loc_assumptions if is_safety(a)]
+#    l_ass_list = [a for a in loc_assumptions if a not in s_ass_list]
+#
+#    inst_s_ass = instantiate_formula(and_properties(s_ass_list), 1)
+#    inst_l_ass = instantiate_formula(and_properties(l_ass_list), 1)
+#
+#    inst_archi_ass = archi.inst_ass(1)
+#    inst_archi_gua = archi.inst_gua(1)
+#
+#    values_map = {
+#        'inst_s_ass':inst_s_ass,
+#        'inst_l_ass':inst_l_ass,
+#        'inst_archi_ass':inst_archi_ass,
+#        'inst_archi_gua':inst_archi_gua
+#    }
+#
+#    archi_tok_released = '(({inst_archi_ass}) && ({inst_s_ass}) && ({inst_l_ass})) -> ({inst_archi_gua})'.format_map(
+#        values_map
+#    )#def _build_archi_property(archi:TokRingArchitecture, loc_assumptions):
+#    # Safety properties of token rings architecture are added on SMT level
+#    # they are conjuncted to the original spec
+#    assert archi.spec_rank == 1, 'unsupported: architecture spec is _not 1-indexed'
+#
+#    loc_assumptions = list(loc_assumptions)
+#
+#    s_ass_list = [a for a in loc_assumptions if is_safety(a)]
+#    l_ass_list = [a for a in loc_assumptions if a not in s_ass_list]
+#
+#    inst_s_ass = instantiate_formula(and_properties(s_ass_list), 1)
+#    inst_l_ass = instantiate_formula(and_properties(l_ass_list), 1)
+#
+#    inst_archi_ass = archi.inst_ass(1)
+#    inst_archi_gua = archi.inst_gua(1)
+#
+#    values_map = {
+#        'inst_s_ass':inst_s_ass,
+#        'inst_l_ass':inst_l_ass,
+#        'inst_archi_ass':inst_archi_ass,
+#        'inst_archi_gua':inst_archi_gua
+#    }
+#
+#    archi_tok_released = '(({inst_archi_ass}) && ({inst_s_ass}) && ({inst_l_ass})) -> ({inst_archi_gua})'.format_map(
+#        values_map
+#    )
+#
+#    return archi_tok_released
 
-    loc_assumptions = list(loc_assumptions)
-
-    s_ass_list = [a for a in loc_assumptions if is_safety(a)]
-    l_ass_list = [a for a in loc_assumptions if a not in s_ass_list]
-
-    inst_s_ass = instantiate_formula(and_properties(s_ass_list), 1)
-    inst_l_ass = instantiate_formula(and_properties(l_ass_list), 1)
-
-    inst_archi_ass = archi.inst_ass(1)
-    inst_archi_gua = archi.inst_gua(1)
-
-    values_map = {
-        'inst_s_ass':inst_s_ass,
-        'inst_l_ass':inst_l_ass,
-        'inst_archi_ass':inst_archi_ass,
-        'inst_archi_gua':inst_archi_gua
-    }
-
-    archi_tok_released = '(({inst_archi_ass}) && ({inst_s_ass}) && ({inst_l_ass})) -> ({inst_archi_gua})'.format_map(
-        values_map
-    )
-
-    return archi_tok_released
+#
+#    return archi_tok_released
 
 
-def _build_loc_property_with_archi(loc_property:SpecProperty,
-                                   archi,
-                                   logger:Logger):
-    #TODO: i don't like raw applications of '&&'
-    assert loc_property.rank == 1, 'local'
-    assert archi.spec_rank == 1, 'unsupported architecture'
-    assert not is_safety(archi.inst_ass(1)), 'architectures with safety assumptions are not supported'
-
-    s_ass_list = [a for a in loc_property.assumptions if is_safety(a)]
-    s_gua_list = [g for g in loc_property.guarantees if is_safety(g)]
-
-    l_ass_list = [a for a in loc_property.assumptions if a not in s_ass_list]
-    l_gua_list = [g for g in loc_property.guarantees if g not in s_gua_list]
-
-    logger.debug('safety assumptions are: {0}', s_ass_list)
-    logger.debug('safety guarantees are: {0}', s_gua_list)
-    logger.debug('liveness assumptions are: {0}', l_ass_list)
-    logger.debug('liveness guarantees are: {0}', l_gua_list)
-
-    inst_s_ass = instantiate_formula(and_properties(s_ass_list), 1)
-    inst_s_gua = instantiate_formula(and_properties(s_gua_list), 1)
-
-    inst_l_ass = instantiate_formula(and_properties(l_ass_list), 1)
-    inst_l_gua = instantiate_formula(and_properties(l_gua_list), 1)
-
-    values_map = {
-        'inst_s_ass':inst_s_ass,
-        'inst_s_gua':inst_s_gua,
-        'inst_l_ass':inst_l_ass,
-        'inst_l_gua':inst_l_gua,
-        'inst_archi_ass':archi.inst_ass(1)
-        }
-
-    inst_s_part = '(({inst_s_ass}) -> ({inst_s_gua})'.format_map(values_map)
-    inst_l_part = '(({archi_ass}) && ({inst_s_ass}) && ({inst_l_ass})) -> ({inst_l_gua})'.format_map(values_map)
-
-    updated_property = '({inst_l_part}) && ({inst_s_part})'.format(
-        inst_l_part = inst_l_part,
-        loc_safety_part = inst_s_part
-    )
-
-    return updated_property
+#def _build_loc_property_with_archi(loc_property:SpecProperty,
+#                                   archi,
+#                                   logger:Logger):
+#    #TODO: i don't like raw applications of '&&'
+#    assert loc_property.rank == 1, 'local'
+#    assert archi.spec_rank == 1, 'unsupported architecture'
+#    assert not is_safety(archi.inst_ass(1)), 'architectures with safety assumptions are not supported'
+#
+#    s_ass_list = [a for a in loc_property.assumptions if is_safety(a)]
+#    s_gua_list = [g for g in loc_property.guarantees if is_safety(g)]
+#
+#    l_ass_list = [a for a in loc_property.assumptions if a not in s_ass_list]
+#    l_gua_list = [g for g in loc_property.guarantees if g not in s_gua_list]
+#
+#    logger.debug('safety assumptions are: {0}', s_ass_list)
+#    logger.debug('safety guarantees are: {0}', s_gua_list)
+#    logger.debug('liveness assumptions are: {0}', l_ass_list)
+#    logger.debug('liveness guarantees are: {0}', l_gua_list)
+#
+#    inst_s_ass = instantiate_formula(and_properties(s_ass_list), 1)
+#    inst_s_gua = instantiate_formula(and_properties(s_gua_list), 1)
+#
+#    inst_l_ass = instantiate_formula(and_properties(l_ass_list), 1)
+#    inst_l_gua = instantiate_formula(and_properties(l_gua_list), 1)
+#
+#    values_map = {
+#        'inst_s_ass':inst_s_ass,
+#        'inst_s_gua':inst_s_gua,
+#        'inst_l_ass':inst_l_ass,
+#        'inst_l_gua':inst_l_gua,
+#        'inst_archi_ass':archi.inst_ass(1)
+#        }
+#
+#    inst_s_part = '(({inst_s_ass}) -> ({inst_s_gua})'.format_map(values_map)
+#    inst_l_part = '(({archi_ass}) && ({inst_s_ass}) && ({inst_l_ass})) -> ({inst_l_gua})'.format_map(values_map)
+#
+#    updated_property = '({inst_l_part}) && ({inst_s_part})'.format(
+#        inst_l_part = inst_l_part,
+#        loc_safety_part = inst_s_part
+#    )
+#
+#    return updated_property
 
 
 def _strengthen_many(properties:list, ltl2ucw_converter) -> (list, list):
@@ -371,22 +346,17 @@ def _strengthen_many(properties:list, ltl2ucw_converter) -> (list, list):
 
     return pseudo_safety_properties, pseudo_liveness_properties
 
+def instantiate_exprs(expressions, cutoff):
+    print('not implemented!')
 
-def _inst_properties(archi, pseudo_liveness_properties, pseudo_safety_properties, scheduler):
+
+def _inst_properties(archi, properties):
+    #TODO: bug: handle scheduler properties _specially
+
     prop_cutoff_pairs = []
-    for p in pseudo_safety_properties:
+    for p in properties:
         cutoff = archi.get_cutoff(get_rank(p))
         inst_a = instantiate_exprs(p.assumptions, cutoff)
-        inst_g = instantiate_exprs(p.guarantees, cutoff)
-        inst_p = SpecProperty(inst_a, inst_g)
-        prop_cutoff_pairs.append((inst_p, cutoff))
-
-    for p in pseudo_liveness_properties:
-        ass_rank = max(get_rank(p.assumptions), 1) #+scheduler assumptions
-        p_rank = ass_rank + get_rank(p.guarantees)
-        cutoff = archi.get_cutoff(p_rank)
-
-        inst_a = instantiate_exprs(p.assumptions, cutoff) + scheduler.inst_ass(cutoff)
         inst_g = instantiate_exprs(p.guarantees, cutoff)
         inst_p = SpecProperty(inst_a, inst_g)
         prop_cutoff_pairs.append((inst_p, cutoff))
@@ -403,23 +373,41 @@ def main(spec_text, is_moore,
     logger.info('compositional approach')
     #TODO: check which optimizations are used
 
+    #TODO: why anon_outputs do not contain send_token/has_token?
     anon_inputs, anon_outputs, assumptions, guarantees = _get_spec(spec_text, logger)
 
     archi = TokRingArchitecture()
-    scheduler = InterleavingScheduler()
-
     archi_properties = [SpecProperty(assumptions, [g]) for g in archi.guarantees()]
     spec_properties = [SpecProperty(assumptions+archi.implications(), [g]) for g in guarantees]
     properties = archi_properties + spec_properties
 
-    #TODO: add scheduler assumptions
+    scheduler = InterleavingScheduler()
+    properties = [SpecProperty(p.assumptions + scheduler.assumptions, p.guarantees)
+                  for p in properties]
 
-    properties = [localize(p) for p in properties]
     pseudo_safety_properties, pseudo_liveness_properties = _strengthen_many(properties, ltl2ucw_converter)
 
-    prop_cutoff_pairs = _inst_properties(archi, pseudo_liveness_properties, pseudo_safety_properties, scheduler)
-
+    print('-'*80)
+    print('after strengthening')
+    print('safety-----------')
+    print('\n'.join(map(str, pseudo_safety_properties)))
+    print('liveness---------')
+    print('\n'.join(map(str, pseudo_liveness_properties)))
+    print('-----------')
     print()
+
+    properties = [localize(p)
+                  for p in pseudo_liveness_properties + pseudo_safety_properties]
+
+    print('-'*80)
+    print('after localization')
+    for p in properties:
+        print(p)
+    print()
+
+    print('-'*80)
+    prop_cutoff_pairs = _inst_properties(archi, properties)
+    print('after instantiation')
     print(prop_cutoff_pairs)
     exit(0)
 #    modified_glob_properties = CURRENT

@@ -62,7 +62,11 @@ class ConverterToLtl2BaFormatVisitor(Visitor):
             return '({arg1}) && ({arg2})'.format(arg1 = arg1, arg2 = arg2)
 
         if binary_op.name == '=':
-            return '{neg}{arg1}'.format(arg1 = arg1, neg = ['', '!'][arg2 == Number(0)])
+            if isinstance(arg1, Number):
+                bool_arg, signal_arg = arg1, arg2
+            else:
+                bool_arg, signal_arg = arg2, arg1
+            return '{neg}{signal}'.format(signal = signal_arg, neg = ['', '!'][bool_arg == Number(0)])
 
         if binary_op.name == '+':
             return '({arg1}) || ({arg2})'.format(arg1 = arg1, arg2 = arg2)
@@ -83,7 +87,7 @@ class ConverterToLtl2BaFormatVisitor(Visitor):
     def visit_signal(self, signal):
         return signal.name.lower() #ltl3ba treats upper letter wrongly
 
-    def visit_number(self, number):
+    def visit_number(self, number:Number):
         return number
 
     def visit_forall(self, node:ForallExpr):
