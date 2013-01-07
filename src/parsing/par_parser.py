@@ -125,5 +125,23 @@ class Test(TestCase):
             {PAR_INPUT_VARIABLES:1, PAR_OUTPUT_VARIABLES:1, PAR_ASSUMPTIONS:1, PAR_GUARANTEES:6})
 
 
+    def test_priorities(self):
+        whole_text = '''
+        [INPUT_VARIABLES]
+        [OUTPUT_VARIABLES]
+        [ASSUMPTIONS]
+        [GUARANTEES]
+        {0};
+        '''
+        text = whole_text.format('b_0=1 -> c_0=1 * c_1=1 * c_2=1 * c_3=1')
+
+        section_data = dict(par_parser.parse(text))
+
+        expressions = section_data[PAR_GUARANTEES]
+
+        assert len(expressions) == 1, str(expressions)
+        assert expressions[0].name == '->'
+
+
     def _get_all_properties(self, section_name_to_data:dict):
         return list(section_name_to_data[PAR_ASSUMPTIONS]) + list(section_name_to_data[PAR_GUARANTEES])

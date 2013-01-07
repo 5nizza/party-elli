@@ -5,7 +5,7 @@ from parsing.par_lexer_desc import *
 precedence = (
     ('right', 'QUANTIFIER'),
     ('left','OR'),
-    ('left','IMPLIES','EQUIV'),
+    ('right','IMPLIES','EQUIV'),
     ('left','AND'),
     ('left', 'TEMPORAL_BINARY'),
     ('left', 'NEG'),            #left - right should not matter..
