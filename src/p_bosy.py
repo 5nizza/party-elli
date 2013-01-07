@@ -13,7 +13,7 @@ from helpers.main_helper import setup_logging, create_spec_converter_z3
 from interfaces.parser_expr import Expr
 from interfaces.spec import SpecProperty
 from module_generation.dot import moore_to_dot, to_dot
-from optimizations import localize, strengthen, get_rank, inst_properties
+from optimizations import localize, strengthen, get_rank, inst_property
 from parsing import par_parser
 from parsing.par_lexer_desc import PAR_INPUT_VARIABLES, PAR_OUTPUT_VARIABLES, PAR_ASSUMPTIONS, PAR_GUARANTEES
 from synthesis import par_model_searcher
@@ -390,7 +390,7 @@ def main(spec_text, is_moore,
     print()
 
     print('-'*80)
-    prop_cutoff_pairs = inst_properties(archi, properties)
+    prop_cutoff_pairs = inst_property(archi, properties)
     print('after instantiation')
     print(prop_cutoff_pairs)
     exit(0)

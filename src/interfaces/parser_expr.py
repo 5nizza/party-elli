@@ -86,6 +86,8 @@ class ForallExpr(Expr):
 # helpers
 
 def and_expressions(conjuncts):
+    assert len(conjuncts) > 0
+
     if len(conjuncts) == 1:
         return conjuncts[0]
 

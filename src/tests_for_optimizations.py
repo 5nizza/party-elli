@@ -1,9 +1,10 @@
 from itertools import chain
 import unittest
 import os
+from architecture.tok_ring import TokRingArchitecture
 from interfaces.spec import SpecProperty
-from optimizations import strengthen, localize, _reduce_quantifiers, _get_conjuncts, _denormalize, _fix_indices, _replace_indices
-from interfaces.parser_expr import QuantifiedSignal, ForallExpr, UnaryOp, BinOp, Signal, Expr, Number, Bool
+from optimizations import strengthen, localize, _reduce_quantifiers, _get_conjuncts, _denormalize, _fix_indices, _replace_indices, _instantiate_expr, inst_property
+from interfaces.parser_expr import QuantifiedSignal, ForallExpr, UnaryOp, BinOp, Signal, Expr, Number, Bool, and_expressions
 from parsing.par_lexer_desc import PAR_GUARANTEES
 from parsing.par_parser_desc import par_parser
 from translation2uct.ltl2automaton import Ltl2UCW
@@ -335,6 +336,99 @@ class FixIndicesTests(unittest.TestCase):
         expected_result = BinOp('*', a_2_1, c_0)
 
         self.assertEqual(str(result), str(expected_result))
+
+
+class TestInstantiate(unittest.TestCase):
+    def _get_sorted_conjuncts_str(self, expr:Expr) -> list:
+        return str(sorted(str(expr).split('*')))
+
+
+    def _convert_conjunction_to_str(self, property:SpecProperty) -> str:
+        data = self._get_sorted_conjuncts_str(and_expressions(property.assumptions)) +\
+                      self._get_sorted_conjuncts_str(and_expressions(property.guarantees))
+        return str(data)
+
+
+    def test_instantiate_expr_one_index(self):
+        result = _instantiate_expr(_parse('Forall (i) a_i=1'), 2)
+        expected = _parse('a_0=1 * a_1=1')
+
+        self.assertEqual(str(expected), str(result))
+
+
+    def test_instantiate_expr_two_indices(self):
+        result = _instantiate_expr(_parse('Forall (i,j) a_i_j=1'), 2)
+        expected = _parse('a_0_0=1 * a_1_0=1 * a_0_1=1 * a_1_1=1')
+
+        result_data = self._get_sorted_conjuncts_str(result)
+        expected_data = self._get_sorted_conjuncts_str(expected)
+        self.assertEqual(expected_data, result_data)
+
+
+    def test_instantiate_expr_not_quantified(self):
+        result = _instantiate_expr(_parse('a_1=1'), 2)
+        expected = _parse('a_1=1')
+
+        self.assertEqual(str(expected), str(result))
+
+
+    def test_instantiate_property_cutoff4(self):
+        property = SpecProperty([_parse('Forall (i) a_i = 1')], [_parse('Forall(j) b_j=1')])
+
+        result, cutoff = inst_property(TokRingArchitecture(), property)
+
+        expected = SpecProperty([_parse('a_0=1 * a_1=1 * a_2=1 * a_3=1')], [_parse('b_0=1')])
+
+        result_data = self._convert_conjunction_to_str(result)
+        expected_data = self._convert_conjunction_to_str(expected)
+
+        self.assertEqual(4, cutoff)
+        self.assertEqual(expected_data, result_data)
+
+
+    def test_instantiate_property_cutoff2(self):
+        property = SpecProperty([Bool(True)], [_parse('Forall(j) b_j=1')])
+
+        result, cutoff = inst_property(TokRingArchitecture(), property)
+
+        expected = SpecProperty([Bool(True)], [_parse('b_0=1')])
+
+        result_data = self._convert_conjunction_to_str(result)
+        expected_data = self._convert_conjunction_to_str(expected)
+
+        self.assertEqual(2, cutoff)
+        self.assertEqual(expected_data, result_data)
+
+
+    def test_instantiate_property_handle_scheduler(self):
+        assert 0, 'replace scheduler assumptions'
+
+
+    def test_instantiate_property_cutoff_another_4(self):
+        property = SpecProperty([Bool(True)], [_parse('Forall(j,k) b_j=1 -> c_k=1')])
+
+        result, cutoff = inst_property(TokRingArchitecture(), property)
+
+        expected = SpecProperty([Bool(True)], [_parse('(b_0=1 -> c_0=1) * (b_0=1 -> c_1=1) * (b_0=1 -> c_2=1) * (b_0=1 -> c_3=1)')])
+
+        result_data = self._convert_conjunction_to_str(result)
+        expected_data = self._convert_conjunction_to_str(expected)
+
+        self.assertEqual(4, cutoff)
+        self.assertEqual(expected_data, result_data)
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
