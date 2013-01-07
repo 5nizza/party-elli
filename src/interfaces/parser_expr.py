@@ -17,10 +17,10 @@ class Signal:
 class QuantifiedSignal(Signal):
     def __init__(self, base_name:str, *binding_indices):
         super().__init__(base_name)
-        self.binding_indices = tuple(binding_indices)
+        self.binding_indices = tuple(binding_indices) #binding index: string means parametrization, int - process index
 
     def __repr__(self):
-        return self.name + '_' + '_'.join(self.binding_indices)
+        return self.name + '_' + '_'.join(map(str, self.binding_indices))
 
     __str__ = __repr__
 

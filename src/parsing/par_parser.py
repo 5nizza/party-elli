@@ -58,11 +58,11 @@ Forall (i,j) G(!(g_i=1 * g_j=1));
 
 def parse_ltl(par_text:str, logger:Logger) -> dict:
     #TODO: current version of parser is very restrictive: it allows only the specs of the form:
-    # Forall (i,j..) ass_i_j -> (Forall(k) gua_k ^ Forall(l,m) gua_l_m)
+    # Forall (i,j..) ass_i_j -> (Forall(k) gua_k * Forall(l,m) gua_l_m)
     # it is impossible to have:
-    # (Forall(i) a_i  ->  Forall(k) g_k) ^ (Forall(i,j) a_i_j  ->  Forall(i) g_i)
+    # (Forall(i) a_i  ->  Forall(k) g_k) * (Forall(i,j) a_i_j  ->  Forall(i) g_i)
     # what we can have is:
-    # (Forall(i,j,k) ((a_i -> g_i)) ^ (Forall(i,j) a_i_j -> g_i)
+    # (Forall(i,j,k) ((a_i -> g_i)) * (Forall(i,j) a_i_j -> g_i)
 
     """ Return {section:data}, see sections in syntax_desc """
 
@@ -80,11 +80,11 @@ from unittest import TestCase
 
 class QuantifiedSignalsFinderVisitor(Visitor):
     def __init__(self):
-        self.quantified_signal_names = set()
+        self.quantified_signals = set()
 
     def visit_signal(self, signal:Signal):
         if isinstance(signal, QuantifiedSignal):
-            self.quantified_signal_names.add(signal.name)
+            self.quantified_signals.add(signal)
 
 
 class Test(TestCase):
@@ -110,9 +110,9 @@ class Test(TestCase):
 
         [quantified_signals_finder.dispatch(p) for p in all_properties]
 
-        assert quantified_signal_names_expected == quantified_signals_finder.quantified_signal_names, \
-               'expected {0}, got {1}'.format(quantified_signal_names_expected, quantified_signals_finder.quantified_signal_names)
-
+        quantified_signal_names = set(map(lambda qs: qs.name, quantified_signals_finder.quantified_signals))
+        assert quantified_signal_names_expected == quantified_signal_names, \
+               'expected {0}, got {1}'.format(quantified_signal_names_expected, quantified_signal_names)
 
 
     def test_pnueli(self):

@@ -23,7 +23,7 @@ class GenericEncoder:
 
 
     def _get_assumption_on_output_vars(self, label, sys_state_vector, impl):
-        and_args = []
+        conjuncts = []
         for i in range(impl.nof_processes):
             outvar_desc = impl.outvar_desc_by_process[i]
             for var_name, value in label.items():
@@ -40,9 +40,9 @@ class GenericEncoder:
                 if not label[var_name]:
                     out_condition = op_not(out_condition)
 
-                and_args.append(out_condition)
+                conjuncts.append(out_condition)
 
-        return op_and(and_args)
+        return op_and(conjuncts)
 
 
     def _encode_transition(self,
@@ -62,7 +62,7 @@ class GenericEncoder:
 
             next_sys_state.append(call_func(impl.taus_descs[i].name, tau_args))
 
-        #TODO: forall is evil!
+        #TODO: forall is evil?
         free_input_vars = self._get_free_vars(label, impl)
 
         next_sys_state_name = ' '.join(next_sys_state)

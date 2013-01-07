@@ -1,10 +1,9 @@
 from helpers.spec_helper import and_properties
 from interfaces.parser_expr import Number, BinOp, UnaryOp, Bool, Signal, ForallExpr
 
-__author__ = 'art_haali'
 
 class Visitor:
-    def dispatch(self, node):
+    def dispatch(self, node): #TODO: clear: should accept Expr and return Expr
         if isinstance(node, BinOp):
             return self.visit_binary_op(node)
 
@@ -48,9 +47,12 @@ class Visitor:
         return node
 
     def visit_forall(self, node:ForallExpr):
-        self.dispatch(node.arg2)
-        self.dispatch(node.arg1)
-        return node
+        #: :type: tuple
+        binding_indices_visited = self.dispatch(node.arg1)
+        #: :type: Expr
+        quantified_expr_visited = self.dispatch(node.arg2)
+
+        return ForallExpr(binding_indices_visited, quantified_expr_visited)
 
 
 class ConverterToLtl2BaFormatVisitor(Visitor):

@@ -10,9 +10,10 @@ from architecture.scheduler import InterleavingScheduler, SCHED_ID_PREFIX, ACTIV
 from architecture.tok_ring import TokRingArchitecture, SENDS_NAME_MY, HAS_TOK_NAME_MY, SENDS_PREV_NAME_MY
 
 from helpers.main_helper import setup_logging, create_spec_converter_z3
+from interfaces.parser_expr import Expr
 from interfaces.spec import SpecProperty
 from module_generation.dot import moore_to_dot, to_dot
-from optimizations import localize, strengthen, get_rank
+from optimizations import localize, strengthen, get_rank, inst_properties
 from parsing import par_parser
 from parsing.par_lexer_desc import PAR_INPUT_VARIABLES, PAR_OUTPUT_VARIABLES, PAR_ASSUMPTIONS, PAR_GUARANTEES
 from synthesis import par_model_searcher
@@ -346,23 +347,6 @@ def _strengthen_many(properties:list, ltl2ucw_converter) -> (list, list):
 
     return pseudo_safety_properties, pseudo_liveness_properties
 
-def instantiate_exprs(expressions, cutoff):
-    print('not implemented!')
-
-
-def _inst_properties(archi, properties):
-    #TODO: bug: handle scheduler properties _specially
-
-    prop_cutoff_pairs = []
-    for p in properties:
-        cutoff = archi.get_cutoff(get_rank(p))
-        inst_a = instantiate_exprs(p.assumptions, cutoff)
-        inst_g = instantiate_exprs(p.guarantees, cutoff)
-        inst_p = SpecProperty(inst_a, inst_g)
-        prop_cutoff_pairs.append((inst_p, cutoff))
-
-    return prop_cutoff_pairs
-
 
 def main(spec_text, is_moore,
          smt_files_prefix, dot_files_prefix,
@@ -406,7 +390,7 @@ def main(spec_text, is_moore,
     print()
 
     print('-'*80)
-    prop_cutoff_pairs = _inst_properties(archi, properties)
+    prop_cutoff_pairs = inst_properties(archi, properties)
     print('after instantiation')
     print(prop_cutoff_pairs)
     exit(0)

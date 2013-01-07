@@ -2,8 +2,10 @@ from itertools import chain
 import unittest
 import os
 from interfaces.spec import SpecProperty
-from optimizations import strengthen, localize, _reduce_quantifiers, _get_conjuncts, _denormalize
-from interfaces.parser_expr import QuantifiedSignal, ForallExpr, UnaryOp, BinOp, Bool, Signal
+from optimizations import strengthen, localize, _reduce_quantifiers, _get_conjuncts, _denormalize, _fix_indices, _replace_indices
+from interfaces.parser_expr import QuantifiedSignal, ForallExpr, UnaryOp, BinOp, Signal, Expr, Number, Bool
+from parsing.par_lexer_desc import PAR_GUARANTEES
+from parsing.par_parser_desc import par_parser
 from translation2uct.ltl2automaton import Ltl2UCW
 
 
@@ -12,7 +14,20 @@ def _get_is_true(signal_name:str, *binding_indices):
         signal = Signal(signal_name)
     else:
         signal = QuantifiedSignal(signal_name, *binding_indices)
-    return BinOp('=', signal, Bool(True))
+    return BinOp('=', signal, Number(1))
+
+
+def _parse(expr_as_text:str) -> Expr:
+    whole_text = '''
+    [INPUT_VARIABLES]
+    [OUTPUT_VARIABLES]
+    [ASSUMPTIONS]
+    [GUARANTEES]
+    {0};
+    '''.format(expr_as_text)
+
+    return dict(par_parser.parse(whole_text))[PAR_GUARANTEES][0]
+
 
 
 class TestStrengthen(unittest.TestCase):
@@ -212,14 +227,11 @@ class TestLocalize(unittest.TestCase):
             forall(i) (a_i -> b_i)
         """
 
-        a_i_is_true, a_j_is_true, b_j_is_true, b_i_is_true = _get_is_true('a', 'i'), _get_is_true('a', 'j'),\
-                                                             _get_is_true('b', 'j'), _get_is_true('b', 'i')
-
-        prop = SpecProperty([ForallExpr(['i'], a_i_is_true)], [ForallExpr(['j'], b_j_is_true)])
+        prop = SpecProperty([_parse('Forall (i) a_i=1')], [_parse('Forall (j) b_j=1')])
 
         localized_prop = localize(prop)
-        expected_prop_i = SpecProperty([Bool(True)], [ForallExpr(['i'], BinOp('->', a_i_is_true, b_i_is_true))])
-        expected_prop_j = SpecProperty([Bool(True)], [ForallExpr(['j'], BinOp('->', a_j_is_true, b_j_is_true))])
+        expected_prop_i = SpecProperty([Bool(True)], [_parse('Forall (i) a_i=1 -> b_i=1')])
+        expected_prop_j = SpecProperty([Bool(True)], [_parse('Forall (j) a_j=1 -> b_j=1')])
 
         expected_prop_str_i = str(expected_prop_i)
         expected_prop_str_j = str(expected_prop_j)
@@ -291,6 +303,41 @@ class TestLocalize(unittest.TestCase):
         expected_prop = SpecProperty([Bool(True)], [ForallExpr(['i'], BinOp('->', Bool(True), b_i_is_true))])
 
         assert str(localized_prop) == str(expected_prop), str(localized_prop)
+
+
+class ReplaceIndicesTests(unittest.TestCase):
+    def test_replace_indices(self):
+        expr = _parse('Forall (i,j) (a_i_j=1 * b_j=1)')
+        result = _replace_indices({'i':'k','j':'m'}, expr)
+        expected = _parse('Forall (k,m) (a_k_m=1 * b_m=1)')
+
+        self.assertEqual(str(expected), str(result))
+
+
+class FixIndicesTests(unittest.TestCase):
+    def test_fix_indices_main(self):
+        expr = _parse('Forall(i,j,k,m) (a_i_j_k=1 * b_i_m=1)')
+
+        result = _fix_indices({'i':1, 'j':2, 'k':3}, expr)
+        expected_result = ForallExpr(['m'], BinOp('*', _get_is_true('a', 1,2,3), _get_is_true('b',1,'m')))
+
+        self.assertEqual(str(expected_result), str(result))
+
+
+    def test_fix_indices_partially_fixed(self):
+        a_i_1 = _get_is_true('a', 'i', 1)
+        c_0 = _get_is_true('c', 0)
+
+        expr = ForallExpr(['i'], BinOp('*', a_i_1, c_0))
+        result = _fix_indices({'i':2}, expr)
+
+        a_2_1 = _get_is_true('a', 2,1)
+        expected_result = BinOp('*', a_2_1, c_0)
+
+        self.assertEqual(str(result), str(expected_result))
+
+
+
 
 
 
