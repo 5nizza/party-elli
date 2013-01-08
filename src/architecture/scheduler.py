@@ -11,7 +11,7 @@ class InterleavingScheduler:
     """ The only process is active. """
 
     _FAIR_SCHED_NAME = 'fair_scheduling'
-#
+
 #    def _get_inf_sched_prop(self, proc_index, nof_processes, sched_id_prefix):
 #        assert nof_processes > 0
 #        assert proc_index <= nof_processes - 1
@@ -38,8 +38,8 @@ class InterleavingScheduler:
         return [ForallExpr(['i'],
             UnaryOp('G', UnaryOp('F',
                                  BinOp('=',
-                                        Number(1),
-                                        QuantifiedSignal(self._FAIR_SCHED_NAME, 'i')))))]
+                                        QuantifiedSignal(self._FAIR_SCHED_NAME, 'i'),
+                                        Number(1)))))]
 
 
     def is_scheduler_signal(self, signal:QuantifiedSignal) -> bool:

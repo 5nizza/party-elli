@@ -159,7 +159,7 @@ def main_anzu_case():
 
     bounds = list(range(2, args.bound + 1) if args.size is None else range(args.size, args.size + 1))
 
-    ltl2ucw_converter, z3solver = create_spec_converter_z3(False)
+    ltl2ucw_converter, z3solver = create_spec_converter_z3()
 
     assume_guarantee_case(anzu_ltl_spec, smt_file_name, args.dot, bounds, ltl2ucw_converter, z3solver, logger)
 

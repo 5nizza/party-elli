@@ -3,7 +3,7 @@ import os
 import sys
 
 from synthesis.z3 import Z3
-from translation2uct.ltl2automaton import Ltl2UCW, Ltl2UCW_thru_ACW
+from translation2uct.ltl2automaton import Ltl2UCW
 
 
 def setup_logging(verbose):
@@ -21,7 +21,7 @@ def setup_logging(verbose):
     return logging.getLogger(__name__)
 
 
-def create_spec_converter_z3(use_acw): #TODO: add config file
+def create_spec_converter_z3():
     """ Return ltl to automaton converter, Z3 solver """
 
     #make paths independent of current working directory
@@ -39,6 +39,5 @@ def create_spec_converter_z3(use_acw): #TODO: add config file
         ltl2ba_path += '.exe'
         flag_marker = '/'
 
-    ltl2ucw = Ltl2UCW_thru_ACW if use_acw else Ltl2UCW
-    return ltl2ucw(ltl2ba_path), Z3(z3_path, flag_marker)
+    return Ltl2UCW(ltl2ba_path), Z3(z3_path, flag_marker)
 

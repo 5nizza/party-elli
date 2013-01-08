@@ -55,6 +55,7 @@ def main(ltl_text, is_moore, dot_file, bounds, ltl2ucw_converter, z3solver, logg
     spec_property = '({ass}) -> ({gua})'.format(ass = ass, gua = gua)
     logger.info('the specification property (in ltl3ba format) is: ' + spec_property)
 
+    #TODO: bug -- use SpecProperty
     automaton = ltl2ucw_converter.convert(spec_property)
     logger.info('spec automaton has {0} states'.format(len(automaton.nodes)))
 
@@ -94,7 +95,7 @@ if __name__ == "__main__":
 
     setup_logging(args.verbose)
 
-    ltl2ucw_converter, z3solver = create_spec_converter_z3(False)
+    ltl2ucw_converter, z3solver = create_spec_converter_z3()
 
     bounds = list(range(1, args.bound + 1) if args.size is None else range(args.size, args.size + 1))
 

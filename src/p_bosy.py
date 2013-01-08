@@ -10,14 +10,15 @@ from architecture.scheduler import InterleavingScheduler, SCHED_ID_PREFIX, ACTIV
 from architecture.tok_ring import TokRingArchitecture, SENDS_NAME_MY, HAS_TOK_NAME_MY, SENDS_PREV_NAME_MY
 
 from helpers.main_helper import setup_logging, create_spec_converter_z3
-from interfaces.parser_expr import Expr
-from interfaces.spec import SpecProperty
+from interfaces.automata import Automaton
+from interfaces.spec import SpecProperty, and_properties, expr_from_property
 from module_generation.dot import moore_to_dot, to_dot
-from optimizations import localize, strengthen, get_rank, inst_property, apply_log_bit_scheduler_optimization
+from optimizations import localize, strengthen, inst_property, apply_log_bit_scheduler_optimization
 from parsing import par_parser
 from parsing.par_lexer_desc import PAR_INPUT_VARIABLES, PAR_OUTPUT_VARIABLES, PAR_ASSUMPTIONS, PAR_GUARANTEES
 from synthesis import par_model_searcher
 from synthesis.smt_logic import UFLIA
+from translation2uct.ltl2automaton import Ltl2UCW
 
 
 def _get_spec(ltl_text:str, logger:Logger) -> (list, list, list, list):
@@ -39,7 +40,7 @@ def _get_spec(ltl_text:str, logger:Logger) -> (list, list, list, list):
 
 def _run(is_moore,
          anon_inputs, anon_outputs,
-         loc_automaton, global_automatae_pairs,
+         loc_automaton:Automaton, global_automatae_pairs,
          bounds,
          solver, logic,
          smt_files_prefix,
@@ -352,7 +353,7 @@ def main(spec_text, is_moore,
          smt_files_prefix, dot_files_prefix,
          bounds,
          cutoff,
-         ltl2ucw_converter,
+         ltl2ucw_converter:Ltl2UCW,
          z3solver, logic,
          logger):
     logger.info('compositional approach')
@@ -371,6 +372,11 @@ def main(spec_text, is_moore,
                   for p in properties]
 
     pseudo_safety_properties, pseudo_liveness_properties = _strengthen_many(properties, ltl2ucw_converter)
+
+    print('-'*80)
+    print('original property')
+    print('\n'.join(map(str, properties)))
+    print()
 
     print('-'*80)
     print('after strengthening')
@@ -395,19 +401,22 @@ def main(spec_text, is_moore,
     prop_cutoff_pairs = [(apply_log_bit_scheduler_optimization(p, scheduler, SCHED_ID_PREFIX, c),c) for p,c in prop_cutoff_pairs]
     print('after instantiation')
     print('\n'.join(map(str, prop_cutoff_pairs)))
-    exit(0)
-#    modified_glob_properties = CURRENT
 
-#    loc_automaton = ltl2ucw_converter.convert(modified_loc_property)
-#
-#    glob_automatae_pairs = [(ltl2ucw_converter.convert(p), p.rank) for p in modified_glob_properties]
-#
-#    _run(logger,
-#        is_moore,
-#        logic, glob_automatae_pairs, loc_automaton, anon_inputs, anon_outputs,
-#        bounds,
-#        z3solver,
-#        smt_files_prefix, dot_files_prefix)
+    local_properties = [p for p,c in prop_cutoff_pairs if c == 2]
+    global_properties = [p for p,c in prop_cutoff_pairs if c > 2]
+
+    local_property = and_properties(local_properties)
+    local_automaton = ltl2ucw_converter.convert(expr_from_property(local_property))
+
+    glob_automatae_pairs = [(ltl2ucw_converter.convert(expr_from_property(p)), c) for p,c in global_properties]
+
+    _run(is_moore,
+        anon_inputs, anon_outputs,
+        local_automaton, glob_automatae_pairs,
+        bounds,
+        z3solver,
+        logic,
+        smt_files_prefix, dot_files_prefix, logger)
 
 #
 #def main_compo(smt_file_prefix, logic, spec_type, is_moore, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
@@ -619,7 +628,7 @@ if __name__ == '__main__':
 
     logger.debug(args)
 
-    ltl2ucw_converter, z3solver = create_spec_converter_z3(False)
+    ltl2ucw_converter, z3solver = create_spec_converter_z3()
 
     bounds = list(range(2, args.bound + 1) if args.size is None else range(args.size, args.size + 1))
 

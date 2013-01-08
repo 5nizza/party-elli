@@ -39,9 +39,7 @@ def _is_quantified_expr(expr:Expr):
 
 @lru_cache()
 def is_safety(expr:Expr, ltl2ba_converter) -> bool:
-    expr_to_ltl2ba_converter = ConverterToLtl2BaFormatVisitor()
-    ltl2ba_formula = expr_to_ltl2ba_converter.dispatch(expr)
-    automaton = ltl2ba_converter.convert(ltl2ba_formula)
+    automaton = ltl2ba_converter.convert(expr)
     res = is_safety_automaton(automaton)
     return res
 

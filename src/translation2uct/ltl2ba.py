@@ -18,7 +18,7 @@ def _get_blocks(toks):
     return cases
 
 
-def parse_label_tok(label_tok):
+def parse_label_tok(label_tok, signal_by_name:dict):
     """ Return maps of labels [{var_name : True/False}, ..] """
     # (!a && !g && r) || (g)
     # (1)
@@ -29,9 +29,13 @@ def parse_label_tok(label_tok):
     toks = [x.strip(' ()') for x in label_tok.split('||')]
     for t in toks:
         label = {}
+
         literals = [x.strip() for x in t.split('&&')]
         for l in literals:
-            label[l.strip('!')] = ('!' not in l)
+            signal_name = l.strip('!')
+            signal = signal_by_name[signal_name]
+            label[signal] = bool('!' not in l) # we don't use numbers as they used in the original spec
+
         labels.append(label)
 
     return labels
@@ -80,8 +84,8 @@ def _get_create_new_nodes(new_name_to_node, flagged_nodes_set):
 
 
 def _conform2acw(initial_nodes, rejecting_nodes, nodes, vars):
-    """ correct incorrect transitions:
-        label->[set1,set2] corrected to label->[set3], where set3=set1 u set2
+    """ Modify 'incorrect' transitions:
+        label->[set1,set2] modified to label->[set3], where set3=set1+set2
     """
     new_name_to_node = {}
     for n in nodes:
@@ -102,10 +106,15 @@ def _conform2acw(initial_nodes, rejecting_nodes, nodes, vars):
     new_init_nodes = [new_name_to_node[n.name] for n in initial_nodes]
     new_rejecting_nodes = [new_name_to_node[n.name] for n in rejecting_nodes]
 
-    return new_init_nodes, new_rejecting_nodes, new_name_to_node.values()
+    return new_init_nodes, new_rejecting_nodes, list(new_name_to_node.values())
 
 
-def _parse_trans_tok(trans:str, src:Node, name_to_node, initial_nodes, rejecting_nodes) -> (Node, list):
+def _parse_trans_tok(trans:str,
+                     src:Node,
+                     name_to_node,
+                     initial_nodes,
+                     rejecting_nodes,
+                     signal_by_name:dict) -> (Node, list):
 
     if trans == 'false;':
         #dead end -- rejecting state with self-loop
@@ -115,12 +124,12 @@ def _parse_trans_tok(trans:str, src:Node, name_to_node, initial_nodes, rejecting
     else:
         label_tok, dst_tok = [x.strip() for x in trans.split('-> goto')]
         dst = _get_create(dst_tok, name_to_node, initial_nodes, rejecting_nodes)
-        labels = parse_label_tok(label_tok)
+        labels = parse_label_tok(label_tok, signal_by_name)
 
     return dst, labels
 
 
-def _get_hacked_ucw(text): #TODO: bad smell - it is left for testing purposes only
+def _get_hacked_ucw(text:str, signal_by_name:dict): #TODO: bad smell - it is left for testing purposes only
     """
         Return: initial_nodes:set, rejecting_nodes:set, nodes:set, label variables:set
         It is hacked since it doesn't conform to description of Node transitions:
@@ -163,7 +172,7 @@ def _get_hacked_ucw(text): #TODO: bad smell - it is left for testing purposes on
             continue
 
         for trans in trans_toks:
-            dst, labels = _parse_trans_tok(trans, src, name_to_node, initial_nodes, rejecting_nodes)
+            dst, labels = _parse_trans_tok(trans, src, name_to_node, initial_nodes, rejecting_nodes, signal_by_name)
             vars.update(itertools.chain(*[l.keys() for l in labels]))
 
             for l in labels:
@@ -174,11 +183,12 @@ def _get_hacked_ucw(text): #TODO: bad smell - it is left for testing purposes on
 
 
 @log_entrance(logging.getLogger(), logging.DEBUG)
-def parse_ltl2ba_ba(text):
-    """ Parse ltl2ba output
-        Return (initial_nodes, rejecting nodes, nodes of Node class)
+def parse_ltl2ba_ba(text:str, signal_by_name:dict):
     """
-    initial_nodes, rejecting_nodes, nodes, vars = _get_hacked_ucw(text)
+    Parse ltl2ba output
+    Return (initial_nodes, rejecting nodes, nodes of Node class)
+    """
+    initial_nodes, rejecting_nodes, nodes, vars = _get_hacked_ucw(text, signal_by_name)
 
     ucw_init_nodes, ucw_rej_nodes, ucw_nodes =  _conform2acw(initial_nodes, rejecting_nodes, nodes, vars)
 

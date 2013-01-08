@@ -80,7 +80,7 @@ class ForallExpr(Expr):
         self.arg1, self.arg2 = tuple(binding_indices), expr #TODO: rename fields
 
     def __str__(self):
-        return self.name + str(self.arg1) + ' ' + str(self.arg2)
+        return self.name + str('({0})'.format(','.join(self.arg1))) + ' ' + str(self.arg2)
 
     __repr__ = __str__
 

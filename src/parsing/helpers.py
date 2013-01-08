@@ -1,5 +1,4 @@
-from helpers.spec_helper import and_properties
-from interfaces.parser_expr import Number, BinOp, UnaryOp, Bool, Signal, ForallExpr
+from interfaces.parser_expr import Number, BinOp, UnaryOp, Bool, Signal, ForallExpr, QuantifiedSignal
 
 
 class Visitor:
@@ -56,6 +55,10 @@ class Visitor:
 
 
 class ConverterToLtl2BaFormatVisitor(Visitor):
+    def __init__(self):
+        self.signal_by_name = dict()
+
+
     def visit_binary_op(self, binary_op:BinOp):
         arg1 = self.dispatch(binary_op.arg1)
         arg2 = self.dispatch(binary_op.arg2)
@@ -78,29 +81,50 @@ class ConverterToLtl2BaFormatVisitor(Visitor):
 
         assert 0, 'unknown binary operator: ' + "'" + str(binary_op.name) + "'"
 
+
     def visit_unary_op(self, unary_op:UnaryOp):
         arg = self.dispatch(unary_op.arg)
         assert unary_op.name in ('G', 'F', 'X', '!'), 'unknown unary operator: ' + str(unary_op.name)
         return '{op}({arg})'.format(op = unary_op.name, arg = arg)
 
+
     def visit_bool(self, bool_const):
         return bool_const.name.lower()
 
+
     def visit_signal(self, signal):
-        return signal.name.lower() #ltl3ba treats upper letter wrongly
+        assert '___' not in signal.name, 'current version assumes that there are no "___" in signal names'
+
+        suffix = ''
+        if isinstance(signal, QuantifiedSignal) and len(signal.binding_indices) > 0:
+            suffix = '___' + '___'.join(map(str, signal.binding_indices))
+
+        name = (signal.name + suffix).lower() #ltl3ba treats upper letter wrongly
+        self.signal_by_name[name] = signal
+
+        return name
+
 
     def visit_number(self, number:Number):
         return number
 
-    def visit_forall(self, node:ForallExpr):
-        return self.dispatch(node.arg2) #TODO: default behaviour is to ignore Forall
 
+    def visit_forall(self, node:ForallExpr):
+        return self.dispatch(node.arg2) #TODO: default behaviour of this visitor is to ignore Forall
+
+
+def _and_ltl2ba_properties(properties):
+    properties = list(properties)
+    if len(properties) == 0:
+        return 'true'
+
+    return ' && '.join(['(' + str(p) + ')' for p in properties])
 
 
 def convert_asts_to_ltl3ba_format(asts):
     properties = list(map(lambda a: convert_ast_to_ltl3ba_format(a), asts)) +\
                  list(map(lambda a: convert_ast_to_ltl3ba_format(a), asts))
-    property = and_properties(properties)
+    property = _and_ltl2ba_properties(properties)
 
     return property
 

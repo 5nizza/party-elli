@@ -1,4 +1,4 @@
-from collections import Iterable
+from interfaces.parser_expr import and_expressions, BinOp, Bool, Expr
 
 class Spec:
     def __init__(self, inputs, outputs, properties):
@@ -37,3 +37,27 @@ class SpecProperty:
             gua = str(self.guarantees))
 
     __repr__ = __str__
+
+
+
+
+################################################################
+#helpers
+
+def and_properties(properties) -> SpecProperty:
+    property_expressions = [BinOp('->', and_expressions(p.assumptions),
+                                        and_expressions(p.guarantees))
+                            for p in properties]
+
+    return SpecProperty([Bool(True)], [and_expressions(property_expressions)])
+
+
+def expr_from_property(property:SpecProperty) -> Expr:
+    return BinOp('->', and_expressions(property.assumptions),
+                       and_expressions(property.guarantees))
+
+
+
+
+
+
