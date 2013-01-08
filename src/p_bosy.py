@@ -406,12 +406,12 @@ def main(spec_text, is_moore,
     global_property_pairs = [(p,c) for p,c in prop_cutoff_pairs if c > 2]
 
     local_automaton = None
-    if len(local_properties):
+    if len(local_properties) > 0:
         local_property = and_properties(local_properties)
         local_automaton = ltl2ucw_converter.convert(expr_from_property(local_property))
 
     glob_automatae_pairs = []
-    if len(global_property_pairs):
+    if len(global_property_pairs) > 0:
         glob_automatae_pairs = [(ltl2ucw_converter.convert(expr_from_property(p)), c) for p,c in global_property_pairs]
 
     _run(is_moore,

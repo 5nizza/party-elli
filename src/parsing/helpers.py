@@ -68,10 +68,10 @@ class ConverterToLtl2BaFormatVisitor(Visitor):
 
         if binary_op.name == '=':
             if isinstance(arg1, Number):
-                bool_arg, signal_arg = arg1, arg2
+                number_arg, signal_arg = arg1, arg2
             else:
-                bool_arg, signal_arg = arg2, arg1
-            return '{neg}{signal}'.format(signal = signal_arg, neg = ['', '!'][bool_arg == Number(0)])
+                number_arg, signal_arg = arg2, arg1
+            return '{neg}{signal}'.format(signal = signal_arg, neg = ['', '!'][number_arg == Number(0)])
 
         if binary_op.name == '+':
             return '({arg1}) || ({arg2})'.format(arg1 = arg1, arg2 = arg2)
