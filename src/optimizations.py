@@ -335,12 +335,12 @@ def _set_one_index_to_zero(expr:Expr) -> Expr:
     return expr_with_fixed_index
 
 
-def inst_property(archi, property:SpecProperty, cutoff) -> (SpecProperty, int):
+def inst_property(archi, property:SpecProperty, max_cutoff:int) -> (SpecProperty, int):
     """
     forall(i,j) a_i_j -> forall(k) b_k
     =
     (!a_0_0 + !a_0_1 + !a_1_0 + !a_1_1 + ..) + (b_0*b_1*b_2..)
-    where maximum values of i,j,k are defined by the cutoff size.
+    where maximum values of i,j,k are defined by the min(max_cutoff, actual_cutoff).
 
     We optimize instantiations of guarantees by fixing one of the indices. E.g.:
     forall(i,j) a_i_j -> forall(k) b_k
@@ -379,7 +379,8 @@ def inst_property(archi, property:SpecProperty, cutoff) -> (SpecProperty, int):
     if we proved Forall(j) a_0_j with the same randomization <=> proved Forall(i,j) a_i_j,
     but it is incorrect to verify a_0_0 because it is equivalent to Forall (i) a_i_i.
     """
-    cutoff = cutoff if cutoff else archi.get_cutoff(get_rank(property))
+
+    cutoff = min(max_cutoff, archi.get_cutoff(get_rank(property)))
 
     assumptions = property.assumptions
     guarantees = [_set_one_index_to_zero(g) for g in property.guarantees]
@@ -389,7 +390,7 @@ def inst_property(archi, property:SpecProperty, cutoff) -> (SpecProperty, int):
 
     inst_p = SpecProperty(inst_assumptions, inst_guarantees)
 
-    return inst_p, cutoff
+    return inst_p, max_cutoff
 
 
 class ReplaceSignalsVisitor(Visitor):

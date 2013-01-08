@@ -1,6 +1,7 @@
 from itertools import chain
 import unittest
 import os
+import sys
 from architecture.scheduler import InterleavingScheduler
 from architecture.tok_ring import TokRingArchitecture
 from interfaces.spec import SpecProperty
@@ -385,7 +386,7 @@ class TestInstantiate(unittest.TestCase):
     def test_instantiate_property_cutoff4(self):
         property = SpecProperty([_parse('Forall (i) a_i = 1')], [_parse('Forall(j) b_j=1')])
 
-        result, cutoff = inst_property(TokRingArchitecture(), property, False)
+        result, cutoff = inst_property(TokRingArchitecture(), property, sys.maxsize)
 
         expected = SpecProperty([_parse('a_0=1 * a_1=1 * a_2=1 * a_3=1')], [_parse('b_0=1')])
 
@@ -399,7 +400,7 @@ class TestInstantiate(unittest.TestCase):
     def test_instantiate_property_cutoff2(self):
         property = SpecProperty([Bool(True)], [_parse('Forall(j) b_j=1')])
 
-        result, cutoff = inst_property(TokRingArchitecture(), property, False)
+        result, cutoff = inst_property(TokRingArchitecture(), property, sys.maxsize)
 
         expected = SpecProperty([Bool(True)], [_parse('b_0=1')])
 
@@ -413,7 +414,7 @@ class TestInstantiate(unittest.TestCase):
     def test_instantiate_property_cutoff_another_4(self):
         property = SpecProperty([Bool(True)], [_parse('Forall(j,k) b_j=1 -> c_k=1')])
 
-        result, cutoff = inst_property(TokRingArchitecture(), property, False)
+        result, cutoff = inst_property(TokRingArchitecture(), property, sys.maxsize)
 
         expected = SpecProperty([Bool(True)], [_parse('(b_0=1 -> c_1=1) * (b_0=1 -> c_2=1) * (b_0=1 -> c_3=1)')])
 
