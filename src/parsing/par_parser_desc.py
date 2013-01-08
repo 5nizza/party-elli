@@ -162,7 +162,7 @@ def p_var_name(p):
 def p_number(p):
     """ number : NUMBER
     """
-    p[0] = Number(p[1])
+    p[0] = Number(int(p[1]))
 
 
 def p_section_data_property_unary(p):

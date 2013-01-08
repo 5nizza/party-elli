@@ -26,8 +26,8 @@ class QuantifiedSignal(Signal):
 
 
 class Number:
-    def __init__(self, number):
-        self._number = int(number)
+    def __init__(self, number:int):
+        self._number = number
 
     def __repr__(self):
         return str(self._number)
