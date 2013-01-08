@@ -390,7 +390,7 @@ def inst_property(archi, property:SpecProperty, max_cutoff:int) -> (SpecProperty
 
     inst_p = SpecProperty(inst_assumptions, inst_guarantees)
 
-    return inst_p, max_cutoff
+    return inst_p, cutoff
 
 
 class ReplaceSignalsVisitor(Visitor):
