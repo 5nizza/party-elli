@@ -93,11 +93,12 @@ class ConverterToLtl2BaFormatVisitor(Visitor):
 
 
     def visit_signal(self, signal):
-        assert '___' not in signal.name, 'current version assumes that there are no "___" in signal names'
+#        assert '___' not in signal.name, 'current version assumes that there are no "___" in signal names'
 
         suffix = ''
         if isinstance(signal, QuantifiedSignal) and len(signal.binding_indices) > 0:
-            suffix = '___' + '___'.join(map(str, signal.binding_indices))
+#            suffix = '___' + '___'.join(map(str, signal.binding_indices))
+            suffix = '_'.join(map(str, signal.binding_indices))
 
         name = (signal.name + suffix).lower() #ltl3ba treats upper letter wrongly
         self.signal_by_name[name] = signal
