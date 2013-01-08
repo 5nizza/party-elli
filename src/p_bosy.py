@@ -13,7 +13,7 @@ from helpers.main_helper import setup_logging, create_spec_converter_z3
 from interfaces.parser_expr import Expr
 from interfaces.spec import SpecProperty
 from module_generation.dot import moore_to_dot, to_dot
-from optimizations import localize, strengthen, get_rank, inst_property
+from optimizations import localize, strengthen, get_rank, inst_property, apply_log_bit_scheduler_optimization
 from parsing import par_parser
 from parsing.par_lexer_desc import PAR_INPUT_VARIABLES, PAR_OUTPUT_VARIABLES, PAR_ASSUMPTIONS, PAR_GUARANTEES
 from synthesis import par_model_searcher
@@ -373,9 +373,9 @@ def main(spec_text, is_moore,
 
     print('-'*80)
     print('after strengthening')
-    print('safety-----------')
+    print('\nsafety-----------')
     print('\n'.join(map(str, pseudo_safety_properties)))
-    print('liveness---------')
+    print('\nliveness---------')
     print('\n'.join(map(str, pseudo_liveness_properties)))
     print('-----------')
     print()
@@ -388,11 +388,12 @@ def main(spec_text, is_moore,
     for p in properties:
         print(p)
     print()
-
+    #TODO: check that optimizations work with full_arbiter!
     print('-'*80)
-    prop_cutoff_pairs = inst_property(archi, properties)
+    prop_cutoff_pairs = [inst_property(archi, p) for p in properties]
+    prop_cutoff_pairs = [(apply_log_bit_scheduler_optimization(p, scheduler, SCHED_ID_PREFIX, c),c) for p,c in prop_cutoff_pairs]
     print('after instantiation')
-    print(prop_cutoff_pairs)
+    print('\n'.join(map(str, prop_cutoff_pairs)))
     exit(0)
 #    modified_glob_properties = CURRENT
 

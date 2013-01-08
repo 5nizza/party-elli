@@ -1,10 +1,12 @@
 from functools import lru_cache
-from itertools import chain, product
+from itertools import chain, product, combinations, combinations_with_replacement, permutations
+import math
+from architecture.scheduler import SCHED_ID_PREFIX, InterleavingScheduler
 from helpers.automata_helper import is_safety_automaton
-from helpers.python_ext import index_of
+from helpers.python_ext import index_of, bin_fixed_list
 from interfaces.spec import SpecProperty
 from parsing.helpers import Visitor, ConverterToLtl2BaFormatVisitor
-from interfaces.parser_expr import ForallExpr, BinOp, Signal, Expr, Bool, QuantifiedSignal, UnaryOp, and_expressions
+from interfaces.parser_expr import ForallExpr, BinOp, Signal, Expr, Bool, QuantifiedSignal, UnaryOp, and_expressions, Number
 from parsing.par_parser import QuantifiedSignalsFinderVisitor
 
 
@@ -37,15 +39,10 @@ def _is_quantified_expr(expr:Expr):
 
 @lru_cache()
 def is_safety(expr:Expr, ltl2ba_converter) -> bool:
-    print('is: is_safety')
-    print('is:', expr)
-
     expr_to_ltl2ba_converter = ConverterToLtl2BaFormatVisitor()
     ltl2ba_formula = expr_to_ltl2ba_converter.dispatch(expr)
     automaton = ltl2ba_converter.convert(ltl2ba_formula)
     res = is_safety_automaton(automaton)
-    print('is: res =', res)
-    print()
     return res
 
 
@@ -94,7 +91,7 @@ def normalize_conjuncts(expressions:list) -> Expr:
     return normalized_expr
 
 
-class SignalsReplacerVisitor(Visitor):
+class IndexReplacerVisitor(Visitor):
     def __init__(self, new_by_old_index:dict):
         super().__init__()
         self._new_by_old_index = new_by_old_index
@@ -138,7 +135,7 @@ def _replace_indices(newindex_by_oldindex:dict, expr:Expr):
     if len(newindex_by_oldindex) == 0:
         return expr
 
-    replacer = SignalsReplacerVisitor(newindex_by_oldindex)
+    replacer = IndexReplacerVisitor(newindex_by_oldindex)
     replaced_expr = replacer.dispatch(expr)
 
     return replaced_expr
@@ -286,17 +283,14 @@ def strengthen(property:SpecProperty, ltl2ucw_converter) -> (list, list):
 
     denormalized_props = _get_denormalized_property(property)
     for p_ in denormalized_props:
-        print('stre: p=', p_)
         #: :type: SpecProperty
         p = p_
 
         safety_ass = normalize_conjuncts([a for a in p.assumptions if is_safety(a, ltl2ucw_converter)])
-        print('stre: ==================== safety_ass=', safety_ass)
 
         all_ass = normalize_conjuncts(p.assumptions)
 
         safety_guarantees = [g for g in p.guarantees if is_safety(g, ltl2ucw_converter)]
-        print('stre: ==================== safety_gua=', '\n'.join(map(str,safety_guarantees)))
         liveness_guarantees = [g for g in p.guarantees if not is_safety(g, ltl2ucw_converter)]
 
         safety_properties += [SpecProperty([safety_ass], [sg])
@@ -312,7 +306,10 @@ def _instantiate_expr(expr:Expr, cutoff) -> Expr:
         return expr
 
     binding_indices = _get_indices(expr)
-    index_values_tuples = list(product(range(cutoff), repeat=len(binding_indices)))
+
+    assert cutoff >= len(binding_indices), 'impossible to have ' + str(len(binding_indices)) + ' different index values'
+
+    index_values_tuples = list(permutations(range(cutoff), len(binding_indices)))
 
     expressions = []
     for index_values in index_values_tuples:
@@ -391,12 +388,112 @@ def inst_property(archi, property:SpecProperty) -> (SpecProperty, int):
     inst_assumptions = [_instantiate_expr(a, cutoff) for a in assumptions]
     inst_guarantees = [_instantiate_expr(g, cutoff) for g in guarantees]
 
-    #TODO: bug: handle scheduler properties _specially
     inst_p = SpecProperty(inst_assumptions, inst_guarantees)
 
     return inst_p, cutoff
 
 
+class ReplaceSignalsVisitor(Visitor):
+    def __init__(self, newsignal_by_oldsignal:dict):
+        self.new_by_old = newsignal_by_oldsignal
+
+
+    def visit_signal(self, signal:Signal):
+        if not isinstance(signal, QuantifiedSignal):
+            return signal
+
+        if signal not in self.new_by_old:
+            return signal
+
+        return self.new_by_old[signal]
+
+
+#class ReplaceSignalVisitor(Visitor):
+#    def __init__(self, newsignal_by_oldsignal:dict):
+#        self.new_by_old = newsignal_by_oldsignal
+#
+#
+#    def visit_signal(self, signal:Signal):
+#        if not isinstance(signal, QuantifiedSignal):
+#            return signal
+#
+#        if signal not in self.new_by_old:
+#            return signal
+#
+#        return self.new_by_old[signal]
+
+
+class OptimizeSchedulerSignalsVisitor(Visitor):
+    def __init__(self, new_sched_signal_name:str, cutoff:int, scheduler:InterleavingScheduler):
+        self._new_sched_signal_name = new_sched_signal_name
+        self._cutoff = cutoff
+        self._scheduler = scheduler
+
+
+    def visit_binary_op(self, binary_op:BinOp):
+        if binary_op.name == '=':
+            old_scheduling_signal = self._get_scheduling_signal(binary_op.arg1, binary_op.arg2)
+            old_signal_value = self._get_number(binary_op.arg1, binary_op.arg2)
+            if old_scheduling_signal and old_signal_value:
+                new_scheduling_underlying_constraint = _get_optimized_version(old_scheduling_signal,
+                     self._new_sched_signal_name,
+                     self._cutoff)
+
+                return new_scheduling_underlying_constraint
+
+        return super().visit_binary_op(binary_op)
+
+
+    def _get_scheduling_signal(self, arg1, arg2) -> QuantifiedSignal:
+        def check(arg):
+            if isinstance(arg, QuantifiedSignal) and self._scheduler.is_scheduler_signal(arg):
+                return arg
+            return None
+
+        return check(arg1) or check(arg2)
+
+
+    def _get_number(self, arg1, arg2) -> Number:
+        if isinstance(arg1, Number): return arg1
+        if isinstance(arg2, Number): return arg2
+        return None
+
+
+def _get_optimized_version(signal:QuantifiedSignal, new_sched_signal_name:str, cutoff:int) -> QuantifiedSignal:
+    assert len(signal.binding_indices) == 1
+
+    proc_index = signal.binding_indices[0]
+
+    nof_sched_bits = int(max(1, math.ceil(math.log(cutoff, 2))))
+    bits = bin_fixed_list(proc_index, nof_sched_bits)
+
+    #TODO: use quantified signal or signal?
+    conjuncts = [BinOp('=', QuantifiedSignal(new_sched_signal_name, bit_index),
+        Number(1 if bit_value else 0))
+        for bit_index, bit_value in enumerate(bits)]
+
+    conjunction = and_expressions(conjuncts)
+
+    return conjunction
+
+
+def _apply_log_bit_optimization(new_sched_signal_name:str,
+                                instantiated_expr:Expr,
+                                cutoff:int,
+                                scheduler:InterleavingScheduler) -> Expr:
+    new_expr = OptimizeSchedulerSignalsVisitor(new_sched_signal_name, cutoff, scheduler).dispatch(instantiated_expr)
+    return new_expr
+
+
+def apply_log_bit_scheduler_optimization(instantiated_property:SpecProperty,
+                                         scheduler:InterleavingScheduler,
+                                         new_sched_signal_name:str,
+                                         cutoff:int) -> SpecProperty:
+
+    new_assumptions = [_apply_log_bit_optimization(new_sched_signal_name, a, cutoff, scheduler) for a in instantiated_property.assumptions]
+    new_guarantees = [_apply_log_bit_optimization(new_sched_signal_name, g, cutoff, scheduler) for g in instantiated_property.guarantees]
+
+    return SpecProperty(new_assumptions, new_guarantees)
 
 
 

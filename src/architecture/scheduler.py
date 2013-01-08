@@ -40,3 +40,7 @@ class InterleavingScheduler:
                                  BinOp('=',
                                         Number(1),
                                         QuantifiedSignal(self._FAIR_SCHED_NAME, 'i')))))]
+
+
+    def is_scheduler_signal(self, signal:QuantifiedSignal) -> bool:
+        return signal.name == self._FAIR_SCHED_NAME

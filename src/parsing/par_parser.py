@@ -1,7 +1,7 @@
 from logging import Logger
 from helpers.ply import yacc
 from parsing.helpers import Visitor
-from interfaces.parser_expr import Signal, QuantifiedSignal
+from interfaces.parser_expr import Signal, QuantifiedSignal, Expr
 from parsing.par_lexer_desc import par_lexer, PAR_INPUT_VARIABLES, PAR_OUTPUT_VARIABLES, PAR_ASSUMPTIONS, PAR_GUARANTEES
 from parsing.par_parser_desc import par_parser
 
@@ -85,6 +85,10 @@ class QuantifiedSignalsFinderVisitor(Visitor):
     def visit_signal(self, signal:Signal):
         if isinstance(signal, QuantifiedSignal):
             self.quantified_signals.add(signal)
+
+    def find_quantified_signals(self, expr:Expr) -> set:
+        self.dispatch(expr)
+        return self.quantified_signals
 
 
 class Test(TestCase):

@@ -1,21 +1,30 @@
 from itertools import chain
 import unittest
 import os
+from architecture.scheduler import InterleavingScheduler
 from architecture.tok_ring import TokRingArchitecture
 from interfaces.spec import SpecProperty
-from optimizations import strengthen, localize, _reduce_quantifiers, _get_conjuncts, _denormalize, _fix_indices, _replace_indices, _instantiate_expr, inst_property
+from optimizations import strengthen, localize, _reduce_quantifiers, _get_conjuncts, _denormalize, _fix_indices, _replace_indices, _instantiate_expr, inst_property, apply_log_bit_scheduler_optimization, _apply_log_bit_optimization, normalize_conjuncts
 from interfaces.parser_expr import QuantifiedSignal, ForallExpr, UnaryOp, BinOp, Signal, Expr, Number, Bool, and_expressions
 from parsing.par_lexer_desc import PAR_GUARANTEES
 from parsing.par_parser_desc import par_parser
 from translation2uct.ltl2automaton import Ltl2UCW
 
 
-def _get_is_true(signal_name:str, *binding_indices):
+def _get_is_value(signal_name:str, value:Number, *binding_indices):
     if len(binding_indices) == 0:
         signal = Signal(signal_name)
     else:
         signal = QuantifiedSignal(signal_name, *binding_indices)
-    return BinOp('=', signal, Number(1))
+    return BinOp('=', signal, value)
+
+
+def _get_is_true(signal_name:str, *binding_indices):
+    return _get_is_value(signal_name, Number(1), *binding_indices)
+
+
+def _get_is_false(signal_name:str, *binding_indices):
+    return _get_is_value(signal_name, Number(0), *binding_indices)
 
 
 def _parse(expr_as_text:str) -> Expr:
@@ -338,17 +347,18 @@ class FixIndicesTests(unittest.TestCase):
         self.assertEqual(str(result), str(expected_result))
 
 
+def _get_sorted_conjuncts_str(expr:Expr) -> str:
+    list = [t.strip() for t in str(expr).split('*') if t.strip() != '']
+    return str(sorted(list))
+
+
+def _convert_conjunction_to_str(property:SpecProperty) -> str:
+    result_str = _get_sorted_conjuncts_str(and_expressions(property.assumptions)) +\
+                 _get_sorted_conjuncts_str(and_expressions(property.guarantees))
+    return result_str
+
+
 class TestInstantiate(unittest.TestCase):
-    def _get_sorted_conjuncts_str(self, expr:Expr) -> list:
-        return str(sorted(str(expr).split('*')))
-
-
-    def _convert_conjunction_to_str(self, property:SpecProperty) -> str:
-        data = self._get_sorted_conjuncts_str(and_expressions(property.assumptions)) +\
-                      self._get_sorted_conjuncts_str(and_expressions(property.guarantees))
-        return str(data)
-
-
     def test_instantiate_expr_one_index(self):
         result = _instantiate_expr(_parse('Forall (i) a_i=1'), 2)
         expected = _parse('a_0=1 * a_1=1')
@@ -360,8 +370,8 @@ class TestInstantiate(unittest.TestCase):
         result = _instantiate_expr(_parse('Forall (i,j) a_i_j=1'), 2)
         expected = _parse('a_0_0=1 * a_1_0=1 * a_0_1=1 * a_1_1=1')
 
-        result_data = self._get_sorted_conjuncts_str(result)
-        expected_data = self._get_sorted_conjuncts_str(expected)
+        result_data = _get_sorted_conjuncts_str(result)
+        expected_data = _get_sorted_conjuncts_str(expected)
         self.assertEqual(expected_data, result_data)
 
 
@@ -379,8 +389,8 @@ class TestInstantiate(unittest.TestCase):
 
         expected = SpecProperty([_parse('a_0=1 * a_1=1 * a_2=1 * a_3=1')], [_parse('b_0=1')])
 
-        result_data = self._convert_conjunction_to_str(result)
-        expected_data = self._convert_conjunction_to_str(expected)
+        result_data = _convert_conjunction_to_str(result)
+        expected_data = _convert_conjunction_to_str(expected)
 
         self.assertEqual(4, cutoff)
         self.assertEqual(expected_data, result_data)
@@ -393,15 +403,11 @@ class TestInstantiate(unittest.TestCase):
 
         expected = SpecProperty([Bool(True)], [_parse('b_0=1')])
 
-        result_data = self._convert_conjunction_to_str(result)
-        expected_data = self._convert_conjunction_to_str(expected)
+        result_data = _convert_conjunction_to_str(result)
+        expected_data = _convert_conjunction_to_str(expected)
 
         self.assertEqual(2, cutoff)
         self.assertEqual(expected_data, result_data)
-
-
-    def test_instantiate_property_handle_scheduler(self):
-        assert 0, 'replace scheduler assumptions'
 
 
     def test_instantiate_property_cutoff_another_4(self):
@@ -411,17 +417,56 @@ class TestInstantiate(unittest.TestCase):
 
         expected = SpecProperty([Bool(True)], [_parse('(b_0=1 -> c_0=1) * (b_0=1 -> c_1=1) * (b_0=1 -> c_2=1) * (b_0=1 -> c_3=1)')])
 
-        result_data = self._convert_conjunction_to_str(result)
-        expected_data = self._convert_conjunction_to_str(expected)
+        result_data = _convert_conjunction_to_str(result)
+        expected_data = _convert_conjunction_to_str(expected)
 
         self.assertEqual(4, cutoff)
         self.assertEqual(expected_data, result_data)
 
 
+class TestSchedulerOptimization(unittest.TestCase):
+    def setUp(self):
+        assert len(InterleavingScheduler().assumptions) == 1
 
 
+    def test_sched_optimization(self):
+        scheduler = InterleavingScheduler()
+
+        forall_expr = scheduler.assumptions[0] # Forall(i) GFsched_i=1
+
+        instantiated_expr = _instantiate_expr(forall_expr, 2) # GFsched_0=1 * GFsched_1=1
+
+        result_expr = _apply_log_bit_optimization('sch', instantiated_expr, 2, scheduler)
+        expected_expr = BinOp('*',
+                                UnaryOp('G', UnaryOp('F', _get_is_true('sch', 0))),
+                                UnaryOp('G', UnaryOp('F', _get_is_false('sch', 0))))
+
+        result_str = _get_sorted_conjuncts_str(result_expr)
+        expected_str = _get_sorted_conjuncts_str(expected_expr)
+
+        self.assertEqual(expected_str, result_str)
 
 
+    def test_sched_visual(self):
+        scheduler = InterleavingScheduler()
+        forall_expr = normalize_conjuncts([_parse('Forall(i) a_i=1'), scheduler.assumptions[0]])
+
+        instantiated_expr = _instantiate_expr(forall_expr, 4) # GFsched_0=1 * GFsched_1=1
+
+        result_expr = _apply_log_bit_optimization('sch', instantiated_expr, 4, scheduler)
+        print('''::test_sched_visual::
+Check visually the correctness.
+The original expr is Forall(i) a_i=1 * GFfair_sched_i=1,
+ after scheduler_log_bit optimization and instantiation with cutoff=4
+ it is expected to receive
+  a_0=1 * a_1=1 * a_2=1 * a_3=1 *
+  GF(sch0=0 * sch1=0) *
+  GF(sch0=0 * sch1=1) *
+  GF(sch0=1 * sch1=0) *
+  GF(sch0=1 * sch1=1)
+        ''', result_expr)
+        print('The result is')
+        print(result_expr)
 
 
 

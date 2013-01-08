@@ -32,7 +32,7 @@ class SpecProperty:
         self.guarantees = guarantees
 
     def __str__(self):
-        return '  (SpecProperty: assumptions={ass}, guarantees={gua})  '.format(
+        return '  (SpecProperty: \n\tassumptions={ass}, \n\tguarantees={gua})  '.format(
             ass = str(self.assumptions),
             gua = str(self.guarantees))
 
