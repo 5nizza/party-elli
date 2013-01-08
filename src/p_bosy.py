@@ -351,6 +351,7 @@ def _strengthen_many(properties:list, ltl2ucw_converter) -> (list, list):
 def main(spec_text, is_moore,
          smt_files_prefix, dot_files_prefix,
          bounds,
+         cutoff,
          ltl2ucw_converter,
          z3solver, logic,
          logger):
@@ -390,7 +391,7 @@ def main(spec_text, is_moore,
     print()
     #TODO: check that optimizations work with full_arbiter!
     print('-'*80)
-    prop_cutoff_pairs = [inst_property(archi, p) for p in properties]
+    prop_cutoff_pairs = [inst_property(archi, p, cutoff) for p in properties]
     prop_cutoff_pairs = [(apply_log_bit_scheduler_optimization(p, scheduler, SCHED_ID_PREFIX, c),c) for p,c in prop_cutoff_pairs]
     print('after instantiation')
     print('\n'.join(map(str, prop_cutoff_pairs)))
@@ -632,6 +633,7 @@ if __name__ == '__main__':
     main(args.ltl.read(), args.moore,
         smt_files_prefix, args.dot,
         bounds,
+        args.cutoff,
         ltl2ucw_converter, z3solver,
         logic,
         logger)

@@ -337,7 +337,7 @@ def _set_one_index_to_zero(expr:Expr) -> Expr:
     return expr_with_fixed_index
 
 
-def inst_property(archi, property:SpecProperty) -> (SpecProperty, int):
+def inst_property(archi, property:SpecProperty, cutoff) -> (SpecProperty, int):
     """
     forall(i,j) a_i_j -> forall(k) b_k
     =
@@ -381,7 +381,7 @@ def inst_property(archi, property:SpecProperty) -> (SpecProperty, int):
     if we proved Forall(j) a_0_j with the same randomization <=> proved Forall(i,j) a_i_j,
     but it is incorrect to verify a_0_0 because it is equivalent to Forall (i) a_i_i.
     """
-    cutoff = archi.get_cutoff(get_rank(property))
+    cutoff = cutoff if cutoff else archi.get_cutoff(get_rank(property))
 
     assumptions = property.assumptions
     guarantees = [_set_one_index_to_zero(g) for g in property.guarantees]
