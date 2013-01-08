@@ -60,7 +60,10 @@ class BinOp(Expr):
         self.arg1 = arg1
         self.arg2 = arg2
     def __repr__(self):
-        return str(self.arg1) + ' ' + self.name + ' ' + str(self.arg2)
+        if self.name != '=':
+            return str(self.arg1) + ' ' + self.name + ' ' + str(self.arg2)
+        else:
+            return str(self.arg1) + self.name + str(self.arg2)
 
 
 class UnaryOp(Expr):
@@ -68,7 +71,7 @@ class UnaryOp(Expr):
         super().__init__(name)
         self.arg = arg
     def __repr__(self):
-        return self.name + str(self.arg)
+        return self.name + '({0})'.format(self.arg)
 
 
 class ForallExpr(Expr):

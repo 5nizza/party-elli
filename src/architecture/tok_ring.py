@@ -12,13 +12,16 @@ class TokRingArchitecture:
         #TODO: dirty -- introduce Globally/Finally class
         expr = UnaryOp('G',
             BinOp('->',
-                BinOp('=', Number(1), QuantifiedSignal(HAS_TOK_NAME_MY, 'i')),
-                UnaryOp('F', BinOp('=', Number(1), QuantifiedSignal(SENDS_NAME_MY, 'i')))))
+                BinOp('=', QuantifiedSignal(HAS_TOK_NAME_MY, 'i'), Number(1)),
+                UnaryOp('F', BinOp('=', QuantifiedSignal(SENDS_NAME_MY, 'i'), Number(1)))))
+
         tok_released = ForallExpr(['i'], expr)
         return [tok_released]
 
     def implications(self):
-        expr = UnaryOp('G', UnaryOp('F', BinOp('=', Number(1), QuantifiedSignal(HAS_TOK_NAME_MY, 'i'))))
+        expr = UnaryOp('G', UnaryOp('F', BinOp('=',
+            QuantifiedSignal(HAS_TOK_NAME_MY, 'i'),
+            Number(1))))
         fair_tok_sched = ForallExpr(['i'], expr)
         return [fair_tok_sched]
 

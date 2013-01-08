@@ -301,7 +301,7 @@ def strengthen(property:SpecProperty, ltl2ucw_converter) -> (list, list):
     return safety_properties, liveness_properties
 
 
-def _instantiate_expr(expr:Expr, cutoff) -> Expr:
+def _instantiate_expr(expr:Expr, cutoff, forbid_zero_index:bool) -> Expr:
     if not _is_quantified_expr(expr):
         return expr
 
@@ -309,7 +309,8 @@ def _instantiate_expr(expr:Expr, cutoff) -> Expr:
 
     assert cutoff >= len(binding_indices), 'impossible to have ' + str(len(binding_indices)) + ' different index values'
 
-    index_values_tuples = list(permutations(range(cutoff), len(binding_indices)))
+    indices_range = range(cutoff) if not forbid_zero_index else range(1,cutoff)
+    index_values_tuples = list(permutations(indices_range, len(binding_indices)))
 
     expressions = []
     for index_values in index_values_tuples:
@@ -321,7 +322,7 @@ def _instantiate_expr(expr:Expr, cutoff) -> Expr:
     return expressions_conjuncted
 
 
-def _fix_one_index(expr:Expr) -> Expr:
+def _set_one_index_to_zero(expr:Expr) -> Expr:
     """ Here QuantifiedSignal is used in a special way -- with numbers instead of letters.
     """
     if not _is_quantified_expr(expr):
@@ -383,10 +384,10 @@ def inst_property(archi, property:SpecProperty) -> (SpecProperty, int):
     cutoff = archi.get_cutoff(get_rank(property))
 
     assumptions = property.assumptions
-    guarantees = [_fix_one_index(g) for g in property.guarantees]
+    guarantees = [_set_one_index_to_zero(g) for g in property.guarantees]
 
-    inst_assumptions = [_instantiate_expr(a, cutoff) for a in assumptions]
-    inst_guarantees = [_instantiate_expr(g, cutoff) for g in guarantees]
+    inst_assumptions = [_instantiate_expr(a, cutoff, False) for a in assumptions]
+    inst_guarantees = [_instantiate_expr(g, cutoff, True) for g in guarantees]
 
     inst_p = SpecProperty(inst_assumptions, inst_guarantees)
 
