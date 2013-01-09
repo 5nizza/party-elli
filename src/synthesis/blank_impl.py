@@ -10,12 +10,14 @@ class BlankImpl:
 
         self.nof_processes = 0
 
+        #TODO: rename -- orig_inputs are model_inputs
+        #TODO: remove at all -- better to use 'tau_model_args' from taus_desc?
         self.orig_inputs = ()
 
         self.init_states = ()
         self.aux_func_descs = ()
 
-        self.outvar_desc_by_process = (()) # (((var, func_desc), (var, func_desc)), ((), ()), ..)
+        self.outvar_desc_by_process = (dict()) # ({signal:func_desc}, ..)
 
         self.taus_descs = ()
         self.model_taus_descs = ()
@@ -37,24 +39,31 @@ class BlankImpl:
             result.append(tuple(proc_descs))
         return tuple(result)
 
+
     def get_proc_tau_additional_args(self, proc_label, sys_state_vector, proc_index):
         return dict()
 
-    def get_output_func_name(self, concr_var_name):
-        return concr_var_name
+
+#    def get_output_func_name(self, concr_var_name):
+#        return concr_var_name
+
 
     def filter_label_by_process(self, label, proc_index): #TODO: hack
         return label
 
+
     def get_free_sched_vars(self, label):
         return tuple()
+
 
     def get_architecture_trans_assumption(self, label, sys_state_vector):
         return ''
 
+
     def get_architecture_conditions(self):
         return tuple()
 
-    def convert_global_args_to_local(self, arg_values_dict):
-        """ global args dictionary has global names, local - local names """
-        return arg_values_dict
+
+#    def convert_global_args_to_local(self, arg_values_dict):
+#        """ global args dictionary has global names, local - local names """
+#        return arg_values_dict

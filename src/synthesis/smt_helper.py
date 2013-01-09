@@ -1,20 +1,25 @@
 from itertools import product
 import math
 from helpers.python_ext import StrAwareList
+from interfaces.parser_expr import QuantifiedSignal
 
-def build_values_from_label(inputs, label):
-    values = dict()
+
+def build_values_from_label(signals, label) -> (dict, list):
+    for s in signals: #TODO: remove after debug
+        assert isinstance(s, QuantifiedSignal)
+
+    value_by_signal = dict()
     free_values = []
 
-    for var_name in inputs:
-        if var_name in label:
-            values[var_name] = str(label[var_name]).lower()
+    for s in signals:
+        if s in label:
+            value_by_signal[s] = str(label[s]).lower()
         else:
-            value = '?{0}'.format(var_name)
-            values[var_name] = value
+            value = '?{0}'.format(str(s)).lower() #TODO: hack: we str(signal)
+            value_by_signal[s] = value
             free_values.append(value)
 
-    return values, free_values
+    return value_by_signal, free_values
 
 
 def get_bits_definition(arg_prefix, nof_bits):

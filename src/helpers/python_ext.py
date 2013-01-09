@@ -1,7 +1,7 @@
 from collections import Iterable
 import math
 
-def add_dicts(*dicts):
+def add_dicts(*dicts) -> dict:
     resulting_items = []
     for d in dicts:
         resulting_items += list(d.items())

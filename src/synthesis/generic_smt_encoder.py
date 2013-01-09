@@ -5,6 +5,7 @@ from helpers.logging import log_entrance
 from helpers.python_ext import StrAwareList, index_of
 from interfaces.automata import  DEAD_END, Label
 from interfaces.lts import LTS
+from synthesis.blank_impl import BlankImpl
 from synthesis.func_description import FuncDescription
 from synthesis.rejecting_states_finder import build_state_to_rejecting_scc
 from synthesis.smt_helper import *
@@ -22,25 +23,28 @@ class GenericEncoder:
         self._laC_name = 'laC'+counters_postfix
 
 
-    def _get_assumption_on_output_vars(self, label, sys_state_vector, impl):
+    def _get_assumption_on_output_vars(self, label:dict, sys_state_vector, impl) -> str:
         conjuncts = []
-        for i in range(impl.nof_processes):
-            outvar_desc = impl.outvar_desc_by_process[i]
-            for var_name, value in label.items():
 
-                index = index_of(lambda var_desc: var_name == var_desc[0], outvar_desc)
-                if index is None:
-                    continue
+        for lbl_signal_, lbl_signal_value in label.items():
+            #: :type: QuantifiedSignal
+            lbl_signal = lbl_signal_
+            assert len(lbl_signal.binding_indices) == 1 #TODO: non-parameterized case
 
-                _, outfunc_desc = outvar_desc[index]
+            proc_index = lbl_signal.binding_indices[0]
 
-                outfunc_args  = self._get_proc_tau_args(sys_state_vector, label, i, impl)
+            out_desc_by_signal = impl.outvar_desc_by_process[proc_index]
 
-                out_condition = call_func(outfunc_desc.name, outfunc_desc.get_args_list(outfunc_args))
-                if not label[var_name]:
-                    out_condition = op_not(out_condition)
+            out_desc = out_desc_by_signal[lbl_signal]
 
-                conjuncts.append(out_condition)
+            out_args  = self._get_proc_tau_args(sys_state_vector, label, proc_index, impl)
+
+            condition_on_out = call_func(out_desc.name, out_desc.get_args_list(out_args))
+
+            if lbl_signal_value is False:
+                condition_on_out = op_not(condition_on_out)
+
+            conjuncts.append(condition_on_out)
 
         return op_and(conjuncts)
 
@@ -120,7 +124,7 @@ class GenericEncoder:
         conjunction = StrAwareList()
         conjunction += impl.get_architecture_conditions() #TODO: looks hacky! replace with two different encoders?
 
-        if not impl.automaton: #TODO: see above, make sense if there are architecture assertions and no automaton
+        if not impl.automaton: #TODO: see 'todo' above, make sense if there are architecture assertions and no automaton
             return conjunction
 
         assert len(impl.automaton.initial_sets_list) == 1, 'nondet not supported'
@@ -191,7 +195,7 @@ class GenericEncoder:
         return ' '.join(sys_state_vector)
 
 
-    def _get_proc_tau_args(self, sys_state, label, proc_index, impl):
+    def _get_proc_tau_args(self, sys_state_vector, label, proc_index:int, impl:BlankImpl):
         """ Return dict: name->value
             free variables (to be enumerated) has called ?var_name value.
         """
@@ -200,16 +204,16 @@ class GenericEncoder:
 
         glob_tau_args = dict()
 
-        proc_state = sys_state[proc_index]
+        proc_state = sys_state_vector[proc_index]
         glob_tau_args.update({impl.state_arg_name:proc_state})
 
+        #TODO: try to use label instead of proc_label -- should be the same -- alleviate the need of impl.filter_label_by_process
         label_vals_dict, _ = build_values_from_label(impl.orig_inputs[proc_index], proc_label)
         glob_tau_args.update(label_vals_dict)
 
-        glob_tau_args.update(impl.get_proc_tau_additional_args(proc_label, sys_state, proc_index))
+        glob_tau_args.update(impl.get_proc_tau_additional_args(proc_label, sys_state_vector, proc_index))
 
-        proc_tau_args = impl.convert_global_args_to_local(glob_tau_args)
-        return proc_tau_args
+        return glob_tau_args
 
 
     def _get_implication_right_counter(self, spec_state, next_spec_state,
@@ -282,8 +286,10 @@ class GenericEncoder:
 
         return free_vars
 
+
     def _parse_values(self, values): #TODO: introduce type class
         return [v=='true' if v == 'true' or v=='false' else v for v in values]
+
 
     def _build_func_model_from_smt(self, func_smt_lines, func_desc:FuncDescription):
         """ Return {Label:output} """
@@ -430,7 +436,6 @@ class GenericEncoder:
 
     def _make_init_states_condition(self, init_spec_state_name, init_sys_state_name):
         return call_func(self._laB_name, [init_spec_state_name, init_sys_state_name])
-#        return make_assert(call_func(self._laB_name, [init_spec_state_name, init_sys_state_name]))
 
 
     def _laB(self, spec_state_name, sys_state_expression):

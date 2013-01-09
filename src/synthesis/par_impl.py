@@ -1,217 +1,253 @@
-from itertools import permutations, chain
 import math
-from helpers.python_ext import bin_fixed_list, StrAwareList, index_of
-from interfaces.automata import Label
+
+from itertools import permutations
+from helpers.python_ext import bin_fixed_list, StrAwareList, index_of, add_dicts
+from interfaces.automata import Label, Automaton
+from interfaces.parser_expr import QuantifiedSignal
 from synthesis.blank_impl import BlankImpl
 from synthesis.func_description import FuncDescription
-from synthesis.smt_helper import call_func, op_and, get_bits_definition, op_not
+from synthesis.smt_helper import call_func, op_and, op_not, build_values_from_label
+
+
+def get_signals_definition(signal_base_name, nof_bits):
+    signals  = list(map(lambda i: QuantifiedSignal(signal_base_name, i), range(nof_bits)))
+    args_defs = list(map(lambda s: (s, 'Bool'), signals))
+    return signals, args_defs
+
+
+def _is_signal_for_index(signal:QuantifiedSignal, index:int) -> bool:
+    assert len(signal.binding_indices) == 1
+
+    signal_index = signal.binding_indices[0]
+    return signal_index == index
+
+
+def _filter_by_proc(i, signals) -> list:
+    filtered = list(filter(lambda s: s.binding_indices[0] == i, signals))
+    return filtered
+
+
+def _build_model_inputs(nof_processes:int, model_inputs) -> list:
+    model_inputs_by_process = dict()
+    for i in range(nof_processes):
+        proc_signals = list(filter(lambda s: _is_signal_for_index(s, i), model_inputs))
+        model_inputs_by_process[i] = proc_signals
+
+    return model_inputs_by_process
 
 
 class ParImpl(BlankImpl): #TODO: separate architecture from the spec
-    def __init__(self, automaton,
-                 is_mealy,
-                 anon_inputs, anon_outputs, nof_processes, nof_local_states,
-                 sched_var_prefix, active_anon_var_name,
-                 sends_anon_var_name,
-                 sends_prev_anon_var_name,
-                 has_tok_var_prefix, state_type,
-                 tau_name, internal_funcs_postfix):
+    def __init__(self, automaton:Automaton,
+                 is_mealy:bool,
+                 orig_inputs, orig_outputs,
+                 archi_inputs, archi_outputs,
+                 nof_processes:int,
+                 nof_local_states:int,
+                 sched_inputs,
+                 is_active_signals,
+                 sends_signals,
+                 sends_prev_signals, #sends_prev is input signals, sends_signals are output, though essentially they are the same
+                 has_tok_signals, #it is part of the state, but can be emulated as Moore-like output signal
+                 state_type,
+                 tau_name,
+                 internal_funcs_postfix:str):
+
         super().__init__(is_mealy)
 
-        anon_inputs = list(anon_inputs)
-        anon_outputs = list(anon_outputs)
+        for s in orig_inputs: #TODO: remove me after debug
+            assert isinstance(s, QuantifiedSignal)
+            assert 'prev' not in s.name, str(s)
 
-        self._state_type = state_type
-        self._prev_name = sends_prev_anon_var_name
-        self._tau_name = tau_name
-        self._is_active_name = 'is_active' + internal_funcs_postfix
-        self._equal_bits_name = 'equal_bits' + internal_funcs_postfix
-        self._prev_is_sched_name = 'prev_is_sched' + internal_funcs_postfix
-        self._tau_sched_wrapper_name = 'tau_sch' + internal_funcs_postfix
-        self._proc_id_prefix = 'proc'
-        self._active_var_prefix = active_anon_var_name[:-1]
-        self._sends_name = sends_anon_var_name
-        self._has_tok_var_prefix = has_tok_var_prefix
-        self._sched_var_prefix = sched_var_prefix
+        for s in orig_outputs: #TODO: remove me after debug
+            assert isinstance(s, QuantifiedSignal)
+            assert 'prev' not in s.name, str(s)
+            assert 'tok' not in s.name, str(s)
 
-        self._nof_bits = int(max(1, math.ceil(math.log(nof_processes, 2))))
-        self._sched_vars, self._sched_args_defs = get_bits_definition(self._sched_var_prefix, self._nof_bits)
-        self._proc_vars, self._proc_args_defs = get_bits_definition(self._proc_id_prefix, self._nof_bits)
-        self._equals_first_args, _ = get_bits_definition('x', self._nof_bits)
-        self._equals_second_args, _ = get_bits_definition('y', self._nof_bits)
 
         self.automaton = automaton
         self.nof_processes = nof_processes
 
-        self.states_by_process = [tuple([self._get_state_name(self._state_type, i) for i in range(nof_local_states)])]\
-                                 * self.nof_processes
+        self._state_type = state_type
+
+        self._has_tok_signals = has_tok_signals
+        self._sends_prev_signals = sends_prev_signals
+        self._sends_signals = sends_signals
+        self._is_active_signals = is_active_signals
+
+        self._TAU_NAME = tau_name
+        self._IS_ACTIVE_NAME = 'is_active' + internal_funcs_postfix
+        self._EQUAL_BITS_NAME = 'equal_bits' + internal_funcs_postfix
+        self._PREV_IS_SCHED_NAME = 'prev_is_sched' + internal_funcs_postfix
+        self._TAU_SCHED_WRAPPER_NAME = 'tau_sch' + internal_funcs_postfix
+        self._PROC_ID_PREFIX = 'proc' #TODO: check necessity
+
+        self._nof_proc_bits = int(max(1, math.ceil(math.log(nof_processes, 2))))
+
+        self._sched_signals = sched_inputs #TODO: check necessity
+        self._sched_arg_type_pairs = [(s, 'Bool') for s in self._sched_signals]
+
+        #intoduced proc_signals to resemble sched_signals
+        self._proc_signals = [QuantifiedSignal(self._PROC_ID_PREFIX, i) for i in range(nof_processes)]
+        self._proc_arg_type_pairs = [(s, 'Bool') for s in self._proc_signals]
+
+        self._equals_first_args, _ = get_signals_definition('x', self._nof_proc_bits)
+        self._equals_second_args, _ = get_signals_definition('y', self._nof_proc_bits)
+
+        ### BlankImpl interface TODO: use __init__ with arguments?
+        self.states_by_process = self.nof_processes * [tuple(self._get_state_name(self._state_type, i) for i in range(nof_local_states))]
         self.state_types_by_process = [self._state_type] * self.nof_processes
 
-        self.orig_inputs = self._build_orig_inputs(nof_processes, anon_inputs, sends_prev_anon_var_name)
+        #should contain all the inputs (for all the processes)
+        all_models_inputs = orig_inputs + archi_inputs
+        #TODO: rename to self.model_inputs
+        self.orig_inputs = _build_model_inputs(nof_processes, all_models_inputs)
 
         self.init_states = self._build_init_states()
         self.aux_func_descs = self._build_aux_func_descs()
 
-        self.outvar_desc_by_process = self._build_outvar_desc_by_process(anon_outputs,
-            sends_anon_var_name, has_tok_var_prefix,
-            anon_inputs, nof_processes)
+        self.outvar_desc_by_process = [self._build_desc_by_out(_filter_by_proc(i, orig_outputs),
+                                                               _filter_by_proc(i, archi_outputs),
+                                                               _filter_by_proc(i, all_models_inputs))
+                                       for i in range(nof_processes)]
 
-        self.taus_descs = self._build_taus_descs(anon_inputs)
-        self.model_taus_descs = self._build_model_taus_descs(anon_inputs)
-
-
-    def _build_outvar_desc_by_process(self, anon_outputs,
-                                      sends_anon_var_name, has_tok_var_prefix,
-                                      anon_inputs, nof_processes):
-        all_var_desc = []
-        for i in range(nof_processes):
-            var_desc = []
-            for o in anon_outputs:
-                argname_to_type = {self.state_arg_name:self._state_type}
-                if self.is_mealy and o not in (sends_anon_var_name, has_tok_var_prefix):
-                    argname_to_type.update((i, 'Bool') for i in anon_inputs)
-
-                description = FuncDescription(str(o), argname_to_type, set(), 'Bool', None)
-
-                label_var = concretize_anon_var(o, i)
-                var_desc.append((label_var, description))
-
-            all_var_desc.append(tuple(var_desc))
-
-        return tuple(all_var_desc)
+        self.taus_descs = self._build_taus_descs(all_models_inputs)
+        self.model_taus_descs = self._build_model_taus_descs(all_models_inputs)
 
 
-    def _build_taus_descs(self, anon_inputs):
-        return [self._get_desc_tau_sched_wrapper(anon_inputs)]*self.nof_processes
+    def _do_desc_by_out(self, out_signals, is_mealy:bool, model_inputs) -> dict:
+        desc_by_signal = dict()
+
+        for s_ in out_signals:
+            #: :type: QuantifiedSignal
+            s = s_
+
+            type_by_arg = {self.state_arg_name:self._state_type}
+
+            if is_mealy:
+                type_by_arg.update((s, 'Bool') for s in model_inputs)
+
+            desc_by_signal[s] = FuncDescription(s.name, type_by_arg, 'Bool', None)
+
+        return desc_by_signal
 
 
-    def _build_orig_inputs(self, nof_processes, anon_inputs, prev_name):
-        assert nof_processes >= 0
+    def _build_desc_by_out(self,
+                           proc_orig_outputs, proc_archi_outputs,
+                           proc_model_inputs) -> dict:
 
-        if nof_processes > 1:
-            inputs = [i for i in anon_inputs if input != prev_name]
-        else: #case of async hub
-            inputs = anon_inputs
+        desc_by_signal = self._do_desc_by_out(proc_orig_outputs, self.is_mealy, proc_model_inputs)
+        #architecture outputs are Moore
+        desc_by_signal.update(self._do_desc_by_out(proc_archi_outputs, False, proc_model_inputs))
 
-        return [concretize_anon_vars(inputs, i) for i in range(nof_processes)]
+        return desc_by_signal
+
+
+    def _build_taus_descs(self, all_models_inputs):
+        return [self._get_desc_tau_sched_wrapper(i, all_models_inputs)
+                for i in range(self.nof_processes)]
 
 
     def _build_aux_func_descs(self):
-        """ Return func_name, input_types, output_type, body[optional]
-        """
         return [self._get_desc_equal_bools(),
                 self._get_desc_prev_is_sched(),
-                self._get_desc_is_active()]
+                self._get_desc_is_active(0)] #TODO: hack: here proc_index does not matter
 
 
-    def _build_model_taus_descs(self, anon_inputs):
-        return [self._get_desc_local_tau(anon_inputs)]*self.nof_processes
+    def _build_model_taus_descs(self, all_models_input_signals):
+        return [self._get_desc_local_tau(_filter_by_proc(i, all_models_input_signals))
+                for i in range(self.nof_processes)]
 
 
-    def convert_global_args_to_local(self, arg_values_dict):
-        # all tau desc accept anon values, they know nothing about concrete values
-        # should they know? but they are 'local', they know nothing about global system
-        anon_args_dict = dict()
+    def get_proc_tau_additional_args(self, proc_label:Label, sys_state_vector, proc_index:int) -> dict:
+        value_by_signal = dict()
 
-        for argname, argvalue in arg_values_dict.items():
-            if argname not in self._sched_vars \
-               and argname not in self._proc_vars \
-               and argname != self.state_arg_name:
-                argname, _ = anonymize_concr_var(argname)
-            anon_args_dict[argname] = argvalue
+        value_by_sched = dict(filter(lambda sig_val: sig_val[0] in self._sched_signals, proc_label.items()))
+        value_by_signal.update(value_by_sched)
 
-        return anon_args_dict
+        value_by_proc = dict(filter(lambda sig_val: sig_val[0] in self._proc_signals, proc_label.items()))
+        value_by_signal.update(value_by_proc)
 
+        if self.nof_processes > 1: #for nof_processes=1 sends_prev_expr is not calculated, it is a pure input
+            sends_prev_signal = _filter_by_proc(proc_index, self._sends_prev_signals)[0]
+            sends_prev_expr = self._get_sends_prev_expr(proc_index, sys_state_vector)
+            value_by_signal.update({sends_prev_signal:sends_prev_expr})
 
-    def get_proc_tau_additional_args(self, proc_label, sys_state_vector, proc_index):
-        tau_args = dict()
-
-        sched_values = self._get_sched_values(proc_label)
-        tau_args.update(sched_values)
-
-        if self.nof_processes > 1:
-            sends_prev = self._get_sends_prev_expr(proc_index, sys_state_vector)
-            tau_args.update(sends_prev)
-
-        proc_id_values = self._get_proc_id_values(proc_index)
-        tau_args.update(proc_id_values)
-
-        return tau_args
+        return value_by_signal
 
 
-    def get_output_func_name(self, concr_var_name):
-        par_var_name, proc_index = anonymize_concr_var(concr_var_name) #TODO: bad dependence on parser
-        return par_var_name
+    def get_architecture_trans_assumption(self, label, sys_state_vector) -> str:
+        """ Handle 'is_active' variable in the specification. """
 
+        index_of_prev = index_of(lambda s: s in self._sends_prev_signals, label.keys())
+        assert not (self.nof_processes > 1 and index_of_prev is not None), 'not implemented' #TODO: unknown assertion
 
-    def get_architecture_trans_assumption(self, label, sys_state_vector):
-        index_of_prev = index_of(lambda var_name: anonymize_concr_var(var_name)[0] == self._prev_name, label.keys())
-        assert not (self.nof_processes > 1 and index_of_prev is not None), 'not implemented'
+        active_signals = list(filter(lambda s: s in self._is_active_signals, label.keys()))
+        assert len(active_signals) <= 1, 'spec cannot contain > 1 is_active as conjunction'
 
-        var_names = list(label.keys())
-
-        active_var_index = index_of(lambda concr_var_name: self._active_var_prefix in concr_var_name,
-            var_names)
-
-        if active_var_index is None:
+        if len(active_signals) == 0:
             return ''
 
-        concr_active_variable = var_names[active_var_index]
-        _, proc_index = anonymize_concr_var(concr_active_variable)
+        #: :type: QuantifiedSignal
+        active = active_signals[0]
+        proc_index = active.binding_indices[0]
 
-        proc_id_args = self._get_proc_id_values(proc_index)
+        sends_prev_signal = _filter_by_proc(proc_index, self._sends_prev_signals)[0]
+
         if self.nof_processes > 1:
             sends_prev_value = self._get_sends_prev_expr(proc_index, sys_state_vector)
         else:
-            prev = concretize_anon_var(self._prev_name, 0)
-            sends_prev_value = {prev: str(label.get(prev, '?' + prev)).lower()} #TODO: hack: knowledge of format
+            #sync_hub, async_hub
+            #In this case the specification contain sends_prev as a part of 'abstraction'
+            value_by_signal, _ = build_values_from_label(sends_prev_signal, label)
+            sends_prev_value = value_by_signal[sends_prev_signal]
 
-        sched_vals = self._get_sched_values(label)
+        value_by_sched = build_values_from_label(self._sched_signals, label)
+#        sched_vals = self._get_sched_values(label)
 
-        is_active_concrt_args_dict = dict(chain(sched_vals.items(), proc_id_args.items(), sends_prev_value.items()))
+        value_by_proc = build_values_from_label(self._proc_signals, self._build_label_from_proc_index(proc_index))
 
-        is_active_proc_args_dict = self.convert_global_args_to_local(is_active_concrt_args_dict)
+#        value_by_proc_index = self._get_proc_id_values(proc_index)
 
-        is_active_args = self._get_desc_is_active().get_args_list(is_active_proc_args_dict)
+        value_by_signal = add_dicts(value_by_sched, value_by_proc, {sends_prev_signal:sends_prev_value})
 
-        func = call_func(self._is_active_name, is_active_args)
+#        is_active_proc_args_dict = self.convert_global_args_to_local(active_value_by_signal)
+
+        is_active_func_desc = self._get_desc_is_active(proc_index)
+        is_active_args = is_active_func_desc.get_args_list(value_by_signal)
+
+        func = call_func(is_active_func_desc.name, is_active_args)
 
         return func
 
 
-    def get_free_sched_vars(self, label):
-        free_sched_vars = []
-        sched_vars = list(map(lambda i: '{0}{1}'.format(self._sched_var_prefix, i), range(self._nof_bits)))
-        for sched_var_name in sched_vars:
-            if sched_var_name not in label:
-                free_sched_vars.append('?{0}'.format(sched_var_name))
+    def get_free_sched_vars(self, label) -> list:
+        free_signals = set(filter(lambda sch: sch not in label, self._sched_signals))
 
-        return free_sched_vars
+        _, free_vars = build_values_from_label(free_signals, Label())
+
+        return free_vars
 
 
-    def _get_desc_tau_sched_wrapper(self, anon_inputs):
-        local_tau_inputs = self._get_desc_local_tau(anon_inputs).inputs
+    def _get_desc_tau_sched_wrapper(self, proc_index:int, all_models_inputs) -> FuncDescription:
+        local_tau_input_signals = _filter_by_proc(proc_index, all_models_inputs)
+        local_tau_inputs = self._get_desc_local_tau(local_tau_input_signals).inputs
 
-        argname_to_type = dict(local_tau_inputs + \
-                               list(map(lambda sch_arg: (sch_arg, 'Bool'), self._sched_vars)) +\
-                               list(map(lambda proc_arg: (proc_arg, 'Bool'), self._proc_vars)))
+        type_by_arg = dict(local_tau_inputs + self._sched_arg_type_pairs + self._proc_arg_type_pairs)
 
         local_tau_args = list(map(lambda input_type: input_type[0], local_tau_inputs))
 
-        is_active_desc = self._get_desc_is_active()
+        is_active_desc = self._get_desc_is_active(proc_index)
         is_active_inputs = list(map(lambda input: input[0], is_active_desc.inputs)) #TODO: hack: knowledge: var names are the same
 
         body = """
         (ite ({is_active} {is_active_inputs}) ({tau} {local_tau_inputs}) {state})
-        """.format_map({'tau': self._tau_name,
+        """.format_map({'tau': self._TAU_NAME,
                         'local_tau_inputs': ' '.join(local_tau_args),
                         'state':self.state_arg_name,
-                        'is_active': self._is_active_name,
+                        'is_active': self._IS_ACTIVE_NAME,
                         'is_active_inputs': ' '.join(is_active_inputs)})
 
-        architecture_inputs = set(chain([self._prev_name], self._sched_vars, self._proc_vars))
-
-        description = FuncDescription(self._tau_sched_wrapper_name, argname_to_type, architecture_inputs,
+        description = FuncDescription(self._TAU_SCHED_WRAPPER_NAME, type_by_arg,
             self._state_type,
             body)
 
@@ -225,67 +261,74 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
         {cmp}
         """.format(cmp = cmp_stmnt)
 
-        inputname_to_type = dict(list(map(lambda i: (str(i), 'Bool'), self._equals_first_args)) +\
-                                 list(map(lambda i: (str(i), 'Bool'), self._equals_second_args)))
+        inputname_to_type = dict([(s, 'Bool') for s in self._equals_first_args] +\
+                                 [(s, 'Bool') for s in self._equals_second_args])
 
-        description = FuncDescription(self._equal_bits_name,
-            inputname_to_type, set(),
+        description = FuncDescription(self._EQUAL_BITS_NAME,
+            inputname_to_type,
             'Bool',
             body)
 
         return description
 
 
-    def _get_desc_is_active(self):
-        argname_to_type = dict([(self._prev_name, 'Bool')] + self._sched_args_defs + self._proc_args_defs)
+    def _get_desc_is_active(self, proc_index:int):
+        #: :type: QuantifiedSignal
+        sends_prev_signal = self._sends_prev_signals[proc_index]
 
-        sched_eq_proc_args_dict = self._get_equal_func_args(self._sched_vars, self._proc_vars)
-        sched_eq_proc_args = self._get_desc_equal_bools().get_args_list(sched_eq_proc_args_dict)
+        sched_eq_proc_arg_by_signal = self._get_equal_func_args(self._sched_signals, self._proc_signals)
+
+        sched_eq_proc_args = self._get_desc_equal_bools().get_args_list(sched_eq_proc_arg_by_signal)
 
         prev_is_sched_args = map(lambda var_type: var_type[0], self._get_desc_prev_is_sched().inputs) #order is important
 
         body = """
         (or (and (not {sends_prev}) ({equal_bits} {sched_eq_proc_args})) (and {sends_prev} ({prev_is_sched} {prev_is_sched_args})))
-        """.format_map({'equal_bits':self._equal_bits_name,
+        """.format_map({'equal_bits':self._EQUAL_BITS_NAME,
                         'sched_eq_proc_args': ' '.join(sched_eq_proc_args),
-                        'prev_is_sched': self._prev_is_sched_name,
+                        'prev_is_sched': self._PREV_IS_SCHED_NAME,
                         'prev_is_sched_args': ' '.join(prev_is_sched_args),
-                        'sends_prev': self._prev_name
+                        'sends_prev': str(sends_prev_signal)
         })
 
-        description = FuncDescription(self._is_active_name,
-            argname_to_type, set(),
+        type_by_arg = dict([(sends_prev_signal, 'Bool')] + self._sched_arg_type_pairs + self._proc_arg_type_pairs)
+
+        description = FuncDescription(self._IS_ACTIVE_NAME,
+            type_by_arg,
             'Bool',
             body)
 
         return description
 
 
-    def _get_equal_func_args(self, first_arg_values, second_arg_values):
-        index_to_first_arg = dict(zip(map(lambda a: int(a[-1]), self._equals_first_args), self._equals_first_args))
-        index_to_second_arg = dict(zip(map(lambda a: int(a[-1]), self._equals_second_args), self._equals_second_args))
+    def _get_equal_func_args(self, arg1_values, arg2_values) -> dict:
+        assert len(arg1_values) == len(arg2_values)
 
-        equal_func_args = dict()
-        for i in range(len(first_arg_values)):
-            equal_func_args[index_to_first_arg[i]] = first_arg_values[i]
-            equal_func_args[index_to_second_arg[i]] = second_arg_values[i]
-        return equal_func_args
+        arg1_by_index = dict(zip(map(lambda a: a.binding_indices[0], self._equals_first_args), self._equals_first_args))
+        arg2_by_index = dict(zip(map(lambda a: a.binding_indices[0], self._equals_second_args), self._equals_second_args))
+
+        value_by_arg = dict()
+        for i in range(len(arg1_values)):
+            value_by_arg[arg1_by_index[i]] = arg1_values[i]
+            value_by_arg[arg2_by_index[i]] = arg2_values[i]
+
+        return value_by_arg
 
 
     def _get_desc_prev_is_sched(self): #TODO: optimize
         enum_clauses = []
 
         def accumulator(prev, crt):
-            equal_bits_desc = self._get_desc_equal_bools()
+            equals_desc = self._get_desc_equal_bools()
 
-            proc_eq_crt_args_dict = self._get_equal_func_args(self._proc_vars, crt)
-            sched_eq_prev_args_dict = self._get_equal_func_args(self._sched_vars, prev)
+            proc_eq_crt_args_dict = self._get_equal_func_args(self._proc_signals, crt)
+            sched_eq_prev_args_dict = self._get_equal_func_args(self._sched_signals, prev)
 
-            proc_eq_crt_args = equal_bits_desc.get_args_list(proc_eq_crt_args_dict)
-            sched_eq_prev_args = equal_bits_desc.get_args_list(sched_eq_prev_args_dict)
+            proc_eq_crt_args = equals_desc.get_args_list(proc_eq_crt_args_dict)
+            sched_eq_prev_args = equals_desc.get_args_list(sched_eq_prev_args_dict)
 
             enum_clauses.append('(and ({equals} {proc_eq_crt}) ({equals} {sched_eq_prev}))'
-            .format_map({'equals': self._equal_bits_name,
+            .format_map({'equals': self._EQUAL_BITS_NAME,
                          'proc_eq_crt': ' '.join(proc_eq_crt_args),
                          'sched_eq_prev': ' '.join(sched_eq_prev_args)
             }))
@@ -293,12 +336,12 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
 
         self._ring_modulo_iterate(self.nof_processes, accumulator)
 
-        argname_to_type = dict(self._sched_args_defs + self._proc_args_defs)
+        type_by_arg = dict(self._sched_arg_type_pairs + self._proc_arg_type_pairs)
 
         body = """(or {enum_clauses})""".format(enum_clauses = '\n\t'.join(enum_clauses))
 
-        description = FuncDescription(self._prev_is_sched_name,
-            argname_to_type, set(),
+        description = FuncDescription(self._PREV_IS_SCHED_NAME,
+            type_by_arg,
             'Bool',
             body)
 
@@ -308,7 +351,7 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
     def _ring_modulo_iterate(self, nof_processes, function):
 
         def to_smt_bools(int_val):
-            return list(map(lambda b: str(b).lower(), bin_fixed_list(int_val, self._nof_bits)))
+            return list(map(lambda b: str(b).lower(), bin_fixed_list(int_val, self._nof_proc_bits)))
 
         if nof_processes == 1:
             crt = to_smt_bools(0)
@@ -322,96 +365,114 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
             function(prev, crt)
 
 
-    def _get_desc_local_tau(self, anon_inputs):
-        argname_to_type = dict([(self.state_arg_name, self._state_type)] + \
-                               list(map(lambda input: (str(input), 'Bool'), anon_inputs)))
+    def _ensure_inputs_are_isomorphic(self, all_models_inputs):
+        pass #don't worry, be happy
 
-        description = FuncDescription(self._tau_name, argname_to_type, set(), self._state_type, None)
+
+    def _get_desc_local_tau(self, local_tau_input_signals) -> FuncDescription:
+        type_by_arg = dict([(self.state_arg_name, self._state_type)] + [(s, 'Bool') for s in local_tau_input_signals])
+
+        description = FuncDescription(self._TAU_NAME, type_by_arg, self._state_type, None)
 
         return description
 
-    #TODO: duplications
-    def _get_sched_values(self, label):
-        sched_values = dict()
-        for sched_var_name in self._sched_vars:
-            if sched_var_name in label:
-                sched_value = str(label[sched_var_name]).lower()
-                sched_values[sched_var_name] = sched_value
-            else:
-                sched_value = '?{0}'.format(sched_var_name) #TODO: bad: sacral knowledge about format
-                sched_values[sched_var_name] = sched_value
 
-        return sched_values
-
-    def _get_proc_id_values(self, proc_index):
-        bits_list = bin_fixed_list(proc_index, self._nof_bits)
-        bits_vals_as_str_list = list(map(lambda b: str(b).lower(), bits_list))
-        bits_dict = dict(zip(self._proc_vars, bits_vals_as_str_list))
-
-        return bits_dict
+#    def _get_sched_values(self, label) -> dict:
+#        value_by_sched = dict()
+#
+#        for sched_var_name in self._sched_vars:
+#            if sched_var_name in label:
+#                sched_value = str(label[sched_var_name]).lower()
+#                value_by_sched[sched_var_name] = sched_value
+#            else:
+#                sched_value = '?{0}'.format(sched_var_name) #TODO: bad: sacral knowledge about format
+#                value_by_sched[sched_var_name] = sched_value
+#
+#        return value_by_sched
 
 
-    def _get_sends_prev_expr(self, proc_index, sys_states_vector):
+#    def _get_proc_id_values(self, proc_index):
+#        bits_list = bin_fixed_list(proc_index, self._nof_proc_bits)
+#        bits_vals_as_str_list = list(map(lambda b: str(b).lower(), bits_list))
+#        value_by_varname = dict(zip(self._proc_vars, bits_vals_as_str_list))
+#
+#        return value_by_varname
+
+
+    def _get_sends_prev_expr(self, proc_index, sys_states_vector) -> str:
         assert self.nof_processes > 1, 'nonsense'
 
         prev_proc = (proc_index-1) % self.nof_processes
 
         prev_proc_state = sys_states_vector[prev_proc]
 
-        expr = '({sends} {state})'.format_map({'sends': self._sends_name,
-                                               'state': prev_proc_state})
+        #: :type: QuantifiedSignal
+        sends_signal = _filter_by_proc(prev_proc, self._sends_signals)
+        #: :type: FuncDescription
+        sends_func_desc = self.outvar_desc_by_process[proc_index][sends_signal]
 
-        return {concretize_anon_var(self._prev_name, proc_index): expr} #TODO: bad reversed dependence
+        call_sends = call_func(sends_func_desc.name, sends_func_desc.get_args_list({self.state_arg_name:prev_proc_state}))
+
+        expr = '({call_sends})'.format(call_sends = call_sends)
+        return expr
 
 
-    def filter_label_by_process(self, label, proc_index): #TODO: hack
+    def filter_label_by_process(self, label, proc_index:int): #TODO: hack
         filtered_label = dict()
 
-        for var_name, var_value in label.items():
-            if var_name.startswith(self._sched_var_prefix): #TODO: use Signal instead of these hacks
-                filtered_label[var_name] = var_value
+        for signal, value in label.items():
+            if signal in self._sched_signals:
+                filtered_label[signal] = value
 
-            elif var_name.startswith(self._active_var_prefix):
-                filtered_label[var_name] = var_value
+            elif signal in self._is_active_signals: #TODO: why do we need is_active of OTHER processes?!
+                filtered_label[signal] = value
 
-            else:
-                _, var_proc_index = anonymize_concr_var(var_name)
-                if proc_index == var_proc_index:
-                    filtered_label[var_name] = var_value
+            elif signal.binding_indices[0] == proc_index:
+                filtered_label[signal] = value
 
         return Label(filtered_label)
 
 
     def get_architecture_conditions(self):
+        """
+        Generic encoder considers different initial configurations of the ring,
+        making sure that all possible initial token distributions are verified.
+        """
         conditions = StrAwareList()
 
-        #first process possesses the token, others - don't
-        #consider the only init state - others are isomorphic and don't add to the conditions
+        states = self.states_by_process[0]
+        s0, s1 = states[0], states[1]
 
-        state_by_proc = self.init_states[0]
+        has_tok_func_name = self._has_tok_signals[0].name #TODO: hack
+        conditions += call_func(has_tok_func_name, [s1])
 
-        #TODO: hack - don't use get_args
-        conditions += call_func(self._has_tok_var_prefix, [state_by_proc[0]])
+        conditions += op_not(call_func(has_tok_func_name, [s0]))
 
-        if self.nof_processes > 1:
-            conditions += op_not(call_func(self._has_tok_var_prefix, [state_by_proc[1]]))
+#        if self.nof_processes > 1:
+#            conditions += op_not(call_func(has_tok_func_name, [other_process_state]))
 
         return conditions
 
 
     def _build_init_states(self):
-        #TODO: hardcoded: state 0 no tok, state 1 tok
+        #TODO: hardcoded: state 1 with the token, state 0 without the token,
 
         states = self.states_by_process[0]
+        s0, s1 = states[0], states[1]
         if self.nof_processes == 1:
-            return [(states[1],), (states[0],)] #TODO: the order matters
+            return [(s1,), (s0,)]
 
-        init_sys_state = [states[1]] + [states[0]] * (self.nof_processes-1) #states of all processes are the same
+        init_sys_state = [s1] + [s0] * (self.nof_processes-1) #states of all processes are the same
+
         permutations_of_init_state = list(permutations(init_sys_state))
 
-        result = []
-        for sys_state in permutations_of_init_state:
-            result.append(sys_state)
+        return permutations_of_init_state
 
-        return result
+
+    def _build_label_from_proc_index(self, proc_index:int) -> Label:
+        bits = bin_fixed_list(proc_index, self._nof_proc_bits)
+
+        label = Label(dict(zip(map(lambda at: at[0], self._proc_arg_type_pairs), bits)))
+
+        return label
 

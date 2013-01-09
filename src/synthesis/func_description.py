@@ -2,23 +2,22 @@ from helpers.python_ext import index_of
 
 class FuncDescription:
     def __init__(self, func_name,
-                 argname_to_type, architecture_inputs:"inputs that are managed by Impl?",
+                 type_by_arg,
                  output,
                  body):
         self._name = func_name
         self._output = output
         self._body = body
-        self._architecture_inputs = architecture_inputs
-        self._ordered_input_type_pairs = list(argname_to_type.items())
+        self._ordered_input_type_pairs = list(type_by_arg.items())
 
 
     @property
     def name(self):
         return self._name
 
-    @property
-    def architecture_inputs(self):
-        return self._architecture_inputs
+#    @property
+#    def architecture_inputs(self):
+#        return self._architecture_inputs
 
     @property
     def inputs(self):
@@ -48,39 +47,39 @@ class FuncDescription:
         )
 
 
-    def get_args_list(self, argname_to_value):
-        assert set([p[0] for p in self._ordered_input_type_pairs]).issubset(set(argname_to_value.keys()))
+    def get_args_list(self, value_by_argname:dict):
+        assert set([p[0] for p in self._ordered_input_type_pairs]).issubset(set(value_by_argname.keys()))
 
-        args = dict()
-        for argname, value in argname_to_value.items():
-            index = index_of(lambda in_ty_pair: in_ty_pair[0]==argname, self._ordered_input_type_pairs)
+        value_by_arg = dict()
+        for arg, value in value_by_argname.items():
+            index = index_of(lambda in_ty_pair: in_ty_pair[0]==arg, self._ordered_input_type_pairs)
             if index is None:
                 continue
 
-            args[index] = value
+            value_by_arg[index] = value
 
-        args_list = sorted(list(args.items()), key=lambda i_a: i_a[0])
+        args_list = sorted(list(value_by_arg.items()), key=lambda i_a: i_a[0])
         ordered_values = list(map(lambda i_a: i_a[1], args_list))
         return ordered_values
 
 
-    def get_args_dict(self, values):
-        result = dict()
+    def get_args_dict(self, values) -> dict:
+        value_by_arg = dict()
         for i, v in enumerate(values):
             arg, type = self._ordered_input_type_pairs[i]
-            result[arg] = v
+            value_by_arg[arg] = v
 
-        return result
+        return value_by_arg
 
 
     def __str__(self):
-        return '<name: {name}, inputs: {inputs} (archit. inputs: {archi_inputs}), output: {output}, definition: \n{definition}>'.format(
+        return '<name: {name}, inputs: {inputs}, output: {output}, definition: \n{definition}>'.format(
             name=self._name,
             inputs = str(self._ordered_input_type_pairs),
-            archi_inputs = str(self._architecture_inputs),
             output = self._output,
             definition = self.definition
         )
+
 
     def __eq__(self, other):
         if not isinstance(other, FuncDescription):
@@ -88,7 +87,9 @@ class FuncDescription:
 
         return str(other) == str(self)
 
+
     def __hash__(self):
         return hash(str(self))
+
 
     __repr__ = __str__
