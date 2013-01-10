@@ -152,7 +152,7 @@ def call_func_raw(func_name, args):
     return smt_str
 
 
-def call_func(func_desc:FuncDescription, func_args_dict):
+def call_func(func_desc:FuncDescription, func_args_dict:dict):
     return call_func_raw(func_desc.name, func_desc.get_args_list(func_args_dict))
 
 

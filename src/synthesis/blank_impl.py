@@ -17,7 +17,7 @@ class BlankImpl:
         self.init_states = ()
         self.aux_func_descs = ()
 
-        self.outvar_desc_by_process = (dict()) # ({signal:func_desc}, ..)
+        self.outvar_desc_by_process = (dict(),) # ({signal:func_desc}, ..)
 
         self.taus_descs = ()
         self.model_taus_descs = ()
@@ -34,9 +34,10 @@ class BlankImpl:
         result = []
         for proc_record in self.outvar_desc_by_process:
             proc_descs = []
-            for var, desc in proc_record:
+            for var, desc in proc_record.items():
                 proc_descs.append(desc)
             result.append(tuple(proc_descs))
+
         return tuple(result)
 
 
@@ -63,7 +64,3 @@ class BlankImpl:
     def get_architecture_requirements(self):
         return tuple()
 
-
-#    def convert_global_args_to_local(self, arg_values_dict):
-#        """ global args dictionary has global names, local - local names """
-#        return arg_values_dict

@@ -1,7 +1,5 @@
-import math
-
 from itertools import permutations
-from helpers.python_ext import bin_fixed_list, StrAwareList, index_of, add_dicts
+from helpers.python_ext import bin_fixed_list, StrAwareList, index_of, add_dicts, lmap
 from interfaces.automata import Label, Automaton
 from interfaces.parser_expr import QuantifiedSignal
 from parsing.helpers import get_log_bits
@@ -87,7 +85,7 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
         self._sched_arg_type_pairs = [(s, 'Bool') for s in self._sched_signals]
 
         #intoduced proc_signals to resemble sched_signals
-        self._proc_signals = [QuantifiedSignal(self._PROC_ID_PREFIX, i) for i in range(nof_processes)]
+        self._proc_signals = [QuantifiedSignal(self._PROC_ID_PREFIX, i) for i in range(get_log_bits(nof_processes))]
         self._proc_arg_type_pairs = [(s, 'Bool') for s in self._proc_signals]
 
         self._equals_first_args, _ = get_signals_definition('x', self._nof_proc_bits)
@@ -97,8 +95,8 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
         self.states_by_process = self.nof_processes * [tuple(self._get_state_name(self._state_type, i) for i in range(nof_local_states))]
         self.state_types_by_process = [self._state_type] * self.nof_processes
 
-        archi_inputs = [sends_prev_signals]
-        archi_outputs = [has_tok_signals, sends_signals]
+        archi_inputs = sends_prev_signals
+        archi_outputs = has_tok_signals + sends_signals
 
         all_models_inputs = orig_inputs + archi_inputs
         #TODO: rename to self.model_inputs
@@ -163,13 +161,14 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
     def get_proc_tau_additional_args(self, proc_label:Label, sys_state_vector, proc_index:int) -> dict:
         value_by_signal = dict()
 
-        value_by_sched = dict(filter(lambda sig_val: sig_val[0] in self._sched_signals, proc_label.items()))
+        value_by_sched, _ = build_signals_values(self._sched_signals, proc_label)
         value_by_signal.update(value_by_sched)
 
-        value_by_proc = dict(filter(lambda sig_val: sig_val[0] in self._proc_signals, proc_label.items()))
+        proc_index_label = self._build_label_from_proc_index(proc_index) #assume the spec doesn't have proc_index
+        value_by_proc, _ = build_signals_values(self._proc_signals, proc_index_label)
         value_by_signal.update(value_by_proc)
 
-        if self.nof_processes > 1: #for nof_processes=1 sends_prev_expr is not calculated, it is a pure input
+        if self.nof_processes > 1: #for nof_processes=1 sends_prev_expr is not calculated, since it is an input
             sends_prev_signal = _filter_by_proc(proc_index, self._sends_prev_signals)[0]
             sends_prev_expr = self._get_sends_prev_expr(proc_index, sys_state_vector)
             value_by_signal.update({sends_prev_signal:sends_prev_expr})
@@ -203,10 +202,10 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
             value_by_signal, _ = build_signals_values(sends_prev_signal, label)
             sends_prev_value = value_by_signal[sends_prev_signal]
 
-        value_by_sched = build_signals_values(self._sched_signals, label)
+        value_by_sched, _ = build_signals_values(self._sched_signals, label)
 #        sched_vals = self._get_sched_values(label)
 
-        value_by_proc = build_signals_values(self._proc_signals, self._build_label_from_proc_index(proc_index))
+        value_by_proc, _ = build_signals_values(self._proc_signals, self._build_label_from_proc_index(proc_index))
 
 #        value_by_proc_index = self._get_proc_id_values(proc_index)
 
@@ -232,24 +231,24 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
 
     def _get_desc_tau_sched_wrapper(self, proc_index:int, all_models_inputs) -> FuncDescription:
         local_tau_input_signals = _filter_by_proc(proc_index, all_models_inputs)
-        local_tau_inputs = self._get_desc_local_tau(local_tau_input_signals).inputs
+        local_tau_arg_type_pairs = self._get_desc_local_tau(local_tau_input_signals).inputs
 
-        type_by_arg = dict(local_tau_inputs + self._sched_arg_type_pairs + self._proc_arg_type_pairs)
+        type_by_signal = dict(local_tau_arg_type_pairs + self._sched_arg_type_pairs + self._proc_arg_type_pairs)
 
-        local_tau_args = list(map(lambda input_type: input_type[0], local_tau_inputs))
+        local_tau_arg_type_pairs = list(map(lambda signal_type: signal_type[0], local_tau_arg_type_pairs))
 
         is_active_desc = self._get_desc_is_active(proc_index)
-        is_active_inputs = list(map(lambda input: input[0], is_active_desc.inputs)) #TODO: hack: knowledge: var names are the same
+        is_active_inputs = list(map(lambda signal: signal[0], is_active_desc.inputs)) #TODO: hack: knowledge: var names are the same
 
         body = """
         (ite ({is_active} {is_active_inputs}) ({tau} {local_tau_inputs}) {state})
         """.format_map({'tau': self._TAU_NAME,
-                        'local_tau_inputs': ' '.join(local_tau_args),
+                        'local_tau_inputs': ' '.join(map(str, local_tau_arg_type_pairs)),
                         'state':self.state_arg_name,
                         'is_active': self._IS_ACTIVE_NAME,
-                        'is_active_inputs': ' '.join(is_active_inputs)})
+                        'is_active_inputs': ' '.join(map(str, is_active_inputs))})
 
-        description = FuncDescription(self._TAU_SCHED_WRAPPER_NAME, type_by_arg,
+        description = FuncDescription(self._TAU_SCHED_WRAPPER_NAME, type_by_signal,
             self._state_type,
             body)
 
@@ -278,11 +277,11 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
         #: :type: QuantifiedSignal
         sends_prev_signal = self._sends_prev_signals[proc_index]
 
-        sched_eq_proc_arg_by_signal = self._get_equal_func_args(self._sched_signals, self._proc_signals)
+        sched_eq_proc_arg_by_signal = self._get_equal_func_args(lmap(str, self._sched_signals), lmap(str, self._proc_signals))
 
         sched_eq_proc_args = self._get_desc_equal_bools().get_args_list(sched_eq_proc_arg_by_signal)
 
-        prev_is_sched_args = map(lambda var_type: var_type[0], self._get_desc_prev_is_sched().inputs) #order is important
+        prev_is_sched_args = map(lambda signal_type: str(signal_type[0]), self._get_desc_prev_is_sched().inputs) #order is important
 
         body = """
         (or (and (not {sends_prev}) ({equal_bits} {sched_eq_proc_args})) (and {sends_prev} ({prev_is_sched} {prev_is_sched_args})))
@@ -304,7 +303,12 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
 
 
     def _get_equal_func_args(self, arg1_values, arg2_values) -> dict:
-        assert len(arg1_values) == len(arg2_values)
+        for a in arg1_values:
+            assert isinstance(a, str), str(a.__class__)
+        for a in arg2_values:
+            assert isinstance(a, str), str(a.__class__)
+
+        assert len(arg1_values) == len(arg2_values), '{0} vs {1}'.format(arg1_values, arg2_values)
 
         arg1_by_index = dict(zip(map(lambda a: a.binding_indices[0], self._equals_first_args), self._equals_first_args))
         arg2_by_index = dict(zip(map(lambda a: a.binding_indices[0], self._equals_second_args), self._equals_second_args))
@@ -320,11 +324,11 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
     def _get_desc_prev_is_sched(self): #TODO: optimize
         enum_clauses = []
 
-        def accumulator(prev, crt):
+        def accumulator(prev_proc, crt_proc):
             equals_desc = self._get_desc_equal_bools()
 
-            proc_eq_crt_args_dict = self._get_equal_func_args(self._proc_signals, crt)
-            sched_eq_prev_args_dict = self._get_equal_func_args(self._sched_signals, prev)
+            proc_eq_crt_args_dict = self._get_equal_func_args(lmap(str, self._proc_signals), crt_proc)
+            sched_eq_prev_args_dict = self._get_equal_func_args(lmap(str, self._sched_signals), prev_proc)
 
             proc_eq_crt_args = equals_desc.get_args_list(proc_eq_crt_args_dict)
             sched_eq_prev_args = equals_desc.get_args_list(sched_eq_prev_args_dict)
@@ -409,13 +413,13 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
         prev_proc_state = sys_states_vector[prev_proc]
 
         #: :type: QuantifiedSignal
-        sends_signal = _filter_by_proc(prev_proc, self._sends_signals)
+        sends_signal = _filter_by_proc(prev_proc, self._sends_signals)[0]
         #: :type: FuncDescription
-        sends_func_desc = self.outvar_desc_by_process[proc_index][sends_signal]
+        sends_func_desc = self.outvar_desc_by_process[prev_proc][sends_signal]
 
         call_sends = call_func_raw(sends_func_desc.name, sends_func_desc.get_args_list({self.state_arg_name:prev_proc_state}))
 
-        expr = '({call_sends})'.format(call_sends = call_sends)
+        expr = '{call_sends}'.format(call_sends = call_sends)
         return expr
 
 

@@ -1,23 +1,33 @@
-from helpers.python_ext import index_of
+from interfaces.parser_expr import QuantifiedSignal
 
 class FuncDescription:
     def __init__(self, func_name,
-                 type_by_arg,
+                 type_by_arg:dict,
                  output,
                  body):
         self._name = func_name
         self._output = output
         self._body = body
-        self._ordered_input_type_pairs = list(type_by_arg.items())
+
+        #TODO: evil hack
+        # Tau function of each process though isomorphic has slightly different signals
+        # for example, tau_0 has signals indexed with 0 and tau_1 - signals indexed with 1
+        #
+        # This may lead to different order of arguments in different tau functions.
+        # for example, tau0 has r0,sch0,proc0,prev0
+        #          and tau1 has prev1,sch0,proc0,r1
+        # The problem is that I call the same instance of tau function in the end.
+        # Therefore the order of arguments should be the same.
+        # To assure this, lets sort signals with respect to their str(s) implementation.
+
+        self._ordered_input_type_pairs = sorted(list(type_by_arg.items()),
+            key=lambda t_a: str(t_a[0]) if not isinstance(t_a[0], QuantifiedSignal)
+                                        else str(t_a[0].name)) #ignore indices
 
 
     @property
     def name(self):
         return self._name
-
-#    @property
-#    def architecture_inputs(self):
-#        return self._architecture_inputs
 
     @property
     def inputs(self):
@@ -33,9 +43,8 @@ class FuncDescription:
         if self._body is None:
             return None
 
-        inputs = list(map(lambda input_type_pair: '({name} {type})'.format(
-            name = input_type_pair[0],
-            type = input_type_pair[1]), self.inputs))
+        inputs = ['({name} {type})'.format(name = input_type[0], type = input_type[1])
+                  for input_type in self._ordered_input_type_pairs]
 
         return """(define-fun {name} ({inputs}) {output}
         {body}
@@ -47,19 +56,15 @@ class FuncDescription:
         )
 
 
-    def get_args_list(self, value_by_argname:dict):
-        assert set([p[0] for p in self._ordered_input_type_pairs]).issubset(set(value_by_argname.keys()))
+    def get_args_list(self, value_by_argname:dict) -> list:
+        assert set([p[0] for p in self._ordered_input_type_pairs]).issubset(set(value_by_argname.keys())), \
+        'requested \n{0}\n, but I have \n{1}'.format(value_by_argname, self._ordered_input_type_pairs)
 
-        value_by_arg = dict()
-        for arg, value in value_by_argname.items():
-            index = index_of(lambda in_ty_pair: in_ty_pair[0]==arg, self._ordered_input_type_pairs)
-            if index is None:
-                continue
+        ordered_values = []
+        for (signal, type) in self._ordered_input_type_pairs:
+            value = value_by_argname[signal]
+            ordered_values.append(value)
 
-            value_by_arg[index] = value
-
-        args_list = sorted(list(value_by_arg.items()), key=lambda i_a: i_a[0])
-        ordered_values = list(map(lambda i_a: i_a[1], args_list))
         return ordered_values
 
 

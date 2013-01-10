@@ -2,10 +2,9 @@ from itertools import product, chain
 import logging
 from helpers.labels_map import LabelsMap
 from helpers.logging import log_entrance
-from helpers.python_ext import StrAwareList
+from helpers.python_ext import StrAwareList, lmap
 from interfaces.automata import  DEAD_END, Label
 from interfaces.lts import LTS
-from synthesis.blank_impl import BlankImpl
 from synthesis.func_description import FuncDescription
 from synthesis.rejecting_states_finder import build_state_to_rejecting_scc
 from synthesis.smt_helper import *
@@ -26,9 +25,15 @@ class GenericEncoder:
     def _get_assumption_on_output_vars(self, label:dict, sys_state_vector, impl) -> str:
         conjuncts = []
 
+        output_signals = set(chain(*[d.keys() for d in impl.outvar_desc_by_process]))
+
         for lbl_signal_, lbl_signal_value in label.items():
             #: :type: QuantifiedSignal
             lbl_signal = lbl_signal_
+
+            if lbl_signal not in output_signals:
+                continue
+
             assert len(lbl_signal.binding_indices) == 1 #TODO: non-parameterized case
 
             proc_index = lbl_signal.binding_indices[0]
@@ -55,6 +60,7 @@ class GenericEncoder:
                            label,
                            state_to_rejecting_scc,
                            impl):
+
         spec_state_name = self._get_smt_name_spec_state(spec_state)
         sys_state_name = self._get_smt_name_sys_state(sys_state_vector)
 

@@ -1,4 +1,4 @@
-from itertools import combinations, permutations, product
+from itertools import  product
 import logging
 
 from helpers.logging import log_entrance
@@ -46,7 +46,7 @@ def search(logic,
 
             encoder = GenericEncoder(logic, spec_states_type, counters_postfix)
 
-            sched_input_signals = get_signals_definition(sched_signals_base_name, get_log_bits(nof_processes))
+            sched_input_signals, _ = get_signals_definition(sched_signals_base_name, get_log_bits(nof_processes))
             is_active_signals = [QuantifiedSignal(active_signal_base_name, i) for i in range(nof_processes)]
             sends_signals = [QuantifiedSignal(sends_signal_base_name, i) for i in range(nof_processes)]
             sends_prev_signals = [QuantifiedSignal(sends_prev_signal_base_name, i) for i in range(nof_processes)]
@@ -70,11 +70,15 @@ def search(logic,
 
                 query_lines += comment('local_encoder')
 
-
-                local_impl = SyncImpl(local_automaton, not is_moore, anon_inputs, anon_outputs,
+                local_impl = SyncImpl(local_automaton,
+                    not is_moore,
+                    [QuantifiedSignal(n, 0) for n in anon_input_names],
+                    [QuantifiedSignal(n, 0) for n in anon_output_names],
                     bound,
                     sys_state_type,
-                    has_tok_var_prefix, sends_anon_var_name, sends_prev_var_name,
+                    QuantifiedSignal(has_tok_signals_base_name, 0),
+                    QuantifiedSignal(sends_signal_base_name, 0),
+                    QuantifiedSignal(sends_prev_signal_base_name, 0),
                     tau_name,
                     impl.init_states[0])
 
