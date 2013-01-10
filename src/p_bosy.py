@@ -32,8 +32,8 @@ def _get_spec(ltl_text:str, logger:Logger) -> (list, list, list, list):
     assumptions = data_by_section[PAR_ASSUMPTIONS]
     guarantees = data_by_section[PAR_GUARANTEES]
 
-    anon_inputs = data_by_section[PAR_INPUT_VARIABLES]
-    anon_outputs = data_by_section[PAR_OUTPUT_VARIABLES]
+    anon_inputs = [s.name for s in data_by_section[PAR_INPUT_VARIABLES]]
+    anon_outputs = [s.name for s in data_by_section[PAR_OUTPUT_VARIABLES]]
 
     return anon_inputs, anon_outputs, assumptions, guarantees
 
@@ -66,7 +66,7 @@ def _run(is_moore,
         loc_automaton,
         anon_inputs, anon_outputs,
         bounds,
-        solver, SCHED_ID_PREFIX, ACTIVE_NAME_MY, SENDS_NAME_MY, HAS_TOK_NAME_MY, SENDS_PREV_NAME_MY,
+        solver, SCHED_ID_PREFIX, ACTIVE_NAME_MY, SENDS_NAME_MY, SENDS_PREV_NAME_MY, HAS_TOK_NAME_MY,
         smt_files_prefix)
 
     logger.info('model%s found', ['', ' not'][models is None])
@@ -359,7 +359,6 @@ def main(spec_text, is_moore,
     logger.info('compositional approach')
     #TODO: check which optimizations are used
 
-    #TODO: why anon_outputs do not contain send_token/has_token?
     anon_inputs, anon_outputs, assumptions, guarantees = _get_spec(spec_text, logger)
 
     archi = TokRingArchitecture()
@@ -398,7 +397,8 @@ def main(spec_text, is_moore,
     #TODO: check that optimizations work with full_arbiter!
     print('-'*80)
     prop_cutoff_pairs = [inst_property(archi, p, cutoff) for p in properties]
-    prop_cutoff_pairs = [(apply_log_bit_scheduler_optimization(p, scheduler, SCHED_ID_PREFIX, c),c) for p,c in prop_cutoff_pairs]
+    prop_cutoff_pairs = [(apply_log_bit_scheduler_optimization(p, scheduler, SCHED_ID_PREFIX, c),  c)
+                         for p,c in prop_cutoff_pairs]
     print('after instantiation')
     print('\n'.join(map(str, prop_cutoff_pairs)))
 

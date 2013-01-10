@@ -60,7 +60,7 @@ class BlankImpl:
         return ''
 
 
-    def get_architecture_conditions(self):
+    def get_architecture_requirements(self):
         return tuple()
 
 

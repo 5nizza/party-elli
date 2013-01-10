@@ -1,3 +1,4 @@
+import math
 from interfaces.parser_expr import Number, BinOp, UnaryOp, Bool, Signal, ForallExpr, QuantifiedSignal
 
 
@@ -133,3 +134,7 @@ def convert_asts_to_ltl3ba_format(asts):
 def convert_ast_to_ltl3ba_format(property_ast):
     result = ConverterToLtl2BaFormatVisitor().dispatch(property_ast)
     return result
+
+
+def get_log_bits(nof_processes:int) -> int:
+    return int(max(1, math.ceil(math.log(nof_processes, 2))))

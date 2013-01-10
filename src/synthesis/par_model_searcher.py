@@ -1,27 +1,32 @@
+from itertools import combinations, permutations, product
 import logging
 
 from helpers.logging import log_entrance
 from helpers.python_ext import StrAwareList, FileAsStringEmulator
+from interfaces.automata import Automaton
+from interfaces.parser_expr import QuantifiedSignal
+from parsing.helpers import get_log_bits
 from synthesis.generic_smt_encoder import GenericEncoder
-from synthesis.local_en_process_impl import SyncImpl
-from synthesis.par_impl import ParImpl
+from synthesis.sync_impl import SyncImpl
+from synthesis.par_impl import ParImpl, get_signals_definition
 from synthesis.smt_helper import comment
 from synthesis.z3 import Z3
+
 
 
 @log_entrance(logging.getLogger(), logging.INFO)
 def search(logic,
            is_moore,
-           global_automata_nof_processes_pairs,
-           local_automaton,
-           anon_inputs, anon_outputs,
+           global_automaton_cutoff_pairs,
+           local_automaton:Automaton,
+           anon_input_names, anon_output_names,
                         local_bounds,
                         z3solver,
-                        sched_id_prefix,
-                        active_var_name,
-                        sends_anon_var_name,
-                        has_tok_var_prefix,
-                        sends_prev_var_name,
+                        sched_signals_base_name:str,
+                        active_signal_base_name:str,
+                        sends_signal_base_name:str,
+                        sends_prev_signal_base_name:str,
+                        has_tok_signals_base_name:str,
                         smt_file_name):
     logger = logging.getLogger()
 
@@ -35,23 +40,36 @@ def search(logic,
         query_lines = StrAwareList(FileAsStringEmulator(smt_file))
 
         encoder=impl=None
-        for i, (automaton, nof_processes) in enumerate(global_automata_nof_processes_pairs):
+        for i, (automaton, nof_processes) in enumerate(global_automaton_cutoff_pairs):
             counters_postfix = sys_intern_funcs_postfix = '_'+str(i)
             spec_states_type = 'Q'+str(i)
 
             encoder = GenericEncoder(logic, spec_states_type, counters_postfix)
 
-            impl = ParImpl(automaton, not is_moore, anon_inputs, anon_outputs, nof_processes, bound,
-                sched_id_prefix, active_var_name, sends_anon_var_name, sends_prev_var_name, has_tok_var_prefix,
+            sched_input_signals = get_signals_definition(sched_signals_base_name, get_log_bits(nof_processes))
+            is_active_signals = [QuantifiedSignal(active_signal_base_name, i) for i in range(nof_processes)]
+            sends_signals = [QuantifiedSignal(sends_signal_base_name, i) for i in range(nof_processes)]
+            sends_prev_signals = [QuantifiedSignal(sends_prev_signal_base_name, i) for i in range(nof_processes)]
+            has_tok_signals = [QuantifiedSignal(has_tok_signals_base_name, i) for i in range(nof_processes)]
+
+            orig_input_signals = [QuantifiedSignal(n, i) for (n,i) in product(anon_input_names, range(nof_processes))]
+            orig_output_signals = [QuantifiedSignal(n, i) for (n,i) in product(anon_output_names, range(nof_processes))]
+
+            impl = ParImpl(automaton,
+                not is_moore,
+                orig_input_signals, orig_output_signals,
+                nof_processes, bound,
+                sched_input_signals, is_active_signals, sends_signals, sends_prev_signals, has_tok_signals,
                 sys_state_type,
                 tau_name,
                 sys_intern_funcs_postfix)
 
-            if i is 0:
+            if i == 0:
                 encoder.encode_headers(query_lines)
                 encoder.encode_sys_model_functions(impl, query_lines)
 
                 query_lines += comment('local_encoder')
+
 
                 local_impl = SyncImpl(local_automaton, not is_moore, anon_inputs, anon_outputs,
                     bound,

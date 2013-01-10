@@ -2,7 +2,7 @@ from itertools import product, chain
 import logging
 from helpers.labels_map import LabelsMap
 from helpers.logging import log_entrance
-from helpers.python_ext import StrAwareList, index_of
+from helpers.python_ext import StrAwareList
 from interfaces.automata import  DEAD_END, Label
 from interfaces.lts import LTS
 from synthesis.blank_impl import BlankImpl
@@ -39,7 +39,7 @@ class GenericEncoder:
 
             out_args  = self._get_proc_tau_args(sys_state_vector, label, proc_index, impl)
 
-            condition_on_out = call_func(out_desc.name, out_desc.get_args_list(out_args))
+            condition_on_out = call_func_raw(out_desc.name, out_desc.get_args_list(out_args))
 
             if lbl_signal_value is False:
                 condition_on_out = op_not(condition_on_out)
@@ -64,7 +64,7 @@ class GenericEncoder:
 
             tau_args = impl.taus_descs[i].get_args_list(proc_tau_args)
 
-            next_sys_state.append(call_func(impl.taus_descs[i].name, tau_args))
+            next_sys_state.append(call_func_raw(impl.taus_descs[i].name, tau_args))
 
         #TODO: forall is evil?
         free_input_vars = self._get_free_vars(label, impl)
@@ -122,7 +122,7 @@ class GenericEncoder:
 
     def get_run_graph_conjunctions(self, impl):
         conjunction = StrAwareList()
-        conjunction += impl.get_architecture_conditions() #TODO: looks hacky! replace with two different encoders?
+        conjunction += impl.get_architecture_requirements() #TODO: looks hacky! replace with two different encoders?
 
         if not impl.automaton: #TODO: see 'todo' above, make sense if there are architecture assertions and no automaton
             return conjunction
@@ -195,7 +195,7 @@ class GenericEncoder:
         return ' '.join(sys_state_vector)
 
 
-    def _get_proc_tau_args(self, sys_state_vector, label, proc_index:int, impl:BlankImpl):
+    def _get_proc_tau_args(self, sys_state_vector, label, proc_index:int, impl):
         """ Return dict: name->value
             free variables (to be enumerated) has called ?var_name value.
         """
@@ -208,7 +208,7 @@ class GenericEncoder:
         glob_tau_args.update({impl.state_arg_name:proc_state})
 
         #TODO: try to use label instead of proc_label -- should be the same -- alleviate the need of impl.filter_label_by_process
-        label_vals_dict, _ = build_values_from_label(impl.orig_inputs[proc_index], proc_label)
+        label_vals_dict, _ = build_signals_values(impl.orig_inputs[proc_index], proc_label)
         glob_tau_args.update(label_vals_dict)
 
         glob_tau_args.update(impl.get_proc_tau_additional_args(proc_label, sys_state_vector, proc_index))
@@ -266,7 +266,7 @@ class GenericEncoder:
                 unique_func_descs.add(func_desc)
 
                 for input in self._get_all_possible_inputs(states, func_desc):
-                    smt_lines += get_value(call_func(func_desc.name, input))
+                    smt_lines += get_value(call_func_raw(func_desc.name, input))
 
         return smt_lines
 
@@ -279,7 +279,7 @@ class GenericEncoder:
 
 
     def _get_free_vars(self, label, impl):
-        free_vars = set(chain(*[build_values_from_label(impl.orig_inputs[proc_index], label)[1]
+        free_vars = set(chain(*[build_signals_values(impl.orig_inputs[proc_index], label)[1]
                                 for proc_index in range(impl.nof_processes)]))
 
         free_vars.update(impl.get_free_sched_vars(label))
@@ -325,6 +325,7 @@ class GenericEncoder:
 
             init_states = set(sys_init_state[i] for sys_init_state in impl.init_states)
 
+            #noinspection PyTypeChecker
             models.append(LTS(init_states, output_models, tau_model))
 
         return models
@@ -435,15 +436,15 @@ class GenericEncoder:
 
 
     def _make_init_states_condition(self, init_spec_state_name, init_sys_state_name):
-        return call_func(self._laB_name, [init_spec_state_name, init_sys_state_name])
+        return call_func_raw(self._laB_name, [init_spec_state_name, init_sys_state_name])
 
 
     def _laB(self, spec_state_name, sys_state_expression):
-        return call_func(self._laB_name, [spec_state_name, sys_state_expression])
+        return call_func_raw(self._laB_name, [spec_state_name, sys_state_expression])
 
 
     def _counter(self, spec_state_name, sys_state_name):
-        return call_func(self._laC_name, [spec_state_name, sys_state_name])
+        return call_func_raw(self._laC_name, [spec_state_name, sys_state_name])
 
 
     def encode_headers(self, smt_lines):

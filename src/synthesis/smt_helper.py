@@ -1,10 +1,8 @@
-from itertools import product
-import math
-from helpers.python_ext import StrAwareList
 from interfaces.parser_expr import QuantifiedSignal
+from synthesis.func_description import FuncDescription
 
 
-def build_values_from_label(signals, label) -> (dict, list):
+def build_signals_values(signals, label) -> (dict, list):
     for s in signals: #TODO: remove after debug
         assert isinstance(s, QuantifiedSignal)
 
@@ -144,14 +142,18 @@ def declare_tuple(name, component_types, getter_prefix):
     return smt_str
 
 
-def call_func(function, args):
-    smt_str = '(' + function + ' '
+def call_func_raw(func_name, args):
+    smt_str = '(' + func_name + ' '
     for arg in args:
         smt_str += str(arg) + ' '
     if len(args):
         smt_str = smt_str[:-1]
     smt_str += ')'
     return smt_str
+
+
+def call_func(func_desc:FuncDescription, func_args_dict):
+    return call_func_raw(func_desc.name, func_desc.get_args_list(func_args_dict))
 
 
 def make_assert(formula):

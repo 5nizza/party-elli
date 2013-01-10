@@ -2,17 +2,17 @@ from interfaces.automata import Label
 
 
 class LabelsMap:
-    def __init__(self, label_to_value:dict=None):
-        if label_to_value is None:
-            label_to_value = []
-        self._label_to_value = list(label_to_value.items())
+    def __init__(self, value_by_label:dict=None):
+        if value_by_label is None:
+            value_by_label = []
+        self._value_by_label = list(value_by_label.items())
 
 
     def __getitem__(self, key:Label):
         if not isinstance(key, Label):
             raise TypeError(key)
 
-        indices = [v for (l, v) in self._label_to_value
+        indices = [v for (l, v) in self._value_by_label
                     if set(l.items()).issubset(set(key.items()))]
 
         assert len(indices) == 0 or len(indices) == 1, str(indices) + ', for ' + str(key)
@@ -30,16 +30,16 @@ class LabelsMap:
             raise TypeError(key)
 
         assert key not in self
-        self._label_to_value.append((key, value))
+        self._value_by_label.append((key, value))
 
 
     def items(self):
-        return list(self._label_to_value)
+        return list(self._value_by_label)
 
 
     def __iter__(self):
         print()
-        return iter([l for (l,v) in self._label_to_value])
+        return iter([l for (l,v) in self._value_by_label])
 
 
     def __contains__(self, item):

@@ -4,9 +4,10 @@ from itertools import permutations
 from helpers.python_ext import bin_fixed_list, StrAwareList, index_of, add_dicts
 from interfaces.automata import Label, Automaton
 from interfaces.parser_expr import QuantifiedSignal
+from parsing.helpers import get_log_bits
 from synthesis.blank_impl import BlankImpl
 from synthesis.func_description import FuncDescription
-from synthesis.smt_helper import call_func, op_and, op_not, build_values_from_label
+from synthesis.smt_helper import call_func_raw, op_and, op_not, build_signals_values
 
 
 def get_signals_definition(signal_base_name, nof_bits):
@@ -40,7 +41,6 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
     def __init__(self, automaton:Automaton,
                  is_mealy:bool,
                  orig_inputs, orig_outputs,
-                 archi_inputs, archi_outputs,
                  nof_processes:int,
                  nof_local_states:int,
                  sched_inputs,
@@ -81,7 +81,7 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
         self._TAU_SCHED_WRAPPER_NAME = 'tau_sch' + internal_funcs_postfix
         self._PROC_ID_PREFIX = 'proc' #TODO: check necessity
 
-        self._nof_proc_bits = int(max(1, math.ceil(math.log(nof_processes, 2))))
+        self._nof_proc_bits = get_log_bits(nof_processes)
 
         self._sched_signals = sched_inputs #TODO: check necessity
         self._sched_arg_type_pairs = [(s, 'Bool') for s in self._sched_signals]
@@ -97,7 +97,9 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
         self.states_by_process = self.nof_processes * [tuple(self._get_state_name(self._state_type, i) for i in range(nof_local_states))]
         self.state_types_by_process = [self._state_type] * self.nof_processes
 
-        #should contain all the inputs (for all the processes)
+        archi_inputs = [sends_prev_signals]
+        archi_outputs = [has_tok_signals, sends_signals]
+
         all_models_inputs = orig_inputs + archi_inputs
         #TODO: rename to self.model_inputs
         self.orig_inputs = _build_model_inputs(nof_processes, all_models_inputs)
@@ -198,13 +200,13 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
         else:
             #sync_hub, async_hub
             #In this case the specification contain sends_prev as a part of 'abstraction'
-            value_by_signal, _ = build_values_from_label(sends_prev_signal, label)
+            value_by_signal, _ = build_signals_values(sends_prev_signal, label)
             sends_prev_value = value_by_signal[sends_prev_signal]
 
-        value_by_sched = build_values_from_label(self._sched_signals, label)
+        value_by_sched = build_signals_values(self._sched_signals, label)
 #        sched_vals = self._get_sched_values(label)
 
-        value_by_proc = build_values_from_label(self._proc_signals, self._build_label_from_proc_index(proc_index))
+        value_by_proc = build_signals_values(self._proc_signals, self._build_label_from_proc_index(proc_index))
 
 #        value_by_proc_index = self._get_proc_id_values(proc_index)
 
@@ -215,7 +217,7 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
         is_active_func_desc = self._get_desc_is_active(proc_index)
         is_active_args = is_active_func_desc.get_args_list(value_by_signal)
 
-        func = call_func(is_active_func_desc.name, is_active_args)
+        func = call_func_raw(is_active_func_desc.name, is_active_args)
 
         return func
 
@@ -223,7 +225,7 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
     def get_free_sched_vars(self, label) -> list:
         free_signals = set(filter(lambda sch: sch not in label, self._sched_signals))
 
-        _, free_vars = build_values_from_label(free_signals, Label())
+        _, free_vars = build_signals_values(free_signals, Label())
 
         return free_vars
 
@@ -411,7 +413,7 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
         #: :type: FuncDescription
         sends_func_desc = self.outvar_desc_by_process[proc_index][sends_signal]
 
-        call_sends = call_func(sends_func_desc.name, sends_func_desc.get_args_list({self.state_arg_name:prev_proc_state}))
+        call_sends = call_func_raw(sends_func_desc.name, sends_func_desc.get_args_list({self.state_arg_name:prev_proc_state}))
 
         expr = '({call_sends})'.format(call_sends = call_sends)
         return expr
@@ -433,8 +435,10 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
         return Label(filtered_label)
 
 
-    def get_architecture_conditions(self):
+    def get_architecture_requirements(self):
         """
+        'One process only possesses the token initially'
+
         Generic encoder considers different initial configurations of the ring,
         making sure that all possible initial token distributions are verified.
         """
@@ -444,9 +448,9 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
         s0, s1 = states[0], states[1]
 
         has_tok_func_name = self._has_tok_signals[0].name #TODO: hack
-        conditions += call_func(has_tok_func_name, [s1])
+        conditions += call_func_raw(has_tok_func_name, [s1])
 
-        conditions += op_not(call_func(has_tok_func_name, [s0]))
+        conditions += op_not(call_func_raw(has_tok_func_name, [s0]))
 
 #        if self.nof_processes > 1:
 #            conditions += op_not(call_func(has_tok_func_name, [other_process_state]))
