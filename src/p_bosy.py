@@ -22,6 +22,10 @@ from synthesis.smt_logic import UFLIA
 from translation2uct.ltl2automaton import Ltl2UCW
 
 
+NO, STRENGTH, ASYNC_HUB, SYNC_HUB = 'no', 'strength', 'async_hub', 'sync_hub'
+OPTS = {NO:0, STRENGTH:1, ASYNC_HUB:2, SYNC_HUB:3}
+
+
 def _get_spec(ltl_text:str, logger:Logger) -> (list, list, list, list):
     #all the assumptions are conjugated together
     #the guarantees are separated into different SpecProperty objects
@@ -101,15 +105,17 @@ def _strengthen_many(properties:list, ltl2ucw_converter) -> (list, list):
     return pseudo_safety_properties, pseudo_liveness_properties
 
 
-def main(spec_text, is_moore,
+def main(spec_text,
+         optimization,
+         is_moore,
          smt_files_prefix, dot_files_prefix,
          bounds,
          cutoff,
          ltl2ucw_converter:Ltl2UCW,
          z3solver, logic,
          logger):
-    logger.info('compositional approach')
     #TODO: check which optimizations are used
+    #TODO: async_hub left, modular is always enabled
 
     anon_inputs, anon_outputs, assumptions, guarantees = _get_spec(spec_text, logger)
 
@@ -122,7 +128,12 @@ def main(spec_text, is_moore,
     properties = [SpecProperty(p.assumptions + scheduler.assumptions, p.guarantees)
                   for p in properties]
 
-    pseudo_safety_properties, pseudo_liveness_properties = _strengthen_many(properties, ltl2ucw_converter)
+    if OPTS[optimization] >= OPTS[STRENGTH]:
+        logger.info('strengthening properties..')
+        pseudo_safety_properties, pseudo_liveness_properties = _strengthen_many(properties, ltl2ucw_converter)
+    else:
+        pseudo_safety_properties = []
+        pseudo_liveness_properties = properties
 
     print('-'*80)
     print('original property')
@@ -138,7 +149,8 @@ def main(spec_text, is_moore,
     print('-----------')
     print()
 
-    properties = [localize(p)
+    properties = [localize(p) if OPTS[optimization] >= OPTS[STRENGTH]
+                  else p
                   for p in pseudo_liveness_properties + pseudo_safety_properties]
 
     print('-'*80)
@@ -158,14 +170,10 @@ def main(spec_text, is_moore,
         inst_p = inst_property(p, inst_c)
         opt_inst_p = apply_log_bit_scheduler_optimization(inst_p, scheduler, SCHED_ID_PREFIX, inst_c)
 
-        print('testing the case of no global automaton')
-
-#        if c == 2: #(not inst_c)
-        if c>-1:
+        if OPTS[optimization] >= OPTS[SYNC_HUB] and c == 2: #don't use inst_c here
             local_properties.append(opt_inst_p)
         else:
             global_property_pairs.append((opt_inst_p, inst_c))
-
 
     print('-'*80)
     print('local properties', local_properties)
@@ -180,6 +188,8 @@ def main(spec_text, is_moore,
     glob_automatae_pairs = []
     if len(global_property_pairs) > 0:
         glob_automatae_pairs = [(ltl2ucw_converter.convert(expr_from_property(p)), c) for p,c in global_property_pairs]
+
+    #TODO: CURRENT ADD ASYNC_HUB
 
     _run(is_moore,
         anon_inputs, anon_outputs,
@@ -206,7 +216,7 @@ if __name__ == '__main__':
         help='force specified cutoff size')
     parser.add_argument('-v', '--verbose', action='count', default=0)
 
-    #    parser.add_argument('--opt', choices=tuple(_OPT_TO_MAIN.keys()), required=True)
+    parser.add_argument('--opt', choices=tuple(OPTS.keys()), required=False, default=NO)
 
     args = parser.parse_args(sys.argv[1:])
 
@@ -225,8 +235,12 @@ if __name__ == '__main__':
 
     logger.info('temp file prefix used is %s', smt_files_prefix)
 
-    main(args.ltl.read(), args.moore,
-        smt_files_prefix, args.dot,
+    assert args.opt != ASYNC_HUB, 'not added yet'
+    main(args.ltl.read(),
+        args.opt,
+        args.moore,
+        smt_files_prefix,
+        args.dot,
         bounds,
         args.cutoff,
         ltl2ucw_converter, z3solver,

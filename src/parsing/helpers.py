@@ -99,7 +99,7 @@ class ConverterToLtl2BaFormatVisitor(Visitor):
         suffix = ''
         if isinstance(signal, QuantifiedSignal) and len(signal.binding_indices) > 0:
 #            suffix = '___' + '___'.join(map(str, signal.binding_indices))
-            suffix = '_'.join(map(str, signal.binding_indices))
+            suffix = '_' + '_'.join(map(str, signal.binding_indices))
 
         name = (signal.name + suffix).lower() #ltl3ba treats upper letter wrongly
         self.signal_by_name[name] = signal

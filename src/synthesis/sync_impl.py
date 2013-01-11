@@ -2,7 +2,7 @@ from helpers.python_ext import StrAwareList, add_dicts
 from interfaces.automata import Label, Automaton
 from synthesis.blank_impl import BlankImpl
 from synthesis.func_description import FuncDescription
-from synthesis.smt_helper import op_and, call_func_raw, op_not, op_implies, forall_bool, build_signals_values, call_func
+from synthesis.smt_helper import op_and, op_not, op_implies, forall_bool, build_signals_values, call_func
 
 
 class SyncImpl(BlankImpl):
@@ -26,10 +26,10 @@ class SyncImpl(BlankImpl):
                  tau_name,
                  init_process_states):
 
-        assert init_process_states
-#        if init_process_states is None:
-#            #TODO: hack:
-#            init_process_states = [self._get_state_name(sys_state_type, 1), self._get_state_name(sys_state_type, 0)]
+        if not init_process_states:
+            s1 = self._get_state_name(sys_state_type, 1)
+            s0 = self._get_state_name(sys_state_type, 0)
+            init_process_states = [s1, s0]
 
         super().__init__(is_mealy)
 

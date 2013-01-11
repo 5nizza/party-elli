@@ -34,7 +34,7 @@ class GenericEncoder:
             if lbl_signal not in output_signals:
                 continue
 
-            assert len(lbl_signal.binding_indices) == 1 #TODO: non-parameterized case
+            assert len(lbl_signal.binding_indices) == 1 #TODO: remove when finish non-parameterized case
 
             proc_index = lbl_signal.binding_indices[0]
 
@@ -128,8 +128,8 @@ class GenericEncoder:
 
     def get_run_graph_conjunctions(self, impl):
         conjunction = StrAwareList()
-        conjunction += impl.get_architecture_requirements() #TODO: looks hacky! replace with two different encoders?
 
+        conjunction += impl.get_architecture_requirements() #TODO: looks hacky! replace with two different encoders?
         if not impl.automaton: #TODO: see 'todo' above, make sense if there are architecture assertions and no automaton
             return conjunction
 
@@ -153,7 +153,6 @@ class GenericEncoder:
                 for label, dst_set_list in spec_state.transitions.items():
                     transition_condition = self._encode_transition(spec_state, global_state, label, state_to_rejecting_scc, impl)
 
-#                    smt_lines += comment(label)
                     conjunction += transition_condition
 
         return conjunction
