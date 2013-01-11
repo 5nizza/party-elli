@@ -84,6 +84,166 @@ def _run(is_moore,
                 out.write(dot)
 
 
+def join_properties(properties:Iterable):
+    properties = list(properties)
+    all_ass = list(chain(p.assumptions for p in properties))
+    all_gua = list(chain(p.guarantees for p in properties))
+    return SpecProperty(all_ass, all_gua)
+
+
+def _strengthen_many(properties:list, ltl2ucw_converter) -> (list, list):
+    pseudo_safety_properties, pseudo_liveness_properties = [], []
+    for p in properties:
+        safety_props, liveness_props = strengthen(p, ltl2ucw_converter)
+        pseudo_safety_properties += safety_props
+        pseudo_liveness_properties += liveness_props
+
+    return pseudo_safety_properties, pseudo_liveness_properties
+
+
+def main(spec_text, is_moore,
+         smt_files_prefix, dot_files_prefix,
+         bounds,
+         cutoff,
+         ltl2ucw_converter:Ltl2UCW,
+         z3solver, logic,
+         logger):
+    logger.info('compositional approach')
+    #TODO: check which optimizations are used
+
+    anon_inputs, anon_outputs, assumptions, guarantees = _get_spec(spec_text, logger)
+
+    archi = TokRingArchitecture()
+    archi_properties = [SpecProperty(assumptions, [g]) for g in archi.guarantees()]
+    spec_properties = [SpecProperty(assumptions+archi.implications(), [g]) for g in guarantees]
+    properties = archi_properties + spec_properties
+
+    scheduler = InterleavingScheduler()
+    properties = [SpecProperty(p.assumptions + scheduler.assumptions, p.guarantees)
+                  for p in properties]
+
+    pseudo_safety_properties, pseudo_liveness_properties = _strengthen_many(properties, ltl2ucw_converter)
+
+    print('-'*80)
+    print('original property')
+    print('\n'.join(map(str, properties)))
+    print()
+
+    print('-'*80)
+    print('after strengthening')
+    print('\nsafety-----------')
+    print('\n'.join(map(str, pseudo_safety_properties)))
+    print('\nliveness---------')
+    print('\n'.join(map(str, pseudo_liveness_properties)))
+    print('-----------')
+    print()
+
+    properties = [localize(p)
+                  for p in pseudo_liveness_properties + pseudo_safety_properties]
+
+    print('-'*80)
+    print('after localization')
+    for p in properties:
+        print(p)
+    print()
+    print('-'*80)
+
+    prop_real_cutoff_pairs = [(p, archi.get_cutoff(p)) for p in properties]
+
+    local_properties = []
+    global_property_pairs = []
+
+    for (p,c) in prop_real_cutoff_pairs:
+        inst_c = min(c, cutoff)
+        inst_p = inst_property(p, inst_c)
+        opt_inst_p = apply_log_bit_scheduler_optimization(inst_p, scheduler, SCHED_ID_PREFIX, inst_c)
+        if c == 2: #(not inst_c)
+            local_properties.append(opt_inst_p)
+        else:
+            global_property_pairs.append((opt_inst_p, inst_c))
+
+
+    print('-'*80)
+    print('local properties', local_properties)
+    print('-'*10)
+    print('global properties', global_property_pairs)
+
+    local_automaton = None
+    if len(local_properties) > 0:
+        local_property = and_properties(local_properties)
+        local_automaton = ltl2ucw_converter.convert(expr_from_property(local_property))
+
+    glob_automatae_pairs = []
+    if len(global_property_pairs) > 0:
+        glob_automatae_pairs = [(ltl2ucw_converter.convert(expr_from_property(p)), c) for p,c in global_property_pairs]
+
+    _run(is_moore,
+        anon_inputs, anon_outputs,
+        local_automaton, glob_automatae_pairs,
+        bounds,
+        z3solver,
+        logic,
+        smt_files_prefix, dot_files_prefix, logger)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Parametrized Synthesis Tool for token rings architecture')
+    parser.add_argument('ltl', metavar='ltl', type=FileType(),
+        help='LTL file with parameterized specification')
+    parser.add_argument('--moore', action='store_true', required=False, default=False,
+        help='treat the spec as Moore and produce Moore machine')
+    parser.add_argument('--dot', metavar='dot', type=str, required=False,
+        help='writes the output into a dot graph files prefixed with this prefix')
+    parser.add_argument('--bound', metavar='bound', type=int, default=2, required=False,
+        help='upper bound on the size of local process (default: %(default)i)')
+    parser.add_argument('--size', metavar='size', type=int, default=None, required=False,
+        help='exact size of the process implementation(default: %(default)i)')
+    parser.add_argument('--cutoff', metavar='cutoff', type=int, default=sys.maxsize, required=True,
+        help='force specified cutoff size')
+    parser.add_argument('-v', '--verbose', action='count', default=0)
+
+    #    parser.add_argument('--opt', choices=tuple(_OPT_TO_MAIN.keys()), required=True)
+
+    args = parser.parse_args(sys.argv[1:])
+
+    logger = setup_logging(args.verbose)
+
+    logger.debug(args)
+
+    ltl2ucw_converter, z3solver = create_spec_converter_z3()
+
+    bounds = list(range(2, args.bound + 1) if args.size is None else range(args.size, args.size + 1))
+
+    logic = UFLIA(None)
+
+    with tempfile.NamedTemporaryFile(delete=False, dir='./') as smt_file:
+        smt_files_prefix = smt_file.name
+
+    logger.info('temp file prefix used is %s', smt_files_prefix)
+
+    main(args.ltl.read(), args.moore,
+        smt_files_prefix, args.dot,
+        bounds,
+        args.cutoff,
+        ltl2ucw_converter, z3solver,
+        logic,
+        logger)
+
+
+#    main()
+
+#    profile_file_name = 'profile_data'
+#
+#    cProfile.run('tmp()', filename=profile_file_name)
+#    p = pstats.Stats(profile_file_name)
+#
+#    p.sort_stats('cumulative').print_stats(15)
+
+
+
+
+
+
 #def main_with_sync_hub(smt_file_name, logic, spec_type, is_moore, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
 #    logger.info('sync hub')
 #
@@ -232,13 +392,6 @@ def _run(is_moore,
 #        smt_file_prefix, dot_files_prefix)
 
 
-def join_properties(properties:Iterable):
-    properties = list(properties)
-    all_ass = list(chain(p.assumptions for p in properties))
-    all_gua = list(chain(p.guarantees for p in properties))
-    return SpecProperty(all_ass, all_gua)
-
-
 
 #def _build_archi_property(archi:TokRingArchitecture, loc_assumptions):
 #    # Safety properties of token rings architecture are added on SMT level
@@ -342,98 +495,9 @@ def join_properties(properties:Iterable):
 #    return updated_property
 
 
-def _strengthen_many(properties:list, ltl2ucw_converter) -> (list, list):
-    pseudo_safety_properties, pseudo_liveness_properties = [], []
-    for p in properties:
-        safety_props, liveness_props = strengthen(p, ltl2ucw_converter)
-        pseudo_safety_properties += safety_props
-        pseudo_liveness_properties += liveness_props
-
-    return pseudo_safety_properties, pseudo_liveness_properties
 
 
-def main(spec_text, is_moore,
-         smt_files_prefix, dot_files_prefix,
-         bounds,
-         cutoff,
-         ltl2ucw_converter:Ltl2UCW,
-         z3solver, logic,
-         logger):
-    logger.info('compositional approach')
-    #TODO: check which optimizations are used
 
-    anon_inputs, anon_outputs, assumptions, guarantees = _get_spec(spec_text, logger)
-
-    archi = TokRingArchitecture()
-    archi_properties = [SpecProperty(assumptions, [g]) for g in archi.guarantees()]
-    spec_properties = [SpecProperty(assumptions+archi.implications(), [g]) for g in guarantees]
-    properties = archi_properties + spec_properties
-
-    scheduler = InterleavingScheduler()
-    properties = [SpecProperty(p.assumptions + scheduler.assumptions, p.guarantees)
-                  for p in properties]
-
-    pseudo_safety_properties, pseudo_liveness_properties = _strengthen_many(properties, ltl2ucw_converter)
-
-    print('-'*80)
-    print('original property')
-    print('\n'.join(map(str, properties)))
-    print()
-
-    print('-'*80)
-    print('after strengthening')
-    print('\nsafety-----------')
-    print('\n'.join(map(str, pseudo_safety_properties)))
-    print('\nliveness---------')
-    print('\n'.join(map(str, pseudo_liveness_properties)))
-    print('-----------')
-    print()
-
-    properties = [localize(p)
-                  for p in pseudo_liveness_properties + pseudo_safety_properties]
-
-    print('-'*80)
-    print('after localization')
-    for p in properties:
-        print(p)
-    print()
-    #TODO: check that optimizations work with full_arbiter!
-    print('-'*80)
-    prop_real_cutoff_pairs = [(p, archi.get_cutoff(p)) for p in properties]
-#    local_properties = [p for (p,c) in prop_real_cutoff_pairs if c == 2]
-#    global_property_pairs = [(p,c) for (p,c) in prop_real_cutoff_pairs if c > 2]
-
-    prop_cutoff_pairs = [(p, min(c, cutoff))          for (p,c) in prop_real_cutoff_pairs]
-    prop_cutoff_pairs = [(inst_property(p, cutoff),c) for (p,c) in prop_cutoff_pairs]
-    prop_cutoff_pairs = [(apply_log_bit_scheduler_optimization(p, scheduler, SCHED_ID_PREFIX, c),  c)
-                         for (p,c) in prop_cutoff_pairs]
-
-    print('after instantiation')
-    print('\n'.join(map(str, prop_cutoff_pairs)))
-
-    local_properties = [p for (p,c) in prop_cutoff_pairs if c == 2]
-    global_property_pairs = [(p,c) for (p,c) in prop_cutoff_pairs if c > 2]
-    print('-'*80)
-    print('local properties', local_properties)
-    print('-'*10)
-    print('global properties', global_property_pairs)
-
-    local_automaton = None
-    if len(local_properties) > 0:
-        local_property = and_properties(local_properties)
-        local_automaton = ltl2ucw_converter.convert(expr_from_property(local_property))
-
-    glob_automatae_pairs = []
-    if len(global_property_pairs) > 0:
-        glob_automatae_pairs = [(ltl2ucw_converter.convert(expr_from_property(p)), c) for p,c in global_property_pairs]
-
-    _run(is_moore,
-        anon_inputs, anon_outputs,
-        local_automaton, glob_automatae_pairs,
-        bounds,
-        z3solver,
-        logic,
-        smt_files_prefix, dot_files_prefix, logger)
 
 #
 #def main_compo(smt_file_prefix, logic, spec_type, is_moore, dot_files_prefix, bounds, cutoff, automaton_converter, solver, logger):
@@ -620,56 +684,3 @@ def main(spec_text, is_moore,
 #                'strength':main_strengthening,
 #                'bottomup':main_bottomup}
 
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Parametrized Synthesis Tool for token rings architecture')
-    parser.add_argument('ltl', metavar='ltl', type=FileType(),
-        help='LTL file with parameterized specification')
-    parser.add_argument('--moore', action='store_true', required=False, default=False,
-        help='treat the spec as Moore and produce Moore machine')
-    parser.add_argument('--dot', metavar='dot', type=str, required=False,
-        help='writes the output into a dot graph files prefixed with this prefix')
-    parser.add_argument('--bound', metavar='bound', type=int, default=2, required=False,
-        help='upper bound on the size of local process (default: %(default)i)')
-    parser.add_argument('--size', metavar='size', type=int, default=None, required=False,
-        help='exact size of the process implementation(default: %(default)i)')
-    parser.add_argument('--cutoff', metavar='cutoff', type=int, default=sys.maxsize, required=True,
-        help='force specified cutoff size')
-    parser.add_argument('-v', '--verbose', action='count', default=0)
-
-    #    parser.add_argument('--opt', choices=tuple(_OPT_TO_MAIN.keys()), required=True)
-
-    args = parser.parse_args(sys.argv[1:])
-
-    logger = setup_logging(args.verbose)
-
-    logger.debug(args)
-
-    ltl2ucw_converter, z3solver = create_spec_converter_z3()
-
-    bounds = list(range(2, args.bound + 1) if args.size is None else range(args.size, args.size + 1))
-
-    logic = UFLIA(None)
-
-    with tempfile.NamedTemporaryFile(delete=False, dir='./') as smt_file:
-        smt_files_prefix = smt_file.name
-
-    logger.info('temp file prefix used is %s', smt_files_prefix)
-
-    main(args.ltl.read(), args.moore,
-        smt_files_prefix, args.dot,
-        bounds,
-        args.cutoff,
-        ltl2ucw_converter, z3solver,
-        logic,
-        logger)
-
-
-#    main()
-
-#    profile_file_name = 'profile_data'
-#
-#    cProfile.run('tmp()', filename=profile_file_name)
-#    p = pstats.Stats(profile_file_name)
-#
-#    p.sort_stats('cumulative').print_stats(15)

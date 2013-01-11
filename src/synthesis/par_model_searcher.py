@@ -12,12 +12,6 @@ from synthesis.par_impl import ParImpl, get_signals_definition
 from synthesis.smt_helper import comment
 from synthesis.z3 import Z3
 
-#self.encode_headers(smt_lines)
-#self.encode_sys_model_functions(impl, smt_lines)
-#self.encode_sys_aux_functions(impl, smt_lines)
-#self.encode_run_graph_headers(impl, smt_lines)
-#self.encode_run_graph(impl, smt_lines)
-#self.encode_footings(impl, smt_lines)
 
 class BaseNames:
     def __init__(self,
@@ -75,11 +69,13 @@ class ParModelSearcher:
                 init_process_states = None
                 for i, (automaton, nof_processes) in enumerate(global_automaton_cutoff_pairs):
                     #noinspection PyTypeChecker
-                    encoder, impl = self._encode_global_automaton(i, nof_processes, automaton, bound, query_lines)
-                    init_process_states = impl.init_states[0]
+#                    encoder, impl = self._encode_global_automaton(i, nof_processes, automaton, bound, query_lines)
+                    _, impl = self._encode_global_automaton(i, nof_processes, automaton, bound, query_lines)
+                    init_process_states = impl.init_states[0] #TODO: another hack
 
-                if local_automaton:
-                    encoder, impl = self._encode_local_automaton(query_lines, local_automaton, bound, init_process_states)
+                #TODO: mess -- I use local automaton to encode token ring properties on SMT level, use separate impl for that?
+#                if local_automaton:
+                encoder, impl = self._encode_local_automaton(query_lines, local_automaton, bound, init_process_states)
 
                 self._ensure_footings_added(encoder, impl, query_lines)
 
