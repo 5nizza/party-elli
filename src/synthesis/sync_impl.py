@@ -26,6 +26,11 @@ class SyncImpl(BlankImpl):
                  tau_name,
                  init_process_states):
 
+        assert init_process_states
+#        if init_process_states is None:
+#            #TODO: hack:
+#            init_process_states = [self._get_state_name(sys_state_type, 1), self._get_state_name(sys_state_type, 0)]
+
         super().__init__(is_mealy)
 
         self._tau_name = tau_name

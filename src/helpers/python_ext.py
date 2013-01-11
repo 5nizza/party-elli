@@ -82,7 +82,7 @@ class StrAwareList(Iterable):
             return self
 
 
-class FileAsStringEmulator:
+class StringEmulatorFromFile:
     def __init__(self, file_writer):
         self._file_writer = file_writer
         self._len = 0

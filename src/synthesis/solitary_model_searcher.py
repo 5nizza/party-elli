@@ -1,7 +1,7 @@
 import logging
 from helpers.logging import log_entrance
 from helpers.automata_helper import to_dot
-from helpers.python_ext import StrAwareList, FileAsStringEmulator
+from helpers.python_ext import StrAwareList, StringEmulatorFromFile
 from synthesis.generic_smt_encoder import GenericEncoder
 from synthesis.solitary_impl import SolitaryImpl
 from synthesis.z3 import Z3
@@ -20,7 +20,7 @@ def search(automaton, is_mealy, inputs, outputs, bounds, z3solver, logic, smt_fi
         with open(smt_file_prefix+'_'+str(bound), 'w') as smt_file:
             logger.info('using smt file ' + str(smt_file.name))
 
-            query_lines = StrAwareList(FileAsStringEmulator(smt_file))
+            query_lines = StrAwareList(StringEmulatorFromFile(smt_file))
 
             spec_states_type = 'Q'
             sys_states_type = 'T'

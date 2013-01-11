@@ -1,3 +1,5 @@
+from helpers.python_ext import index_of
+
 class Signal:
     def __init__(self, name:str):
         self.name = name
@@ -46,6 +48,14 @@ class Expr:
         self.name = name
     def __repr__(self):
         return str(self.name)
+
+    def __hash__(self):
+        return hash(str(self))
+
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+        return str(self) == str(other)
 
 
 class Bool(Expr):
@@ -100,3 +110,18 @@ def and_expressions(conjuncts):
         res = BinOp('*', res, c)
 
     return res
+
+
+def is_quantified_property(property) -> Bool: #TODO: does not allow embedded forall quantifiers
+    """ Return True iff the property has quantified indices.
+        Numbers cannot be used as quantification indices.
+    """
+    for e in property.assumptions + property.guarantees:
+        if isinstance(e, ForallExpr):
+            binding_indices = e.arg1
+            if index_of(lambda bi: isinstance(bi, str), binding_indices) is not None:
+                return True
+        else:
+            assert e.__class__ in [ForallExpr, BinOp, UnaryOp, Bool], 'unknown class'
+
+    return False

@@ -21,7 +21,7 @@ class SolitaryImpl(BlankImpl):
         self.init_states = [(self.states_by_process[0][0],)]
 
         self.orig_inputs = [inputs]
-        self.aux_func_descs = []
+        self.aux_func_descs_ordered = []
 
         self.outvar_desc_by_process = self._build_outvar_desc_by_process(outputs, inputs if is_mealy else ())
 

@@ -15,7 +15,7 @@ class BlankImpl:
         self.orig_inputs = ()
 
         self.init_states = ()
-        self.aux_func_descs = ()
+        self.aux_func_descs_ordered = ()
 
         self.outvar_desc_by_process = (dict(),) # ({signal:func_desc}, ..)
 

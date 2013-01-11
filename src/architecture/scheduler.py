@@ -4,7 +4,7 @@ from interfaces.parser_expr import Bool, Signal, BinOp, UnaryOp, and_expressions
 
 
 SCHED_ID_PREFIX = 'sch'
-ACTIVE_NAME_MY = 'active' #TODO: check in searcher, that everything is OK(??)
+ACTIVE_NAME = 'active' #TODO: check in searcher, that everything is OK(??)
 
 
 class InterleavingScheduler:

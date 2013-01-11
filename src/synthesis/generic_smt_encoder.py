@@ -163,27 +163,31 @@ class GenericEncoder:
         conjunctions = self.get_run_graph_conjunctions(impl)
         for c in conjunctions:
             smt_lines += make_assert(c)
+
         return smt_lines
 
 
     def encode_sys_model_functions(self, impl, smt_lines):
-        self._define_sys_states(impl, smt_lines)
+        states_by_type = dict(zip(impl.state_types_by_process, impl.states_by_process))
+        self._define_sys_states(states_by_type, smt_lines)
 
         func_descs = list(chain(*impl.get_outputs_descs())) + impl.model_taus_descs
-        smt_lines += self._define_declare_functions(func_descs)
+        self._define_declare_functions(func_descs, smt_lines)
+
         return smt_lines
 
 
     def encode_sys_aux_functions(self, impl, smt_lines):
-        func_descs = impl.aux_func_descs + (impl.taus_descs if impl.taus_descs != impl.model_taus_descs else [])
-        functions = self._define_declare_functions(func_descs)
-        smt_lines += functions
+        func_descs = impl.aux_func_descs_ordered + (impl.taus_descs if impl.taus_descs != impl.model_taus_descs else []) #TODO: this comparison looks erroneous
+
+        self._define_declare_functions(func_descs, smt_lines)
 
         return smt_lines
 
+
     @log_entrance(logging.getLogger(), logging.INFO)
     def encode(self, impl, smt_lines):
-        self.encode_headers(smt_lines)
+        self.encode_header(smt_lines)
         self.encode_sys_model_functions(impl, smt_lines)
         self.encode_sys_aux_functions(impl, smt_lines)
         self.encode_run_graph_headers(impl, smt_lines)
@@ -261,18 +265,18 @@ class GenericEncoder:
     def _make_get_values_func_descs(self, impl, func_descs_by_proc):
         smt_lines = StrAwareList()
 
-        unique_func_descs = set()
+        processed_func_names = set()
 
-        for proc_index, func_descs in enumerate(func_descs_by_proc):
-            states = impl.states_by_process[proc_index]
+        for func_descs, states in zip(func_descs_by_proc, impl.states_by_process):
 
-            for func_desc in func_descs:
-                if func_desc in unique_func_descs: continue
+            new_func_descs = dict([(f.name,f) for f in func_descs if f.name not in processed_func_names]).values()
 
-                unique_func_descs.add(func_desc)
-
+            for func_desc in new_func_descs:
                 for input in self._get_all_possible_inputs(states, func_desc):
                     smt_lines += get_value(call_func_raw(func_desc.name, input))
+
+            processed_func_names.update(f.name for f in func_descs)
+
 
         return smt_lines
 
@@ -398,34 +402,26 @@ class GenericEncoder:
         return smt_lines
 
 
-    def _define_sys_states(self, impl, smt_lines):
-        declared_enums = set()
-        for state_type, states in zip(impl.state_types_by_process, impl.states_by_process):
-            enum_name = state_type
-            if enum_name in declared_enums:
-                continue
-
-            smt_lines += declare_enum(enum_name, states)
-
-            declared_enums.add(enum_name)
+    def _define_sys_states(self, states_by_type:dict, smt_lines):
+        for type, states in states_by_type.items():
+            smt_lines += declare_enum(type, states)
 
         return smt_lines
 
 
-    def _define_declare_functions(self, func_descs):
-        smt_lines = StrAwareList()
-        declared_funcs = set()
-        for func_desc in func_descs:
-            if func_desc.name in declared_funcs:
-                continue
+    def _define_declare_functions(self, func_descs, smt_lines):
+        #should preserve the order: some functions may depend on others
+        desc_by_name = dict((desc.name, (i,desc)) for (i,desc) in enumerate(func_descs)) #TODO: cannot use set of func descriptions due to hack in FuncDescription
 
-            if func_desc.definition is not None:
-                smt_lines += func_desc.definition
+        unique_index_descs_sorted = sorted(desc_by_name.values(), key=lambda i_d: i_d[0])
+        unique_descs = lmap(lambda i_d: i_d[1], unique_index_descs_sorted)
+
+        for desc in unique_descs:
+            if desc.definition is not None:
+                smt_lines += desc.definition
             else:
-                input_types = map(lambda i_t: i_t[1], func_desc.inputs)
-                smt_lines += declare_fun(func_desc.name, input_types, func_desc.output)
-
-            declared_funcs.add(func_desc.name)
+                input_types = map(lambda i_t: i_t[1], desc.inputs)
+                smt_lines += declare_fun(desc.name, input_types, desc.output)
 
         return smt_lines
 
@@ -453,7 +449,7 @@ class GenericEncoder:
         return call_func_raw(self._laC_name, [spec_state_name, sys_state_name])
 
 
-    def encode_headers(self, smt_lines):
+    def encode_header(self, smt_lines):
         smt_lines += make_headers()
         smt_lines += make_set_logic(self._logic)
         return smt_lines
@@ -464,4 +460,5 @@ class GenericEncoder:
         get_values = self._make_get_values(impl)
         smt_lines += get_values
         smt_lines += make_exit()
+
         return smt_lines

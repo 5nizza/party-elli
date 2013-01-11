@@ -6,8 +6,8 @@ from argparse import FileType
 from collections import Iterable
 from itertools import chain
 from logging import Logger
-from architecture.scheduler import InterleavingScheduler, SCHED_ID_PREFIX, ACTIVE_NAME_MY
-from architecture.tok_ring import TokRingArchitecture, SENDS_NAME_MY, HAS_TOK_NAME_MY, SENDS_PREV_NAME_MY
+from architecture.scheduler import InterleavingScheduler, SCHED_ID_PREFIX, ACTIVE_NAME
+from architecture.tok_ring import TokRingArchitecture, SENDS_NAME, HAS_TOK_NAME, SENDS_PREV_NAME
 
 from helpers.main_helper import setup_logging, create_spec_converter_z3
 from interfaces.automata import Automaton
@@ -17,6 +17,7 @@ from optimizations import localize, strengthen, inst_property, apply_log_bit_sch
 from parsing import par_parser
 from parsing.par_lexer_desc import PAR_INPUT_VARIABLES, PAR_OUTPUT_VARIABLES, PAR_ASSUMPTIONS, PAR_GUARANTEES
 from synthesis import par_model_searcher
+from synthesis.par_model_searcher import BaseNames
 from synthesis.smt_logic import UFLIA
 from translation2uct.ltl2automaton import Ltl2UCW
 
@@ -43,7 +44,7 @@ def _run(is_moore,
          loc_automaton:Automaton, global_automatae_pairs,
          bounds,
          solver, logic,
-         smt_files_prefix,
+         smt_files_prefix:str,
          dot_files_prefix,
          logger):
 
@@ -60,14 +61,16 @@ def _run(is_moore,
     else:
         logger.info('no local automaton')
 
-    models = par_model_searcher.search(logic,
+    model_searcher = par_model_searcher.ParModelSearcher()
+    models = model_searcher.search(logic,
         is_moore,
         global_automatae_pairs,
         loc_automaton,
         anon_inputs, anon_outputs,
         bounds,
-        solver, SCHED_ID_PREFIX, ACTIVE_NAME_MY, SENDS_NAME_MY, SENDS_PREV_NAME_MY, HAS_TOK_NAME_MY,
-        smt_files_prefix)
+        solver,
+        smt_files_prefix,
+        BaseNames(SCHED_ID_PREFIX, ACTIVE_NAME, SENDS_NAME, SENDS_PREV_NAME, HAS_TOK_NAME))
 
     logger.info('model%s found', ['', ' not'][models is None])
 
@@ -77,7 +80,7 @@ def _run(is_moore,
                 if is_moore:
                     dot = moore_to_dot(lts)
                 else:
-                    dot = to_dot(lts, [SENDS_NAME_MY, HAS_TOK_NAME_MY])
+                    dot = to_dot(lts, [SENDS_NAME, HAS_TOK_NAME])
                 out.write(dot)
 
 
@@ -396,14 +399,24 @@ def main(spec_text, is_moore,
     print()
     #TODO: check that optimizations work with full_arbiter!
     print('-'*80)
-    prop_cutoff_pairs = [inst_property(archi, p, cutoff) for p in properties]
+    prop_real_cutoff_pairs = [(p, archi.get_cutoff(p)) for p in properties]
+#    local_properties = [p for (p,c) in prop_real_cutoff_pairs if c == 2]
+#    global_property_pairs = [(p,c) for (p,c) in prop_real_cutoff_pairs if c > 2]
+
+    prop_cutoff_pairs = [(p, min(c, cutoff))          for (p,c) in prop_real_cutoff_pairs]
+    prop_cutoff_pairs = [(inst_property(p, cutoff),c) for (p,c) in prop_cutoff_pairs]
     prop_cutoff_pairs = [(apply_log_bit_scheduler_optimization(p, scheduler, SCHED_ID_PREFIX, c),  c)
-                         for p,c in prop_cutoff_pairs]
+                         for (p,c) in prop_cutoff_pairs]
+
     print('after instantiation')
     print('\n'.join(map(str, prop_cutoff_pairs)))
 
-    local_properties = [p for p,c in prop_cutoff_pairs if c == 2]
-    global_property_pairs = [(p,c) for p,c in prop_cutoff_pairs if c > 2]
+    local_properties = [p for (p,c) in prop_cutoff_pairs if c == 2]
+    global_property_pairs = [(p,c) for (p,c) in prop_cutoff_pairs if c > 2]
+    print('-'*80)
+    print('local properties', local_properties)
+    print('-'*10)
+    print('global properties', global_property_pairs)
 
     local_automaton = None
     if len(local_properties) > 0:

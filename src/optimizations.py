@@ -1,40 +1,25 @@
 from functools import lru_cache
-from itertools import chain, product, combinations, combinations_with_replacement, permutations
+from itertools import chain, permutations
 import math
-from architecture.scheduler import SCHED_ID_PREFIX, InterleavingScheduler
+from architecture.scheduler import  InterleavingScheduler
 from helpers.automata_helper import is_safety_automaton
-from helpers.python_ext import index_of, bin_fixed_list
+from helpers.python_ext import  bin_fixed_list
 from interfaces.spec import SpecProperty
-from parsing.helpers import Visitor, ConverterToLtl2BaFormatVisitor
-from interfaces.parser_expr import ForallExpr, BinOp, Signal, Expr, Bool, QuantifiedSignal, UnaryOp, and_expressions, Number
+from parsing.helpers import Visitor
+from interfaces.parser_expr import ForallExpr, BinOp, Signal, Expr, Bool, QuantifiedSignal, and_expressions, Number, is_quantified_property
 from parsing.par_parser import QuantifiedSignalsFinderVisitor
 
 
+def is_quantified_expr(expr:Expr):
+    return is_quantified_property(SpecProperty([], [expr]))
+
+
 def _get_indices(normalized_ass:Expr):
-    if not _is_quantified_expr(normalized_ass):
+    if not is_quantified_expr(normalized_ass):
         return []
 
     assert isinstance(normalized_ass, ForallExpr)
     return normalized_ass.arg1
-
-
-def _is_quantified_property(property:SpecProperty) -> Bool: #TODO: does not allow embedded forall quantifiers
-    """ Return True iff the property has quantified indices.
-        Numbers cannot be used as quantification indices.
-    """
-    for e in property.assumptions + property.guarantees:
-        if isinstance(e, ForallExpr):
-            binding_indices = e.arg1
-            if index_of(lambda bi: isinstance(bi, str), binding_indices) is not None:
-                return True
-        else:
-            assert e.__class__ in [ForallExpr, BinOp, UnaryOp, Bool], 'unknown class'
-
-    return False
-
-
-def _is_quantified_expr(expr:Expr):
-    return _is_quantified_property(SpecProperty([], [expr]))
 
 
 @lru_cache()
@@ -42,17 +27,6 @@ def is_safety(expr:Expr, ltl2ba_converter) -> bool:
     automaton = ltl2ba_converter.convert(expr)
     res = is_safety_automaton(automaton)
     return res
-
-
-def get_rank(property:SpecProperty) -> int:
-    if not _is_quantified_property(property):
-        return 0
-
-    ass_max_len = max(map(lambda e: len(e.arg1) if _is_quantified_expr(e) else 0, property.assumptions))
-    gua_max_len = max(map(lambda e: len(e.arg1) if _is_quantified_expr(e) else 0, property.guarantees))
-    rank = ass_max_len + gua_max_len
-
-    return rank
 
 
 def normalize_conjuncts(expressions:list) -> Expr:
@@ -142,7 +116,7 @@ def _replace_indices(newindex_by_oldindex:dict, expr:Expr):
 def _fix_indices(value_by_index:dict, expr:Expr):
     """ if 'index' is not in the value_by_index therefore leave it as is """
 
-    if not _is_quantified_expr(expr):
+    if not is_quantified_expr(expr):
         return expr
 
     newindex_by_oldindex = dict((i,i) for i in _get_indices(expr))
@@ -171,7 +145,7 @@ def localize(property:SpecProperty):
     forall(i,j) (a_i_j -> g_i)
     """
 
-    if not _is_quantified_property(property):
+    if not is_quantified_property(property):
         return property
 
     normalized_ass = normalize_conjuncts(property.assumptions)
@@ -195,8 +169,8 @@ def localize(property:SpecProperty):
     replaced_ass = _replace_indices(ass_newindex_by_old, normalized_ass)
     replaced_gua = _replace_indices(gua_newindex_by_old, normalized_gua)
 
-    replaced_underlying_ass = replaced_ass.arg2 if _is_quantified_expr(replaced_ass) else replaced_ass
-    replaced_underlying_gua = replaced_gua.arg2 if _is_quantified_expr(replaced_gua) else replaced_gua
+    replaced_underlying_ass = replaced_ass.arg2 if is_quantified_expr(replaced_ass) else replaced_ass
+    replaced_underlying_gua = replaced_gua.arg2 if is_quantified_expr(replaced_gua) else replaced_gua
 
     new_gua = ForallExpr(max_binding_indices,
         BinOp('->', replaced_underlying_ass, replaced_underlying_gua))
@@ -237,7 +211,7 @@ def _denormalize(conjunct:Expr) -> list:
 
     normalized_conjunct = normalize_conjuncts([conjunct])
 
-    if not _is_quantified_property(SpecProperty([normalized_conjunct], [])):
+    if not is_quantified_property(SpecProperty([normalized_conjunct], [])):
         return [normalized_conjunct]
 
     #: :type: ForallExpr
@@ -300,7 +274,7 @@ def strengthen(property:SpecProperty, ltl2ucw_converter) -> (list, list):
 
 
 def _instantiate_expr(expr:Expr, cutoff, forbid_zero_index:bool) -> Expr:
-    if not _is_quantified_expr(expr):
+    if not is_quantified_expr(expr):
         return expr
 
     binding_indices = _get_indices(expr)
@@ -323,7 +297,7 @@ def _instantiate_expr(expr:Expr, cutoff, forbid_zero_index:bool) -> Expr:
 def _set_one_index_to_zero(expr:Expr) -> Expr:
     """ Here QuantifiedSignal is used in a special way -- with numbers instead of letters.
     """
-    if not _is_quantified_expr(expr):
+    if not is_quantified_expr(expr):
         return expr
 
     binding_indices = _get_indices(expr)
@@ -335,7 +309,7 @@ def _set_one_index_to_zero(expr:Expr) -> Expr:
     return expr_with_fixed_index
 
 
-def inst_property(archi, property:SpecProperty, max_cutoff:int) -> (SpecProperty, int):
+def inst_property(property:SpecProperty, cutoff:int) -> SpecProperty:
     """
     forall(i,j) a_i_j -> forall(k) b_k
     =
@@ -380,8 +354,6 @@ def inst_property(archi, property:SpecProperty, max_cutoff:int) -> (SpecProperty
     but it is incorrect to verify a_0_0 because it is equivalent to Forall (i) a_i_i.
     """
 
-    cutoff = min(max_cutoff, archi.get_cutoff(get_rank(property)))
-
     assumptions = property.assumptions
     guarantees = [_set_one_index_to_zero(g) for g in property.guarantees]
 
@@ -390,7 +362,7 @@ def inst_property(archi, property:SpecProperty, max_cutoff:int) -> (SpecProperty
 
     inst_p = SpecProperty(inst_assumptions, inst_guarantees)
 
-    return inst_p, cutoff
+    return inst_p
 
 
 class ReplaceSignalsVisitor(Visitor):
