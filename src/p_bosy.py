@@ -157,7 +157,11 @@ def main(spec_text, is_moore,
         inst_c = min(c, cutoff)
         inst_p = inst_property(p, inst_c)
         opt_inst_p = apply_log_bit_scheduler_optimization(inst_p, scheduler, SCHED_ID_PREFIX, inst_c)
-        if c == 2: #(not inst_c)
+
+        print('testing the case of no global automaton')
+
+#        if c == 2: #(not inst_c)
+        if c>-1:
             local_properties.append(opt_inst_p)
         else:
             global_property_pairs.append((opt_inst_p, inst_c))
