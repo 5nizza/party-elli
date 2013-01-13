@@ -38,7 +38,7 @@ def bin_fixed_list(int, width):
 
 
 def index_of(lambda_func, iterable):
-    for i, e in enumerate(iterable):
+    for (i, e) in enumerate(iterable):
         if lambda_func(e):
             return i
     return None

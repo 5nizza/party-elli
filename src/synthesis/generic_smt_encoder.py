@@ -2,7 +2,7 @@ from itertools import product, chain
 import logging
 from helpers.labels_map import LabelsMap
 from helpers.logging import log_entrance
-from helpers.python_ext import StrAwareList, lmap
+from helpers.python_ext import StrAwareList, lmap, index_of
 from interfaces.automata import  DEAD_END, Label
 from interfaces.lts import LTS
 from synthesis.func_description import FuncDescription
@@ -114,6 +114,7 @@ class GenericEncoder:
             and_args.append(implication_right)
 
         condition = forall_bool(free_input_vars, op_implies(implication_left, op_and(and_args)))
+
         return condition
 
 

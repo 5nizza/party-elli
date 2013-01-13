@@ -11,9 +11,10 @@ from architecture.tok_ring import TokRingArchitecture, SENDS_NAME, HAS_TOK_NAME,
 
 from helpers.main_helper import setup_logging, create_spec_converter_z3
 from interfaces.automata import Automaton
+from interfaces.parser_expr import Bool
 from interfaces.spec import SpecProperty, and_properties, expr_from_property
 from module_generation.dot import moore_to_dot, to_dot
-from optimizations import localize, strengthen, inst_property, apply_log_bit_scheduler_optimization
+from optimizations import localize, strengthen, inst_property, apply_log_bit_scheduler_optimization, _instantiate_expr
 from parsing import par_parser
 from parsing.par_lexer_desc import PAR_INPUT_VARIABLES, PAR_OUTPUT_VARIABLES, PAR_ASSUMPTIONS, PAR_GUARANTEES
 from synthesis import par_model_searcher
@@ -45,7 +46,7 @@ def _get_spec(ltl_text:str, logger:Logger) -> (list, list, list, list):
 
 def _run(is_moore,
          anon_inputs, anon_outputs,
-         loc_automaton:Automaton, global_automatae_pairs,
+         sync_automaton:Automaton, global_automatae_pairs,
          bounds,
          solver, logic,
          smt_files_prefix:str,
@@ -59,9 +60,9 @@ def _run(is_moore,
         logger.info('corresponding cutoff=%i', cutoff)
         logger.info('nof_nodes=%i', len(glob_automaton.nodes))
 
-    if loc_automaton:
-        logger.info('local automaton %s', loc_automaton.name)
-        logger.info('nof_nodes=%i', len(loc_automaton.nodes))
+    if sync_automaton:
+        logger.info('local automaton %s', sync_automaton.name)
+        logger.info('nof_nodes=%i', len(sync_automaton.nodes))
     else:
         logger.info('no local automaton')
 
@@ -69,7 +70,7 @@ def _run(is_moore,
     models = model_searcher.search(logic,
         is_moore,
         global_automatae_pairs,
-        loc_automaton,
+        sync_automaton,
         anon_inputs, anon_outputs,
         bounds,
         solver,
@@ -124,10 +125,6 @@ def main(spec_text,
     spec_properties = [SpecProperty(assumptions+archi.implications(), [g]) for g in guarantees]
     properties = archi_properties + spec_properties
 
-    if optimization == ASYNC_HUB: #TODO: sync hub -- should also add
-        async_hub_assumptions = archi.get_async_hub_assumptions(HAS_TOK_NAME, SENDS_PREV_NAME)
-        properties += [SpecProperty(p.assumptions + async_hub_assumptions, p.guarantees) for p in properties]
-
     scheduler = InterleavingScheduler()
     properties = [SpecProperty(p.assumptions + scheduler.assumptions, p.guarantees)
                   for p in properties]
@@ -152,7 +149,7 @@ def main(spec_text,
     print('\n'.join(map(str, pseudo_liveness_properties)))
     print('-----------')
     print()
-
+    #TODO: add support of strength option disabling
     properties = [localize(p) if OPTS[optimization] >= OPTS[STRENGTH]
                   else p
                   for p in pseudo_liveness_properties + pseudo_safety_properties]
@@ -166,18 +163,32 @@ def main(spec_text,
 
     prop_real_cutoff_pairs = [(p, archi.get_cutoff(p)) for p in properties]
 
-    local_properties = []
-    global_property_pairs = []
+    par_local_properties = [p for (p,c) in prop_real_cutoff_pairs if c == 2]
+    par_global_property_pairs = [(p,c) for (p,c) in prop_real_cutoff_pairs if p not in par_local_properties]
 
-    for (p,c) in prop_real_cutoff_pairs:
+    if optimization == ASYNC_HUB: #TODO: sync hub -- should also add
+        async_hub_assumptions = archi.get_async_hub_assumptions(HAS_TOK_NAME, SENDS_PREV_NAME)
+        par_local_properties2 = par_local_properties
+        par_local_properties = []
+        for p in par_local_properties2:
+            assert p.assumptions == [Bool(True)]
+            p_updated_with_sync_hub = localize(SpecProperty(async_hub_assumptions, p.guarantees))
+            par_local_properties.append(p_updated_with_sync_hub)
+
+    global_property_pairs = []
+    for (p,c) in par_global_property_pairs:
         inst_c = min(c, cutoff)
         inst_p = inst_property(p, inst_c)
         opt_inst_p = apply_log_bit_scheduler_optimization(inst_p, scheduler, SCHED_ID_PREFIX, inst_c)
 
-        if OPTS[optimization] >= OPTS[SYNC_HUB] and c == 2: #don't use inst_c here #TODO: rank is more clear than cutoff?
-            local_properties.append(opt_inst_p)
-        else:
-            global_property_pairs.append((opt_inst_p, inst_c))
+        global_property_pairs.append((opt_inst_p, inst_c))
+
+    local_properties = []
+    for p in par_local_properties:
+        inst_p = inst_property(p, 2)
+        opt_inst_p = apply_log_bit_scheduler_optimization(inst_p, scheduler, SCHED_ID_PREFIX, 2)
+
+        local_properties.append(opt_inst_p)
 
     print('-'*80)
     print('local properties', local_properties)
@@ -191,14 +202,28 @@ def main(spec_text,
 
     glob_automatae_pairs = []
     if len(global_property_pairs) > 0:
-        glob_automatae_pairs = [(ltl2ucw_converter.convert(expr_from_property(p)), c) for p,c in global_property_pairs]
+        glob_automatae_pairs = [(ltl2ucw_converter.convert(expr_from_property(p)), c)
+                                for p,c in global_property_pairs]
 
-    if optimization == ASYNC_HUB and local_automaton:
-        glob_automatae_pairs += [(local_automaton, 1)]
+    if OPTS[optimization] < OPTS[SYNC_HUB] and local_automaton:
+        if optimization == ASYNC_HUB:
+            glob_automatae_pairs += [(local_automaton, 1)]
+        else:
+            glob_automatae_pairs += [(local_automaton, 2)]
+
+    sync_automaton = None
+    if optimization >= SYNC_HUB:
+        sync_automaton = local_automaton
+
+    print('SYNC_AUTOMATON', sync_automaton.name if sync_automaton else 'None')
+    print()
+    for a,c in glob_automatae_pairs:
+        print('{0}\n{1}\n'.format(a.name, c))
+
 
     _run(is_moore,
         anon_inputs, anon_outputs,
-        local_automaton, glob_automatae_pairs,
+        sync_automaton, glob_automatae_pairs,
         bounds,
         z3solver,
         logic,

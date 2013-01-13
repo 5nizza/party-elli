@@ -177,17 +177,29 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
 
 
     def get_architecture_trans_assumption(self, label, sys_state_vector) -> str:
-        """ Handle 'is_active' variable in the specification. """
+        """ It handles 'is_active' variable in the specification. """
 
-        active_signals = list(filter(lambda s: s in self._is_active_signals, label.keys()))
-        assert not len(active_signals) > 1, 'spec cannot contain > 1 is_active as conjunction'
+        #TODO: here I can add G(tok -> !prev) for the hub abstraction instead of specifying this on LTL level
 
-        if len(active_signals) == 0:
+        active_signals = list(filter(lambda s: s in label, self._is_active_signals))
+        assert len(active_signals) <= 1, 'spec cannot contain > 1 is_active as conjunction'
+
+        index_of_prev = index_of(lambda s: s in label, self._sends_prev_signals)
+        assert index_of_prev is None or self.nof_processes == 1, \
+        'using prev in the specification is not supported; prev in async hub abstraction works with local properties only'
+
+        if not active_signals and not index_of_prev:
             return ''
 
-        #: :type: QuantifiedSignal
-        active = active_signals[0]
-        proc_index = active.binding_indices[0]
+        if active_signals:
+            #: :type: QuantifiedSignal
+            active = active_signals[0]
+            proc_index = active.binding_indices[0]
+        else:
+            print(self._sends_prev_signals)
+            print(index_of_prev)
+            proc_index = self._sends_prev_signals[index_of_prev].binding_indices[0]
+            assert self.nof_processes == 1, 'should come here only in the case of async hub'
 
         sends_prev_signal = _filter_by_proc(proc_index, self._sends_prev_signals)[0]
 
@@ -195,9 +207,11 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
             sends_prev_value = self._get_sends_prev_expr(proc_index, sys_state_vector)
         else:
             #async_hub
-            #In this case the specification contain sends_prev as a part of 'abstraction'
-            value_by_signal, _ = build_signals_values(sends_prev_signal, label)
+            value_by_signal, _ = build_signals_values([sends_prev_signal], label)
             sends_prev_value = value_by_signal[sends_prev_signal]
+
+        if not active_signals:
+            return sends_prev_value
 
         value_by_sched, _ = build_signals_values(self._sched_signals, label)
 #        sched_vals = self._get_sched_values(label)

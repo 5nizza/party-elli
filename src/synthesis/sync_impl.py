@@ -100,7 +100,7 @@ class SyncImpl(BlankImpl):
 
     def get_architecture_trans_assumption(self, label, sys_state_vector):
         # ignore active_i
-        # add assumption 'G(!(tok & prev))' #TODO: current, why?
+        # add assumption 'G(!(tok & prev))' #TODO: add on LTL level?
 
         proc_state = sys_state_vector[0]
 
