@@ -37,6 +37,9 @@ class Automaton:
                "\n".join([str(x) for x in self._rejecting_nodes])
 
 
+    __repr__ = __str__
+
+
 class Label(HashableDict):
     """
     hashable dict: variable_name -> True/False

@@ -7,7 +7,9 @@ from helpers.python_ext import  bin_fixed_list
 from interfaces.spec import SpecProperty
 from parsing.helpers import Visitor
 from interfaces.parser_expr import ForallExpr, BinOp, Signal, Expr, Bool, QuantifiedSignal, and_expressions, Number, is_quantified_property
+from parsing.par_lexer_desc import PAR_GUARANTEES
 from parsing.par_parser import QuantifiedSignalsFinderVisitor
+from parsing.par_parser_desc import par_parser
 
 
 def is_quantified_expr(expr:Expr):
@@ -468,6 +470,19 @@ def apply_log_bit_scheduler_optimization(instantiated_property:SpecProperty,
     return SpecProperty(new_assumptions, new_guarantees)
 
 
+##############################################################################
+#helpers
+
+def parse_expr(expr_as_text:str) -> Expr:
+    whole_text = '''
+    [INPUT_VARIABLES]
+    [OUTPUT_VARIABLES]
+    [ASSUMPTIONS]
+    [GUARANTEES]
+    {0};
+    '''.format(expr_as_text)
+
+    return dict(par_parser.parse(whole_text))[PAR_GUARANTEES][0]
 
 
 

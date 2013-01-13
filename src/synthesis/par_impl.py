@@ -179,11 +179,8 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
     def get_architecture_trans_assumption(self, label, sys_state_vector) -> str:
         """ Handle 'is_active' variable in the specification. """
 
-        index_of_prev = index_of(lambda s: s in self._sends_prev_signals, label.keys())
-        assert not (self.nof_processes > 1 and index_of_prev is not None), 'not implemented' #TODO: unknown assertion
-
         active_signals = list(filter(lambda s: s in self._is_active_signals, label.keys()))
-        assert len(active_signals) <= 1, 'spec cannot contain > 1 is_active as conjunction'
+        assert not len(active_signals) > 1, 'spec cannot contain > 1 is_active as conjunction'
 
         if len(active_signals) == 0:
             return ''
@@ -197,7 +194,7 @@ class ParImpl(BlankImpl): #TODO: separate architecture from the spec
         if self.nof_processes > 1:
             sends_prev_value = self._get_sends_prev_expr(proc_index, sys_state_vector)
         else:
-            #sync_hub, async_hub
+            #async_hub
             #In this case the specification contain sends_prev as a part of 'abstraction'
             value_by_signal, _ = build_signals_values(sends_prev_signal, label)
             sends_prev_value = value_by_signal[sends_prev_signal]

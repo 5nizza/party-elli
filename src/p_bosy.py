@@ -124,6 +124,10 @@ def main(spec_text,
     spec_properties = [SpecProperty(assumptions+archi.implications(), [g]) for g in guarantees]
     properties = archi_properties + spec_properties
 
+    if optimization == ASYNC_HUB: #TODO: sync hub -- should also add
+        async_hub_assumptions = archi.get_async_hub_assumptions(HAS_TOK_NAME, SENDS_PREV_NAME)
+        properties += [SpecProperty(p.assumptions + async_hub_assumptions, p.guarantees) for p in properties]
+
     scheduler = InterleavingScheduler()
     properties = [SpecProperty(p.assumptions + scheduler.assumptions, p.guarantees)
                   for p in properties]
@@ -170,7 +174,7 @@ def main(spec_text,
         inst_p = inst_property(p, inst_c)
         opt_inst_p = apply_log_bit_scheduler_optimization(inst_p, scheduler, SCHED_ID_PREFIX, inst_c)
 
-        if OPTS[optimization] >= OPTS[SYNC_HUB] and c == 2: #don't use inst_c here
+        if OPTS[optimization] >= OPTS[SYNC_HUB] and c == 2: #don't use inst_c here #TODO: rank is more clear than cutoff?
             local_properties.append(opt_inst_p)
         else:
             global_property_pairs.append((opt_inst_p, inst_c))
@@ -189,7 +193,8 @@ def main(spec_text,
     if len(global_property_pairs) > 0:
         glob_automatae_pairs = [(ltl2ucw_converter.convert(expr_from_property(p)), c) for p,c in global_property_pairs]
 
-    #TODO: CURRENT ADD ASYNC_HUB
+    if optimization == ASYNC_HUB and local_automaton:
+        glob_automatae_pairs += [(local_automaton, 1)]
 
     _run(is_moore,
         anon_inputs, anon_outputs,
@@ -235,7 +240,6 @@ if __name__ == '__main__':
 
     logger.info('temp file prefix used is %s', smt_files_prefix)
 
-    assert args.opt != ASYNC_HUB, 'not added yet'
     main(args.ltl.read(),
         args.opt,
         args.moore,

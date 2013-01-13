@@ -5,10 +5,8 @@ import sys
 from architecture.scheduler import InterleavingScheduler
 from architecture.tok_ring import TokRingArchitecture
 from interfaces.spec import SpecProperty
-from optimizations import strengthen, localize, _reduce_quantifiers, _get_conjuncts, _denormalize, _fix_indices, _replace_indices, _instantiate_expr, inst_property, apply_log_bit_scheduler_optimization, _apply_log_bit_optimization, normalize_conjuncts
+from optimizations import strengthen, localize, _reduce_quantifiers, _get_conjuncts, _denormalize, _fix_indices, _replace_indices, _instantiate_expr, inst_property, _apply_log_bit_optimization, normalize_conjuncts, parse_expr
 from interfaces.parser_expr import QuantifiedSignal, ForallExpr, UnaryOp, BinOp, Signal, Expr, Number, Bool, and_expressions
-from parsing.par_lexer_desc import PAR_GUARANTEES
-from parsing.par_parser_desc import par_parser
 from translation2uct.ltl2automaton import Ltl2UCW
 
 
@@ -26,19 +24,6 @@ def _get_is_true(signal_name:str, *binding_indices):
 
 def _get_is_false(signal_name:str, *binding_indices):
     return _get_is_value(signal_name, Number(0), *binding_indices)
-
-
-def _parse(expr_as_text:str) -> Expr:
-    whole_text = '''
-    [INPUT_VARIABLES]
-    [OUTPUT_VARIABLES]
-    [ASSUMPTIONS]
-    [GUARANTEES]
-    {0};
-    '''.format(expr_as_text)
-
-    return dict(par_parser.parse(whole_text))[PAR_GUARANTEES][0]
-
 
 
 class TestStrengthen(unittest.TestCase):
@@ -238,11 +223,11 @@ class TestLocalize(unittest.TestCase):
             forall(i) (a_i -> b_i)
         """
 
-        prop = SpecProperty([_parse('Forall (i) a_i=1')], [_parse('Forall (j) b_j=1')])
+        prop = SpecProperty([parse_expr('Forall (i) a_i=1')], [parse_expr('Forall (j) b_j=1')])
 
         localized_prop = localize(prop)
-        expected_prop_i = SpecProperty([Bool(True)], [_parse('Forall (i) a_i=1 -> b_i=1')])
-        expected_prop_j = SpecProperty([Bool(True)], [_parse('Forall (j) a_j=1 -> b_j=1')])
+        expected_prop_i = SpecProperty([Bool(True)], [parse_expr('Forall (i) a_i=1 -> b_i=1')])
+        expected_prop_j = SpecProperty([Bool(True)], [parse_expr('Forall (j) a_j=1 -> b_j=1')])
 
         expected_prop_str_i = str(expected_prop_i)
         expected_prop_str_j = str(expected_prop_j)
@@ -318,16 +303,16 @@ class TestLocalize(unittest.TestCase):
 
 class ReplaceIndicesTests(unittest.TestCase):
     def test_replace_indices(self):
-        expr = _parse('Forall (i,j) (a_i_j=1 * b_j=1)')
+        expr = parse_expr('Forall (i,j) (a_i_j=1 * b_j=1)')
         result = _replace_indices({'i':'k','j':'m'}, expr)
-        expected = _parse('Forall (k,m) (a_k_m=1 * b_m=1)')
+        expected = parse_expr('Forall (k,m) (a_k_m=1 * b_m=1)')
 
         self.assertEqual(str(expected), str(result))
 
 
 class FixIndicesTests(unittest.TestCase):
     def test_fix_indices_main(self):
-        expr = _parse('Forall(i,j,k,m) (a_i_j_k=1 * b_i_m=1)')
+        expr = parse_expr('Forall(i,j,k,m) (a_i_j_k=1 * b_i_m=1)')
 
         result = _fix_indices({'i':1, 'j':2, 'k':3}, expr)
         expected_result = ForallExpr(['m'], BinOp('*', _get_is_true('a', 1,2,3), _get_is_true('b',1,'m')))
@@ -361,15 +346,15 @@ def _convert_conjunction_to_str(property:SpecProperty) -> str:
 
 class TestInstantiate(unittest.TestCase):
     def test_instantiate_expr_one_index(self):
-        result = _instantiate_expr(_parse('Forall (i) a_i=1'), 2, False)
-        expected = _parse('a_0=1 * a_1=1')
+        result = _instantiate_expr(parse_expr('Forall (i) a_i=1'), 2, False)
+        expected = parse_expr('a_0=1 * a_1=1')
 
         self.assertEqual(str(expected), str(result))
 
 
     def test_instantiate_expr_two_indices(self):
-        result = _instantiate_expr(_parse('Forall (i,j) a_i_j=1'), 2, False)
-        expected = _parse('a_0_1=1 * a_1_0=1')
+        result = _instantiate_expr(parse_expr('Forall (i,j) a_i_j=1'), 2, False)
+        expected = parse_expr('a_0_1=1 * a_1_0=1')
 
         result_data = _get_sorted_conjuncts_str(result)
         expected_data = _get_sorted_conjuncts_str(expected)
@@ -377,18 +362,18 @@ class TestInstantiate(unittest.TestCase):
 
 
     def test_instantiate_expr_not_quantified(self):
-        result = _instantiate_expr(_parse('a_1=1'), 2, False)
-        expected = _parse('a_1=1')
+        result = _instantiate_expr(parse_expr('a_1=1'), 2, False)
+        expected = parse_expr('a_1=1')
 
         self.assertEqual(str(expected), str(result))
 
 
     def test_instantiate_property_cutoff4(self):
-        property = SpecProperty([_parse('Forall (i) a_i = 1')], [_parse('Forall(j) b_j=1')])
+        property = SpecProperty([parse_expr('Forall (i) a_i = 1')], [parse_expr('Forall(j) b_j=1')])
 
-        result, cutoff = inst_property(TokRingArchitecture(), property, sys.maxsize)
+        result, cutoff = inst_property(TokRingArchitecture(), property, False)
 
-        expected = SpecProperty([_parse('a_0=1 * a_1=1 * a_2=1 * a_3=1')], [_parse('b_0=1')])
+        expected = SpecProperty([parse_expr('a_0=1 * a_1=1 * a_2=1 * a_3=1')], [parse_expr('b_0=1')])
 
         result_data = _convert_conjunction_to_str(result)
         expected_data = _convert_conjunction_to_str(expected)
@@ -398,11 +383,11 @@ class TestInstantiate(unittest.TestCase):
 
 
     def test_instantiate_property_cutoff2(self):
-        property = SpecProperty([Bool(True)], [_parse('Forall(j) b_j=1')])
+        property = SpecProperty([Bool(True)], [parse_expr('Forall(j) b_j=1')])
 
         result, cutoff = inst_property(TokRingArchitecture(), property, sys.maxsize)
 
-        expected = SpecProperty([Bool(True)], [_parse('b_0=1')])
+        expected = SpecProperty([Bool(True)], [parse_expr('b_0=1')])
 
         result_data = _convert_conjunction_to_str(result)
         expected_data = _convert_conjunction_to_str(expected)
@@ -412,11 +397,11 @@ class TestInstantiate(unittest.TestCase):
 
 
     def test_instantiate_property_cutoff_another_4(self):
-        property = SpecProperty([Bool(True)], [_parse('Forall(j,k) b_j=1 -> c_k=1')])
+        property = SpecProperty([Bool(True)], [parse_expr('Forall(j,k) b_j=1 -> c_k=1')])
 
         result, cutoff = inst_property(TokRingArchitecture(), property, sys.maxsize)
 
-        expected = SpecProperty([Bool(True)], [_parse('(b_0=1 -> c_1=1) * (b_0=1 -> c_2=1) * (b_0=1 -> c_3=1)')])
+        expected = SpecProperty([Bool(True)], [parse_expr('(b_0=1 -> c_1=1) * (b_0=1 -> c_2=1) * (b_0=1 -> c_3=1)')])
 
         result_data = _convert_conjunction_to_str(result)
         expected_data = _convert_conjunction_to_str(expected)
@@ -450,7 +435,7 @@ class TestSchedulerOptimization(unittest.TestCase):
 
     def test_sched_visual(self):
         scheduler = InterleavingScheduler()
-        forall_expr = normalize_conjuncts([_parse('Forall(i) a_i=1'), scheduler.assumptions[0]])
+        forall_expr = normalize_conjuncts([parse_expr('Forall(i) a_i=1'), scheduler.assumptions[0]])
 
         instantiated_expr = _instantiate_expr(forall_expr, 4, False) # GFsched_0=1 * GFsched_1=1
 

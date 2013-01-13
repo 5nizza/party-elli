@@ -39,7 +39,7 @@ class ParModelSearcher:
                logic,
                is_moore,
                global_automaton_cutoff_pairs,
-               local_automaton:Automaton,
+               sync_automaton:Automaton,
 
                anon_input_names, anon_output_names,
 
@@ -75,7 +75,7 @@ class ParModelSearcher:
 
                 #TODO: mess -- I use local automaton to encode token ring properties on SMT level, use separate impl for that?
 #                if local_automaton:
-                encoder, impl = self._encode_local_automaton(query_lines, local_automaton, bound, init_process_states)
+                encoder, impl = self._encode_local_automaton(query_lines, sync_automaton, bound, init_process_states)
 
                 self._ensure_footings_added(encoder, impl, query_lines)
 

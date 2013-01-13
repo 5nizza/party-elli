@@ -10,6 +10,9 @@ class SyncImpl(BlankImpl):
     The class's method get_architecture_trans_assumption
     adds assumption G(tok -> !sends_prev) on SMT level.
 
+    There are no scheduling restrictions, the process is assumed
+    to be always scheduled.
+
     TODO: This class was never tested separately from ParImpl.
     """
 
@@ -97,7 +100,7 @@ class SyncImpl(BlankImpl):
 
     def get_architecture_trans_assumption(self, label, sys_state_vector):
         # ignore active_i
-        # add assumption 'not_and_tok_sends_prev'
+        # add assumption 'G(!(tok & prev))' #TODO: current, why?
 
         proc_state = sys_state_vector[0]
 
