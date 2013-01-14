@@ -32,6 +32,9 @@ def check_unknown_signals_in_properties(property_asts, known_signals):
     for a in property_asts:
         signals_checker.dispatch(a)
         if signals_checker.unknown_signal:
-            return 'found unknown signal "{signal}" in property "{ast}"'.format(
+            error_str = 'found unknown signal "{signal}" in property "{ast}"\nknown_signals are {known}'.format(
                 signal = str(signals_checker.unknown_signal),
-                ast = str(a))
+                ast = str(a),
+                known = str(known_signals))
+
+            return error_str

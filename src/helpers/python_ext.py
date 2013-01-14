@@ -5,6 +5,9 @@ import math
 def lmap(lambda_func, iterable) -> list:
     return list(map(lambda_func, iterable))
 
+def lfilter(lambda_func, iterable) -> list:
+    return list(filter(lambda_func, iterable))
+
 
 def add_dicts(*dicts) -> dict:
     resulting_items = []

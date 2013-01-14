@@ -100,7 +100,10 @@ class ForallExpr(Expr):
 # helpers
 
 def and_expressions(conjuncts):
-    assert len(conjuncts) > 0
+    conjuncts = [c for c in conjuncts if c != Bool(True)]
+
+    if len(conjuncts) == 0:
+        return Bool(True)
 
     if len(conjuncts) == 1:
         return conjuncts[0]
