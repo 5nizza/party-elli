@@ -1,0 +1,42 @@
+# TLC'
+# ----
+# Simplified TLC
+
+# environment:
+# ec : car present on farm road
+# etc: 0 is counter has expired, 1 if it is counting
+
+# system:
+# sts: timer set
+# sflr: light on farm road (red green)
+# shlr: light on highway
+
+# In the following, sflg (shlg) is an abbreviaton for !sflr (!shlr)
+
+# Assumption
+# timer
+assume etc=0;                          #!etc;
+assume G((etc=0 * sts=0) -> X(etc=0)); #G(!etc * !sts -> X(!etc)
+assume G(etc=1 -> F(etc=0));           #G(etc -> F(!etc))
+assume G(sts=1 -> X(etc=1));           #G(sts -> X etc)
+
+#Guarantee
+#timer is set when we change to green
+G((shlr=1 * X(shlr=0)) -> sts=1); #G(shlr * X shlg -> sts)
+G((sflr=1 * X(sflr=0)) -> sts=1); #G(sflr * X sflg -> sts)
+
+
+# the farm light moves from green to red iff time out OR no cars present
+# the highway light moves when time out AND cars present (on farm road).
+# the second x is because the system can not react instantaneously
+G((sflr=0 * (etc=0 + ec=0)) -> X (sflr=1));   # G(sflg * (!etc + !ec) -> X sflr);
+G((shlr=0 * (etc=0 + ec=1)) -> X (shlr=1));   # G(shlg * (!etc * ec)  -> X shlr);
+
+# safety: at least one red
+G(sflr=1 + shlr=1); #G((sflr + shlr));
+
+# liveness: farm cars cause a green light, highway is regularly set to green
+G(ec=1 -> F(sflr=0));  #G(ec -> F sflg )
+G(F(shlr=0));          #GF shlg;
+
+

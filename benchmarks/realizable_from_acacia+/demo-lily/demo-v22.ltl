@@ -1,0 +1,25 @@
+# input godown; request to move down
+# input goup;   request to move up 
+# (not to be asserted simultaneously with godown)
+# input  ws;    state of the window 
+# ws=0..closed 
+# ws=1..open
+# output ss;    state of the screen 
+# ss=0..up
+# ss=1..down
+
+assume godown=0 * goup=0 * ws=0;
+assume G(godown=0 + goup=0);
+assume G(F(ws=0));
+assume G((ws=0 * ss=1) -> X(ws=0));
+assume G(ws=1 -> (X(ws=0) + X(X(ws=0)) + X(X(X(ws=0))) + X(X(X(X(ws=0))))));
+
+#liveness
+G(goup=1 -> F(ss=0));
+G(godown=1  -> F(ss=1));
+
+#safety
+G(!(ws=1 * X(ss=1)));
+
+
+

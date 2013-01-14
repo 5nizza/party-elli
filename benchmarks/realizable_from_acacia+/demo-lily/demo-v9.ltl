@@ -1,0 +1,1 @@
+(G(F(req=1))) -> ((G(grant=0 -> (grant=0 U req=1)))*(((grant=0))*((G(req=1 -> F(grant=1)))*(G(F(grant=1))))));

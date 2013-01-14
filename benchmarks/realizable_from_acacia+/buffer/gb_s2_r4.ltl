@@ -1,0 +1,104 @@
+################################################
+[spec_unit s2b_0]
+################################################
+assume s2b_req0=0;
+assume G((s2b_req0=1 * b2s_ack0=0) -> X(s2b_req0=1));
+assume G(b2s_ack0=1 -> X(s2b_req0=0));
+
+b2s_ack0=0; 
+G( (s2b_req0=0 * X(s2b_req0=1)) -> X(b2s_ack0=0 * X(F(b2s_ack0=1))) ); 
+G( (b2s_ack0=0 * X(s2b_req0=0)) -> X(b2s_ack0=0) ); 
+G(b2s_ack0=0 + b2s_ack1=0);
+ 
+
+################################################
+[spec_unit s2b_1]
+################################################
+assume s2b_req1=0;
+assume G((s2b_req1=1 * b2s_ack1=0) -> X(s2b_req1=1));
+assume G(b2s_ack1=1 -> X(s2b_req1=0));
+
+b2s_ack1=0; 
+G( (s2b_req1=0 * X(s2b_req1=1)) -> X(b2s_ack1=0 * X(F(b2s_ack1=1))) ); 
+G( (b2s_ack1=0 * X(s2b_req1=0)) -> X(b2s_ack1=0) ); 
+G(b2s_ack0=0 + b2s_ack1=0);
+
+
+################################################
+[spec_unit b2r_0]
+################################################
+assume r2b_ack0=0;
+assume G(b2r_req0=0 -> X(r2b_ack0=0));	
+assume G(b2r_req0=1 -> X(F(r2b_ack0=1)));
+
+b2r_req0=0;  
+G(r2b_ack0=1 -> X(b2r_req0=0)); 
+G((b2r_req0=1 * r2b_ack0=0) -> X(b2r_req0=1)); 
+G((b2r_req0=1 * X(b2r_req0=0)) -> X( b2r_req0=0 U (b2r_req0=0 * b2r_req3=1)));
+G(  (b2r_req0=0 * b2r_req1=0 * b2r_req2=0) 
+  + (b2r_req1=0 * b2r_req2=0 * b2r_req3=0)
+  + (b2r_req2=0 * b2r_req3=0 * b2r_req0=0)   
+  + (b2r_req3=0 * b2r_req0=0 * b2r_req1=0)   
+ );
+G((s2b_req0=1 + s2b_req1=1) -> X(F(b2r_req0=1 + b2r_req1=1 + b2r_req2=1 + b2r_req3=1)));
+            
+
+################################################
+[spec_unit b2r_1]
+################################################
+assume r2b_ack1=0;
+assume G(b2r_req1=0 -> X(r2b_ack1=0));	
+assume G(b2r_req1=1 -> X(F(r2b_ack1=1)));
+
+b2r_req1=0; 
+G(r2b_ack1=1 -> X(b2r_req1=0)); 
+G((b2r_req1=1 * r2b_ack1=0) -> X(b2r_req1=1)); 
+G((b2r_req1=1 * X(b2r_req1=0)) -> X( b2r_req1=0 U (b2r_req1=0 * b2r_req0=1)));
+G(  (b2r_req0=0 * b2r_req1=0 * b2r_req2=0) 
+  + (b2r_req1=0 * b2r_req2=0 * b2r_req3=0)
+  + (b2r_req2=0 * b2r_req3=0 * b2r_req0=0)   
+  + (b2r_req3=0 * b2r_req0=0 * b2r_req1=0)   
+ );
+G((s2b_req0=1 + s2b_req1=1) -> X(F(b2r_req0=1 + b2r_req1=1 + b2r_req2=1 + b2r_req3=1)));
+
+
+################################################
+[spec_unit b2r_2]
+################################################
+assume r2b_ack2=0;
+assume G(b2r_req2=0 -> X(r2b_ack2=0));	
+assume G(b2r_req2=1 -> X(F(r2b_ack2=1)));
+
+b2r_req2=0; 
+G(r2b_ack2=1 -> X(b2r_req2=0)); 
+G((b2r_req2=1 * r2b_ack2=0) -> X(b2r_req2=1)); 
+G((b2r_req2=1 * X(b2r_req2=0)) -> X( b2r_req2=0 U (b2r_req2=0 * b2r_req1=1)));
+G(  (b2r_req0=0 * b2r_req1=0 * b2r_req2=0) 
+  + (b2r_req1=0 * b2r_req2=0 * b2r_req3=0)
+  + (b2r_req2=0 * b2r_req3=0 * b2r_req0=0)   
+  + (b2r_req3=0 * b2r_req0=0 * b2r_req1=0)   
+ );
+G((s2b_req0=1 + s2b_req1=1) -> X(F(b2r_req0=1 + b2r_req1=1 + b2r_req2=1 + b2r_req3=1)));
+  
+
+################################################
+[spec_unit b2r_3]
+################################################
+assume r2b_ack3=0;
+assume G(b2r_req3=0 -> X(r2b_ack3=0));	
+assume G(b2r_req3=1 -> X(F(r2b_ack3=1)));
+
+b2r_req3=0; 
+G(r2b_ack3=1 -> X(b2r_req3=0)); 
+G((b2r_req3=1 * r2b_ack3=0) -> X(b2r_req3=1)); 
+G((b2r_req3=1 * X(b2r_req3=0)) -> X( b2r_req3=0 U (b2r_req3=0 * b2r_req2=1)));
+G(  (b2r_req0=0 * b2r_req1=0 * b2r_req2=0) 
+  + (b2r_req1=0 * b2r_req2=0 * b2r_req3=0)
+  + (b2r_req2=0 * b2r_req3=0 * b2r_req0=0)   
+  + (b2r_req3=0 * b2r_req0=0 * b2r_req1=0)   
+ );
+G((s2b_req0=1 + s2b_req1=1) -> X(F(b2r_req0=1 + b2r_req1=1 + b2r_req2=1 + b2r_req3=1)));
+
+
+group_order = FLAT;
+

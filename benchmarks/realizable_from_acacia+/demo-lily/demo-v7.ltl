@@ -1,0 +1,1 @@
+(G(cancel=1 -> (X(go=1) + X(X(go=1))))) -> ((G(cancel=1 -> X((!grant=1) U go=1)))*((G(grant=1 -> X(!grant=1)))*(G(req=1 -> ((grant=1 + cancel=1) + X(grant=1 + cancel=1) + X(X(grant=1 + cancel=1)) + X(X(X(grant=1 + cancel=1))))))));
