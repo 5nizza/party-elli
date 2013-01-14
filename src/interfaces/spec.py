@@ -44,6 +44,11 @@ class SpecProperty:
 ################################################################
 #helpers
 
+def to_expr(spec_property:SpecProperty) -> Expr:
+    return BinOp('->', and_expressions(spec_property.assumptions),
+                       and_expressions(spec_property.guarantees))
+
+
 def and_properties(properties) -> SpecProperty:
     property_expressions = [BinOp('->', and_expressions(p.assumptions),
                                         and_expressions(p.guarantees))

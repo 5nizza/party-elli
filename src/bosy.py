@@ -4,65 +4,58 @@ import sys
 import tempfile
 
 from helpers.main_helper import setup_logging, create_spec_converter_z3
+from interfaces.parser_expr import and_expressions, QuantifiedSignal
+from interfaces.spec import SpecProperty, to_expr
 from module_generation.dot import to_dot, moore_to_dot
 import parsing.anzu_parser as anzu_parser
 from parsing.anzu_parser_desc import ANZU_INPUT_VARIABLES, ANZU_ENV_FAIRNESS, ANZU_ENV_INITIAL,ANZU_ENV_TRANSITIONS, ANZU_OUTPUT_VARIABLES, ANZU_SYS_TRANSITIONS, ANZU_SYS_FAIRNESS, ANZU_SYS_INITIAL
-from parsing.helpers import convert_asts_to_ltl3ba_format
 from synthesis.solitary_model_searcher import search
 from synthesis.smt_logic import UFLIA
 
 
-def get_asts(data_from_section_name):
-    inputs = data_from_section_name[ANZU_INPUT_VARIABLES]
-    outputs = data_from_section_name[ANZU_OUTPUT_VARIABLES]
+def _get_spec(spec_text:str, logger:logging.Logger) -> (list, list, SpecProperty):
+    #TODO: add strengthening option?
+    #TODO: use real semantics of GR1(with past operators), it may be more efficient
+    data_by_section = anzu_parser.parse_ltl(spec_text, logger)
+    if data_by_section is None:
+        return None, None, None
 
-    env_initials_asts = data_from_section_name[ANZU_ENV_INITIAL]
-    sys_initials_asts = data_from_section_name[ANZU_SYS_INITIAL]
+    init_assumptions, s_assumptions, l_assumptions = data_by_section[ANZU_ENV_INITIAL], \
+                                                     data_by_section[ANZU_ENV_TRANSITIONS], \
+                                                     data_by_section[ANZU_ENV_FAIRNESS]
+    init_guarantees, s_guarantees, l_guarantees = data_by_section[ANZU_SYS_INITIAL], \
+                                                  data_by_section[ANZU_SYS_TRANSITIONS], \
+                                                  data_by_section[ANZU_SYS_FAIRNESS]
 
-    env_transitions_asts = data_from_section_name[ANZU_ENV_TRANSITIONS]
-    sys_transitions_asts = data_from_section_name[ANZU_SYS_TRANSITIONS]
+    ass = and_expressions([and_expressions(init_assumptions),
+                           and_expressions(s_assumptions),
+                           and_expressions(l_assumptions)])
 
-    env_fairness_asts = data_from_section_name[ANZU_ENV_FAIRNESS]
-    sys_fairness_asts = data_from_section_name[ANZU_SYS_FAIRNESS]
+    gua = and_expressions([and_expressions(init_guarantees),
+                           and_expressions(s_guarantees),
+                           and_expressions(l_guarantees)])
 
-    return inputs, outputs, env_initials_asts, sys_initials_asts, env_transitions_asts, sys_transitions_asts, env_fairness_asts, sys_fairness_asts
+    spec_property = SpecProperty([ass], [gua])
+
+    input_signals = [QuantifiedSignal(s.name, 0) for s in data_by_section[ANZU_INPUT_VARIABLES]]
+    output_signals = [QuantifiedSignal(s.name, 0) for s in data_by_section[ANZU_OUTPUT_VARIABLES]]
+
+    return input_signals, output_signals, spec_property
 
 
 def main(ltl_text, is_moore, dot_file, bounds, ltl2ucw_converter, z3solver, logger):
-    data_by_section = anzu_parser.parse_ltl(ltl_text, logger)
-    if data_by_section is None:
-        return
+    input_signals, output_signals, spec_property = _get_spec(ltl_text, logger)
+    if not input_signals:
+        return None
 
-    input_signals, output_signals, \
-    env_initials_asts, sys_initials_asts, \
-    env_transitions_asts, sys_transitions_asts, \
-    env_fairness_asts, sys_fairness_asts = get_asts(data_by_section)
 
-    #TODO: hidden dependence: ltl3ba treats upper letters wrongly
-    inputs = [i.name.lower() for i in input_signals]
-    outputs = [o.name.lower() for o in output_signals]
-
-    vars = {'Ie':convert_asts_to_ltl3ba_format(env_initials_asts),
-            'Is':convert_asts_to_ltl3ba_format(sys_initials_asts),
-            'Se':convert_asts_to_ltl3ba_format(env_transitions_asts),
-            'Ss':convert_asts_to_ltl3ba_format(sys_transitions_asts),
-            'Le':convert_asts_to_ltl3ba_format(env_fairness_asts),
-            'Ls':convert_asts_to_ltl3ba_format(sys_fairness_asts)}
-
-    ass = '(({Ie}) && ({Se}) && ({Le}))'.format_map(vars)
-    gua = '(({Is}) && ({Ss}) && ({Ls}))'.format_map(vars)
-
-    spec_property = '({ass}) -> ({gua})'.format(ass = ass, gua = gua)
-    logger.info('the specification property (in ltl3ba format) is: ' + spec_property)
-
-    #TODO: bug -- use SpecProperty
-    automaton = ltl2ucw_converter.convert(spec_property)
+    automaton = ltl2ucw_converter.convert(to_expr(spec_property))
     logger.info('spec automaton has {0} states'.format(len(automaton.nodes)))
 
     with tempfile.NamedTemporaryFile(delete=False, dir='./') as smt_file:
         smt_file_prefix = smt_file.name
 
-    models = search(automaton, not is_moore, inputs, outputs, bounds, z3solver, UFLIA(None), smt_file_prefix)
+    models = search(automaton, not is_moore, input_signals, output_signals, bounds, z3solver, UFLIA(None), smt_file_prefix)
     assert models is None or len(models) == 1
 
     logger.info('model %s found', ['', 'not'][models is None])

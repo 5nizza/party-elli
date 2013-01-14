@@ -118,7 +118,7 @@ def label_to_short_string(label):
     for var, val in label.items():
         if val is False:
             short_string += '!'
-        short_string += var
+        short_string += str(var)
 
     return short_string
 

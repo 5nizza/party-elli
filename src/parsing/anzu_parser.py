@@ -1,5 +1,6 @@
 from logging import Logger
 from helpers.ply import yacc
+from interfaces.parser_expr import QuantifiedSignal
 from parsing.anzu_lexer_desc import anzu_lexer, ANZU_ENV_FAIRNESS, ANZU_ENV_INITIAL, ANZU_ENV_TRANSITIONS, ANZU_SYS_FAIRNESS, ANZU_SYS_INITIAL, ANZU_SYS_TRANSITIONS, ANZU_INPUT_VARIABLES, ANZU_OUTPUT_VARIABLES
 from parsing.anzu_parser_desc import anzu_parser
 from parsing.sanity_checker import check_unknown_signals_in_properties
@@ -9,7 +10,9 @@ def parse_ltl(anzu_text, logger:Logger):
     """ Return {section:data} or None in case of error """
     section_name_to_data = dict(anzu_parser.parse(anzu_text, lexer=anzu_lexer))
 
-    known_signals = section_name_to_data[ANZU_INPUT_VARIABLES] + section_name_to_data[ANZU_OUTPUT_VARIABLES]
+    input_signals = section_name_to_data[ANZU_INPUT_VARIABLES]
+    output_signals = section_name_to_data[ANZU_OUTPUT_VARIABLES]
+    known_signals = input_signals + output_signals
 
     for asts in (section_name_to_data[ANZU_ENV_FAIRNESS],
                  section_name_to_data[ANZU_ENV_INITIAL],

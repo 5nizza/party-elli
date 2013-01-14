@@ -51,7 +51,9 @@ class GenericEncoder:
 
             conjuncts.append(condition_on_out)
 
-        return op_and(conjuncts)
+        assumption_on_outputs_vars = op_and(conjuncts)
+
+        return assumption_on_outputs_vars
 
 
     def _encode_transition(self,

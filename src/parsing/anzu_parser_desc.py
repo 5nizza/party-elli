@@ -59,13 +59,19 @@ def p_section_data(p):
         p[0] = p[1]
 
 
-def p_section_data_signals_definitions2(p):
-    """signals : SIGNAL_NAME SEP
-               | signals SIGNAL_NAME SEP """
+def p_section_data_signals_definitions(p):
+    """signals : signal_name SEP
+               | signals signal_name SEP """
     if len(p) == 4:
         p[0] = p[1] + [p[2]]
     else:
         p[0] = [p[1]]
+
+
+def p_signal_name(p):
+    """ signal_name : SIGNAL_NAME
+    """
+    p[0] = QuantifiedSignal(p[1], 0)
 
 
 def p_section_data_properties(p):
@@ -83,7 +89,7 @@ def p_section_data_property_bool(p):
 
 
 def p_section_data_property_binary_operation(p):
-    """property   : SIGNAL_NAME EQUALS NUMBER
+    """property   : signal_name EQUALS NUMBER
                   | property AND property
                   | property OR property
                   | property IMPLIES property

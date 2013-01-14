@@ -62,7 +62,7 @@ def p_section_data(p):
         p[0] = p[1]
 
 
-def p_section_data_signals_definitions2(p):
+def p_section_data_signals_definitions(p):
     """signals : signal_name SEP
                | signals signal_name SEP """
     if len(p) == 4:

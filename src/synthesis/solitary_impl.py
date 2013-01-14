@@ -16,6 +16,7 @@ class SolitaryImpl(BlankImpl):
 
         self.states_by_process = [tuple(self._get_state_name(self._state_type, s)
                                         for s in range(nof_local_states))]
+
         self.state_types_by_process = [self._state_type]
 
         self.init_states = [(self.states_by_process[0][0],)]
@@ -23,30 +24,29 @@ class SolitaryImpl(BlankImpl):
         self.orig_inputs = [inputs]
         self.aux_func_descs_ordered = []
 
-        self.outvar_desc_by_process = self._build_outvar_desc_by_process(outputs, inputs if is_mealy else ())
+        self.outvar_desc_by_process = [self._build_outvar_descs(outputs, inputs if is_mealy else ())]
 
         self.taus_descs = self._get_taus_descs(inputs)
         self.model_taus_descs = self.taus_descs
 
 
-    def _build_outvar_desc_by_process(self, outputs, inputs):
-        descs = []
-        for o in outputs:
-            argname_to_type = {self.state_arg_name: self._state_type}
+    def _build_outvar_descs(self, outputs, inputs):
+        descs = {}
+        for s in outputs:
+            type_by_signal = {self.state_arg_name: self._state_type}
             if self.is_mealy:
-                argname_to_type.update((input, 'Bool') for input in inputs)
+                type_by_signal.update((s, 'Bool') for s in inputs)
 
-            description = FuncDescription(str(o), argname_to_type, set(), 'Bool', None)
+            description = FuncDescription(str(s), type_by_signal, 'Bool', None) #TODO: don't like the str(s)
 
-            descs.append((o, description))
+            descs[s] = description
 
-        return tuple([descs])
+        return descs
 
 
     def _get_taus_descs(self, inputs):
         tau_desc = FuncDescription('tau',
-            dict([(self.state_arg_name, self._state_type)] + list(map(lambda i: (str(i), 'Bool'), inputs))),
-            set(),
+            dict([(self.state_arg_name, self._state_type)] + [(s, 'Bool') for s in inputs]),
             self._state_type,
             None)
 

@@ -123,7 +123,7 @@ def _and_ltl2ba_properties(properties):
     return ' && '.join(['(' + str(p) + ')' for p in properties])
 
 
-def convert_asts_to_ltl3ba_format(asts):
+def nvert_asts_to_ltl3ba_format(asts):
     properties = list(map(lambda a: convert_ast_to_ltl3ba_format(a), asts)) +\
                  list(map(lambda a: convert_ast_to_ltl3ba_format(a), asts))
     property = _and_ltl2ba_properties(properties)

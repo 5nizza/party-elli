@@ -65,7 +65,6 @@ def t_SIGNAL_NAME(t):
         t.value = Bool(t.value == 'TRUE')
         return t
 
-    t.value = Signal(t.value)
     return t
 
 
