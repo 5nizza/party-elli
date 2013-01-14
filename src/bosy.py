@@ -57,16 +57,18 @@ def main(ltl_text, is_moore, dot_file, bounds, ltl2ucw_converter, z3solver, logg
 
     models = search(automaton, not is_moore, input_signals, output_signals, bounds, z3solver, UFLIA(None), smt_file_prefix)
     assert models is None or len(models) == 1
+    model = models[0] if models else None
 
     logger.info('model %s found', ['', 'not'][models is None])
 
-    if dot_file is not None and models is not None:
-        for lts in models:
-            if is_moore:
-                dot = moore_to_dot(lts)
-            else:
-                dot = to_dot(lts)
-            dot_file.write(dot)
+    if dot_file is not None and model is not None:
+        if is_moore:
+            dot = moore_to_dot(model)
+        else:
+            dot = to_dot(model)
+
+        dot_file.write(dot)
+        logger.info('output {type} model is written to {file}'.format(type=['Mealy','Moore'][is_moore], file=dot_file.name))
 
 
 if __name__ == "__main__":

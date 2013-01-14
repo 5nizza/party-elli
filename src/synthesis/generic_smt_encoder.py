@@ -303,8 +303,9 @@ class GenericEncoder:
         return [v=='true' if v == 'true' or v=='false' else v for v in values]
 
 
-    def _build_func_model_from_smt(self, func_smt_lines, func_desc:FuncDescription):
-        """ Return {Label:output} """
+    def _build_func_model_from_smt(self, func_smt_lines, func_desc:FuncDescription) -> dict:
+        """ Return transition(output) graph {label:output}
+        """
         func_model = {}
 
         for l in func_smt_lines:

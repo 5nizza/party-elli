@@ -37,7 +37,7 @@ class SolitaryImpl(BlankImpl):
             if self.is_mealy:
                 type_by_signal.update((s, 'Bool') for s in inputs)
 
-            description = FuncDescription(str(s), type_by_signal, 'Bool', None) #TODO: don't like the str(s)
+            description = FuncDescription(s.name, type_by_signal, 'Bool', None)
 
             descs[s] = description
 

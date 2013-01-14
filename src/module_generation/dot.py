@@ -1,6 +1,7 @@
 from helpers.python_ext import StrAwareList
 from interfaces.automata import Label
 from interfaces.lts import LTS
+from interfaces.parser_expr import QuantifiedSignal
 
 
 def _colorize_nodes(lts):
@@ -13,13 +14,19 @@ def _colorize_nodes(lts):
     return dot_lines
 
 
-def _convert_to_dot(vals_dict):
-    return ''.join(map(lambda arg: '{value}{var}'.format(value=['-', ''][arg[1]], var=arg[0]), vals_dict.items()))
+def _convert_to_dot(value_by_signal:dict) -> str:
+    #TODO: create FuncDescription with name as QuantifiedSignal_i in Impl?
+
+    values_str = ''.join(['{value}{var}'.format(
+                            value=['-', ''][value],
+                            var=signal.name if isinstance(signal, QuantifiedSignal) else signal)
+                          for (signal,value) in value_by_signal.items()])
+    return values_str
 
 
-def _get_inputvals(inputargs):
-    inputvals = dict(inputargs)
-    del inputvals['state'] #TODO: hack
+def _get_inputvals(label:dict) -> dict:
+    inputvals = dict(label)
+    del inputvals['state'] #TODO: hack -- hardcoded 'state'
     return inputvals
 
 
@@ -27,9 +34,10 @@ def _label_states_with_outvalues(lts:LTS, filter='all'):
     dot_lines = StrAwareList()
 
     for state in lts.states:
-        var_vals = [(var, vals) for (var,vals) in lts.output_models.items()
-                    if var in filter or filter == 'all']
-        outvals = dict([(var, vals[Label({'state':state})]) for (var, vals) in var_vals]) #TODO: hack
+        signal_vals_pairs = [(var, vals) for (var,vals) in lts.model_by_name.items()
+                             if var in filter or filter == 'all']
+        outvals = dict([(var, vals[Label({'state':state})])
+                        for (var, vals) in signal_vals_pairs]) #TODO: hack
 
         outvals_str = _convert_to_dot(outvals)
         if outvals_str != '':
@@ -38,17 +46,17 @@ def _label_states_with_outvalues(lts:LTS, filter='all'):
     return dot_lines
 
 
-def to_dot(lts:LTS, outvars_treat_as_moore=()):
+def to_dot(lts:LTS, outvars_treated_as_moore=()):
     dot_lines = StrAwareList()
     dot_lines += 'digraph module {\n'
 
     dot_lines += _colorize_nodes(lts) + '\n'
 
-    dot_lines += _label_states_with_outvalues(lts, outvars_treat_as_moore)
+    dot_lines += _label_states_with_outvalues(lts, outvars_treated_as_moore)
 
     for label, next_state in lts.tau_model.items():
-        outvar_vals = [(var, vals) for (var, vals) in lts.output_models.items()
-                       if var not in outvars_treat_as_moore]
+        outvar_vals = [(var, vals) for (var, vals) in lts.model_by_name.items()
+                       if var not in outvars_treated_as_moore]
 
         outvals = dict([(var, values[label]) for (var, values) in outvar_vals])
         outvals_str = _convert_to_dot(outvals)
@@ -68,7 +76,7 @@ def to_dot(lts:LTS, outvars_treat_as_moore=()):
 
 
 def moore_to_dot(moore:LTS):
-    outvars = [var for (var, vals) in moore.output_models.items()]
+    outvars = [var for (var, vals) in moore.model_by_name.items()]
     return to_dot(moore, outvars)
 #    dot_lines = StrAwareList()
 #    dot_lines += 'digraph module {\n'

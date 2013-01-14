@@ -22,7 +22,7 @@ class FuncDescription:
 
         self._ordered_input_type_pairs = sorted(list(type_by_arg.items()),
             key=lambda t_a: str(t_a[0]) if not isinstance(t_a[0], QuantifiedSignal)
-                                        else str(t_a[0].name)) #ignore indices
+                                        else str(t_a[0].name)) #sorting ignores indices
 
 
     @property

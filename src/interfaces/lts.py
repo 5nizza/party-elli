@@ -1,9 +1,10 @@
+from helpers.labels_map import LabelsMap
 from interfaces.automata import Label
 
 
 class LTS:
-    def __init__(self, init_states, output_models:dict, tau_model:dict):
-        self._output_models = output_models
+    def __init__(self, init_states, model_by_name:dict, tau_model:LabelsMap):
+        self._output_models = model_by_name
         self._tau_model = tau_model
         self._init_states = set(init_states)
 
@@ -22,7 +23,7 @@ class LTS:
         return self._tau_model
 
     @property
-    def output_models(self):
+    def model_by_name(self):
         return self._output_models
 
     def get_outputs(self, label:Label):
