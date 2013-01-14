@@ -87,6 +87,9 @@ def _run(is_moore,
                 else:
                     dot = to_dot(lts, [SENDS_NAME, HAS_TOK_NAME])
                 out.write(dot)
+                logger.info('{type} model is written to {file}'.format(
+                    type=['Mealy','Moore'][is_moore],
+                    file=out.name))
 
 
 def join_properties(properties:Iterable):

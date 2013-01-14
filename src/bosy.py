@@ -68,7 +68,7 @@ def main(ltl_text, is_moore, dot_file, bounds, ltl2ucw_converter, z3solver, logg
             dot = to_dot(model)
 
         dot_file.write(dot)
-        logger.info('output {type} model is written to {file}'.format(type=['Mealy','Moore'][is_moore], file=dot_file.name))
+        logger.info('{type} model is written to {file}'.format(type=['Mealy','Moore'][is_moore], file=dot_file.name))
 
 
 if __name__ == "__main__":

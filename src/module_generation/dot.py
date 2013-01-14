@@ -17,7 +17,7 @@ def _colorize_nodes(lts):
 def _convert_to_dot(value_by_signal:dict) -> str:
     #TODO: create FuncDescription with name as QuantifiedSignal_i in Impl?
 
-    values_str = ''.join(['{value}{var}'.format(
+    values_str = '.'.join(['{value}{var}'.format(
                             value=['-', ''][value],
                             var=signal.name if isinstance(signal, QuantifiedSignal) else signal)
                           for (signal,value) in value_by_signal.items()])

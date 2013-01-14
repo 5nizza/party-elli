@@ -68,16 +68,15 @@ class ParModelSearcher:
 
                 init_process_states = None
                 for i, (automaton, nof_processes) in enumerate(global_automaton_cutoff_pairs):
-                    #noinspection PyTypeChecker
-#                    encoder, impl = self._encode_global_automaton(i, nof_processes, automaton, bound, query_lines)
+#                    noinspection PyTypeChecker
                     _, impl = self._encode_global_automaton(i, nof_processes, automaton, bound, query_lines)
-                    init_process_states = impl.init_states[0] #TODO: another hack
+                    init_process_states = set(states[0] for states in impl.init_states)
 
-                #TODO: mess -- I use local automaton to encode token ring properties on SMT level, use separate impl for that?
+                #TODO: mess -- I use sync automaton to encode token ring properties on SMT level, use separate impl for that?
 #                if local_automaton:
                 encoder, impl = self._encode_local_automaton(query_lines, sync_automaton, bound, init_process_states)
 
-                self._ensure_footings_added(encoder, impl, query_lines)
+                encoder.encode_footings(impl, query_lines)
 
                 self.logger.info('smt query has %i lines', len(query_lines))
 
@@ -178,14 +177,6 @@ class ParModelSearcher:
 
         self.is_sys_models_encoded = True
         encoder.encode_sys_model_functions(impl, query_lines)
-
-
-    def _ensure_footings_added(self, encoder:GenericEncoder, impl, query_lines):
-        if self.is_footing_added:
-            return
-
-        self.is_footing_added = True
-        encoder.encode_footings(impl, query_lines)
 
 
 
