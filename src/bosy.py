@@ -103,9 +103,11 @@ if __name__ == "__main__":
 
     args = parser.parse_args(sys.argv[1:])
 
-    setup_logging(args.verbose)
+    logger = setup_logging(args.verbose)
 
-    ltl2ucw_converter, z3solver = create_spec_converter_z3()
+    ltl2ucw_converter, z3solver = create_spec_converter_z3(logger)
+    if not ltl2ucw_converter or not z3solver:
+        exit(0)
 
     bounds = list(range(1, args.bound + 1) if args.size is None else range(args.size, args.size + 1))
 
@@ -115,7 +117,7 @@ if __name__ == "__main__":
     with open(part_file_name) as part_file:
         part_text = part_file.read()
 
-    main(ltl_text, part_text, args.moore, args.dot, bounds, ltl2ucw_converter, z3solver, logging.getLogger(__name__))
+    main(ltl_text, part_text, args.moore, args.dot, bounds, ltl2ucw_converter, z3solver, logger)
 
     args.ltl.close()
 
