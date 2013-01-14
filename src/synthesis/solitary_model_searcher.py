@@ -30,6 +30,8 @@ def search(automaton:Automaton, is_mealy:bool, input_signals, output_signals, bo
             impl = SolitaryImpl(automaton, is_mealy, input_signals, output_signals, bound, sys_states_type)
             encoder.encode(impl, query_lines)
 
+            logger.info('smt query has %i lines', len(query_lines))
+
         status, data = z3solver.solve_file(smt_file.name)
 
         if status == Z3.SAT:
