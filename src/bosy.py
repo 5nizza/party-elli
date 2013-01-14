@@ -75,7 +75,11 @@ def main(ltl_text:str, part_text:str, is_moore, dot_file, bounds, ltl2ucw_conver
     assert models is None or len(models) == 1
     model = models[0] if models else None
 
-    logger.info('model %s found', ['', 'not'][models is None])
+    if not model:
+        logger.info('model not found..')
+        return
+
+    logger.info('model found!')
 
     if dot_file is not None and model is not None:
         if is_moore:
