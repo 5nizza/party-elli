@@ -1,0 +1,27 @@
+#no support of global variables => all the variables are assumed to be indexed!
+[INPUT_VARIABLES] 
+r;
+#active is an internal variable
+
+[OUTPUT_VARIABLES]
+g;
+
+[ASSUMPTIONS]
+#Forall (i) (r_i=0);
+
+[GUARANTEES]
+Forall (i) (g_i=0);
+
+#no spurious grant on start
+Forall (i) (!(((r_i=0) * (g_i=0)) U ((r_i=0) * g_i=1)));
+
+#no spurious grants
+Forall (i) (!F(g_i=1 * X((r_i=0) * g_i=0) * X(((r_i=0) * g_i=0) U (g_i=1 * r_i=0) )) );
+
+#every grant is lowered unless request keeps staying high
+Forall (i) G( (active_i=1 * (r_i=0) * g_i=1) -> F((r_i=1 * g_i=1) + (g_i=0)) );
+
+Forall (i) G( (active_i=1 * (r_i=1)) -> F(g_i=1) );
+
+#mutual exclusion
+Forall (i,j) G(!(g_i=1 * g_j=1));

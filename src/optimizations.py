@@ -275,7 +275,7 @@ def strengthen(property:SpecProperty, ltl2ucw_converter) -> (list, list):
     return safety_properties, liveness_properties
 
 
-def _instantiate_expr(expr:Expr, cutoff, forbid_zero_index:bool) -> Expr:
+def _instantiate_expr2(expr:Expr, cutoff, forbid_zero_index:bool) -> list:
     if not is_quantified_expr(expr):
         return expr
 
@@ -292,8 +292,11 @@ def _instantiate_expr(expr:Expr, cutoff, forbid_zero_index:bool) -> Expr:
         expr_with_fixed_indices = _fix_indices(value_by_index, expr)
         expressions.append(expr_with_fixed_indices)
 
-    expressions_conjuncted = and_expressions(expressions)
-    return expressions_conjuncted
+    return expressions
+
+
+def _instantiate_expr(expr:Expr, cutoff, forbid_zero_index:bool) -> Expr:
+    return and_expressions(_instantiate_expr2(expr, cutoff, forbid_zero_index))
 
 
 def _set_one_index_to_zero(expr:Expr) -> Expr:
