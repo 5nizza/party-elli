@@ -1,3 +1,0 @@
-INPUT:stop
-OUTPUT:c0
-PROPERTY:[]((stop->((c0)<->X(c0))) && ((! stop)->((c0)<->X(! c0))))

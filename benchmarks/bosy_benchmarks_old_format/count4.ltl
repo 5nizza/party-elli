@@ -1,5 +1,0 @@
-INPUT:stop
-OUTPUT:c0
-OUTPUT:c1
-OUTPUT:c2
-PROPERTY:! c0 && ! c1 && ! c2 && []((stop->(((c0)<->X(c0)) && ((c1)<->X(c1)) && ((c2)<->X(c2)))) && ((! stop && ! c2 && ! c1 && ! c0)->(X(! c2 && ! c1 && c0))) && ((! stop && ! c2 && ! c1 && c0)->(X(! c2 && c1 && ! c0))) && ((! stop && ! c2 && c1 && ! c0)->(X(! c2 && c1 && c0))) && ((! stop && ! c2 && c1 && c0)->(X(c2 && ! c1 && ! c0))) && ((! stop &&  c2 && ! c1 && ! c0)->(X(! c2 && ! c1 && ! c0)))))
