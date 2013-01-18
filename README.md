@@ -21,32 +21,10 @@ python3 bosy.py -- to run monolithic synthesis tool
 
 ## Questions ##
 , suggestions and bug reports submit to github      
-or directly to Ayrat: ayrat.khalimov@tugraz.at
+or directly to Ayrat: ayrat.khalimov(tugraz.at)
 
 ## Authors ##
 Ayrat Khalimov,Swen Jacobs,Roderick Bloem, TU Graz.
 
 ## License ## 
-free for any use with references to the original authors          
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Ayrat Khalimov, Swen Jacobs, Roderick Bloem, TU Graz, Austria
+free for any use with references to the original authors
