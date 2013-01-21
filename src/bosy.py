@@ -101,7 +101,7 @@ if __name__ == "__main__":
         help='writes the output into a dot graph file')
     parser.add_argument('--bound', metavar='bound', type=int, default=2, required=False,
         help='upper bound on the size of local process (default: %(default)i)')
-    parser.add_argument('--size', metavar='size', type=int, default=None, required=False,
+    parser.add_argument('--size', metavar='size', type=int, default=0, required=False,
         help='exact size of the process implementation(default: %(default)i)')
     parser.add_argument('-v', '--verbose', action='count', default=0)
 
@@ -113,7 +113,7 @@ if __name__ == "__main__":
     if not ltl2ucw_converter or not z3solver:
         exit(0)
 
-    bounds = list(range(1, args.bound + 1) if args.size is None else range(args.size, args.size + 1))
+    bounds = list(range(1, args.bound + 1) if args.size==0 else range(args.size, args.size + 1))
 
     ltl_text = args.ltl.read()
 

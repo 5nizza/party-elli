@@ -238,18 +238,19 @@ if __name__ == '__main__':
     parser.add_argument('ltl', metavar='ltl', type=FileType(),
         help='LTL file with parameterized specification')
     parser.add_argument('--moore', action='store_true', required=False, default=False,
-        help='treat the spec as Moore and produce Moore machine')
+        help='output Moore machine')
     parser.add_argument('--dot', metavar='dot', type=str, required=False,
-        help='writes the output into a dot graph files prefixed with this prefix')
+        help='prefix of dot-graph files for output model')
     parser.add_argument('--bound', metavar='bound', type=int, default=2, required=False,
         help='upper bound on the size of local process (default: %(default)i)')
-    parser.add_argument('--size', metavar='size', type=int, default=None, required=False,
+    parser.add_argument('--size', metavar='size', type=int, default=0, required=False,
         help='exact size of the process implementation(default: %(default)i)')
     parser.add_argument('--cutoff', metavar='cutoff', type=int, default=sys.maxsize, required=True,
         help='force specified cutoff size')
     parser.add_argument('-v', '--verbose', action='count', default=0)
 
-    parser.add_argument('--opt', choices=tuple(OPTS.keys()), required=False, default=NO)
+    parser.add_argument('--opt', choices=sorted(list(OPTS.keys()), key=lambda v:OPTS[v]), required=False, default=NO,
+        help='apply optimizations (default: %(default)s)')
 
     args = parser.parse_args(sys.argv[1:])
 
@@ -261,7 +262,7 @@ if __name__ == '__main__':
     if not ltl2ucw_converter or not z3solver:
         exit(0)
 
-    bounds = list(range(2, args.bound + 1) if args.size is None else range(args.size, args.size + 1))
+    bounds = list(range(2, args.bound + 1) if args.size==0 else range(args.size, args.size + 1))
 
     logic = UFLIA(None)
 
