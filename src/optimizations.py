@@ -275,7 +275,7 @@ def strengthen(property:SpecProperty, ltl2ucw_converter) -> (list, list):
     return safety_properties, liveness_properties
 
 
-def _instantiate_expr2(expr:Expr, cutoff, forbid_zero_index:bool) -> list:
+def _instantiate_expr2(expr:Expr, cutoff:int, forbid_zero_index:bool) -> list:
     if not is_quantified_expr(expr):
         return [expr]
 
@@ -295,7 +295,7 @@ def _instantiate_expr2(expr:Expr, cutoff, forbid_zero_index:bool) -> list:
     return expressions
 
 
-def _instantiate_expr(expr:Expr, cutoff, forbid_zero_index:bool) -> Expr:
+def _instantiate_expr(expr:Expr, cutoff: int, forbid_zero_index:bool) -> Expr:
     return and_expressions(_instantiate_expr2(expr, cutoff, forbid_zero_index))
 
 
@@ -351,8 +351,7 @@ def inst_property(property:SpecProperty, cutoff:int) -> SpecProperty:
     NOTE on 'forall optimization' with two and more indices:
     If the property is "Forall(i,j) a_i_j",
      can it be replaced with 'a_0_0'?
-
-    No. Initially we give the token to a random process (on SMT level we have to test all the possibilities).
+    - No. Initially we give the token to a random process (on SMT level we have to test all the possibilities).
     This means, that if we proved the property a_0 and process 0 is random <=> we proved Forall (i) a_0.
     In case of two indices Forall(i,j) a_i_j
     if we proved Forall(j) a_0_j with the same randomization <=> proved Forall(i,j) a_i_j,

@@ -371,42 +371,39 @@ class TestInstantiate(unittest.TestCase):
     def test_instantiate_property_cutoff4(self):
         property = SpecProperty([parse_expr('Forall (i) a_i = 1')], [parse_expr('Forall(j) b_j=1')])
 
-        result, cutoff = inst_property(TokRingArchitecture(), property, False)
+        result = inst_property(property, 4)
 
         expected = SpecProperty([parse_expr('a_0=1 * a_1=1 * a_2=1 * a_3=1')], [parse_expr('b_0=1')])
 
         result_data = _convert_conjunction_to_str(result)
         expected_data = _convert_conjunction_to_str(expected)
 
-        self.assertEqual(4, cutoff)
         self.assertEqual(expected_data, result_data)
 
 
     def test_instantiate_property_cutoff2(self):
         property = SpecProperty([Bool(True)], [parse_expr('Forall(j) b_j=1')])
 
-        result, cutoff = inst_property(TokRingArchitecture(), property, sys.maxsize)
+        result = inst_property(property, 2)
 
         expected = SpecProperty([Bool(True)], [parse_expr('b_0=1')])
 
         result_data = _convert_conjunction_to_str(result)
         expected_data = _convert_conjunction_to_str(expected)
 
-        self.assertEqual(2, cutoff)
         self.assertEqual(expected_data, result_data)
 
 
     def test_instantiate_property_cutoff_another_4(self):
         property = SpecProperty([Bool(True)], [parse_expr('Forall(j,k) b_j=1 -> c_k=1')])
 
-        result, cutoff = inst_property(TokRingArchitecture(), property, sys.maxsize)
+        result = inst_property(property, 4)
 
         expected = SpecProperty([Bool(True)], [parse_expr('(b_0=1 -> c_1=1) * (b_0=1 -> c_2=1) * (b_0=1 -> c_3=1)')])
 
         result_data = _convert_conjunction_to_str(result)
         expected_data = _convert_conjunction_to_str(expected)
 
-        self.assertEqual(4, cutoff)
         self.assertEqual(expected_data, result_data)
 
 
