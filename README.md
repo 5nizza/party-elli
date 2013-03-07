@@ -20,7 +20,7 @@ python3 p_bosy.py -- to run parameterized synthesis tool
 python3 bosy.py -- to run monolithic synthesis tool         
 
 ## To test ##
-In src directory run nosetests ./
+In src directory run "nosetests ./"
 Requires nosetests package (for python3)
 
 ## Questions ##
