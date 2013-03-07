@@ -12,13 +12,13 @@ def execute_shell(cmd, input=''):
     args = shlex.split(cmd)
 
     p = subprocess.Popen(args,
-        stdin = proc_stdin,
-        stdout = subprocess.PIPE,
-        stderr = subprocess.PIPE)
+                         stdin=proc_stdin,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE)
 
     out, err = p.communicate(proc_input)
 
     return p.returncode, \
-           str(out, encoding=sys.stdout.encoding), \
-           str(err, encoding=sys.stderr.encoding)
+           str(out, encoding='utf-8'), \
+           str(err, encoding='utf-8')
 
