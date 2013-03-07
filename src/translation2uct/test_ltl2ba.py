@@ -1,4 +1,5 @@
 import unittest
+from interfaces.parser_expr import QuantifiedSignal
 from translation2uct.ltl2ba import _get_hacked_ucw, _unwind_label
 
 
@@ -25,7 +26,11 @@ class Test(unittest.TestCase):
                 fi;
             }"""
 
-        initial_nodes, rejecting_nodes, nodes, _ = _get_hacked_ucw(text)
+        sig_g = QuantifiedSignal('g')
+        sig_r = QuantifiedSignal('r')
+        signal_by_name = {'r': sig_r, 'g': sig_g}
+
+        initial_nodes, rejecting_nodes, nodes, _ = _get_hacked_ucw(text, signal_by_name)
 
         assert len(initial_nodes) == 1, str(len(initial_nodes))
         assert len(rejecting_nodes) == 1, str(len(rejecting_nodes))
@@ -41,9 +46,9 @@ class Test(unittest.TestCase):
                     assert len(dst_set_list) == 1, str(dst_set_list)
                     flagged_dst_set = dst_set_list[0]
                     for dst, is_rejecting in flagged_dst_set:
-                        assert (dst.name == 'T0_init' and label == {}) or\
-                               (dst.name == 'accept_S2' and label == {'g':False, 'r':True}),\
-                                'unknown transition: {0} {1}'.format(label, str(dst))
+                        assert (dst.name == 'T0_init' and label == {}) or \
+                               (dst.name == 'accept_S2' and label == {sig_g: False, sig_r: True}), \
+                            'unknown transition: {0} {1}'.format(label, str(dst))
 
             elif n.name == 'accept_S2':
                 assert n in rejecting_nodes
@@ -54,7 +59,7 @@ class Test(unittest.TestCase):
                     assert len(dst_set_list) == 1, str(dst_set_list)
                     flagged_dst_set = dst_set_list[0]
                     dst, is_rejecting = flagged_dst_set.pop()
-                    assert dst.name == 'accept_S2' and label == {'g':False}
+                    assert dst.name == 'accept_S2' and label == {sig_g: False}
             else:
                 assert False, 'unknown node: {0}'.format(str(n))
 
@@ -70,8 +75,10 @@ class Test(unittest.TestCase):
             accept_all :    /* 1 */
                 skip
             }"""
-
-        initial_nodes, rejecting_nodes, nodes, _ = _get_hacked_ucw(text)
+        sig_g = QuantifiedSignal('g')
+        sig_r = QuantifiedSignal('r')
+        signal_by_name = {'r': sig_r, 'g': sig_g}
+        initial_nodes, rejecting_nodes, nodes, _ = _get_hacked_ucw(text, signal_by_name)
 
         assert len(initial_nodes) == 1, str(len(initial_nodes))
         assert len(rejecting_nodes) == 1, str(len(rejecting_nodes))
@@ -100,8 +107,10 @@ class Test(unittest.TestCase):
             accept_all :    /* 1 */
                 skip
             }"""
-
-        initial_nodes, rejecting_nodes, nodes, _ = _get_hacked_ucw(text)
+        sig_g = QuantifiedSignal('g')
+        sig_r = QuantifiedSignal('r')
+        signal_by_name = {'r': sig_r, 'g': sig_g}
+        initial_nodes, rejecting_nodes, nodes, _ = _get_hacked_ucw(text, signal_by_name)
 
         assert len(initial_nodes) == 1, str(len(initial_nodes))
         assert len(rejecting_nodes) == 1, str(len(rejecting_nodes))
@@ -115,9 +124,9 @@ class Test(unittest.TestCase):
             assert len(dst_set_list) == 1, str(dst_set_list)
             flagged_dst_set = dst_set_list[0]
             for dst, is_rejecting in flagged_dst_set:
-                assert (label == {} and dst == init_node)\
-                        or (label == {'r':True} and dst != init_node)\
-                        or (label == {'g':False} and dst != init_node)
+                assert (label == {} and dst == init_node) \
+                           or (label == {sig_r: True} and dst != init_node) \
+                    or (label == {sig_g: False} and dst != init_node)
 
 
     def test_unwind_labels__true_lbl(self):
@@ -132,15 +141,15 @@ class Test(unittest.TestCase):
 
 
     def test_unwind_labels__concrete_lbl(self):
-        pattern_lbl = {'r':True}
+        pattern_lbl = {'r': True}
         vars = {'r'}
 
         concrete_labels = _unwind_label(pattern_lbl, vars)
-        assert concrete_labels == [{'r':True}]
+        assert concrete_labels == [{'r': True}]
 
 
     def test_unwind_labels__main_case(self):
-        pattern_lbl = {'r':True}
+        pattern_lbl = {'r': True}
         vars = {'r', 'g'}
 
         concrete_labels = _unwind_label(pattern_lbl, vars)
@@ -148,7 +157,6 @@ class Test(unittest.TestCase):
         _assert_equal_list_dict(
             concrete_labels,
             [{'r': True, 'g': True}, {'r': True, 'g': False}])
-
 
 
 if __name__ == "__main__":

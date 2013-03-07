@@ -24,7 +24,7 @@ from translation2uct.ltl2automaton import Ltl2UCW
 
 
 NO, STRENGTH, ASYNC_HUB, SYNC_HUB = 'no', 'strength', 'async_hub', 'sync_hub'
-OPTS = {NO:0, STRENGTH:1, ASYNC_HUB:2, SYNC_HUB:3}
+OPTS = {NO: 0, STRENGTH: 1, ASYNC_HUB: 2, SYNC_HUB: 3}
 
 
 def _get_spec(ltl_text:str, logger:Logger) -> (list, list, list, list):
@@ -52,7 +52,6 @@ def _run(is_moore,
          smt_files_prefix:str,
          dot_files_prefix,
          logger):
-
     logger.info('# of global automatae %i', len(global_automatae_pairs))
 
     for glob_automaton, cutoff in global_automatae_pairs:
@@ -68,14 +67,14 @@ def _run(is_moore,
 
     model_searcher = par_model_searcher.ParModelSearcher()
     models = model_searcher.search(logic,
-        is_moore,
-        global_automatae_pairs,
-        sync_automaton,
-        anon_inputs, anon_outputs,
-        bounds,
-        solver,
-        smt_files_prefix,
-        BaseNames(SCHED_ID_PREFIX, ACTIVE_NAME, SENDS_NAME, SENDS_PREV_NAME, HAS_TOK_NAME))
+                                   is_moore,
+                                   global_automatae_pairs,
+                                   sync_automaton,
+                                   anon_inputs, anon_outputs,
+                                   bounds,
+                                   solver,
+                                   smt_files_prefix,
+                                   BaseNames(SCHED_ID_PREFIX, ACTIVE_NAME, SENDS_NAME, SENDS_PREV_NAME, HAS_TOK_NAME))
 
     logger.info('model%s found', ['', ' not'][models is None])
 
@@ -88,7 +87,7 @@ def _run(is_moore,
                     dot = to_dot(lts, [SENDS_NAME, HAS_TOK_NAME])
                 out.write(dot)
                 logger.info('{type} model is written to {file}'.format(
-                    type=['Mealy','Moore'][is_moore],
+                    type=['Mealy', 'Moore'][is_moore],
                     file=out.name))
 
 
@@ -125,7 +124,7 @@ def main(spec_text,
 
     archi = TokRingArchitecture()
     archi_properties = [SpecProperty(assumptions, [g]) for g in archi.guarantees()]
-    spec_properties = [SpecProperty(assumptions+archi.implications(), [g]) for g in guarantees]
+    spec_properties = [SpecProperty(assumptions + archi.implications(), [g]) for g in guarantees]
     properties = archi_properties + spec_properties
 
     scheduler = InterleavingScheduler()
@@ -139,12 +138,12 @@ def main(spec_text,
         pseudo_safety_properties = []
         pseudo_liveness_properties = properties
 
-    print('-'*80)
+    print('-' * 80)
     print('original property')
     print('\n'.join(map(str, properties)))
     print()
 
-    print('-'*80)
+    print('-' * 80)
     print('after strengthening')
     print('\nsafety-----------')
     print('\n'.join(map(str, pseudo_safety_properties)))
@@ -157,17 +156,17 @@ def main(spec_text,
                   else p
                   for p in pseudo_liveness_properties + pseudo_safety_properties]
 
-    print('-'*80)
+    print('-' * 80)
     print('after localization')
     for p in properties:
         print(p)
     print()
-    print('-'*80)
+    print('-' * 80)
 
     prop_real_cutoff_pairs = [(p, archi.get_cutoff(p)) for p in properties]
 
-    par_local_properties = [p for (p,c) in prop_real_cutoff_pairs if c == 2]
-    par_global_property_pairs = [(p,c) for (p,c) in prop_real_cutoff_pairs if p not in par_local_properties]
+    par_local_properties = [p for (p, c) in prop_real_cutoff_pairs if c == 2]
+    par_global_property_pairs = [(p, c) for (p, c) in prop_real_cutoff_pairs if p not in par_local_properties]
 
     if optimization == ASYNC_HUB: #TODO: sync hub -- should also add
         async_hub_assumptions = archi.get_async_hub_assumptions(HAS_TOK_NAME, SENDS_PREV_NAME)
@@ -179,7 +178,7 @@ def main(spec_text,
             par_local_properties.append(p_updated_with_sync_hub)
 
     global_property_pairs = []
-    for (p,c) in par_global_property_pairs:
+    for (p, c) in par_global_property_pairs:
         inst_c = min(c, cutoff)
         inst_p = inst_property(p, inst_c)
         opt_inst_p = apply_log_bit_scheduler_optimization(inst_p, scheduler, SCHED_ID_PREFIX, inst_c)
@@ -193,9 +192,9 @@ def main(spec_text,
 
         local_properties.append(opt_inst_p)
 
-    print('-'*80)
+    print('-' * 80)
     print('local properties', local_properties)
-    print('-'*10)
+    print('-' * 10)
     print('global properties', global_property_pairs)
 
     local_automaton = None
@@ -206,7 +205,7 @@ def main(spec_text,
     glob_automatae_pairs = []
     if len(global_property_pairs) > 0:
         glob_automatae_pairs = [(ltl2ucw_converter.convert(expr_from_property(p)), c)
-                                for p,c in global_property_pairs]
+                                for p, c in global_property_pairs]
 
     if OPTS[optimization] < OPTS[SYNC_HUB] and local_automaton:
         if optimization == ASYNC_HUB:
@@ -220,37 +219,36 @@ def main(spec_text,
 
     print('SYNC_AUTOMATON', sync_automaton.name if sync_automaton else 'None')
     print()
-    for a,c in glob_automatae_pairs:
+    for a, c in glob_automatae_pairs:
         print('{0}\n{1}\n'.format(a.name, c))
 
-
     _run(is_moore,
-        anon_inputs, anon_outputs,
-        sync_automaton, glob_automatae_pairs,
-        bounds,
-        z3solver,
-        logic,
-        smt_files_prefix, dot_files_prefix, logger)
+         anon_inputs, anon_outputs,
+         sync_automaton, glob_automatae_pairs,
+         bounds,
+         z3solver,
+         logic,
+         smt_files_prefix, dot_files_prefix, logger)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Parametrized Synthesis Tool for token rings architecture')
     parser.add_argument('ltl', metavar='ltl', type=FileType(),
-        help='LTL file with parameterized specification')
+                        help='LTL file with parameterized specification')
     parser.add_argument('--moore', action='store_true', required=False, default=False,
-        help='output Moore machine')
+                        help='output Moore machine')
     parser.add_argument('--dot', metavar='dot', type=str, required=False,
-        help='prefix of dot-graph files for output model')
+                        help='prefix of dot-graph files for output model')
     parser.add_argument('--bound', metavar='bound', type=int, default=2, required=False,
-        help='upper bound on the size of local process (default: %(default)i)')
+                        help='upper bound on the size of local process (default: %(default)i)')
     parser.add_argument('--size', metavar='size', type=int, default=0, required=False,
-        help='exact size of the process implementation(default: %(default)i)')
+                        help='exact size of the process implementation(default: %(default)i)')
     parser.add_argument('--cutoff', metavar='cutoff', type=int, default=sys.maxsize, required=True,
-        help='force specified cutoff size')
+                        help='force specified cutoff size')
     parser.add_argument('-v', '--verbose', action='count', default=0)
 
-    parser.add_argument('--opt', choices=sorted(list(OPTS.keys()), key=lambda v:OPTS[v]), required=False, default=NO,
-        help='apply optimizations (default: %(default)s)')
+    parser.add_argument('--opt', choices=sorted(list(OPTS.keys()), key=lambda v: OPTS[v]), required=False, default=NO,
+                        help='apply optimizations (default: %(default)s)')
 
     args = parser.parse_args(sys.argv[1:])
 
@@ -262,7 +260,7 @@ if __name__ == '__main__':
     if not ltl2ucw_converter or not z3solver:
         exit(0)
 
-    bounds = list(range(2, args.bound + 1) if args.size==0 else range(args.size, args.size + 1))
+    bounds = list(range(2, args.bound + 1) if args.size == 0 else range(args.size, args.size + 1))
 
     logic = UFLIA(None)
 
@@ -272,12 +270,12 @@ if __name__ == '__main__':
     logger.info('temp file prefix used is %s', smt_files_prefix)
 
     main(args.ltl.read(),
-        args.opt,
-        args.moore,
-        smt_files_prefix,
-        args.dot,
-        bounds,
-        args.cutoff,
-        ltl2ucw_converter, z3solver,
-        logic,
-        logger)
+         args.opt,
+         args.moore,
+         smt_files_prefix,
+         args.dot,
+         bounds,
+         args.cutoff,
+         ltl2ucw_converter, z3solver,
+         logic,
+         logger)

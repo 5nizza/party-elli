@@ -21,7 +21,7 @@ def _assert_are_signals_in_labels(nodes): #TODO: remove me after debugging phase
 
 class Ltl2UCW:
     def __init__(self, ltl2ba_path):
-        self._execute_cmd = ltl2ba_path +' -M -f'
+        self._execute_cmd = ltl2ba_path + ' -M -f'
         self._logger = logging.getLogger(__name__)
 
 
