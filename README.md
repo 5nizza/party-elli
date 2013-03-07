@@ -21,6 +21,7 @@ python3 bosy.py -- to run monolithic synthesis tool
 
 ## To test ##
 nosetests ./
+Requires nosetests package.
 
 ## Questions ##
 , suggestions and bug reports submit to github      
