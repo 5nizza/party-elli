@@ -243,7 +243,7 @@ if __name__ == '__main__':
                         help='upper bound on the size of local process (default: %(default)i)')
     parser.add_argument('--size', metavar='size', type=int, default=0, required=False,
                         help='exact size of the process implementation(default: %(default)i)')
-    parser.add_argument('--cutoff', metavar='cutoff', type=int, default=sys.maxsize, required=True,
+    parser.add_argument('--cutoff', metavar='cutoff', type=int, default=sys.maxsize, required=False,
                         help='force specified cutoff size')
     parser.add_argument('-v', '--verbose', action='count', default=0)
 

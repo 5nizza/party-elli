@@ -277,7 +277,7 @@ def strengthen(property:SpecProperty, ltl2ucw_converter) -> (list, list):
 
 def _instantiate_expr2(expr:Expr, cutoff, forbid_zero_index:bool) -> list:
     if not is_quantified_expr(expr):
-        return expr
+        return [expr]
 
     binding_indices = _get_indices(expr)
 
