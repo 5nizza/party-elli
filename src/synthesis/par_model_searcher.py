@@ -1,5 +1,6 @@
-from itertools import  product
+from itertools import product
 import logging
+from helpers.automata_helper import to_dot
 
 from helpers.logging import log_entrance
 from helpers.python_ext import StrAwareList, StringEmulatorFromFile
@@ -20,9 +21,8 @@ class BaseNames:
                  sends_signal_base_name,
                  sends_prev_signal_base_name,
                  has_tok_signals_base_name):
-
-        self.sched_signal =sched_signals_base_name
-        self.active_signal =active_signal_base_name
+        self.sched_signal = sched_signals_base_name
+        self.active_signal = active_signal_base_name
         self.sends_signal = sends_signal_base_name
         self.sends_prev_signal = sends_prev_signal_base_name
         self.has_tok_signal = has_tok_signals_base_name
@@ -32,7 +32,6 @@ class ParModelSearcher:
     def __init__(self):
         self._SYS_STATE_TYPE = 'T'
         self._TAU_NAME = 'tau'
-
 
     @log_entrance(logging.getLogger(), logging.INFO)
     def search(self,
@@ -56,7 +55,6 @@ class ParModelSearcher:
         self.z3solver = z3solver
         self.names = base_name_of
 
-
         for bound in process_model_bounds:
             self._reset_state()
 
@@ -68,12 +66,11 @@ class ParModelSearcher:
 
                 init_process_states = None
                 for i, (automaton, nof_processes) in enumerate(global_automaton_cutoff_pairs):
-#                    noinspection PyTypeChecker
+                    #noinspection PyTypeChecker
                     _, impl = self._encode_global_automaton(i, nof_processes, automaton, bound, query_lines)
                     init_process_states = set(states[0] for states in impl.init_states)
 
-                #TODO: mess -- I use sync automaton to encode token ring properties on SMT level, use separate impl for that?
-#                if local_automaton:
+                #TODO: mess -- I use sync automaton to encode token ring properties on SMT level, use separate impl!
                 encoder, impl = self._encode_local_automaton(query_lines, sync_automaton, bound, init_process_states)
 
                 encoder.encode_footings(impl, query_lines)
@@ -87,8 +84,6 @@ class ParModelSearcher:
 
         return None
 
-
-
     def _encode_global_automaton(self,
                                  automaton_index:int,
                                  nof_processes,
@@ -96,28 +91,29 @@ class ParModelSearcher:
                                  bound:int,
                                  query_lines):
 
-        sys_intern_funcs_postfix = '_'+str(automaton_index)
-        spec_states_type = 'Q'+str(automaton_index)
+        sys_intern_funcs_postfix = '_' + str(automaton_index)
+        spec_states_type = 'Q' + str(automaton_index)
 
         glob_encoder = GenericEncoder(self.logic, spec_states_type, sys_intern_funcs_postfix)
 
-        sched_input_signals = get_signals_definition(self.names.sched_signal, get_log_bits(nof_processes)) [0]
-        is_active_signals =  [QuantifiedSignal(self.names.active_signal, i)     for i in range(nof_processes)]
-        sends_signals =      [QuantifiedSignal(self.names.sends_signal, i)      for i in range(nof_processes)]
+        sched_input_signals = get_signals_definition(self.names.sched_signal, get_log_bits(nof_processes))[0]
+        is_active_signals = [QuantifiedSignal(self.names.active_signal, i) for i in range(nof_processes)]
+        sends_signals = [QuantifiedSignal(self.names.sends_signal, i) for i in range(nof_processes)]
         sends_prev_signals = [QuantifiedSignal(self.names.sends_prev_signal, i) for i in range(nof_processes)]
-        has_tok_signals =    [QuantifiedSignal(self.names.has_tok_signal, i)    for i in range(nof_processes)]
+        has_tok_signals = [QuantifiedSignal(self.names.has_tok_signal, i) for i in range(nof_processes)]
 
-        orig_input_signals = [QuantifiedSignal(n, i) for (n,i) in product(self.anon_input_names, range(nof_processes))]
-        orig_output_signals = [QuantifiedSignal(n, i) for (n,i) in product(self.anon_output_names, range(nof_processes))]
+        orig_input_signals = [QuantifiedSignal(n, i) for (n, i) in product(self.anon_input_names, range(nof_processes))]
+        orig_output_signals = [QuantifiedSignal(n, i) for (n, i) in
+                               product(self.anon_output_names, range(nof_processes))]
 
         par_impl = ParImpl(automaton,
-            not self.is_moore,
-            orig_input_signals, orig_output_signals,
-            nof_processes, bound,
-            sched_input_signals, is_active_signals, sends_signals, sends_prev_signals, has_tok_signals,
-            self._SYS_STATE_TYPE,
-            self._TAU_NAME,
-            sys_intern_funcs_postfix)
+                           not self.is_moore,
+                           orig_input_signals, orig_output_signals,
+                           nof_processes, bound,
+                           sched_input_signals, is_active_signals, sends_signals, sends_prev_signals, has_tok_signals,
+                           self._SYS_STATE_TYPE,
+                           self._TAU_NAME,
+                           sys_intern_funcs_postfix)
 
         query_lines += comment('global_encoder' + sys_intern_funcs_postfix)
 
@@ -131,21 +127,20 @@ class ParModelSearcher:
 
         return glob_encoder, par_impl
 
-
     def _encode_local_automaton(self, query_lines, local_automaton, bound, init_process_states):
         query_lines += comment('local_encoder')
 
         impl = SyncImpl(local_automaton,
-            not self.is_moore,
-            [QuantifiedSignal(n, 0) for n in self.anon_input_names],
-            [QuantifiedSignal(n, 0) for n in self.anon_output_names],
-            bound,
-            self._SYS_STATE_TYPE,
-            QuantifiedSignal(self.names.has_tok_signal, 0),
-            QuantifiedSignal(self.names.sends_signal, 0),
-            QuantifiedSignal(self.names.sends_prev_signal, 0),
-            self._TAU_NAME,
-            init_process_states)
+                        not self.is_moore,
+                        [QuantifiedSignal(n, 0) for n in self.anon_input_names],
+                        [QuantifiedSignal(n, 0) for n in self.anon_output_names],
+                        bound,
+                        self._SYS_STATE_TYPE,
+                        QuantifiedSignal(self.names.has_tok_signal, 0),
+                        QuantifiedSignal(self.names.sends_signal, 0),
+                        QuantifiedSignal(self.names.sends_prev_signal, 0),
+                        self._TAU_NAME,
+                        init_process_states)
 
         encoder = GenericEncoder(self.logic, 'LQ', 'l')
 

@@ -1,9 +1,9 @@
 from functools import lru_cache
 from itertools import chain, permutations
 import math
-from architecture.scheduler import  InterleavingScheduler
+from architecture.scheduler import InterleavingScheduler
 from helpers.automata_helper import is_safety_automaton
-from helpers.python_ext import  bin_fixed_list
+from helpers.python_ext import bin_fixed_list
 from interfaces.spec import SpecProperty
 from parsing.helpers import Visitor
 from interfaces.parser_expr import ForallExpr, BinOp, Signal, Expr, Bool, QuantifiedSignal, and_expressions, Number, is_quantified_property
@@ -52,7 +52,7 @@ def normalize_conjuncts(expressions:list) -> Expr:
     for e in expressions:
         assert isinstance(e, ForallExpr), 'global non-parameterized properties are not supported'
         old_indices = e.arg1
-        new_by_old = dict((o,new_indices[i]) for i, o in enumerate(old_indices))
+        new_by_old = dict((o, new_indices[i]) for i, o in enumerate(old_indices))
 
         new_underlying_e = _replace_indices(new_by_old, e.arg2)
 
@@ -95,10 +95,10 @@ class IndexReplacerVisitor(Visitor):
         return new_signal
 
 
-    def _get_index_name(self, signal:QuantifiedSignal)-> (int, str):
+    def _get_index_name(self, signal:QuantifiedSignal) -> (int, str):
         old_indices = self._new_by_old_index.keys()
         for index in old_indices:
-            if signal.name.endswith('_'+index):
+            if signal.name.endswith('_' + index):
                 original_name = '_'.join(signal.name.split('_')[:-2])
                 return index, original_name
 
@@ -121,7 +121,7 @@ def _fix_indices(value_by_index:dict, expr:Expr):
     if not is_quantified_expr(expr):
         return expr
 
-    newindex_by_oldindex = dict((i,i) for i in _get_indices(expr))
+    newindex_by_oldindex = dict((i, i) for i in _get_indices(expr))
     newindex_by_oldindex.update(value_by_index)
 
     replaced_expr = _replace_indices(newindex_by_oldindex, expr)
@@ -165,8 +165,8 @@ def localize(property:SpecProperty):
 
     max_binding_indices = max_expr.arg1
 
-    ass_newindex_by_old = dict((o, max_binding_indices[i]) for i,o in enumerate(binding_indices_ass))
-    gua_newindex_by_old = dict((o, max_binding_indices[i]) for i,o in enumerate(binding_indices_gua))
+    ass_newindex_by_old = dict((o, max_binding_indices[i]) for i, o in enumerate(binding_indices_ass))
+    gua_newindex_by_old = dict((o, max_binding_indices[i]) for i, o in enumerate(binding_indices_gua))
 
     replaced_ass = _replace_indices(ass_newindex_by_old, normalized_ass)
     replaced_gua = _replace_indices(gua_newindex_by_old, normalized_gua)
@@ -175,7 +175,7 @@ def localize(property:SpecProperty):
     replaced_underlying_gua = replaced_gua.arg2 if is_quantified_expr(replaced_gua) else replaced_gua
 
     new_gua = ForallExpr(max_binding_indices,
-        BinOp('->', replaced_underlying_ass, replaced_underlying_gua))
+                         BinOp('->', replaced_underlying_ass, replaced_underlying_gua))
 
     new_property = SpecProperty([Bool(True)], [new_gua])
 
@@ -268,9 +268,9 @@ def strengthen(property:SpecProperty, ltl2ucw_converter) -> (list, list):
         liveness_guarantees = [g for g in p.guarantees if not is_safety(g, ltl2ucw_converter)]
 
         safety_properties += [SpecProperty([safety_ass], [sg])
-                             for sg in safety_guarantees]
+                              for sg in safety_guarantees]
         liveness_properties += [SpecProperty([all_ass], [lg])
-                               for lg in liveness_guarantees]
+                                for lg in liveness_guarantees]
 
     return safety_properties, liveness_properties
 
@@ -283,12 +283,12 @@ def _instantiate_expr2(expr:Expr, cutoff:int, forbid_zero_index:bool) -> list:
 
     assert cutoff >= len(binding_indices), 'impossible to have ' + str(len(binding_indices)) + ' different index values'
 
-    indices_range = range(cutoff) if not forbid_zero_index else range(1,cutoff)
+    indices_range = range(cutoff) if not forbid_zero_index else range(1, cutoff)
     index_values_tuples = list(permutations(indices_range, len(binding_indices)))
 
     expressions = []
     for index_values in index_values_tuples:
-        value_by_index = dict((binding_indices[i],v) for i,v in enumerate(index_values))
+        value_by_index = dict((binding_indices[i], v) for i, v in enumerate(index_values))
         expr_with_fixed_indices = _fix_indices(value_by_index, expr)
         expressions.append(expr_with_fixed_indices)
 
@@ -373,7 +373,6 @@ class ReplaceSignalsVisitor(Visitor):
     def __init__(self, newsignal_by_oldsignal:dict):
         self.new_by_old = newsignal_by_oldsignal
 
-
     def visit_signal(self, signal:Signal):
         if not isinstance(signal, QuantifiedSignal):
             return signal
@@ -384,19 +383,25 @@ class ReplaceSignalsVisitor(Visitor):
         return self.new_by_old[signal]
 
 
-#class ReplaceSignalVisitor(Visitor):
-#    def __init__(self, newsignal_by_oldsignal:dict):
-#        self.new_by_old = newsignal_by_oldsignal
-#
-#
-#    def visit_signal(self, signal:Signal):
-#        if not isinstance(signal, QuantifiedSignal):
-#            return signal
-#
-#        if signal not in self.new_by_old:
-#            return signal
-#
-#        return self.new_by_old[signal]
+def _get_sched_signal(arg, scheduler):
+    if isinstance(arg, QuantifiedSignal) and scheduler.is_scheduler_signal(arg):
+        return arg
+    return None
+
+
+class RemoveSchedulerSignalsVisitor(Visitor):
+    def __init__(self, scheduler:InterleavingScheduler):
+        self._scheduler = scheduler
+
+    def visit_binary_op(self, binary_op:BinOp):
+        if binary_op.name == '=':
+            if _get_sched_signal(binary_op.arg1, self._scheduler) or _get_sched_signal(binary_op.arg2, self._scheduler):
+                return Bool(True)
+
+        return super().visit_binary_op(binary_op)
+
+    def do(self, expr:Expr) -> Expr:
+        return super().dispatch(expr)
 
 
 class OptimizeSchedulerSignalsVisitor(Visitor):
@@ -405,37 +410,31 @@ class OptimizeSchedulerSignalsVisitor(Visitor):
         self._cutoff = cutoff
         self._scheduler = scheduler
 
-
     def visit_binary_op(self, binary_op:BinOp):
         if binary_op.name == '=':
             old_scheduling_signal = self._get_scheduling_signal(binary_op.arg1, binary_op.arg2)
             old_signal_value = self._get_number(binary_op.arg1, binary_op.arg2)
             if old_scheduling_signal and old_signal_value:
-                new_scheduling_underlying_constraint = _get_optimized_version(old_scheduling_signal,
-                     self._new_sched_signal_name,
-                     self._cutoff)
+                new_scheduling_underlying_constraint = _get_log_encoded_expr(old_scheduling_signal,
+                                                                             self._new_sched_signal_name,
+                                                                             self._cutoff)
 
                 return new_scheduling_underlying_constraint
 
         return super().visit_binary_op(binary_op)
 
-
     def _get_scheduling_signal(self, arg1, arg2) -> QuantifiedSignal:
-        def check(arg):
-            if isinstance(arg, QuantifiedSignal) and self._scheduler.is_scheduler_signal(arg):
-                return arg
-            return None
-
-        return check(arg1) or check(arg2)
-
+        return _get_sched_signal(arg1, self._scheduler) or _get_sched_signal(arg2, self._scheduler)
 
     def _get_number(self, arg1, arg2) -> Number:
-        if isinstance(arg1, Number): return arg1
-        if isinstance(arg2, Number): return arg2
+        if isinstance(arg1, Number):
+            return arg1
+        if isinstance(arg2, Number):
+            return arg2
         return None
 
 
-def _get_optimized_version(signal:QuantifiedSignal, new_sched_signal_name:str, cutoff:int) -> QuantifiedSignal:
+def _get_log_encoded_expr(signal:QuantifiedSignal, new_sched_signal_name:str, cutoff:int) -> Expr:
     assert len(signal.binding_indices) == 1
 
     proc_index = signal.binding_indices[0]
@@ -444,9 +443,10 @@ def _get_optimized_version(signal:QuantifiedSignal, new_sched_signal_name:str, c
     bits = bin_fixed_list(proc_index, nof_sched_bits)
 
     #TODO: use quantified signal or signal?
-    conjuncts = [BinOp('=', QuantifiedSignal(new_sched_signal_name, bit_index),
-        Number(1 if bit_value else 0))
-        for bit_index, bit_value in enumerate(bits)]
+    conjuncts = [BinOp('=',
+                       QuantifiedSignal(new_sched_signal_name, bit_index),
+                       Number(1 if bit_value else 0))
+                 for bit_index, bit_value in enumerate(bits)]
 
     conjunction = and_expressions(conjuncts)
 
@@ -465,9 +465,10 @@ def apply_log_bit_scheduler_optimization(instantiated_property:SpecProperty,
                                          scheduler:InterleavingScheduler,
                                          new_sched_signal_name:str,
                                          cutoff:int) -> SpecProperty:
-
-    new_assumptions = [_apply_log_bit_optimization(new_sched_signal_name, a, cutoff, scheduler) for a in instantiated_property.assumptions]
-    new_guarantees = [_apply_log_bit_optimization(new_sched_signal_name, g, cutoff, scheduler) for g in instantiated_property.guarantees]
+    new_assumptions = [_apply_log_bit_optimization(new_sched_signal_name, a, cutoff, scheduler) for a in
+                       instantiated_property.assumptions]
+    new_guarantees = [_apply_log_bit_optimization(new_sched_signal_name, g, cutoff, scheduler) for g in
+                      instantiated_property.guarantees]
 
     return SpecProperty(new_assumptions, new_guarantees)
 

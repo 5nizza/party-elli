@@ -1,5 +1,6 @@
 from helpers.python_ext import index_of
 
+
 class Signal:
     def __init__(self, name:str):
         self.name = name
@@ -46,6 +47,7 @@ class Number:
 class Expr:
     def __init__(self, name):
         self.name = name
+
     def __repr__(self):
         return str(self.name)
 
@@ -61,6 +63,7 @@ class Expr:
 class Bool(Expr):
     def __init__(self, value):
         super().__init__(str(value))
+
     def __repr__(self):
         return self.name
 
@@ -70,6 +73,7 @@ class BinOp(Expr):
         super().__init__(name)
         self.arg1 = arg1
         self.arg2 = arg2
+
     def __repr__(self):
         if self.name != '=':
             return str(self.arg1) + ' ' + self.name + ' ' + str(self.arg2)
@@ -81,6 +85,7 @@ class UnaryOp(Expr):
     def __init__(self, name, arg):
         super().__init__(name)
         self.arg = arg
+
     def __repr__(self):
         return self.name + '({0})'.format(self.arg)
 
@@ -88,7 +93,7 @@ class UnaryOp(Expr):
 class ForallExpr(Expr):
     def __init__(self, binding_indices:'binding indices', expr:Expr):
         super().__init__('Forall')
-        self.arg1, self.arg2 = tuple(binding_indices), expr #TODO: rename fields
+        self.arg1, self.arg2 = tuple(binding_indices), expr  # TODO: rename fields
 
     def __str__(self):
         return self.name + str('({0})'.format(','.join(self.arg1))) + ' ' + str(self.arg2)

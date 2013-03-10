@@ -11,10 +11,10 @@ from architecture.tok_ring import TokRingArchitecture, SENDS_NAME, HAS_TOK_NAME,
 
 from helpers.main_helper import setup_logging, create_spec_converter_z3
 from interfaces.automata import Automaton
-from interfaces.parser_expr import Bool
+from interfaces.parser_expr import Bool, Expr
 from interfaces.spec import SpecProperty, and_properties, expr_from_property
 from module_generation.dot import moore_to_dot, to_dot
-from optimizations import localize, strengthen, inst_property, apply_log_bit_scheduler_optimization, _instantiate_expr
+from optimizations import localize, strengthen, inst_property, apply_log_bit_scheduler_optimization, RemoveSchedulerSignalsVisitor
 from parsing import par_parser
 from parsing.par_lexer_desc import PAR_INPUT_VARIABLES, PAR_OUTPUT_VARIABLES, PAR_ASSUMPTIONS, PAR_GUARANTEES
 from synthesis import par_model_searcher
@@ -56,8 +56,8 @@ def _run(is_moore,
 
     for glob_automaton, cutoff in global_automatae_pairs:
         logger.info('global automaton %s', glob_automaton.name)
-        logger.info('corresponding cutoff=%i', cutoff)
-        logger.info('nof_nodes=%i', len(glob_automaton.nodes))
+        logger.info('..corresponding cutoff=%i', cutoff)
+        logger.info('..nof_nodes=%i\n', len(glob_automaton.nodes))
 
     if sync_automaton:
         logger.info('local automaton %s', sync_automaton.name)
@@ -99,6 +99,8 @@ def join_properties(properties:Iterable):
 
 
 def _strengthen_many(properties:list, ltl2ucw_converter) -> (list, list):
+    """ Return [a_s -> g_s], [a_s & a_l -> g_l]
+    """
     pseudo_safety_properties, pseudo_liveness_properties = [], []
     for p in properties:
         safety_props, liveness_props = strengthen(p, ltl2ucw_converter)
@@ -106,6 +108,17 @@ def _strengthen_many(properties:list, ltl2ucw_converter) -> (list, list):
         pseudo_liveness_properties += liveness_props
 
     return pseudo_safety_properties, pseudo_liveness_properties
+
+
+def _replace_sched_in_expr_by_true(e:Expr, scheduler) -> Expr:
+    return RemoveSchedulerSignalsVisitor(scheduler).do(e)
+
+
+def _replace_sched_by_true(property:SpecProperty, scheduler) -> SpecProperty:
+    new_assumptions = [_replace_sched_in_expr_by_true(a, scheduler) for a in property.assumptions]
+    new_quarantees = [_replace_sched_in_expr_by_true(g, scheduler) for g in property.guarantees]
+
+    return SpecProperty(new_assumptions, new_quarantees)
 
 
 def main(spec_text,
@@ -118,84 +131,78 @@ def main(spec_text,
          z3solver, logic,
          logger):
     #TODO: check which optimizations are used
-    #TODO: async_hub left, modular is always enabled
 
     anon_inputs, anon_outputs, assumptions, guarantees = _get_spec(spec_text, logger)
 
+    properties = [SpecProperty(assumptions, [g]) for g in guarantees]
+    logger.info('original properties:\n%s\n', '\n'.join(map(str, properties)))
+
     archi = TokRingArchitecture()
     archi_properties = [SpecProperty(assumptions, [g]) for g in archi.guarantees()]
-    spec_properties = [SpecProperty(assumptions + archi.implications(), [g]) for g in guarantees]
-    properties = archi_properties + spec_properties
+    logger.info('architecture properties:\n%s\n', '\n'.join(map(str, archi_properties)))
+
+    if OPTS[optimization] >= OPTS[STRENGTH]:
+        # we don't need this in case of async_hub since its assumptions implies GF(tok), put it here for simplicity
+        properties = [SpecProperty(p.assumptions + archi.implications(), p.guarantees) for p in properties]
+
+    properties = properties + archi_properties
 
     scheduler = InterleavingScheduler()
     properties = [SpecProperty(p.assumptions + scheduler.assumptions, p.guarantees)
                   for p in properties]
+    logger.info('after updating with scheduling assumptions:\n%s\n', '\n'.join(map(str, properties)))
 
+    #TODO: add support of using other options without using strengthening
     if OPTS[optimization] >= OPTS[STRENGTH]:
         logger.info('strengthening properties..')
+
         pseudo_safety_properties, pseudo_liveness_properties = _strengthen_many(properties, ltl2ucw_converter)
-    else:
-        pseudo_safety_properties = []
-        pseudo_liveness_properties = properties
+        properties = pseudo_safety_properties + pseudo_liveness_properties
 
-    print('-' * 80)
-    print('original property')
-    print('\n'.join(map(str, properties)))
-    print()
+        logger.info('strengthening resulted in pseudo_safety_properties (a_s -> g_s):\n%s\n',
+                    '\n'.join(map(str, pseudo_safety_properties)))
+        logger.info('..and in pseudo_liveness_properties (a_s&a_l -> g_l):\n%s\n',
+                    '\n'.join(map(str, pseudo_liveness_properties)))
 
-    print('-' * 80)
-    print('after strengthening')
-    print('\nsafety-----------')
-    print('\n'.join(map(str, pseudo_safety_properties)))
-    print('\nliveness---------')
-    print('\n'.join(map(str, pseudo_liveness_properties)))
-    print('-----------')
-    print()
-    #TODO: add support of strength option disabling
-    properties = [localize(p) if OPTS[optimization] >= OPTS[STRENGTH]
-                  else p
-                  for p in pseudo_liveness_properties + pseudo_safety_properties]
-
-    print('-' * 80)
-    print('after localization')
-    for p in properties:
-        print(p)
-    print()
-    print('-' * 80)
+    if OPTS[optimization] >= OPTS[STRENGTH]:
+        properties = [localize(p) for p in properties]
+        logger.info('properties after localizing:\n%s\n', '\n'.join(map(str, properties)))
 
     prop_real_cutoff_pairs = [(p, archi.get_cutoff(p)) for p in properties]
 
-    par_local_properties = [p for (p, c) in prop_real_cutoff_pairs if c == 2]
-    par_global_property_pairs = [(p, c) for (p, c) in prop_real_cutoff_pairs if p not in par_local_properties]
+    par_global_property_pairs = [(p, c) for (p, c) in prop_real_cutoff_pairs if c != 2]
+    par_local_property_pairs = [(p, c) for (p, c) in prop_real_cutoff_pairs if c == 2]
+    for (p, c) in par_local_property_pairs:
+        assert p.assumptions == [Bool(True)]
+        assert c == 2
 
-    if optimization == ASYNC_HUB: #TODO: sync hub -- should also add
+    if optimization == SYNC_HUB:  # removing GF(sch) from one-indexed properties
+        par_local_property_pairs = [(_replace_sched_by_true(p, scheduler), c)
+                                    for (p, c) in par_local_property_pairs]
+
+    if optimization == SYNC_HUB:
+        pass   # TODO: should add sync_hub assumptions -- but currently they are added on encoder level
+
+    if optimization == ASYNC_HUB:
+        # by definition async_hub_assumptions are one-indexed
         async_hub_assumptions = archi.get_async_hub_assumptions(HAS_TOK_NAME, SENDS_PREV_NAME)
-        par_local_properties2 = par_local_properties
-        par_local_properties = []
-        for p in par_local_properties2:
-            assert p.assumptions == [Bool(True)]
-            p_updated_with_sync_hub = localize(SpecProperty(async_hub_assumptions, p.guarantees))
-            par_local_properties.append(p_updated_with_sync_hub)
+        par_local_property_pairs = [(localize(SpecProperty(async_hub_assumptions, p.guarantees)), c)
+                                    for (p, c) in par_local_property_pairs]
 
-    global_property_pairs = []
-    for (p, c) in par_global_property_pairs:
+    inst_property_cutoff_pairs = []
+    for (p, c) in par_global_property_pairs + par_local_property_pairs:
         inst_c = min(c, cutoff)
         inst_p = inst_property(p, inst_c)
         opt_inst_p = apply_log_bit_scheduler_optimization(inst_p, scheduler, SCHED_ID_PREFIX, inst_c)
 
-        global_property_pairs.append((opt_inst_p, inst_c))
+        inst_property_cutoff_pairs.append((opt_inst_p, c))
 
-    local_properties = []
-    for p in par_local_properties:
-        inst_p = inst_property(p, 2)
-        opt_inst_p = apply_log_bit_scheduler_optimization(inst_p, scheduler, SCHED_ID_PREFIX, 2)
+    local_properties = [p for (p, c) in inst_property_cutoff_pairs if c == 2]
+    global_property_cutoff_pairs = [(p, min(c, cutoff))
+                                    for (p, c) in inst_property_cutoff_pairs if p not in local_properties]
 
-        local_properties.append(opt_inst_p)
-
-    print('-' * 80)
-    print('local properties', local_properties)
-    print('-' * 10)
-    print('global properties', global_property_pairs)
+    logger.info('instantiated local properties:\n%s\n', local_properties)
+    logger.info('instantiated global properties:\n%s\n', global_property_cutoff_pairs)
 
     local_automaton = None
     if len(local_properties) > 0:
@@ -203,9 +210,9 @@ def main(spec_text,
         local_automaton = ltl2ucw_converter.convert(expr_from_property(local_property))
 
     glob_automatae_pairs = []
-    if len(global_property_pairs) > 0:
+    if len(global_property_cutoff_pairs) > 0:
         glob_automatae_pairs = [(ltl2ucw_converter.convert(expr_from_property(p)), c)
-                                for p, c in global_property_pairs]
+                                for (p, c) in global_property_cutoff_pairs]
 
     if OPTS[optimization] < OPTS[SYNC_HUB] and local_automaton:
         if optimization == ASYNC_HUB:
@@ -216,11 +223,6 @@ def main(spec_text,
     sync_automaton = None
     if optimization >= SYNC_HUB:
         sync_automaton = local_automaton
-
-    print('SYNC_AUTOMATON', sync_automaton.name if sync_automaton else 'None')
-    print()
-    for a, c in glob_automatae_pairs:
-        print('{0}\n{1}\n'.format(a.name, c))
 
     _run(is_moore,
          anon_inputs, anon_outputs,

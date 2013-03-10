@@ -42,7 +42,7 @@ class Automaton:
 
 class Label(HashableDict):
     """
-    hashable dict: variable_name -> True/False
+    hashable dict: signal -> True/False
     """
     pass
 

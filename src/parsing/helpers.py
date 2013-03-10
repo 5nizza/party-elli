@@ -3,7 +3,7 @@ from interfaces.parser_expr import Number, BinOp, UnaryOp, Bool, Signal, ForallE
 
 
 class Visitor:
-    def dispatch(self, node): #TODO: clear: should accept Expr and return Expr
+    def dispatch(self, node):  # TODO: clear: should accept Expr and return Expr
         if isinstance(node, BinOp):
             return self.visit_binary_op(node)
 
@@ -26,7 +26,6 @@ class Visitor:
             return self.visit_forall(node)
 
         assert 0, 'unknown node type ' + str(node.__class__) + ': ' + str(node)
-
 
     def visit_binary_op(self, binary_op:BinOp):
         return BinOp(binary_op.name, self.dispatch(binary_op.arg1), self.dispatch(binary_op.arg2))
