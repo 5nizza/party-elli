@@ -19,6 +19,10 @@ ltl3ba=path/to/ltl3ba/executable
 python3 p_bosy.py -- to run parameterized synthesis tool         
 python3 bosy.py -- to run monolithic synthesis tool         
 
+## To test ##
+nosetests ./        
+Requires nosetests package.
+
 ## Questions ##
 , suggestions and bug reports submit to github      
 or directly to Ayrat: ayrat.khalimov(tugraz.at)
