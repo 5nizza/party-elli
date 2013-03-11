@@ -190,8 +190,6 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
             active = active_signals[0]
             proc_index = active.binding_indices[0]
         else:
-            print(self._sends_prev_signals)
-            print(index_of_prev)
             proc_index = self._sends_prev_signals[index_of_prev].binding_indices[0]
             assert self.nof_processes == 1, 'should come here only in the case of async hub'
 

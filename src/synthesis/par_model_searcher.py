@@ -153,10 +153,8 @@ class ParModelSearcher:
 
         return encoder, impl
 
-
     def _reset_state(self):
         self.is_header_encoded = self.is_sys_models_encoded = self.is_footing_added = False
-
 
     def _ensure_header_added(self, encoder:GenericEncoder, query_lines):
         if self.is_header_encoded:
@@ -164,7 +162,6 @@ class ParModelSearcher:
 
         self.is_header_encoded = True
         encoder.encode_header(query_lines)
-
 
     def _ensure_sys_model_functions_added(self, encoder:GenericEncoder, impl, query_lines):
         if self.is_sys_models_encoded:

@@ -142,7 +142,7 @@ def main(spec_text,
     logger.info('architecture properties:\n%s\n', '\n'.join(map(str, archi_properties)))
 
     if OPTS[optimization] >= OPTS[STRENGTH]:
-        # we don't need this in case of async_hub since its assumptions implies GF(tok), put it here for simplicity
+        # we don't need this in case of async_hub since its assumptions implies GF(tok), put it is here for simplicity
         properties = [SpecProperty(p.assumptions + archi.implications(), p.guarantees) for p in properties]
 
     properties = properties + archi_properties
@@ -185,7 +185,7 @@ def main(spec_text,
 
     if optimization == ASYNC_HUB:
         # by definition async_hub_assumptions are one-indexed
-        async_hub_assumptions = archi.get_async_hub_assumptions(HAS_TOK_NAME, SENDS_PREV_NAME)
+        async_hub_assumptions = archi.get_async_hub_assumptions()
         par_local_property_pairs = [(localize(SpecProperty(async_hub_assumptions, p.guarantees)), c)
                                     for (p, c) in par_local_property_pairs]
 
@@ -256,7 +256,7 @@ if __name__ == '__main__':
 
     logger = setup_logging(args.verbose)
 
-    logger.debug(args)
+    logger.info(args)
 
     ltl2ucw_converter, z3solver = create_spec_converter_z3(logger)
     if not ltl2ucw_converter or not z3solver:

@@ -47,6 +47,8 @@ def _get_rank(property:SpecProperty) -> int:
 
 class TokRingArchitecture:
     def guarantees(self):
+        """ Return G(tok_i -> Fsends_i)
+        """
         #TODO: introduce Globally/Finally class
         expr = UnaryOp('G',
                        BinOp('->',
@@ -72,20 +74,18 @@ class TokRingArchitecture:
 
         return 2*rank
 
-    def get_async_hub_assumptions(self,
-                                  has_tok_base_name:str,
-                                  sends_prev_base_name:str) -> list:
+    def get_async_hub_assumptions(self) -> list:
         """ Return [Forall(i) G(tok_i -> !sends_prev_i),
                     Forall(i) G(!tok_i -> F(sends_prev_i))]
         """
 
         expr1 = parse_expr('Forall(i) G({tok}_i=1 -> {sends_prev}_i=0)'.format(
-            tok=has_tok_base_name,
-            sends_prev=sends_prev_base_name))
+            tok=HAS_TOK_NAME,
+            sends_prev=SENDS_PREV_NAME))
 
         expr2 = parse_expr('Forall(i) G({tok}_i=0 -> F(({sends_prev}_i=1) ))'.format(
-            tok=has_tok_base_name,
-            sends_prev=sends_prev_base_name))
+            tok=HAS_TOK_NAME,
+            sends_prev=SENDS_PREV_NAME))
 
         return [expr1, expr2]
 

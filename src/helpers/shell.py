@@ -4,7 +4,10 @@ import sys
 
 
 def execute_shell(cmd, input=''):
-    """ Execute cmd, send input to stdin. Return returncode, stdout, stderr. """
+    """
+    Execute cmd, send input to stdin.
+    Return returncode, stdout, stderr.
+    """
 
     proc_stdin = subprocess.PIPE if input != '' and input is not None else None
     proc_input = input if input != '' and input is not None else None
