@@ -14,11 +14,9 @@ class Z3:
         self._cmd_with_stdin = path + ' {0}smt2 {0}in'.format(flag)
         self._cmd_with_file = path + ' {0}smt2 '.format(flag)
 
-
     def _remove_model_is_not_available(self, err):
         res = [x for x in err.split('\n') if "model is not available" not in x ]
         return '\n'.join(res)
-
 
     def _process_outputs(self, raw_err, raw_output, rc):
         output = self._remove_model_is_not_available(raw_output)
@@ -35,19 +33,15 @@ class Z3:
         if output_lines[0] == 'unsat':
             return Z3.UNSAT, None
         if output_lines[0] == 'sat':
-            return Z3.SAT, output_lines[1:] #first line is status
+            return Z3.SAT, output_lines[1:]  # first line is status
         assert False, 'unknown Z3 state: ' + output
 
+    def solve_file(self, file_name, logger):  # TODO: bad: access to raw file
+        logger.info('z3: solve query: ' + file_name)
 
-    @log_entrance(logging.getLogger(), logging.INFO)
-    def solve_file(self, file_name): #TODO: bad: access to raw file
         cmd = self._cmd_with_file + file_name
         rc, raw_output, raw_err = execute_shell(cmd)
-        return self._process_outputs(raw_err, raw_output, rc)
 
+        status, model = self._process_outputs(raw_err, raw_output, rc)
 
-    @log_entrance(logging.getLogger(), logging.INFO)
-    def solve(self, smt_query):
-        rc, raw_output, raw_err = execute_shell(self._cmd_with_stdin, smt_query)
-
-        return self._process_outputs(raw_err, raw_output, rc)
+        return status, model

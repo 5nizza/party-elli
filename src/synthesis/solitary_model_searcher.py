@@ -18,7 +18,7 @@ def search(automaton:Automaton, is_mealy:bool, input_signals, output_signals, bo
     for bound in bounds:
         logger.info('searching a model of size {0}..'.format(bound))
 
-        with open(smt_file_prefix+'_'+str(bound)+'.smt2', 'w') as smt_file:
+        with open(smt_file_prefix + '_' + str(bound) + '.smt2', 'w') as smt_file:
             logger.info('using smt file ' + str(smt_file.name))
 
             query_lines = StrAwareList(StringEmulatorFromFile(smt_file))
@@ -32,7 +32,7 @@ def search(automaton:Automaton, is_mealy:bool, input_signals, output_signals, bo
 
             logger.info('smt query has %i lines', len(query_lines))
 
-        status, data = z3solver.solve_file(smt_file.name)
+        status, data = z3solver.solve_file(smt_file.name, logger)
 
         if status == Z3.SAT:
             return encoder.parse_sys_model(data, impl)

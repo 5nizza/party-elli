@@ -77,7 +77,7 @@ class ParModelSearcher:
 
                 self.logger.info('smt query has %i lines', len(query_lines))
 
-            status, data_lines = z3solver.solve_file(smt_file_name)
+            status, data_lines = z3solver.solve_file(smt_file_name, self.logger)
 
             if status == Z3.SAT:
                 return encoder.parse_sys_model(data_lines, impl)

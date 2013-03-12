@@ -61,52 +61,47 @@ def satisfied(label, signal_values):
     return True
 
 
-def to_dot(automaton):
+def to_dot(automaton) -> str:
     if automaton is None:
         return ''
 
     rej_header = []
     for rej in automaton.rejecting_nodes:
         rej_header.append('"{0}" [shape=doublecircle]'.format(rej.name))
-
-    assert len(list(filter(lambda states: len(states) > 1, automaton.initial_sets_list))) == 0,\
-    'no support of universal init states!'
-
+    assert len(list(filter(lambda states: len(states) > 1, automaton.initial_sets_list))) == 0, \
+        'no support of universal init states!'
     init_header = []
     init_nodes = chain(*automaton.initial_sets_list)
     for init in init_nodes:
         init_header.append('"{0}" [shape=box]'.format(init.name))
-
     trans_dot = []
     for n in automaton.nodes:
         colors = 'black purple green yellow blue orange red brown pink gray'.split()
 
-        for label, list_of_sets in n.transitions.items():
-            for flagged_states in list_of_sets:
-                if len(colors):
-                    color = colors.pop(0)
-                else:
-                    color = 'gray'
+    for label, list_of_sets in n.transitions.items():
+        for flagged_states in list_of_sets:
+            if len(colors):
+                color = colors.pop(0)
+            else:
+                color = 'gray'
 
-                edge_is_labelled = False
+            edge_is_labelled = False
 
-                for dst, is_rejecting in flagged_states:
+            for dst, is_rejecting in flagged_states:
 
-                    edge_label_add = ''
-                    if not edge_is_labelled:
-                        edge_label_add = ', label="{0}"'.format(label_to_short_string(label))
-                        edge_is_labelled = True
+                edge_label_add = ''
+                if not edge_is_labelled:
+                    edge_label_add = ', label="{0}"'.format(label_to_short_string(label))
+                    edge_is_labelled = True
 
-                    trans_dot.append('"{0}" -> "{1}" [color={2}{3}, arrowhead="{4}"];'.format(
-                        n.name, dst.name, color, edge_label_add, ['normal', 'normalnormal'][is_rejecting]))
+                trans_dot.append('"{0}" -> "{1}" [color={2}{3}, arrowhead="{4}"];'.format(
+                    n.name, dst.name, color, edge_label_add, ['normal', 'normalnormal'][is_rejecting]))
 
-                trans_dot.append('\n')
-
+            trans_dot.append('\n')
     dot_lines = ['digraph "automaton" {'] + \
                 init_header + ['\n'] + \
                 rej_header + ['\n'] + \
                 trans_dot + ['}']
-
     return '\n'.join(dot_lines)
 
 
@@ -114,12 +109,7 @@ def label_to_short_string(label):
     if len(label) == 0:
         return '1'
 
-    short_string = ''
-    for var, val in label.items():
-        if val is False:
-            short_string += '!'
-        short_string += str(var)
-
+    short_string = '.'.join(map(lambda var_val: ['!',''][var_val[1]] + str(var_val[0]), label.items()))
     return short_string
 
 
@@ -241,6 +231,7 @@ def get_intersection(label1, label2):
     result = dict(label1)
     result.update(label2)
     return Label(result)
+
 #overkill?
 #    formula1 = convert_to_formula(label1)
 #    formula2 = convert_to_formula(label2)
@@ -284,12 +275,12 @@ def complement_with_live_ends(automaton, variables):
 class ComplementTests(unittest.TestCase):
     def test_complement_node_with_live_ends(self):
         node = Node('node')
-        node.add_transition(Label({'a':True}), {(node, False)})
+        node.add_transition(Label({'a': True}), {(node, False)})
 
         complement_node(node, ['a'])
 
-        assert node.transitions[Label({'a':True})] == [{(node, False)}]
-        assert node.transitions[Label({'a':False})] == [{(LIVE_END, False)}]
+        assert node.transitions[Label({'a': True})] == [{(node, False)}]
+        assert node.transitions[Label({'a': False})] == [{(LIVE_END, False)}]
 
     def test_complement_node_with_live_ends2(self):
         node = Node('node')
@@ -306,17 +297,16 @@ class ComplementTests(unittest.TestCase):
 
     def test_complement_node_with_live_ends4(self):
         node = Node('node')
-        node.add_transition(Label({'a':True, 'b':False}), {(node, False)})
+        node.add_transition(Label({'a': True, 'b': False}), {(node, False)})
 
-        node.add_transition(Label({'a':False, 'b':True}), {(node, False)})
+        node.add_transition(Label({'a': False, 'b': True}), {(node, False)})
 
         complement_node(node, ['a', 'b'])
 
-        assert node.transitions[Label({'a':False, 'b':False})] == [{(LIVE_END, False)}]
-        assert node.transitions[Label({'a':True, 'b':True})] == [{(LIVE_END, False)}]
-        assert node.transitions[Label({'a':True, 'b':False})] == [{(node, False)}]
-        assert node.transitions[Label({'a':False, 'b':True})] == [{(node, False)}]
-
+        assert node.transitions[Label({'a': False, 'b': False})] == [{(LIVE_END, False)}]
+        assert node.transitions[Label({'a': True, 'b': True})] == [{(LIVE_END, False)}]
+        assert node.transitions[Label({'a': True, 'b': False})] == [{(node, False)}]
+        assert node.transitions[Label({'a': False, 'b': True})] == [{(node, False)}]
 
 
 ##############################################################################
@@ -365,12 +355,13 @@ class PartitioningTests(unittest.TestCase):
 
     def test_convert_to_formula(self):
         boolean_symbols = dict(zip(['a', 'b'], symbols(*['a', 'b'])))
-        assert convert_to_labels(convert_to_formula(Label({'a':True}), boolean_symbols)) == {Label({'a':True})}
-        assert convert_to_labels(convert_to_formula(Label({'a':True, 'b':False}), boolean_symbols)) == {Label({'a':True, 'b':False})}
+        assert convert_to_labels(convert_to_formula(Label({'a': True}), boolean_symbols)) == {Label({'a': True})}
+        assert convert_to_labels(convert_to_formula(Label({'a': True, 'b': False}), boolean_symbols)) == {
+            Label({'a': True, 'b': False})}
 
     def test_get_intersection(self):
         assert get_intersection(Label({}), Label({})) == Label({})
-        assert get_intersection(Label({'a':True}), Label({})) == Label({'a':True})
-        assert get_intersection(Label({'a':True}), Label({'b':False})) == Label({'a':True, 'b':False})
-        assert get_intersection(Label({'a':True}), Label({'a':False})) is None
-        assert get_intersection(Label({'a':False}), Label({'a':False, 'b':True})) == Label({'a':False, 'b':True})
+        assert get_intersection(Label({'a': True}), Label({})) == Label({'a': True})
+        assert get_intersection(Label({'a': True}), Label({'b': False})) == Label({'a': True, 'b': False})
+        assert get_intersection(Label({'a': True}), Label({'a': False})) is None
+        assert get_intersection(Label({'a': False}), Label({'a': False, 'b': True})) == Label({'a': False, 'b': True})
