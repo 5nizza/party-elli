@@ -1,5 +1,4 @@
 *.pyc
-lib/z3
 tmp*
 .idea
 parser.out

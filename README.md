@@ -4,13 +4,13 @@ Party
 Parameterized Synthesis of Token Rings
 
 ## Requirements ##
-Ubuntu 12.04     
-Z3 (tested with version 4.1)      
+Ubuntu 12.04 (likely to work with others)            
+Z3 (tested with version 4.1 and 4.3.1)      
 ltl3ba (tested with version 1.0.2)       
 python3 (tested with version 3.2)       
 
 ## To configure ##
-modify file config.py in the root directory     
+modify file config.py in src directory     
 with paths to executables of z3 and ltl3ba       
 
 ## To run ##
@@ -26,7 +26,7 @@ test_monolithic.py
 
 ## Questions ##
 , suggestions and bug reports submit to github      
-or directly to Ayrat: ayrat.khalimov(tugraz.at)
+or directly to Ayrat: ayrat.khalimov(gmail)
 
 ## Authors ##
 Ayrat Khalimov,Swen Jacobs,Roderick Bloem, TU Graz.
