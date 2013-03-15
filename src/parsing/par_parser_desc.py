@@ -1,6 +1,8 @@
+import os
 from parsing.helpers import Visitor
 from interfaces.parser_expr import *
 from parsing.par_lexer_desc import *
+
 
 precedence = (
     ('right', 'QUANTIFIER'),
@@ -103,6 +105,7 @@ def p_section_data_property_binary_operation(p):
     assert p[2] in BIN_OPS
     p[0] = BinOp(p[2], p[1], p[3])
 
+
 def p_section_data_par_property(p):
     """property : par_property """
     p[0] = p[1]
@@ -184,6 +187,5 @@ def p_error(p):
     assert 0
 
 
-
-from helpers.ply.yacc import yacc
-par_parser = yacc()
+from third_party.ply import yacc
+par_parser = yacc.yacc(debug=0, outputdir=os.path.dirname(os.path.realpath(__file__)))

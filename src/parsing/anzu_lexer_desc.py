@@ -95,6 +95,6 @@ def t_error(t):
 
 
 
-import helpers.ply.lex as lex
+import third_party.ply.lex as lex
 
 anzu_lexer = lex.lex()

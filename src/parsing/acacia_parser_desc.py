@@ -1,9 +1,12 @@
-from helpers.python_ext import lfilter, lmap
+import os
+from helpers.python_ext import lmap
 from parsing.acacia_lexer_desc import *
+
 
 class Assumption:
     def __init__(self, data):
         self.data = data
+
 
 class Guarantee:
     def __init__(self, data):
@@ -131,5 +134,5 @@ def p_error(p):
     assert 0
 
 
-from helpers.ply.yacc import yacc
-acacia_parser = yacc()
+from third_party.ply import yacc
+acacia_parser = yacc.yacc(debug=0, outputdir=os.path.dirname(os.path.realpath(__file__)))

@@ -1,0 +1,12 @@
+# arbiter with cancellation
+
+# A1 always(cancel -> next(go))
+# P1 always(req -> next_e[1:3](grant));
+# P2 always(grant -> next(!grant));
+# P3 always(cancel -> next((!grant) until! go));
+
+#assume G( cancel=1 -> X(go=1) ); # A1
+
+((( req=1 -> (X(grant=1) + X(X(grant=1)) + X(X(X(grant=1))))) * 
+( grant=1 -> X(grant=0)) * 
+( cancel=1 -> X(grant=0 U go=1))) U (!( cancel=1 -> X(go=1) ))) + G( cancel=1 -> X(go=1) );

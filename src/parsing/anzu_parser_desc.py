@@ -1,3 +1,4 @@
+import os
 from parsing.anzu_lexer_desc import *
 
 precedence = (
@@ -119,5 +120,5 @@ def p_error(p):
     assert 0
 
 
-from helpers.ply.yacc import yacc
-anzu_parser = yacc()
+from third_party.ply import yacc
+anzu_parser = yacc.yacc(debug=0, outputdir=os.path.dirname(os.path.realpath(__file__)))

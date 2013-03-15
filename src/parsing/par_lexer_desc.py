@@ -9,8 +9,8 @@ PAR_SECTIONS = (PAR_INPUT_VARIABLES, PAR_OUTPUT_VARIABLES, PAR_ASSUMPTIONS, PAR_
 
 #reserved words: syntactic sugar to help to match exactly reserved word
 reserved_section_names = dict((s, s) for s in PAR_SECTIONS)
-reserved_bools =  dict((s, s) for s in ('TRUE', 'FALSE'))
-reserved_quantifiers = {'Forall' : 'QUANTIFIER'}
+reserved_bools = dict((s, s) for s in ('TRUE', 'FALSE'))
+reserved_quantifiers = {'Forall': 'QUANTIFIER'}
 
 reserved_all = add_dicts(reserved_bools, reserved_quantifiers, reserved_section_names)
 
@@ -21,29 +21,29 @@ reserved_all = add_dicts(reserved_bools, reserved_quantifiers, reserved_section_
 tokens = [
              'COMMA', 'SIGNAL_NAME', 'NUMBER', 'BOOL',
              'TEMPORAL_UNARY', 'NEG', 'TEMPORAL_BINARY',
-             'OR','AND','IMPLIES', 'EQUIV', 'EQUALS',
-             'LPAREN','RPAREN', 'LBRACKET', 'RBRACKET',
+             'OR', 'AND', 'IMPLIES', 'EQUIV', 'EQUALS',
+             'LPAREN', 'RPAREN', 'LBRACKET', 'RBRACKET',
              'SEP'
          ] + list(reserved_section_names.values()) + \
              list(set(reserved_quantifiers.values()))
 #             list(reserved_bools.values()) #i use BOOL currently
 
 #constant to ensure consistency of the code
-BIN_OPS = ('+','*','->','<->','=','U') #TODO: what about Forall?
+BIN_OPS = ('+', '*', '->', '<->', '=', 'U')  # TODO: what about Forall?
 
 ############################################################
-t_OR      = r'\+'
-t_AND     = r'\*'
+t_OR = r'\+'
+t_AND = r'\*'
 t_IMPLIES = r'->'
-t_EQUIV   = r'<->'
-t_EQUALS  = r'='
-t_NEG     = r'\!'
+t_EQUIV = r'<->'
+t_EQUALS = r'='
+t_NEG = r'\!'
 
-t_LPAREN  = r'\('
-t_RPAREN  = r'\)'
+t_LPAREN = r'\('
+t_RPAREN = r'\)'
 
-t_LBRACKET  = r'\['
-t_RBRACKET  = r'\]'
+t_LBRACKET = r'\['
+t_RBRACKET = r'\]'
 
 t_COMMA = r','
 
@@ -72,8 +72,8 @@ def t_SIGNAL_NAME(t):
     # Check for reserved words
     t.type = reserved_all.get(t.value, t.type)
 
-#    if t.type == 'QUANTIFIER':
-#        t.lexer.begin('quantified')
+    #    if t.type == 'QUANTIFIER':
+    #        t.lexer.begin('quantified')
 
     return t
 
@@ -97,7 +97,6 @@ def t_error(t):
     assert 0
 
 
-
-import helpers.ply.lex as lex
+import third_party.ply.lex as lex
 
 par_lexer = lex.lex()

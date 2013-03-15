@@ -10,10 +10,8 @@ ltl3ba (tested with version 1.0.2)
 python3 (tested with version 3.2)       
 
 ## To configure ##
-add file named "config" to the root directory       
-the file should contain two lines:      
-z3=path/to/z3/executable       
-ltl3ba=path/to/ltl3ba/executable        
+modify file config.py in the root directory     
+with paths to executables of z3 and ltl3ba       
 
 ## To run ##
 python3 p_bosy.py -- to run parameterized synthesis tool         
@@ -21,7 +19,10 @@ python3 bosy.py -- to run monolithic synthesis tool
 
 ## To test ##
 nosetests ./        
-Requires nosetests package.
+Requires nosetests package.      
+Also directory ./tests contains functional tests          
+test_parameterized.py       
+test_monolithic.py       
 
 ## Questions ##
 , suggestions and bug reports submit to github      

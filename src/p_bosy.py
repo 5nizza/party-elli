@@ -15,7 +15,7 @@ from interfaces.automata import Automaton
 from interfaces.parser_expr import Bool, Expr
 from interfaces.spec import SpecProperty, and_properties, expr_from_property
 from module_generation.dot import moore_to_dot, to_dot
-from optimizations import localize, strengthen, inst_property, apply_log_bit_scheduler_optimization, RemoveSchedulerSignalsVisitor
+from spec_optimizer.optimizations import localize, strengthen, inst_property, apply_log_bit_scheduler_optimization, RemoveSchedulerSignalsVisitor
 from parsing import par_parser
 from parsing.par_lexer_desc import PAR_INPUT_VARIABLES, PAR_OUTPUT_VARIABLES, PAR_ASSUMPTIONS, PAR_GUARANTEES
 from synthesis import par_model_searcher
@@ -251,8 +251,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Parametrized Synthesis Tool for token rings architecture')
     parser.add_argument('ltl', metavar='ltl', type=FileType(),
                         help='LTL file with parameterized specification')
-    parser.add_argument('--moore', action='store_true', required=False, default=False,
-                        help='output Moore machine')
+
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--moore', action='store_true', required=False,
+                       help='treat the spec as Moore and produce Moore machine')
+    group.add_argument('--mealy', action='store_false', required=False,
+                       help='treat the spec as Mealy and produce Mealy machine')
+
     parser.add_argument('--dot', metavar='dot', type=str, required=False,
                         help='prefix of dot-graph files for output model')
     parser.add_argument('--bound', metavar='bound', type=int, default=2, required=False,

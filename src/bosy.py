@@ -4,12 +4,10 @@ import sys
 import tempfile
 
 from helpers.main_helper import setup_logging, create_spec_converter_z3
-from interfaces.parser_expr import and_expressions, QuantifiedSignal
 from interfaces.spec import SpecProperty, to_expr, and_properties
 from module_generation.dot import to_dot, moore_to_dot
 from module_generation.nusmv import to_nusmv
 from parsing import acacia_parser
-from parsing.anzu_parser_desc import ANZU_INPUT_VARIABLES, ANZU_ENV_FAIRNESS, ANZU_ENV_INITIAL, ANZU_ENV_TRANSITIONS, ANZU_OUTPUT_VARIABLES, ANZU_SYS_TRANSITIONS, ANZU_SYS_FAIRNESS, ANZU_SYS_INITIAL
 from synthesis.solitary_model_searcher import search
 from synthesis.smt_logic import UFLIA
 
@@ -81,8 +79,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='BOunded SYnthesis Tool')
     parser.add_argument('ltl', metavar='ltl', type=argparse.FileType(),
                         help='loads the LTL formula from the given input file, also assumes existence of file with .part extension')
-    parser.add_argument('--moore', action='store_true', required=False, default=False,
-                        help='treat the spec as Moore and produce Moore machine')
+
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--moore', action='store_true', required=False,
+                       help='treat the spec as Moore and produce Moore machine')
+    group.add_argument('--mealy', action='store_false', required=False,
+                       help='treat the spec as Mealy and produce Mealy machine')
+
     parser.add_argument('--dot', metavar='dot', type=str, required=False,
                         help='writes the output into a dot graph file')
     parser.add_argument('--nusmv', metavar='nusmv', type=str, required=False,
@@ -96,6 +99,8 @@ if __name__ == "__main__":
     args = parser.parse_args(sys.argv[1:])
 
     logger = setup_logging(args.verbose)
+
+    logger.info(args)
 
     ltl2ucw_converter, z3solver = create_spec_converter_z3(logger)
     if not ltl2ucw_converter or not z3solver:

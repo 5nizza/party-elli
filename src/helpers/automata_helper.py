@@ -1,9 +1,9 @@
 from itertools import chain, product
-from helpers.boolean import *
+import unittest
+
+from third_party.boolean import *
 from helpers.python_ext import index_of
 from interfaces.automata import Label, LIVE_END, Node, DEAD_END
-
-import unittest
 
 
 def flatten_nodes_in_transition(node_transitions):

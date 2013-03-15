@@ -1,6 +1,5 @@
 from logging import Logger
-from helpers.ply import yacc
-from interfaces.parser_expr import QuantifiedSignal
+from third_party.ply import yacc
 from parsing.anzu_lexer_desc import anzu_lexer, ANZU_ENV_FAIRNESS, ANZU_ENV_INITIAL, ANZU_ENV_TRANSITIONS, ANZU_SYS_FAIRNESS, ANZU_SYS_INITIAL, ANZU_SYS_TRANSITIONS, ANZU_INPUT_VARIABLES, ANZU_OUTPUT_VARIABLES
 from parsing.anzu_parser_desc import anzu_parser
 from parsing.sanity_checker import check_unknown_signals_in_properties

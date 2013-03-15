@@ -1,0 +1,3 @@
+change the spec: remove requrement at the initial moment: !g, also remove assumption !r
+
+this will change the size of Mealy machine to 3 (and Moore remains the same 4)

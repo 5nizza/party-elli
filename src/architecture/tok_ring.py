@@ -1,6 +1,6 @@
 from interfaces.parser_expr import UnaryOp, QuantifiedSignal, BinOp, ForallExpr, Number, Bool, is_quantified_property, Expr
 from interfaces.spec import SpecProperty
-from optimizations import parse_expr
+from spec_optimizer.optimizations import parse_expr
 
 SENDS_NAME, SENDS_PREV_NAME, HAS_TOK_NAME = 'sends', 'prev', 'tok'
 

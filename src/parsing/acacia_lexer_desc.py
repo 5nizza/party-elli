@@ -104,6 +104,6 @@ def t_error(t):
 
 
 
-import helpers.ply.lex as lex
+import third_party.ply.lex as lex
 
 acacia_lexer = lex.lex()
