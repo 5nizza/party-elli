@@ -320,7 +320,10 @@ class GenericEncoder:
             init_states = set(sys_init_state[i] for sys_init_state in impl.init_states)
 
             #noinspection PyTypeChecker
-            models.append(LTS(init_states, output_models, tau_model))
+            lts = LTS(init_states, output_models, tau_model, 'state',
+                      impl.orig_inputs[i], list(impl.outvar_desc_by_process[i].keys()))
+
+            models.append(lts)  # TODO: hack: replace by constant
 
         return models
 

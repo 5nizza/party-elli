@@ -7,13 +7,12 @@ class LabelsMap:
             value_by_label = []
         self._value_by_label = list(value_by_label.items())
 
-
     def __getitem__(self, key:Label):
         if not isinstance(key, Label):
             raise TypeError(key)
 
         indices = [v for (l, v) in self._value_by_label
-                    if set(l.items()).issubset(set(key.items()))]
+                   if set(l.items()).issubset(set(key.items()))]
 
         assert len(indices) == 0 or len(indices) == 1, str(indices) + ', for ' + str(key)
 
@@ -24,7 +23,6 @@ class LabelsMap:
         else:
             assert 0, str(key) + ' leads to ambiguity: ' + str(indices)
 
-
     def __setitem__(self, key:Label, value):
         if not isinstance(key, Label):
             raise TypeError(key)
@@ -32,15 +30,12 @@ class LabelsMap:
         assert key not in self
         self._value_by_label.append((key, value))
 
-
     def items(self):
         return list(self._value_by_label)
-
 
     def __iter__(self):
         print()
         return iter([l for (l,v) in self._value_by_label])
-
 
     def __contains__(self, item):
         try:
@@ -48,6 +43,11 @@ class LabelsMap:
             return True
         except (KeyError, TypeError):
             return False
+
+    def __str__(self):
+        return str(self._value_by_label)
+
+    __repr__ = __str__
 
 ################################################################################
 

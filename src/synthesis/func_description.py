@@ -55,7 +55,6 @@ class FuncDescription:
             body = self._body
         )
 
-
     def get_args_list(self, value_by_argname:dict) -> list:
         assert set([p[0] for p in self._ordered_input_type_pairs]).issubset(set(value_by_argname.keys())), \
         'requested \n{0}\n, but I have \n{1}'.format(value_by_argname, self._ordered_input_type_pairs)
@@ -67,7 +66,6 @@ class FuncDescription:
 
         return ordered_values
 
-
     def get_args_dict(self, values) -> dict:
         value_by_arg = dict()
         for i, v in enumerate(values):
@@ -75,7 +73,6 @@ class FuncDescription:
             value_by_arg[arg] = v
 
         return value_by_arg
-
 
     def __str__(self):
         return '<name: {name}, inputs: {inputs}, output: {output}, definition: \n{definition}>'.format(
@@ -85,16 +82,13 @@ class FuncDescription:
             definition = self.definition
         )
 
-
     def __eq__(self, other):
         if not isinstance(other, FuncDescription):
             return False
 
         return str(other) == str(self)
 
-
     def __hash__(self):
         return hash(str(self))
-
 
     __repr__ = __str__

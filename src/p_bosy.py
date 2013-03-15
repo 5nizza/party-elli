@@ -52,7 +52,7 @@ def _run(is_moore,
          solver, logic,
          smt_files_prefix:str,
          dot_files_prefix,
-         logger):
+         logger) -> Bool:
     logger.info('# of global automatae %i', len(global_automatae_pairs))
 
     for glob_automaton, cutoff in global_automatae_pairs:
@@ -79,19 +79,28 @@ def _run(is_moore,
                                    smt_files_prefix,
                                    BaseNames(SCHED_ID_PREFIX, ACTIVE_NAME, SENDS_NAME, SENDS_PREV_NAME, HAS_TOK_NAME))
 
-    logger.info('model%s found', ['', ' not'][models is None])
+    is_realizable = models is not None
 
-    if dot_files_prefix is not None and models is not None:
+    logger.info(['unrealizable', 'realizable'][is_realizable])
+
+    if is_realizable:
         for i, lts in enumerate(models):
-            with open(dot_files_prefix + str(i) + '.dot', mode='w') as out:
-                if is_moore:
-                    dot = moore_to_dot(lts)
-                else:
-                    dot = to_dot(lts, [SENDS_NAME, HAS_TOK_NAME])
-                out.write(dot)
-                logger.info('{type} model is written to {file}'.format(
-                    type=['Mealy', 'Moore'][is_moore],
-                    file=out.name))
+            if is_moore:
+                dot = moore_to_dot(lts)
+            else:
+                dot = to_dot(lts, [SENDS_NAME, HAS_TOK_NAME])
+
+            if dot_files_prefix is None:
+                logger.info(dot)
+            else:
+                with open(dot_files_prefix + str(i) + '.dot', mode='w') as out:
+                    out.write(dot)
+
+                    logger.info('{type} model is written to {file}'.format(
+                        type=['Mealy', 'Moore'][is_moore],
+                        file=out.name))
+
+    return is_realizable
 
 
 def join_properties(properties:Iterable):
@@ -133,6 +142,8 @@ def main(spec_text,
          ltl2ucw_converter:Ltl2UCW,
          z3solver, logic,
          logger):
+    """ :return: is realizable? """
+
     #TODO: check which optimizations are used
 
     anon_inputs, anon_outputs, assumptions, guarantees = _get_spec(spec_text, logger)
@@ -227,13 +238,13 @@ def main(spec_text,
     if optimization >= SYNC_HUB:
         sync_automaton = local_automaton
 
-    _run(is_moore,
-         anon_inputs, anon_outputs,
-         sync_automaton, glob_automatae_pairs,
-         bounds,
-         z3solver,
-         logic,
-         smt_files_prefix, dot_files_prefix, logger)
+    return _run(is_moore,
+                anon_inputs, anon_outputs,
+                sync_automaton, glob_automatae_pairs,
+                bounds,
+                z3solver,
+                logic,
+                smt_files_prefix, dot_files_prefix, logger)
 
 
 if __name__ == '__main__':
@@ -274,13 +285,15 @@ if __name__ == '__main__':
 
     logger.info('temp file prefix used is %s', smt_files_prefix)
 
-    main(args.ltl.read(),
-         args.opt,
-         args.moore,
-         smt_files_prefix,
-         args.dot,
-         bounds,
-         args.cutoff,
-         ltl2ucw_converter, z3solver,
-         logic,
-         logger)
+    is_realizable = main(args.ltl.read(),
+                         args.opt,
+                         args.moore,
+                         smt_files_prefix,
+                         args.dot,
+                         bounds,
+                         args.cutoff,
+                         ltl2ucw_converter, z3solver,
+                         logic,
+                         logger)
+
+    exit(0 if is_realizable else 1)

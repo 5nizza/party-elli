@@ -5,6 +5,11 @@ from helpers.python_ext import is_empty_str
 from helpers.shell import execute_shell
 
 
+_PYTHON3 = "python3"
+_BENCHMARKS_DIR = get_root_dir() + "benchmarks/"
+_PROGRAM = get_root_dir() + "src/p_bosy.py"
+
+
 _REALIZABLE = [
     "../benchmarks/parameterized/full_arbiter.ltl --cutoff 2 --size 3 --opt strength",
     "../benchmarks/parameterized/full_arbiter.ltl --cutoff 3 --size 3 --opt strength",
@@ -66,16 +71,12 @@ _UNREALIZABLE_SUBSET = [
     "../benchmarks/parameterized/pnueli_arbiter.ltl --cutoff 2 --size 2 --opt sync_hub",
 ]
 
-_BENCHMARKS_DIR = get_root_dir() + "benchmarks/"
-_PYTHON3 = "python3"
-_PROGRAM = get_root_dir() + "src/p_bosy.py"
-
 
 def _get_cmd_result(result, out, err):
     output = '-' * 20 + 'DETAILS' + '-' * 20 + '\n' + \
-             "result:" + str(result) + '\n\n' + \
-             "error:" + err + '\n\n' + \
              "output:" + out + '\n' + \
+             "error:" + err + '\n\n' + \
+             "result:" + str(result) + '\n\n' + \
              '-' * 40
     return output
 
@@ -98,21 +99,16 @@ def _run_benchmark(benchmark, is_realizable) -> bool:
     exec_cmd = '{python3} {program} {args}'.format(python3=_PYTHON3, program=_PROGRAM, args=cmd_args)
     result, out, err = execute_shell(exec_cmd)
 
-    if result != 0 or not is_empty_str(err):
+    if (result != 0 and result != 1) or not is_empty_str(err):
         _failed('error while executing the command', cmd_args, result, out, err)
         return False
 
     else:
-        status_realizability = out.strip().splitlines()[-1]
+        actual_is_realizable = result is 0
 
-        if is_realizable and "model found" in status_realizability:
+        if is_realizable == actual_is_realizable:
             _ok(cmd_args)
             return True
-
-        elif not is_realizable and "model not found" in status_realizability:
-            _ok(cmd_args)
-            return True
-
         else:
             _failed('invalid realizability status(should be {status})'.
                     format(status=['unrealizable', 'realizable'][is_realizable]),

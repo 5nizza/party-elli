@@ -2,7 +2,7 @@ import itertools
 import logging
 from helpers.logging import log_entrance
 from helpers.python_ext import get_add
-from interfaces.automata import Node, Label, DEAD_END
+from interfaces.automata import Node
 
 
 def _get_blocks(toks):
@@ -79,7 +79,7 @@ def _flatten(dst_set_list):
 
 def _get_create_new_nodes(new_name_to_node, flagged_nodes_set):
     new_nodes = [(get_add(new_name_to_node, fn[0].name, Node(fn[0].name)), fn[1])
-                for fn in flagged_nodes_set]
+                 for fn in flagged_nodes_set]
     return new_nodes
 
 
@@ -98,7 +98,7 @@ def _conform2acw(initial_nodes, rejecting_nodes, nodes, vars):
             new_dst_nodes = _get_create_new_nodes(new_name_to_node, old_dst_nodes)
 
             lbl_nodes = get_add(lbl_to_flagged_nodes, pattern_lbl, set())
-            lbl_nodes.update(new_dst_nodes) #TODO: determenize, make labels do not intersect
+            lbl_nodes.update(new_dst_nodes)  # TODO: determenize, make labels do not intersect
 
         for lbl, flagged_dst_nodes in lbl_to_flagged_nodes.items():
             new_node.add_transition(lbl, flagged_dst_nodes)
@@ -119,7 +119,7 @@ def _parse_trans_tok(trans:str,
     if trans == 'false;':
         #dead end -- rejecting state with self-loop
         dst = src
-        labels = [{}] #empty label means 'true'
+        labels = [{}]  # empty label means 'true'
         rejecting_nodes.add(src)
     else:
         label_tok, dst_tok = [x.strip() for x in trans.split('-> goto')]
@@ -190,7 +190,7 @@ def parse_ltl2ba_ba(text:str, signal_by_name:dict):
     """
     initial_nodes, rejecting_nodes, nodes, vars = _get_hacked_ucw(text, signal_by_name)
 
-    ucw_init_nodes, ucw_rej_nodes, ucw_nodes =  _conform2acw(initial_nodes, rejecting_nodes, nodes, vars)
+    ucw_init_nodes, ucw_rej_nodes, ucw_nodes = _conform2acw(initial_nodes, rejecting_nodes, nodes, vars)
 
     return [set(ucw_init_nodes)], ucw_rej_nodes, ucw_nodes
 

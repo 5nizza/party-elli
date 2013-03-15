@@ -1,2 +1,0 @@
-(G(F(req=1)) + F(cancel=1))->(G(F(grant=1)) + G(ack=1));
-
