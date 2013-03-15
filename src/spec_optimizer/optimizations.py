@@ -12,6 +12,8 @@ from parsing.par_parser import QuantifiedSignalsFinderVisitor
 from parsing.par_parser_desc import par_parser
 
 
+# TODO: split into several files
+
 def is_quantified_expr(expr:Expr):
     return is_quantified_property(SpecProperty([], [expr]))
 
@@ -78,11 +80,9 @@ class IndexReplacerVisitor(Visitor):
 
         return new_indices
 
-
     def visit_tuple(self, indices:tuple):
         new_indices = self._replace(indices)
         return new_indices
-
 
     def visit_signal(self, signal:Signal):
         if not isinstance(signal, QuantifiedSignal):
@@ -93,7 +93,6 @@ class IndexReplacerVisitor(Visitor):
 
         new_signal = QuantifiedSignal(signal.name, *new_indices)
         return new_signal
-
 
     def _get_index_name(self, signal:QuantifiedSignal) -> (int, str):
         old_indices = self._new_by_old_index.keys()

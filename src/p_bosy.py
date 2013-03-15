@@ -10,7 +10,7 @@ from architecture.scheduler import InterleavingScheduler, SCHED_ID_PREFIX, ACTIV
 from architecture.tok_ring import TokRingArchitecture, SENDS_NAME, HAS_TOK_NAME, SENDS_PREV_NAME
 from helpers import automata_helper
 
-from helpers.main_helper import setup_logging, create_spec_converter_z3
+from helpers.main_helper import setup_logging, create_spec_converter_z3, remove_files_prefixed
 from interfaces.automata import Automaton
 from interfaces.parser_expr import Bool, Expr
 from interfaces.spec import SpecProperty, and_properties, expr_from_property
@@ -248,7 +248,7 @@ def main(spec_text,
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Parametrized Synthesis Tool for token rings architecture')
+    parser = argparse.ArgumentParser(description='Parametrized Synthesis of Token Rings')
     parser.add_argument('ltl', metavar='ltl', type=FileType(),
                         help='LTL file with parameterized specification')
 
@@ -266,8 +266,10 @@ if __name__ == '__main__':
                         help='exact size of the process implementation(default: %(default)i)')
     parser.add_argument('--cutoff', metavar='cutoff', type=int, default=sys.maxsize, required=False,
                         help='force specified cutoff size')
-    parser.add_argument('-v', '--verbose', action='count', default=0)
-
+    parser.add_argument('-v', '--verbose',
+                        action='count', default=0)
+    parser.add_argument('--tmp', action='store_true', required=False, default=False,
+                        help='keep temporary smt2 files')
     parser.add_argument('--opt', choices=sorted(list(OPTS.keys()), key=lambda v: OPTS[v]), required=False, default=NO,
                         help='apply optimizations (default: %(default)s)')
 
@@ -285,7 +287,7 @@ if __name__ == '__main__':
 
     logic = UFLIA(None)
 
-    with tempfile.NamedTemporaryFile(delete=False, dir='./') as smt_file:
+    with tempfile.NamedTemporaryFile(dir='./') as smt_file:
         smt_files_prefix = smt_file.name
 
     logger.info('temp file prefix used is %s', smt_files_prefix)
@@ -300,5 +302,8 @@ if __name__ == '__main__':
                          ltl2ucw_converter, z3solver,
                          logic,
                          logger)
+
+    if not args.tmp:
+        remove_files_prefixed(smt_files_prefix.split('/')[-1])
 
     exit(0 if is_realizable else 1)

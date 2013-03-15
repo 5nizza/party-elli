@@ -39,3 +39,9 @@ def create_spec_converter_z3(logger:logging.Logger):
     from config import z3_path, ltl3ba_path
     return Ltl2UCW(ltl3ba_path), Z3(z3_path, flag_marker)
 
+
+def remove_files_prefixed(file_prefix:str):
+    """ Remove files from the current directory prefixed with a given prefix """
+    for f in os.listdir():
+        if f.startswith(file_prefix):
+            os.remove(f)

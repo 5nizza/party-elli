@@ -3,7 +3,7 @@ import logging
 import sys
 import tempfile
 
-from helpers.main_helper import setup_logging, create_spec_converter_z3
+from helpers.main_helper import setup_logging, create_spec_converter_z3, remove_files_prefixed
 from interfaces.spec import SpecProperty, to_expr, and_properties
 from module_generation.dot import to_dot, moore_to_dot
 from module_generation.nusmv import to_nusmv
@@ -38,7 +38,10 @@ def _write_out(model, is_moore, file_type, file_name, logger):
             file=out.name))
 
 
-def main(ltl_text:str, part_text:str, is_moore, dot_file_name, nusmv_file_name, bounds, ltl2ucw_converter, z3solver, logger):
+def main(ltl_text:str, part_text:str, is_moore, dot_file_name, nusmv_file_name, bounds,
+         ltl2ucw_converter, z3solver,
+         smt_files_prefix,
+         logger):
     """:return: is realizable? """
 
     input_signals, output_signals, spec_property = _get_acacia_spec(ltl_text, part_text, logger)
@@ -48,11 +51,9 @@ def main(ltl_text:str, part_text:str, is_moore, dot_file_name, nusmv_file_name, 
     automaton = ltl2ucw_converter.convert(to_expr(spec_property))
     logger.info('spec automaton has {0} states'.format(len(automaton.nodes)))
 
-    with tempfile.NamedTemporaryFile(delete=False, dir='./') as smt_file:
-        smt_file_prefix = smt_file.name
-
     models = search(automaton, not is_moore, input_signals, output_signals, bounds, z3solver, UFLIA(None),
-                    smt_file_prefix)
+                    smt_files_prefix)
+
     assert models is None or len(models) == 1
 
     model = models[0] if models else None
@@ -76,7 +77,7 @@ def main(ltl_text:str, part_text:str, is_moore, dot_file_name, nusmv_file_name, 
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='BOunded SYnthesis Tool')
+    parser = argparse.ArgumentParser(description='Bounded Synthesis Tool')
     parser.add_argument('ltl', metavar='ltl', type=argparse.FileType(),
                         help='loads the LTL formula from the given input file, also assumes existence of file with .part extension')
 
@@ -94,6 +95,8 @@ if __name__ == "__main__":
                         help='upper bound on the size of local process (default: %(default)i)')
     parser.add_argument('--size', metavar='size', type=int, default=0, required=False,
                         help='exact size of the process implementation(default: %(default)i)')
+    parser.add_argument('--tmp', action='store_true', required=False, default=False,
+                        help='keep temporary smt2 files')
     parser.add_argument('-v', '--verbose', action='count', default=0)
 
     args = parser.parse_args(sys.argv[1:])
@@ -114,9 +117,16 @@ if __name__ == "__main__":
     with open(part_file_name) as part_file:
         part_text = part_file.read()
 
+    with tempfile.NamedTemporaryFile(dir='./') as smt_file:
+        smt_files_prefix = smt_file.name
+
     is_realizable = main(ltl_text, part_text, args.moore, args.dot, args.nusmv, bounds, ltl2ucw_converter, z3solver,
+                         smt_files_prefix,
                          logger)
 
     args.ltl.close()
+
+    if not args.tmp:
+        remove_files_prefixed(smt_files_prefix.split('/')[-1])
 
     exit(0 if is_realizable else 1)

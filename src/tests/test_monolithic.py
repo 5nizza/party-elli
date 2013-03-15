@@ -1,5 +1,6 @@
 import os
 import sys
+# to inform python where to look for packages
 sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../')
 
 
