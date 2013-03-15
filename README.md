@@ -13,6 +13,11 @@ python3 (tested with version 3.2)
 modify file config.py in src directory     
 with paths to executables of z3 and ltl3ba       
 
+(if you plan to develop smth then you might want 
+to ignore future changes to config.py, to do so run            
+git update-index --assume-unchanged src/config.py)          
+(.gitignore is not enough)           
+
 ## To run ##
 python3 p_bosy.py -- to run parameterized synthesis tool         
 python3 bosy.py -- to run monolithic synthesis tool         
