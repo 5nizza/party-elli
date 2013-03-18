@@ -21,7 +21,7 @@ def build_signals_values(signals, label) -> (dict, list):
 
 
 def get_bits_definition(arg_prefix, nof_bits):
-    args  = list(map(lambda i: arg_prefix+str(i), range(nof_bits)))
+    args = list(map(lambda i: arg_prefix+str(i), range(nof_bits)))
     args_defs = list(map(lambda a: (a, 'Bool'), args))
     return args, args_defs
 

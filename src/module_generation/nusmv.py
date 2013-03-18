@@ -1,4 +1,5 @@
-from helpers.python_ext import StrAwareList, to_str
+import math
+from helpers.python_ext import StrAwareList, lmap, bin_fixed_list
 from interfaces.automata import Label
 from interfaces.lts import LTS
 
@@ -24,53 +25,89 @@ from interfaces.lts import LTS
 #     esac;
 #
 # LTLSPEC G(in_r -> F(out_g))
+
 from interfaces.parser_expr import QuantifiedSignal
 from interfaces.spec import SpecProperty, expr_from_property
 from module_generation.ast_to_smv_property import AstToSmvProperty
 
 
-def _clause_to_formula(clause:Label) -> str:
+def _ith_state_bit(i:int) -> str:
+    return 's' + str(i)
+
+
+def _state_to_formula(state:str, bits_by_state:dict,) -> str:
+    clause = ' & '.join('({neg}{name})'.format(neg=['!',''][val],
+                                               name=_ith_state_bit(i))
+                        for i,val in enumerate(bits_by_state[state]))
+
+    return '(' + clause + ')'
+
+
+def _clause_to_formula(clause:Label, bits_by_state:dict) -> str:
     literals = []
     for (var, value) in clause.items():
         if isinstance(var, QuantifiedSignal):
             lit = ['!', ''][value] + var.name
         else:
-            lit = var + '=' + value
+            lit = _state_to_formula(value, bits_by_state)
         literals.append(lit)
 
     return '(' + ' & '.join(literals) + ')'
 
 
-def _get_formula(out_name, out_model):
+def _get_formula(out_name, out_model, bits_by_state:dict) -> str:
     clauses = [label for (label, value) in out_model.items()
                if value is True]
 
-    return ' | '.join(map(_clause_to_formula, clauses))
+    return ' | '.join(map(lambda c: _clause_to_formula(c, bits_by_state), clauses))
 
 
-def to_nusmv(lts:LTS, specification:SpecProperty) -> str:
+def _assert_no_intersection(state_bool_vars, signals):
+    state_bool_vars = set(state_bool_vars)
+    signal_names = set(s.name for s in signals)
+
+    intersection = state_bool_vars.intersection(signal_names)
+    assert not intersection, str(intersection)
+
+
+def to_boolean_nusmv(lts:LTS, specification:SpecProperty) -> str:
+    nof_state_bits = int(max(1, math.ceil(math.log(len(lts.states), 2))))
+    bits_by_state = dict((state, bin_fixed_list(i, nof_state_bits))
+                         for (i,state) in enumerate(sorted(lts.states)))
+
+    state_bits = lmap(_ith_state_bit, range(nof_state_bits))
+
+    _assert_no_intersection(state_bits, list(lts.input_signals) + lts.output_signals)
+
     dot_lines = StrAwareList()
     dot_lines += 'MODULE main'
     dot_lines += 'IVAR'
     dot_lines += ['  {signal} : boolean;'.format(signal=s.name) for s in lts.input_signals]
 
     dot_lines += 'VAR'
-    dot_lines += '  {state} : {{ {states} }};'.format(states=to_str(lts.states), state=lts.state_name)
+    dot_lines += ['  {si} : boolean;'.format(si=si) for si in state_bits]
 
     dot_lines += 'DEFINE'
     dot_lines += ['  {out_name} := {formula} ;'.format(out_name=out_name,
-                                                       formula=_get_formula(out_name, out_model))
+                                                       formula=_get_formula(out_name, out_model, bits_by_state))
                   for (out_name,out_model) in lts.model_by_name.items()]
 
     dot_lines += 'ASSIGN'
-    dot_lines += '  init({state}) := {init_state};'.format(state=lts.state_name, init_state=list(lts.init_states)[0])
+    for i,sb in enumerate(state_bits):
+        sb_init = str(bits_by_state[list(lts.init_states)[0]][i]).upper()
 
-    dot_lines += '  next({state}) := '.format(state=lts.state_name)
-    dot_lines += '    case'
-    dot_lines += ['      {formula} : {next_state};'.format(formula=_clause_to_formula(label),
-                                                           next_state=next_state)
-                  for (label, next_state) in lts.tau_model.items()]
-    dot_lines += '    esac;'
+        dot_lines += '  init({sb}) := {init_sb};'.format(sb=sb, init_sb=sb_init)
+
+        dot_lines += '  next({sb}) := '.format(sb=sb)
+        dot_lines += '    case'
+
+        for (label,next_state) in lts.tau_model.items():
+            sb_next = str(bits_by_state[next_state][i]).upper()
+            dot_lines += '      {formula} : {next_state};'.format(formula=_clause_to_formula(label, bits_by_state),
+                                                                  next_state=sb_next)
+
+        dot_lines += '    TRUE : FALSE;'  # default: unreachable states, don't care
+        dot_lines += '    esac;'
 
     dot_lines += 'LTLSPEC ' + AstToSmvProperty().dispatch(expr_from_property(specification))
 

@@ -30,13 +30,12 @@ def is_empty_str(s):
     return s is None or s == ''
 
 
-def bin_fixed_list(int, width):
+def bin_fixed_list(i, width):
     """ Return list of boolean values """
-    assert int >= 0, str(int)
-    assert int <= math.pow(2, width) - 1, str(int)
+    assert i >= 0, str(i)
+    assert i <= math.pow(2, width) - 1, str(i)
 
-    bits = [bool(b != '0') for b in bin(int)[2:]]
-
+    bits = [bool(b != '0') for b in bin(i)[2:]]
     extension_size = width - len(bits)
 
     assert extension_size >= 0, str(extension_size)

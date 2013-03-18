@@ -6,7 +6,7 @@ import tempfile
 from helpers.main_helper import setup_logging, create_spec_converter_z3, remove_files_prefixed
 from interfaces.spec import SpecProperty, to_expr, and_properties
 from module_generation.dot import to_dot, moore_to_dot
-from module_generation.nusmv import to_nusmv
+from module_generation.nusmv import to_boolean_nusmv
 from parsing import acacia_parser
 from synthesis.solitary_model_searcher import search
 from synthesis.smt_logic import UFLIA
@@ -70,7 +70,7 @@ def main(ltl_text:str, part_text:str, is_moore, dot_file_name, nusmv_file_name, 
             _write_out(dot_model, is_moore, 'dot', dot_file_name, logger)
 
         if nusmv_file_name:
-            nusmv_model = to_nusmv(model, spec_property)
+            nusmv_model = to_boolean_nusmv(model, spec_property)
             _write_out(nusmv_model, is_moore, 'smv', nusmv_file_name, logger)
 
     return is_realizable
