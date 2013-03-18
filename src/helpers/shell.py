@@ -1,6 +1,5 @@
 import shlex
 import subprocess
-import sys
 
 
 def execute_shell(cmd, input=''):
