@@ -59,6 +59,9 @@ def _get_formula(out_name, out_model, bits_by_state:dict) -> str:
     clauses = [label for (label, value) in out_model.items()
                if value is True]
 
+    if not clauses:
+        return 'FALSE'
+
     return ' | '.join(map(lambda c: _clause_to_formula(c, bits_by_state), clauses))
 
 
