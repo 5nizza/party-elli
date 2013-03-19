@@ -191,7 +191,7 @@ def op_implies(arg1, arg2):
     return smt_str
 
 
-def eq(arg1, arg2): #is equal to
+def op_eq(arg1, arg2):
     smt_str = '(= ' + arg1 + ' ' + arg2 + ')'
     return smt_str
 
