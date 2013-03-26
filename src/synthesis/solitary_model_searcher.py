@@ -1,40 +1,56 @@
 import logging
+
 from helpers.logging import log_entrance
 from helpers.automata_helper import to_dot
-from helpers.python_ext import StrAwareList, StringEmulatorFromFile
 from interfaces.automata import Automaton
+from interfaces.solver_interface import SolverInterface
 from synthesis.generic_smt_encoder import GenericEncoder
 from synthesis.solitary_impl import SolitaryImpl
-from synthesis.z3 import Z3
 
 
 @log_entrance(logging.getLogger(), logging.INFO)
-def search(automaton:Automaton, is_mealy:bool, input_signals, output_signals, bounds, z3solver, logic, smt_file_prefix):
+def search(automaton:Automaton,
+           is_mealy:bool,
+           input_signals, output_signals,
+           sizes,
+           underlying_solver:SolverInterface,
+           logic):
     logger = logging.getLogger()
 
     logger.debug(automaton)
     logger.debug(to_dot(automaton))
 
-    for bound in bounds:
-        logger.info('searching a model of size {0}..'.format(bound))
+    spec_states_type = 'Q'
+    sys_states_type = 'T'
 
-        with open(smt_file_prefix + '_' + str(bound) + '.smt2', 'w') as smt_file:
-            logger.info('using smt file ' + str(smt_file.name))
+    impl = SolitaryImpl(automaton, is_mealy, input_signals, output_signals, list(sizes)[-1], sys_states_type)
 
-            query_lines = StrAwareList(StringEmulatorFromFile(smt_file))
+    encoding_solver = GenericEncoder(logic, spec_states_type, '', impl.state_types_by_process, underlying_solver)
 
-            spec_states_type = 'Q'
-            sys_states_type = 'T'
+    encoding_solver.encode_sys_model_functions(impl)  # TODO: emulator cannot advantage of knowing the current bound?
+    encoding_solver.encode_sys_aux_functions(impl)
+    encoding_solver.encode_run_graph_headers(impl)
 
-            encoder = GenericEncoder(logic, spec_states_type, '')
-            impl = SolitaryImpl(automaton, is_mealy, input_signals, output_signals, bound, sys_states_type)
-            encoder.encode(impl, query_lines)
+    #: :type: EncodingSolver
+    encoding_solver = encoding_solver
+    last_size = 0
+    for size in sizes:
+        logger.info('searching a model of size {0}..'.format(size))
 
-            logger.info('smt query has %i lines', len(query_lines))
+        cur_all_states = impl.states_by_process[0][:size]
+        new_states = cur_all_states[last_size:]
+        last_size = size
 
-        status, data = z3solver.solve_file(smt_file.name, logger)
+        encoding_solver.encode_run_graph(impl, new_states)
 
-        if status == Z3.SAT:
-            return encoder.parse_sys_model(data, impl)
+        encoding_solver.push()
+
+        encoding_solver.encode_model_bound(cur_all_states, impl)
+
+        model = encoding_solver.solve(impl)
+        if model:
+            return model
+
+        encoding_solver.pop()
 
     return None

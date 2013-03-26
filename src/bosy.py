@@ -8,6 +8,7 @@ from interfaces.spec import SpecProperty, to_expr, and_properties
 from module_generation.dot import to_dot, moore_to_dot
 from module_generation.nusmv import to_boolean_nusmv
 from parsing import acacia_parser
+from synthesis import generic_smt_encoder
 from synthesis.solitary_model_searcher import search
 from synthesis.smt_logic import UFLIA
 
@@ -39,8 +40,7 @@ def _write_out(model, is_moore, file_type, file_name, logger):
 
 
 def main(ltl_text:str, part_text:str, is_moore, dot_file_name, nusmv_file_name, bounds,
-         ltl2ucw_converter, z3solver,
-         smt_files_prefix,
+         ltl2ucw_converter, underlying_solver,
          logger):
     """:return: is realizable? """
 
@@ -51,8 +51,7 @@ def main(ltl_text:str, part_text:str, is_moore, dot_file_name, nusmv_file_name, 
     automaton = ltl2ucw_converter.convert(to_expr(spec_property))
     logger.info('spec automaton has {0} states'.format(len(automaton.nodes)))
 
-    models = search(automaton, not is_moore, input_signals, output_signals, bounds, z3solver, UFLIA(None),
-                    smt_files_prefix)
+    models = search(automaton, not is_moore, input_signals, output_signals, bounds, underlying_solver, UFLIA(None))
 
     assert models is None or len(models) == 1
 
@@ -79,7 +78,8 @@ def main(ltl_text:str, part_text:str, is_moore, dot_file_name, nusmv_file_name, 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Bounded Synthesis Tool')
     parser.add_argument('ltl', metavar='ltl', type=argparse.FileType(),
-                        help='loads the LTL formula from the given input file, also assumes existence of file with .part extension')
+                        help='loads the LTL formula from the given input file, '
+                             'also assumes existence of file with .part extension')
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--moore', action='store_true', required=False,
@@ -97,6 +97,8 @@ if __name__ == "__main__":
                         help='exact size of the process implementation(default: %(default)i)')
     parser.add_argument('--tmp', action='store_true', required=False, default=False,
                         help='keep temporary smt2 files')
+    parser.add_argument('--incr', action='store_true', required=False, default=False,
+                        help='produce incremental queries')
     parser.add_argument('-v', '--verbose', action='count', default=0)
 
     args = parser.parse_args(sys.argv[1:])
@@ -105,8 +107,12 @@ if __name__ == "__main__":
 
     logger.info(args)
 
-    ltl2ucw_converter, z3solver = create_spec_converter_z3(logger)
-    if not ltl2ucw_converter or not z3solver:
+    with tempfile.NamedTemporaryFile(dir='./') as smt_file:
+        smt_files_prefix = smt_file.name
+
+    logic = UFLIA(None)
+    ltl2ucw_converter, underlying_solver = create_spec_converter_z3(logger, logic, args.incr, smt_files_prefix)
+    if not ltl2ucw_converter or not underlying_solver:
         exit(1)
 
     bounds = list(range(1, args.bound + 1) if args.size == 0 else range(args.size, args.size + 1))
@@ -117,11 +123,10 @@ if __name__ == "__main__":
     with open(part_file_name) as part_file:
         part_text = part_file.read()
 
-    with tempfile.NamedTemporaryFile(dir='./') as smt_file:
-        smt_files_prefix = smt_file.name
+    generic_smt_encoder.ENCODE_INCREMENTALLY = args.incr
 
-    is_realizable = main(ltl_text, part_text, args.moore, args.dot, args.nusmv, bounds, ltl2ucw_converter, z3solver,
-                         smt_files_prefix,
+    is_realizable = main(ltl_text, part_text, args.moore, args.dot, args.nusmv, bounds,
+                         ltl2ucw_converter, underlying_solver,
                          logger)
 
     args.ltl.close()

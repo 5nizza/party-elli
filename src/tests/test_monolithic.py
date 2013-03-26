@@ -18,7 +18,17 @@ _REALIZABLE = [
     "non_parameterized/others/pnueli_arbiter2.ltl --mealy --size 3",
 
     "non_parameterized/others/elevator2.ltl --moore --size 2",
-    "non_parameterized/others/elevator2.ltl --mealy --size 2"
+    "non_parameterized/others/elevator2.ltl --mealy --size 2",
+
+    
+    # some random subset of tests with --incr
+    "non_parameterized/others/count2.ltl --moore --bound 3 --incr",
+    "non_parameterized/others/full_arbiter2.ltl --mealy --bound 3 --incr",
+
+    "non_parameterized/others/pnueli_arbiter2.ltl --moore --bound 3 --incr",
+    "non_parameterized/others/pnueli_arbiter2.ltl --mealy --bound 3 --incr",
+
+    "non_parameterized/others/elevator2.ltl --mealy --bound 2 --incr"
 ]
 
 _UNREALIZABLE = [
@@ -32,7 +42,14 @@ _UNREALIZABLE = [
     "non_parameterized/others/pnueli_arbiter2.ltl --mealy --size 2",
 
     "non_parameterized/others/elevator2.ltl --moore --size 1",
-    "non_parameterized/others/elevator2.ltl --mealy --size 1"
+    "non_parameterized/others/elevator2.ltl --mealy --size 1",
+
+    # random subset for --incr
+    "non_parameterized/others/count2.ltl --moore --bound 2 --incr",
+
+    "non_parameterized/others/full_arbiter2.ltl --moore --bound 3 --incr",
+
+    "non_parameterized/others/pnueli_arbiter2.ltl --moore --bound 2 --incr",
 ]
 
 

@@ -53,6 +53,5 @@ class BlankImpl:
     def get_architecture_trans_assumption(self, label, sys_state_vector):
         return ''
 
-    def get_architecture_requirements(self):
+    def get_architecture_requirements(self):   # TODO: should use SolverInterface instead of returning SMT!
         return tuple()
-

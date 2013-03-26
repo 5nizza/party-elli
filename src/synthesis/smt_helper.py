@@ -1,9 +1,10 @@
+from helpers.python_ext import lmap
 from interfaces.parser_expr import QuantifiedSignal
 from synthesis.func_description import FuncDescription
 
 
 def build_signals_values(signals, label) -> (dict, list):
-    for s in signals:  # TODO: remove after debug
+    for s in signals:
         assert isinstance(s, QuantifiedSignal)
 
     value_by_signal = dict()
@@ -51,7 +52,7 @@ def make_set_logic(logic):
 
 
 def make_headers():
-    #TODO: ask stackoverflow about other speed upers
+    #TODO: ask stackoverflow about other speed-ups
     #ematching slows down if forall quantifier is present
     return '(set-option :produce-models true)\n(set-option :EMATCHING false)\n'
 
@@ -61,22 +62,6 @@ def declare_bool_const(const_name, value):
     smt = ['(declare-const {0} Bool)\n'.format(const_name),
            '(assert (= {0} {1}))\n'.format(const_name, str(value).lower())]
     return ''.join(smt)
-
-
-def get_output_name(output):
-    return 'fo_' + str(output)
-
-
-def declare_output(output, sys_state_type):
-    return declare_fun(get_output_name(output), [sys_state_type], "Bool")
-
-
-def declare_counters(logic, sys_state_type, spec_state_type):
-    smt_lines = [
-        declare_fun("lambda_B", [spec_state_type, sys_state_type], "Bool"),
-        declare_fun("lambda_sharp", [spec_state_type, sys_state_type], logic.counters_type(4))]
-
-    return '\n'.join(smt_lines)
 
 
 def get_valued_var_name(var, value):
@@ -97,34 +82,6 @@ def declare_enum(enum_name, values):
     smt_str = '(declare-datatypes () (({0} {1})))'.format(enum_name,
                                                           ' '.join(values))
     return smt_str
-
-#def declare_enum_as_int_consts(names):
-#    smt_lines = StrAwareList()
-#    for crt_val, n in enumerate(names):
-#        smt_lines += '(declare-const {name} Int)'.format(
-#            name = n)
-#
-#        smt_lines += '(assert (= {name} {value}))'.format(
-#            name=n,
-#            value=crt_val)
-#
-#    return '\n'.join(smt_lines)
-#
-#
-#def declare_enum_as_bv_consts(names):
-#    smt_lines = StrAwareList()
-#
-#    width = int(max(int(math.ceil(math.log(len(names), 2))), 1))
-#    for crt_val, n in enumerate(names):
-#        smt_lines += '(declare-const {name} {type})'.format(
-#            name = n,
-#            type = '(_ bv {width})'.format(width = width))
-#
-#        smt_lines += '(assert (= {name} {value}))'.format(
-#            name=n,
-#            value='(_ bv{width} {value})'.format(width=width, value = crt_val))
-#
-#    return '\n'.join(smt_lines)
 
 
 def tuple_type(name, component_types):
@@ -150,18 +107,18 @@ def declare_tuple(name, component_types, getter_prefix):
     return smt_str
 
 
-def call_func_raw(func_name, args):
+def call_func(func_desc:FuncDescription, func_args_dict:dict):
+    func_name = func_desc.name
+    args = func_desc.get_args_list(func_args_dict)
+
     smt_str = '(' + func_name + ' '
     for arg in args:
         smt_str += str(arg) + ' '
     if len(args):
         smt_str = smt_str[:-1]
     smt_str += ')'
+
     return smt_str
-
-
-def call_func(func_desc:FuncDescription, func_args_dict:dict):
-    return call_func_raw(func_desc.name, func_desc.get_args_list(func_args_dict))
 
 
 def make_assert(formula):
@@ -174,23 +131,21 @@ def comment(comment):
     return smt_str
 
 
-def declare_fun(name, input_types, out_type):
-    input_types = list(input_types)
+def define_fun(func_desc:FuncDescription) -> str:
+    return func_desc.definition  # TODO: looks dirty
+
+
+def declare_fun(func_desc:FuncDescription) -> str:
+    input_types = lmap(lambda i_t: i_t[1], func_desc.inputs)
     smt_str = '(declare-fun '
-    smt_str += name + ' ('
+    smt_str += func_desc.name + ' ('
 
     for var in input_types:
         smt_str += var + ' '
     if len(input_types):
         smt_str = smt_str[:-1]
 
-    smt_str += ') ' + out_type + ')\n'
-    return smt_str
-
-
-def declare_sort(name, num_param):
-    smt_str = '(declare-sort '
-    smt_str += name + ' ' + str(num_param) + ')\n'
+    smt_str += ') ' + str(func_desc.output) + ')\n'
     return smt_str
 
 
@@ -204,11 +159,11 @@ def op_eq(arg1, arg2):
     return smt_str
 
 
-def gt(arg1, arg2, logic):
+def op_gt(arg1, arg2, logic):
     return '({0} {1} {2})'.format(logic.gt, arg1, arg2)
 
 
-def ge(arg1, arg2, logic):
+def op_ge(arg1, arg2, logic):
     return '({0} {1} {2})'.format(logic.ge, arg1, arg2)
 
 
@@ -236,15 +191,11 @@ def op_or(arguments):
     return make_and_or_xor(arguments, 'or')
 
 
-def op_xor(arguments):
-    return make_and_or_xor(arguments, 'xor')
-
-
 def forall(free_var_type_pairs, condition):
     if len(free_var_type_pairs) == 0:
         return condition
 
-    forall_pre = ' '.join(['({0} {1})'.format(var, type) for (var, type) in free_var_type_pairs])
+    forall_pre = ' '.join(['({0} {1})'.format(var, ty) for (var, ty) in free_var_type_pairs])
 
     return '(forall ({0}) {1})'.format(forall_pre, condition)
 
@@ -311,5 +262,3 @@ def beautify(s):
         beautified += c
 
     return beautified
-
-

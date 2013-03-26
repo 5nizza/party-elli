@@ -52,8 +52,18 @@ def index_of(lambda_func, iterable):
 
 
 class StrAwareList(Iterable):
+    def __init__(self, output=None):
+        if output is None:
+            output = []
+        self._output = output
+
     def __str__(self):
-        return str(self._output)
+        if self._output.__class__ == list:
+            return '\n'.join(self._output)
+        else:
+            return str(self._output)
+
+    __repr__ = __str__
 
     def __len__(self):
         try:
@@ -64,12 +74,6 @@ class StrAwareList(Iterable):
     def __iter__(self):
         for e in self._output:
             yield e
-
-    def __init__(self, output=None):
-        if output is None:
-            output = []
-
-        self._output = output
 
     def __iadd__(self, other):
         self.__add__(other)
@@ -84,7 +88,7 @@ class StrAwareList(Iterable):
             return self
 
 
-class StringEmulatorFromFile:
+class FileWithAppendExtend:
     def __init__(self, file_writer):
         self._file_writer = file_writer
         self._len = 0
@@ -94,11 +98,9 @@ class StringEmulatorFromFile:
         self._file_writer.write('\n')
         self._len += 1
 
-
     def extend(self, strings):
-        for str in strings:
-            self.append(str)
-
+        for s in strings:
+            self.append(s)
 
     def __len__(self):
         return self._len

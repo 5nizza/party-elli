@@ -122,7 +122,7 @@ class SyncImpl(BlankImpl):  # TODO: This class was never tested separately from 
         assert proc_index == 0, str(proc_index)
         return label
 
-    def _get_tok_rings_safety_props(self) -> StrAwareList:
+    def _get_tok_rings_safety_props(self) -> StrAwareList:  # TODO: should be able to specify states!
         """
         Return (in SMT form, constraints on non-wrapped tau function):
          G(tok & !sends -> Xtok(tau(!prev)))

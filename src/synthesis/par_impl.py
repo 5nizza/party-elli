@@ -5,7 +5,7 @@ from interfaces.parser_expr import QuantifiedSignal
 from parsing.helpers import get_log_bits
 from synthesis.blank_impl import BlankImpl
 from synthesis.func_description import FuncDescription
-from synthesis.smt_helper import call_func_raw, op_and, op_not, build_signals_values
+from synthesis.smt_helper import op_and, op_not, build_signals_values, call_func
 
 
 def get_signals_definition(signal_base_name, nof_bits):
@@ -46,7 +46,7 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
                  sends_signals,
                  sends_prev_signals,
                  #sends_prev is input signals, sends_signals are output, though essentially they are the same
-                 has_tok_signals, # it is part of the state, but can be emulated as Moore-like output signal
+                 has_tok_signals,  # it is part of the state, but can be emulated as Moore-like output signal
                  state_type,
                  tau_name,
                  internal_funcs_postfix:str):
@@ -211,9 +211,8 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
         value_by_signal = add_dicts(value_by_sched, value_by_proc, {sends_prev_signal: sends_prev_value})
 
         is_active_func_desc = self._get_desc_is_active(proc_index)
-        is_active_args = is_active_func_desc.get_args_list(value_by_signal)
 
-        func = call_func_raw(is_active_func_desc.name, is_active_args)
+        func = call_func(is_active_func_desc, value_by_signal)
 
         return func
 
@@ -389,8 +388,7 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
         #: :type: FuncDescription
         sends_func_desc = self.outvar_desc_by_process[prev_proc][sends_signal]
 
-        call_sends = call_func_raw(sends_func_desc.name,
-                                   sends_func_desc.get_args_list({self.state_arg_name: prev_proc_state}))
+        call_sends = call_func(sends_func_desc, {self.state_arg_name: prev_proc_state})
 
         expr = '{call_sends}'.format(call_sends=call_sends)
         return expr
@@ -422,13 +420,10 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
         states = self.states_by_process[0]
         s0, s1 = states[0], states[1]
 
-        has_tok_func_name = self._has_tok_signals[0].name  # TODO: hack
-        conditions += call_func_raw(has_tok_func_name, [s1])
+        tok_func_desc = self.outvar_desc_by_process[0][self._has_tok_signals[0]]
 
-        conditions += op_not(call_func_raw(has_tok_func_name, [s0]))
-
-        #        if self.nof_processes > 1:
-        #            conditions += op_not(call_func(has_tok_func_name, [other_process_state]))
+        conditions += call_func(tok_func_desc, {self.state_arg_name:s1})
+        conditions += op_not(call_func(tok_func_desc, {self.state_arg_name:s0}))
 
         return conditions
 

@@ -1,6 +1,7 @@
 from synthesis.blank_impl import BlankImpl
 from synthesis.func_description import FuncDescription
 
+
 class SolitaryImpl(BlankImpl):
     def __init__(self, automaton, is_mealy, inputs, outputs, nof_local_states, sys_state_type):
         super().__init__(is_mealy)
@@ -29,7 +30,6 @@ class SolitaryImpl(BlankImpl):
         self.taus_descs = self._get_taus_descs(inputs)
         self.model_taus_descs = self.taus_descs
 
-
     def _build_outvar_descs(self, outputs, inputs):
         descs = {}
         for s in outputs:
@@ -42,7 +42,6 @@ class SolitaryImpl(BlankImpl):
             descs[s] = description
 
         return descs
-
 
     def _get_taus_descs(self, inputs):
         tau_desc = FuncDescription('tau',

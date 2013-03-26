@@ -1,9 +1,8 @@
 from itertools import product
 import logging
-from helpers.automata_helper import to_dot
 
 from helpers.logging import log_entrance
-from helpers.python_ext import StrAwareList, StringEmulatorFromFile
+from helpers.python_ext import StrAwareList, FileWithAppendExtend
 from interfaces.automata import Automaton
 from interfaces.parser_expr import QuantifiedSignal
 from parsing.helpers import get_log_bits
@@ -34,7 +33,7 @@ class ParModelSearcher:
         self._TAU_NAME = 'tau'
 
     @log_entrance(logging.getLogger(), logging.INFO)
-    def search(self,
+    def search(self,        # TODO: careful with incrementality: nof_states >= 2
                logic,
                is_moore,
                global_automaton_cutoff_pairs,
@@ -62,7 +61,7 @@ class ParModelSearcher:
 
             smt_file_name = '{prefix}_{bound}.smt2'.format(prefix=smt_file_name_prefix, bound=bound)
             with open(smt_file_name, 'w') as out:
-                query_lines = StrAwareList(StringEmulatorFromFile(out))
+                query_lines = StrAwareList(FileWithAppendExtend(out))
 
                 init_process_states = None
                 for i, (automaton, nof_processes) in enumerate(global_automaton_cutoff_pairs):
@@ -92,9 +91,6 @@ class ParModelSearcher:
                                  query_lines):
 
         sys_intern_funcs_postfix = '_' + str(automaton_index)
-        spec_states_type = 'Q' + str(automaton_index)
-
-        glob_encoder = GenericEncoder(self.logic, spec_states_type, sys_intern_funcs_postfix)
 
         sched_input_signals = get_signals_definition(self.names.sched_signal, get_log_bits(nof_processes))[0]
         is_active_signals = [QuantifiedSignal(self.names.active_signal, i) for i in range(nof_processes)]
@@ -114,6 +110,10 @@ class ParModelSearcher:
                            self._SYS_STATE_TYPE,
                            self._TAU_NAME,
                            sys_intern_funcs_postfix)
+
+        spec_states_type = 'Q' + str(automaton_index)
+        glob_encoder = GenericEncoder(self.logic, spec_states_type, sys_intern_funcs_postfix,
+                                      par_impl.state_types_by_process)
 
         query_lines += comment('global_encoder' + sys_intern_funcs_postfix)
 
@@ -142,7 +142,7 @@ class ParModelSearcher:
                         self._TAU_NAME,
                         init_process_states)
 
-        encoder = GenericEncoder(self.logic, 'LQ', 'l')
+        encoder = GenericEncoder(self.logic, 'LQ', 'l', impl.state_types_by_process)
 
         self._ensure_header_added(encoder, query_lines)
         self._ensure_sys_model_functions_added(encoder, impl, query_lines)
