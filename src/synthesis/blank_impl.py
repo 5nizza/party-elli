@@ -28,7 +28,7 @@ class BlankImpl:
         self.states_by_process = ()
         self.state_types_by_process = ()
 
-    def _get_state_name(self, state_type:str, state_number:int):
+    def get_state_name(self, state_type:str, state_number:int):
         return '{type_lower}{number}'.format(type_lower=state_type.lower(), number=str(state_number))
 
     def get_outputs_descs(self):

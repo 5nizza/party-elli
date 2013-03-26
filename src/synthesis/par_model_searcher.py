@@ -2,15 +2,14 @@ from itertools import product
 import logging
 
 from helpers.logging import log_entrance
-from helpers.python_ext import StrAwareList, FileWithAppendExtend
 from interfaces.automata import Automaton
 from interfaces.parser_expr import QuantifiedSignal
+from interfaces.solver_interface import SolverInterface
 from parsing.helpers import get_log_bits
+from synthesis.blank_impl import BlankImpl
 from synthesis.generic_smt_encoder import GenericEncoder
 from synthesis.sync_impl import SyncImpl
 from synthesis.par_impl import ParImpl, get_signals_definition
-from synthesis.smt_helper import comment
-from synthesis.z3 import Z3
 
 
 class BaseNames:
@@ -31,9 +30,11 @@ class ParModelSearcher:
     def __init__(self):
         self._SYS_STATE_TYPE = 'T'
         self._TAU_NAME = 'tau'
+        self._loc_spec_state_prefix = 'LQ'
+        self._loc_counters_postfix = 'l'
 
     @log_entrance(logging.getLogger(), logging.INFO)
-    def search(self,        # TODO: careful with incrementality: nof_states >= 2
+    def search(self,  # TODO: careful with incrementality: nof_states >= 2
                logic,
                is_moore,
                global_automaton_cutoff_pairs,
@@ -42,134 +43,181 @@ class ParModelSearcher:
                anon_input_names, anon_output_names,
 
                process_model_bounds,
-               z3solver,
-               smt_file_name_prefix,
+               solver:SolverInterface,
                base_name_of:BaseNames):
 
-        self.logger = logging.getLogger()
-        self.logic = logic
-        self.is_moore = is_moore
-        self.anon_input_names = anon_input_names
-        self.anon_output_names = anon_output_names
-        self.z3solver = z3solver
-        self.names = base_name_of
+        self._logger = logging.getLogger()
+        self._logic = logic
+        self._is_moore = is_moore
+        self._anon_input_names = anon_input_names
+        self._anon_output_names = anon_output_names
+        self._underlying_solver = solver
+        self._names = base_name_of
 
-        for bound in process_model_bounds:
-            self._reset_state()
+        self._encode_headers(process_model_bounds[-1], sync_automaton, global_automaton_cutoff_pairs)
 
-            self.logger.info('trying size %i', bound)
+        max_size = process_model_bounds[-1]
+        init_process_states = self._get_init_process_states(global_automaton_cutoff_pairs, max_size)
 
-            smt_file_name = '{prefix}_{bound}.smt2'.format(prefix=smt_file_name_prefix, bound=bound)
-            with open(smt_file_name, 'w') as out:
-                query_lines = StrAwareList(FileWithAppendExtend(out))
+        last_size = 0
+        for size in process_model_bounds:
+            cur_all_states = [BlankImpl(False).get_state_name(self._SYS_STATE_TYPE, s)  # TODO: hack
+                              for s in range(size)]
+            new_states = cur_all_states[last_size:]
+            last_size = size
 
-                init_process_states = None
-                for i, (automaton, nof_processes) in enumerate(global_automaton_cutoff_pairs):
-                    #noinspection PyTypeChecker
-                    _, impl = self._encode_global_automaton(i, nof_processes, automaton, bound, query_lines)
-                    init_process_states = set(states[0] for states in impl.init_states)
+            self._logger.info('trying size %i', size)
 
-                #TODO: mess -- I use sync automaton to encode token ring properties on SMT level, use separate impl!
-                encoder, impl = self._encode_local_automaton(query_lines, sync_automaton, bound, init_process_states)
+            for i, (automaton, nof_processes) in enumerate(global_automaton_cutoff_pairs):
+                #noinspection PyTypeChecker
+                self._encode_global_automaton(i, nof_processes, automaton, size, new_states)
 
-                encoder.encode_footings(impl, query_lines)
+            #TODO: mess -- I use sync automaton to encode token ring properties on SMT level, use separate impl!
+            encoding_solver, impl = self._encode_local_automaton(sync_automaton, size, init_process_states, new_states)
 
-                self.logger.info('smt query has %i lines', len(query_lines))
+            encoding_solver.push()
 
-            status, data_lines = z3solver.solve_file(smt_file_name, self.logger)
+            encoding_solver.encode_model_bound(cur_all_states, impl)
 
-            if status == Z3.SAT:
-                return encoder.parse_sys_model(data_lines, impl)
+            model = encoding_solver.solve(impl)
+            if model:
+                return model
+
+            encoding_solver.pop()
 
         return None
 
+    # TODO: bureaucracy in coding.. simplify
+    def _get_init_process_states(self, global_automaton_cutoff_pairs, max_size):
+        if not global_automaton_cutoff_pairs:
+            return None
+
+        automaton, nof_processes = global_automaton_cutoff_pairs[0]
+        automaton_index = 0
+
+        sys_intern_funcs_postfix = self._get_glob_sys_intern_func_postfix(automaton_index)
+
+        par_impl = self._get_par_impl(automaton, max_size, nof_processes, sys_intern_funcs_postfix)
+
+        init_process_states = set(states[0] for states in par_impl.init_states)
+
+        return init_process_states
+
+    def _encode_headers(self, max_model_size,
+                        sync_automaton,
+                        global_automaton_cutoff_pairs):
+        init_process_states = self._get_init_process_states(global_automaton_cutoff_pairs, max_model_size)
+        self._encode_local_headers(max_model_size, init_process_states, sync_automaton)
+
+        for i, (automaton, nof_processes) in enumerate(global_automaton_cutoff_pairs):
+            self._encode_global_headers(automaton, i, max_model_size, nof_processes)
+
+    def _get_glob_spec_state_type(self, automaton_index:int) -> str:
+        spec_states_type = 'Q' + str(automaton_index)
+        return spec_states_type
+
+    def _get_glob_sys_intern_func_postfix(self, automaton_index:int) -> str:
+        sys_intern_funcs_postfix = '_' + str(automaton_index)
+        return sys_intern_funcs_postfix
+
+    def _encode_global_headers(self,
+                               automaton,
+                               automaton_index:int, max_size:int, nof_processes:int):
+
+        sys_intern_funcs_postfix = self._get_glob_sys_intern_func_postfix(automaton_index)
+        spec_state_type = self._get_glob_spec_state_type(automaton_index)
+
+        par_impl = self._get_par_impl(automaton, max_size, nof_processes, sys_intern_funcs_postfix)
+
+        encoding_solver = GenericEncoder(self._logic, spec_state_type, sys_intern_funcs_postfix,
+                                         par_impl.state_types_by_process,
+                                         self._underlying_solver)
+
+        # encoding_solver.encode_sys_model_functions(par_impl)  # this is done in local encoder
+        encoding_solver.encode_sys_aux_functions(par_impl)
+        encoding_solver.encode_run_graph_headers(par_impl)
+
     def _encode_global_automaton(self,
                                  automaton_index:int,
-                                 nof_processes,
+                                 nof_processes:int,
                                  automaton:Automaton,
-                                 bound:int,
-                                 query_lines):
+                                 model_size:int,
+                                 model_states_to_encode):
 
-        sys_intern_funcs_postfix = '_' + str(automaton_index)
+        sys_intern_funcs_postfix = self._get_glob_sys_intern_func_postfix(automaton_index)
+        spec_state_type = self._get_glob_spec_state_type(automaton_index)
 
-        sched_input_signals = get_signals_definition(self.names.sched_signal, get_log_bits(nof_processes))[0]
-        is_active_signals = [QuantifiedSignal(self.names.active_signal, i) for i in range(nof_processes)]
-        sends_signals = [QuantifiedSignal(self.names.sends_signal, i) for i in range(nof_processes)]
-        sends_prev_signals = [QuantifiedSignal(self.names.sends_prev_signal, i) for i in range(nof_processes)]
-        has_tok_signals = [QuantifiedSignal(self.names.has_tok_signal, i) for i in range(nof_processes)]
+        par_impl = self._get_par_impl(automaton, model_size, nof_processes, sys_intern_funcs_postfix)
 
-        orig_input_signals = [QuantifiedSignal(n, i) for (n, i) in product(self.anon_input_names, range(nof_processes))]
+        encoding_solver = GenericEncoder(self._logic, spec_state_type, sys_intern_funcs_postfix,
+                                         par_impl.state_types_by_process,
+                                         self._underlying_solver)
+
+        encoding_solver.encode_run_graph(par_impl, model_states_to_encode)
+        return encoding_solver, par_impl
+
+    def _encode_local_headers(self, max_size:int, init_process_states, sync_automaton:Automaton):
+        impl = self._get_sync_impl(max_size, init_process_states, sync_automaton)
+
+        encoding_solver = GenericEncoder(self._logic,
+                                         self._loc_spec_state_prefix, self._loc_counters_postfix,
+                                         impl.state_types_by_process,
+                                         self._underlying_solver)
+
+        encoding_solver.encode_sys_model_functions(impl)
+        encoding_solver.encode_sys_aux_functions(impl)
+        encoding_solver.encode_run_graph_headers(impl)
+
+    def _get_sync_impl(self, bound, init_process_states, local_automaton):
+        impl = SyncImpl(local_automaton,
+                        not self._is_moore,
+                        [QuantifiedSignal(n, 0) for n in self._anon_input_names],
+                        [QuantifiedSignal(n, 0) for n in self._anon_output_names],
+                        bound,
+                        self._SYS_STATE_TYPE,
+                        QuantifiedSignal(self._names.has_tok_signal, 0),
+                        QuantifiedSignal(self._names.sends_signal, 0),
+                        QuantifiedSignal(self._names.sends_prev_signal, 0),
+                        self._TAU_NAME,
+                        init_process_states)
+        return impl
+
+    def _encode_local_automaton(self, local_automaton,
+                                bound,
+                                init_process_states,
+                                model_states_to_encode):
+        impl = self._get_sync_impl(bound, init_process_states, local_automaton)
+
+        encoding_solver = GenericEncoder(self._logic,
+                                         self._loc_spec_state_prefix, self._loc_counters_postfix,
+                                         impl.state_types_by_process,
+                                         self._underlying_solver)
+
+        encoding_solver.encode_run_graph(impl, model_states_to_encode)
+        return encoding_solver, impl
+
+    def _get_par_impl(self,
+                      automaton:Automaton,
+                      model_size:int, nof_processes:int,
+                      sys_intern_funcs_postfix):
+
+        sched_input_signals = get_signals_definition(self._names.sched_signal, get_log_bits(nof_processes))[0]
+        is_active_signals = [QuantifiedSignal(self._names.active_signal, i) for i in range(nof_processes)]
+        sends_signals = [QuantifiedSignal(self._names.sends_signal, i) for i in range(nof_processes)]
+        sends_prev_signals = [QuantifiedSignal(self._names.sends_prev_signal, i) for i in range(nof_processes)]
+        has_tok_signals = [QuantifiedSignal(self._names.has_tok_signal, i) for i in range(nof_processes)]
+
+        orig_input_signals = [QuantifiedSignal(n, i) for (n, i) in
+                              product(self._anon_input_names, range(nof_processes))]
         orig_output_signals = [QuantifiedSignal(n, i) for (n, i) in
-                               product(self.anon_output_names, range(nof_processes))]
+                               product(self._anon_output_names, range(nof_processes))]
 
         par_impl = ParImpl(automaton,
-                           not self.is_moore,
+                           not self._is_moore,
                            orig_input_signals, orig_output_signals,
-                           nof_processes, bound,
+                           nof_processes, model_size,
                            sched_input_signals, is_active_signals, sends_signals, sends_prev_signals, has_tok_signals,
                            self._SYS_STATE_TYPE,
                            self._TAU_NAME,
                            sys_intern_funcs_postfix)
-
-        spec_states_type = 'Q' + str(automaton_index)
-        glob_encoder = GenericEncoder(self.logic, spec_states_type, sys_intern_funcs_postfix,
-                                      par_impl.state_types_by_process)
-
-        query_lines += comment('global_encoder' + sys_intern_funcs_postfix)
-
-        self._ensure_header_added(glob_encoder, query_lines)
-        self._ensure_sys_model_functions_added(glob_encoder, par_impl, query_lines)
-
-        glob_encoder.encode_sys_aux_functions(par_impl, query_lines)
-        glob_encoder.encode_run_graph_headers(par_impl, query_lines)
-        glob_encoder.encode_run_graph(par_impl, query_lines)
-        #ensure_footings_added -- outside
-
-        return glob_encoder, par_impl
-
-    def _encode_local_automaton(self, query_lines, local_automaton, bound, init_process_states):
-        query_lines += comment('local_encoder')
-
-        impl = SyncImpl(local_automaton,
-                        not self.is_moore,
-                        [QuantifiedSignal(n, 0) for n in self.anon_input_names],
-                        [QuantifiedSignal(n, 0) for n in self.anon_output_names],
-                        bound,
-                        self._SYS_STATE_TYPE,
-                        QuantifiedSignal(self.names.has_tok_signal, 0),
-                        QuantifiedSignal(self.names.sends_signal, 0),
-                        QuantifiedSignal(self.names.sends_prev_signal, 0),
-                        self._TAU_NAME,
-                        init_process_states)
-
-        encoder = GenericEncoder(self.logic, 'LQ', 'l', impl.state_types_by_process)
-
-        self._ensure_header_added(encoder, query_lines)
-        self._ensure_sys_model_functions_added(encoder, impl, query_lines)
-
-        encoder.encode_run_graph_headers(impl, query_lines)
-        encoder.encode_run_graph(impl, query_lines)
-        #ensure_footings_added -- outside
-
-        return encoder, impl
-
-    def _reset_state(self):
-        self.is_header_encoded = self.is_sys_models_encoded = self.is_footing_added = False
-
-    def _ensure_header_added(self, encoder:GenericEncoder, query_lines):
-        if self.is_header_encoded:
-            return
-
-        self.is_header_encoded = True
-        encoder.encode_header(query_lines)
-
-    def _ensure_sys_model_functions_added(self, encoder:GenericEncoder, impl, query_lines):
-        if self.is_sys_models_encoded:
-            return
-
-        self.is_sys_models_encoded = True
-        encoder.encode_sys_model_functions(impl, query_lines)
-
-
-
-
+        return par_impl

@@ -210,7 +210,7 @@ class GenericEncoder(EncodingSolver):
         self._define_declare_functions(func_descs)
 
     def encode_sys_aux_functions(self, impl):
-        func_descs = impl.aux_func_descs_ordered + (
+        func_descs = list(impl.aux_func_descs_ordered) + list(
             impl.taus_descs if impl.taus_descs != impl.model_taus_descs else [])  # TODO: the comparison looks erroneous
 
         self._define_declare_functions(func_descs)
@@ -221,7 +221,6 @@ class GenericEncoder(EncodingSolver):
         self.encode_sys_aux_functions(impl)
         self.encode_run_graph_headers(impl)
         self.encode_run_graph(impl, states_to_encode)
-        self.encode_footings(impl)
 
     def _get_smt_name_spec_state(self, spec_state):
         return '{0}_{1}'.format(self._spec_states_type.lower(), spec_state.name)
@@ -384,12 +383,8 @@ class GenericEncoder(EncodingSolver):
                 self._underlying_solver.declare_fun(desc)
 
     def _define_counters(self):
-        smt_lines = StrAwareList()
-
-        smt_lines += self._underlying_solver.declare_fun(self._laB_func_desc)
-        smt_lines += self._underlying_solver.declare_fun(self._laC_func_desc)
-
-        return smt_lines
+        self._underlying_solver.declare_fun(self._laB_func_desc)
+        self._underlying_solver.declare_fun(self._laC_func_desc)
 
     def _make_init_states_condition(self, init_spec_state, init_sys_state):
         args_dict = {self._la_q_name: self._get_smt_name_spec_state(init_spec_state)}

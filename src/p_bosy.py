@@ -15,7 +15,8 @@ from interfaces.automata import Automaton
 from interfaces.parser_expr import Bool, Expr
 from interfaces.spec import SpecProperty, and_properties, expr_from_property
 from module_generation.dot import moore_to_dot, to_dot
-from spec_optimizer.optimizations import localize, strengthen, inst_property, apply_log_bit_scheduler_optimization, RemoveSchedulerSignalsVisitor
+from spec_optimizer.optimizations import localize, strengthen, inst_property, apply_log_bit_scheduler_optimization, \
+    RemoveSchedulerSignalsVisitor
 from parsing import par_parser
 from parsing.par_lexer_desc import PAR_INPUT_VARIABLES, PAR_OUTPUT_VARIABLES, PAR_ASSUMPTIONS, PAR_GUARANTEES
 from synthesis import par_model_searcher
@@ -50,7 +51,6 @@ def _run(is_moore,
          sync_automaton:Automaton, global_automatae_pairs,
          bounds,
          solver, logic,
-         smt_files_prefix:str,
          dot_files_prefix,
          logger) -> Bool:
     logger.info('# of global automatae %i', len(global_automatae_pairs))
@@ -76,7 +76,6 @@ def _run(is_moore,
                                    anon_inputs, anon_outputs,
                                    bounds,
                                    solver,
-                                   smt_files_prefix,
                                    BaseNames(SCHED_ID_PREFIX, ACTIVE_NAME, SENDS_NAME, SENDS_PREV_NAME, HAS_TOK_NAME))
 
     is_realizable = models is not None
@@ -126,21 +125,21 @@ def _replace_sched_in_expr_by_true(e:Expr, scheduler) -> Expr:
     return RemoveSchedulerSignalsVisitor(scheduler).do(e)
 
 
-def _replace_sched_by_true(property:SpecProperty, scheduler) -> SpecProperty:
-    new_assumptions = [_replace_sched_in_expr_by_true(a, scheduler) for a in property.assumptions]
-    new_quarantees = [_replace_sched_in_expr_by_true(g, scheduler) for g in property.guarantees]
+def _replace_sched_by_true(spec_property:SpecProperty, scheduler) -> SpecProperty:
+    new_assumptions = [_replace_sched_in_expr_by_true(a, scheduler) for a in spec_property.assumptions]
+    new_guarantees = [_replace_sched_in_expr_by_true(g, scheduler) for g in spec_property.guarantees]
 
-    return SpecProperty(new_assumptions, new_quarantees)
+    return SpecProperty(new_assumptions, new_guarantees)
 
 
 def main(spec_text,
          optimization,
          is_moore,
-         smt_files_prefix, dot_files_prefix,
+         dot_files_prefix,
          bounds,
          cutoff,
          ltl2ucw_converter:Ltl2UCW,
-         z3solver, logic,
+         underlying_solver, logic,
          logger):
     """ :return: is realizable? """
 
@@ -242,9 +241,9 @@ def main(spec_text,
                 anon_inputs, anon_outputs,
                 sync_automaton, glob_automatae_pairs,
                 bounds,
-                z3solver,
+                underlying_solver,
                 logic,
-                smt_files_prefix, dot_files_prefix, logger)
+                dot_files_prefix, logger)
 
 
 if __name__ == '__main__':
@@ -270,6 +269,8 @@ if __name__ == '__main__':
                         action='count', default=0)
     parser.add_argument('--tmp', action='store_true', required=False, default=False,
                         help='keep temporary smt2 files')
+    parser.add_argument('--incr', action='store_true', required=False, default=False,
+                        help='produce incremental queries')
     parser.add_argument('--opt', choices=sorted(list(OPTS.keys()), key=lambda v: OPTS[v]), required=False, default=NO,
                         help='apply optimizations (default: %(default)s)')
 
@@ -279,7 +280,10 @@ if __name__ == '__main__':
 
     logger.info(args)
 
-    ltl2ucw_converter, z3solver = create_spec_converter_z3(logger)
+    with tempfile.NamedTemporaryFile(dir='./') as smt_file:
+        smt_files_prefix = smt_file.name
+
+    ltl2ucw_converter, z3solver = create_spec_converter_z3(logger, UFLIA(None), args.incr, smt_files_prefix)
     if not ltl2ucw_converter or not z3solver:
         exit(0)
 
@@ -287,15 +291,11 @@ if __name__ == '__main__':
 
     logic = UFLIA(None)
 
-    with tempfile.NamedTemporaryFile(dir='./') as smt_file:
-        smt_files_prefix = smt_file.name
-
     logger.info('temp file prefix used is %s', smt_files_prefix)
 
     is_realizable = main(args.ltl.read(),
                          args.opt,
                          args.moore,
-                         smt_files_prefix,
                          args.dot,
                          bounds,
                          args.cutoff,

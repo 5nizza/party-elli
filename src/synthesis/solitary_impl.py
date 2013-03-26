@@ -15,7 +15,7 @@ class SolitaryImpl(BlankImpl):
         self.automaton = automaton
         self.nof_processes = 1
 
-        self.states_by_process = [tuple(self._get_state_name(self._state_type, s)
+        self.states_by_process = [tuple(self.get_state_name(self._state_type, s)
                                         for s in range(nof_local_states))]
 
         self.state_types_by_process = [self._state_type]

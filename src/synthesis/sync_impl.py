@@ -28,8 +28,8 @@ class SyncImpl(BlankImpl):  # TODO: This class was never tested separately from 
                  init_process_states):
 
         if not init_process_states:
-            s1 = self._get_state_name(sys_state_type, 1)
-            s0 = self._get_state_name(sys_state_type, 0)
+            s1 = self.get_state_name(sys_state_type, 1)
+            s0 = self.get_state_name(sys_state_type, 0)
             init_process_states = [s1, s0]
 
         super().__init__(is_mealy)
@@ -44,10 +44,10 @@ class SyncImpl(BlankImpl):  # TODO: This class was never tested separately from 
         self._nof_local_states = nof_local_states
 
         #### BlankImpl interface #TODO: use super().init() with args
-        self.automaton = automaton
+        self.automaton = automaton  # TODO: remove me: does NOT belong here!
         self.nof_processes = 1
 
-        self.states_by_process = [tuple(self._get_state_name(self._state_type, i) for i in range(nof_local_states))]
+        self.states_by_process = [tuple(self.get_state_name(self._state_type, i) for i in range(nof_local_states))]
         self.state_types_by_process = [self._state_type]
 
         self.orig_inputs = [spec_input_signals + [sends_prev_signal]]

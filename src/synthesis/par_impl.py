@@ -93,7 +93,7 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
 
         ### BlankImpl interface TODO: use __init__ with arguments?
         self.states_by_process = self.nof_processes * [
-            tuple(self._get_state_name(self._state_type, i) for i in range(nof_local_states))]
+            tuple(self.get_state_name(self._state_type, i) for i in range(nof_local_states))]
         self.state_types_by_process = self.nof_processes * [self._state_type]
 
         archi_inputs = sends_prev_signals

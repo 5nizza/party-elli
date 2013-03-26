@@ -13,16 +13,28 @@ _REALIZABLE = [
     "parameterized/pnueli_arbiter.ltl --cutoff 2 --size 3 --opt strength",
     "parameterized/pnueli_arbiter.ltl --cutoff 3 --size 3 --opt strength",
 
-
+    #
     "parameterized/full_arbiter.ltl --cutoff 2 --size 3 --opt async_hub",
     "parameterized/full_arbiter.ltl --cutoff 3 --size 3 --opt async_hub",
 
     "parameterized/pnueli_arbiter.ltl --cutoff 2 --size 3 --opt async_hub",
     "parameterized/pnueli_arbiter.ltl --cutoff 3 --size 3 --opt async_hub",
 
-
+    #
     "parameterized/full_arbiter.ltl --cutoff 2 --size 3 --opt sync_hub",
-    "parameterized/full_arbiter.ltl --cutoff 3 --size 3 --opt sync_hub"
+    "parameterized/full_arbiter.ltl --cutoff 3 --size 3 --opt sync_hub",
+
+    "parameterized/pnueli_arbiter.ltl --cutoff 2 --size 3 --opt sync_hub",
+    "parameterized/pnueli_arbiter.ltl --cutoff 3 --size 3 --opt sync_hub",
+
+    # some subset to test --incr
+    "parameterized/full_arbiter.ltl --cutoff 3 --bound 3 --opt strength --incr",
+    "parameterized/full_arbiter.ltl --cutoff 3 --bound 3 --opt async_hub --incr",
+    "parameterized/full_arbiter.ltl --cutoff 3 --bound 3 --opt sync_hub --incr",
+
+    "parameterized/pnueli_arbiter.ltl --cutoff 3 --bound 3 --opt strength --incr",
+    "parameterized/pnueli_arbiter.ltl --cutoff 3 --bound 3 --opt async_hub --incr",
+    "parameterized/pnueli_arbiter.ltl --cutoff 3 --bound 3 --opt sync_hub --incr",
 ]
 
 _UNREALIZABLE = [
@@ -32,19 +44,28 @@ _UNREALIZABLE = [
     "parameterized/pnueli_arbiter.ltl --cutoff 2 --size 2 --opt strength",
     "parameterized/pnueli_arbiter.ltl --cutoff 3 --size 2 --opt strength",
 
-
+    #
     "parameterized/full_arbiter.ltl --cutoff 2 --size 2 --opt async_hub",
     "parameterized/full_arbiter.ltl --cutoff 3 --size 2 --opt async_hub",
 
     "parameterized/pnueli_arbiter.ltl --cutoff 2 --size 2 --opt async_hub",
     "parameterized/pnueli_arbiter.ltl --cutoff 3 --size 2 --opt async_hub",
 
-
+    #
     "parameterized/full_arbiter.ltl --cutoff 2 --size 2 --opt sync_hub",
     "parameterized/full_arbiter.ltl --cutoff 3 --size 2 --opt sync_hub",
 
     "parameterized/pnueli_arbiter.ltl --cutoff 2 --size 2 --opt sync_hub",
-    "parameterized/pnueli_arbiter.ltl --cutoff 3 --size 2 --opt sync_hub"
+    "parameterized/pnueli_arbiter.ltl --cutoff 3 --size 2 --opt sync_hub",
+
+    # some subset to test --incr
+    "parameterized/full_arbiter.ltl --cutoff 3 --bound 2 --opt strength --incr",
+    "parameterized/full_arbiter.ltl --cutoff 3 --bound 2 --opt async_hub --incr",
+    "parameterized/full_arbiter.ltl --cutoff 3 --bound 2 --opt sync_hub --incr",
+
+    "parameterized/pnueli_arbiter.ltl --cutoff 3 --bound 2 --opt strength --incr",
+    "parameterized/pnueli_arbiter.ltl --cutoff 3 --bound 2 --opt async_hub --incr",
+    "parameterized/pnueli_arbiter.ltl --cutoff 3 --bound 2 --opt sync_hub --incr",
 ]
 
 
@@ -53,7 +74,12 @@ _REALIZABLE_SUBSET = [
     "parameterized/pnueli_arbiter.ltl --cutoff 3 --size 3 --opt strength",
 
     "parameterized/full_arbiter.ltl --cutoff 3 --size 3 --opt async_hub",
-    "parameterized/pnueli_arbiter.ltl --cutoff 3 --size 3 --opt sync_hub"
+    "parameterized/pnueli_arbiter.ltl --cutoff 3 --size 3 --opt sync_hub",
+
+    # some subset to test --incr
+    "parameterized/full_arbiter.ltl --cutoff 3 --bound 3 --opt strength --incr",
+    "parameterized/pnueli_arbiter.ltl --cutoff 3 --bound 3 --opt async_hub --incr",
+    "parameterized/pnueli_arbiter.ltl --cutoff 3 --bound 3 --opt sync_hub --incr",
 ]
 
 
@@ -65,6 +91,11 @@ _UNREALIZABLE_SUBSET = [
     "parameterized/pnueli_arbiter.ltl --cutoff 2 --size 2 --opt strength",
     "parameterized/pnueli_arbiter.ltl --cutoff 2 --size 2 --opt async_hub",
     "parameterized/pnueli_arbiter.ltl --cutoff 2 --size 2 --opt sync_hub",
+
+    # some subset to test --incr
+    "parameterized/full_arbiter.ltl --cutoff 3 --bound 2 --opt strength --incr",
+    "parameterized/pnueli_arbiter.ltl --cutoff 3 --bound 2 --opt async_hub --incr",
+    "parameterized/pnueli_arbiter.ltl --cutoff 3 --bound 2 --opt sync_hub --incr",
 ]
 
 
