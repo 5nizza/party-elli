@@ -1,6 +1,7 @@
 import logging
 
 from itertools import product, chain
+import sys
 from helpers.labels_map import LabelsMap
 from helpers.logging import log_entrance
 from helpers.python_ext import StrAwareList, lmap, lfilter
@@ -34,7 +35,9 @@ class GenericEncoder(EncodingSolver):
                                for (i, s) in enumerate(sys_state_type_by_process))
 
         self._laB_func_desc = FuncDescription('laB' + counters_postfix, counters_inputs, 'Bool', None)
-        self._laC_func_desc = FuncDescription('laC' + counters_postfix, counters_inputs, logic.counters_type(), None)
+        self._laC_func_desc = FuncDescription('laC' + counters_postfix, counters_inputs,
+                                              logic.counters_type(sys.maxsize),
+                                              None)
 
         self._last_only_states = None
 
