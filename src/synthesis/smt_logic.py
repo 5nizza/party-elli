@@ -1,21 +1,29 @@
+from abc import ABCMeta
+
+
 class Logic:
-    def counters_type(self):
-        pass
+    __metaclass__ = ABCMeta
+
+    def counters_type(self, max_counter_value):
+        raise NotImplementedError()
+
     def smt_name(self):
-        pass
+        raise NotImplementedError()
+
     @property
     def gt(self):
-        pass
+        raise NotImplementedError()
+
     @property
     def ge(self):
-        pass
+        raise NotImplementedError()
 
 
 class UFBV(Logic):
     def __init__(self, width):
         self._width = width
 
-    def counters_type(self):
+    def counters_type(self, max_counter_value):
         return '(_ BitVec {0})'.format(self._width)
 
     @property
@@ -35,7 +43,7 @@ class UFLIA(Logic):
     def __init__(self, upper_bound):
         self._upper_bound = upper_bound
 
-    def counters_type(self):
+    def counters_type(self, max_counter_value):
         return 'Int'
 
     @property
