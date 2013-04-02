@@ -458,6 +458,10 @@ class GenericEncoder(EncodingSolver):
                 self._underlying_solver.assert_(condition)
 
     def encode_model_solution(self, model:LTS, impl):  # TODO: no distributed case
+        def to_bool(val:bool):
+            return [self._underlying_solver.false(),
+                    self._underlying_solver.true()][val]
+
         tau_model = impl.model_taus_descs[0]
         out_descs_dict = dict(map(lambda desc: (desc.name, desc), impl.outvar_desc_by_process[0].values()))
 
@@ -465,7 +469,8 @@ class GenericEncoder(EncodingSolver):
             out_desc = out_descs_dict[outvar_signal]
 
             for args_dict, defined_bool_value in labels_map.items():
-                defined_value = [self._underlying_solver.false(), self._underlying_solver.true()][defined_bool_value]
+                defined_value = to_bool(defined_bool_value)
+
                 computed_value = self._underlying_solver.call_func(out_desc, args_dict)
 
                 condition = self._underlying_solver.op_eq(computed_value, defined_value)

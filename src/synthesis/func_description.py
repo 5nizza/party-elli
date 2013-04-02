@@ -60,7 +60,7 @@ class FuncDescription:
             'requested \n{0}\n, but I have \n{1}'.format(value_by_argname, self._ordered_input_type_pairs)
 
         ordered_values = []
-        for (signal, type) in self._ordered_input_type_pairs:
+        for (signal, ty) in self._ordered_input_type_pairs:
             value = value_by_argname[signal]
             ordered_values.append(value)
 

@@ -3,6 +3,7 @@ import logging
 
 from helpers.logging import log_entrance
 from interfaces.automata import Automaton
+from interfaces.lts import LTS
 from interfaces.parser_expr import QuantifiedSignal
 from interfaces.solver_interface import SolverInterface
 from parsing.helpers import get_log_bits
@@ -32,6 +33,57 @@ class ParModelSearcher:
         self._TAU_NAME = 'tau'
         self._loc_spec_state_prefix = 'LQ'
         self._loc_counters_postfix = 'l'
+
+    @log_entrance(logging.getLogger(), logging.INFO)
+    def check(self,  # TODO: careful with incrementality: nof_states >= 2
+              logic,
+              is_moore,
+              global_automaton_cutoff_pairs,
+              sync_automaton:Automaton,
+
+              anon_input_names, anon_output_names,
+
+              solver:SolverInterface,
+              base_name_of:BaseNames,
+              model:LTS):
+
+        self._logger = logging.getLogger()
+        self._logic = logic
+        self._is_moore = is_moore
+        self._anon_input_names = anon_input_names
+        self._anon_output_names = anon_output_names
+        self._underlying_solver = solver
+        self._names = base_name_of
+
+        model_size = len(model.states)
+        self._encode_headers(model_size, sync_automaton, global_automaton_cutoff_pairs)
+
+        init_process_states = self._get_init_process_states(global_automaton_cutoff_pairs, model_size)
+
+        self._logger.info('model is given, lets try it first: model checking..')
+        all_states = model.states
+
+        for i, (automaton, nof_processes) in enumerate(global_automaton_cutoff_pairs):
+            #noinspection PyTypeChecker
+            self._encode_global_automaton(i,
+                                          nof_processes,
+                                          automaton,
+                                          model_size,
+                                          all_states)
+
+        # TODO: use separate impl! -- I use sync automaton to encode token ring properties on SMT level
+        encoding_solver, impl = self._encode_local_automaton(sync_automaton,
+                                                             model_size,
+                                                             init_process_states,
+                                                             all_states)
+
+        encoding_solver.push()
+
+        # encoding_solver.encode_model_bound(all_states, impl)
+        encoding_solver.encode_model_solution(model, impl)
+
+        found_model = encoding_solver.solve(impl)
+        return found_model
 
     @log_entrance(logging.getLogger(), logging.INFO)
     def search(self,  # TODO: careful with incrementality: nof_states >= 2

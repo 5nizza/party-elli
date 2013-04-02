@@ -91,10 +91,13 @@ if __name__ == "__main__":
                         help='writes the output into a dot graph file')
     parser.add_argument('--nusmv', metavar='nusmv', type=str, required=False,
                         help='writes the output and the specification into NuSMV file')
-    parser.add_argument('--bound', metavar='bound', type=int, default=2, required=False,
-                        help='upper bound on the size of local process (default: %(default)i)')
-    parser.add_argument('--size', metavar='size', type=int, default=0, required=False,
-                        help='exact size of the process implementation(default: %(default)i)')
+
+    group_bound = parser.add_mutually_exclusive_group()
+    group_bound.add_argument('--bound', metavar='bound', type=int, default=2, required=False,
+                             help='upper bound on the size of local process (default: %(default)i)')
+    group_bound.add_argument('--size', metavar='size', type=int, default=0, required=False,
+                             help='exact size of the process implementation(default: %(default)i)')
+
     parser.add_argument('--tmp', action='store_true', required=False, default=False,
                         help='keep temporary smt2 files')
     parser.add_argument('--incr', action='store_true', required=False, default=False,
@@ -111,8 +114,8 @@ if __name__ == "__main__":
         smt_files_prefix = smt_file.name
 
     logic = UFLIA(None)
-    ltl2ucw_converter, underlying_solver = create_spec_converter_z3(logger, logic, args.incr, smt_files_prefix)
-    if not ltl2ucw_converter or not underlying_solver:
+    ltl2ucw_converter, solver_factory = create_spec_converter_z3(logger, logic, args.incr, smt_files_prefix)
+    if not ltl2ucw_converter or not solver_factory:
         exit(1)
 
     bounds = list(range(1, args.bound + 1) if args.size == 0 else range(args.size, args.size + 1))
@@ -126,7 +129,8 @@ if __name__ == "__main__":
     generic_smt_encoder.ENCODE_INCREMENTALLY = args.incr
 
     is_realizable = main(ltl_text, part_text, args.moore, args.dot, args.nusmv, bounds,
-                         ltl2ucw_converter, underlying_solver,
+                         ltl2ucw_converter,
+                         solver_factory.create(),
                          logger)
 
     args.ltl.close()

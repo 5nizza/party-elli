@@ -109,7 +109,17 @@ def declare_tuple(name, component_types, getter_prefix):
 
 def call_func(func_desc:FuncDescription, func_args_dict:dict):
     func_name = func_desc.name
-    args = func_desc.get_args_list(func_args_dict)
+    smt_func_args_dict = dict()
+    for (var,val) in func_args_dict.items():
+        if val is True:
+            val = true()
+        elif val is False:
+            val = false()
+        smt_func_args_dict[var] = val
+
+    func_args_dict = smt_func_args_dict
+
+    args = func_desc.get_args_list(func_args_dict)  # TODO: bad dependence
 
     smt_str = '(' + func_name + ' '
     for arg in args:

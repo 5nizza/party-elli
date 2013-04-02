@@ -221,12 +221,11 @@ class Z3_Smt_Interactive(SmtSolverWithQueryStorageAbstract):
                                    error='\n'.join(real_error_lines))
             assert 0, msg
 
-    # TODO: current -- use file instead of piping of stdin
-
     def solve(self):
         self._logger.info('solving the query..')
 
         self._query_storage += '(echo "done")'
+
         self._process.stdin.write(bytes(str(self._query_storage), 'utf-8'))
         self._process.stdin.flush()  # just in case
 

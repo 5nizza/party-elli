@@ -49,6 +49,10 @@ class LTS:
     def model_by_name(self):
         return self._output_models
 
+    @property
+    def output_models(self) -> dict:
+        return self._output_models
+
     def get_outputs(self, label:Label):
         return dict((outvar, transitions[label]) for (outvar, transitions) in self._output_models.items())
 

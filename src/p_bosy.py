@@ -10,7 +10,7 @@ from architecture.scheduler import InterleavingScheduler, SCHED_ID_PREFIX, ACTIV
 from architecture.tok_ring import TokRingArchitecture, SENDS_NAME, HAS_TOK_NAME, SENDS_PREV_NAME
 from helpers import automata_helper
 
-from helpers.main_helper import setup_logging, create_spec_converter_z3, remove_files_prefixed
+from helpers.main_helper import setup_logging, create_spec_converter_z3, remove_files_prefixed, Z3SolverFactory
 from interfaces.automata import Automaton
 from interfaces.parser_expr import Bool, Expr
 from interfaces.spec import SpecProperty, and_properties, expr_from_property
@@ -46,27 +46,61 @@ def _get_spec(ltl_text:str, logger:Logger) -> (list, list, list, list):
     return anon_inputs, anon_outputs, assumptions, guarantees
 
 
-def _run(is_moore,
-         anon_inputs, anon_outputs,
-         sync_automaton:Automaton, global_automatae_pairs,
-         bounds,
-         solver, logic,
-         dot_files_prefix,
-         logger) -> Bool:
-    logger.info('# of global automatae %i', len(global_automatae_pairs))
+def _write_results(dot_files_prefix, is_moore, logger, models):
+    for i, lts in enumerate(models):
+        if is_moore:
+            dot = moore_to_dot(lts)
+        else:
+            dot = to_dot(lts, [SENDS_NAME, HAS_TOK_NAME])
 
+        if dot_files_prefix is None:
+            logger.info(dot)
+        else:
+            with open(dot_files_prefix + str(i) + '.dot', mode='w') as out:
+                out.write(dot)
+
+                logger.info('{type} model is written to {file}'.format(
+                    type=['Mealy', 'Moore'][is_moore],
+                    file=out.name))
+
+
+def _log_automatae(logger, global_automatae_pairs, sync_automaton):
+    logger.info('# of global automatae %i', len(global_automatae_pairs))
     for glob_automaton, cutoff in global_automatae_pairs:
         logger.info('global automaton %s', glob_automaton.name)
         logger.info('..corresponding cutoff=%i', cutoff)
         logger.info('..nof_nodes=%i', len(glob_automaton.nodes))
         logger.debug('..corresponding dot:\n%s', automata_helper.to_dot(glob_automaton))
         logger.info('\n')
-
     if sync_automaton:
         logger.info('local automaton %s', sync_automaton.name)
         logger.info('nof_nodes=%i', len(sync_automaton.nodes))
     else:
         logger.info('no local automaton')
+
+
+def _run(default_models,
+         is_moore,
+         anon_inputs, anon_outputs,
+         sync_automaton:Automaton, global_automatae_pairs,
+         bounds,
+         solver_creater:Z3SolverFactory,
+         logic,
+         logger) -> Bool:
+    _log_automatae(logger, global_automatae_pairs, sync_automaton)
+
+    if default_models:
+        model_checker = par_model_searcher.ParModelSearcher()
+        models = model_checker.check(logic,
+                                     is_moore,
+                                     global_automatae_pairs,
+                                     sync_automaton,
+                                     anon_inputs, anon_outputs,
+                                     solver_creater.create(),
+                                     BaseNames(SCHED_ID_PREFIX, ACTIVE_NAME, SENDS_NAME, SENDS_PREV_NAME, HAS_TOK_NAME),
+                                     default_models[0])
+        if models:
+            return models
 
     model_searcher = par_model_searcher.ParModelSearcher()
     models = model_searcher.search(logic,
@@ -75,34 +109,14 @@ def _run(is_moore,
                                    sync_automaton,
                                    anon_inputs, anon_outputs,
                                    bounds,
-                                   solver,
-                                   BaseNames(SCHED_ID_PREFIX, ACTIVE_NAME, SENDS_NAME, SENDS_PREV_NAME, HAS_TOK_NAME))
+                                   solver_creater.create(),
+                                   BaseNames(SCHED_ID_PREFIX, ACTIVE_NAME, SENDS_NAME, SENDS_PREV_NAME,
+                                             HAS_TOK_NAME))
 
-    is_realizable = models is not None
-
-    logger.info(['unrealizable', 'realizable'][is_realizable])
-
-    if is_realizable:
-        for i, lts in enumerate(models):
-            if is_moore:
-                dot = moore_to_dot(lts)
-            else:
-                dot = to_dot(lts, [SENDS_NAME, HAS_TOK_NAME])
-
-            if dot_files_prefix is None:
-                logger.info(dot)
-            else:
-                with open(dot_files_prefix + str(i) + '.dot', mode='w') as out:
-                    out.write(dot)
-
-                    logger.info('{type} model is written to {file}'.format(
-                        type=['Mealy', 'Moore'][is_moore],
-                        file=out.name))
-
-    return is_realizable
+    return models
 
 
-def join_properties(properties:Iterable):
+def _join_properties(properties:Iterable):
     properties = list(properties)
     all_ass = list(chain(p.assumptions for p in properties))
     all_gua = list(chain(p.guarantees for p in properties))
@@ -132,20 +146,12 @@ def _replace_sched_by_true(spec_property:SpecProperty, scheduler) -> SpecPropert
     return SpecProperty(new_assumptions, new_guarantees)
 
 
-def main(spec_text,
-         optimization,
-         is_moore,
-         dot_files_prefix,
-         bounds,
-         cutoff,
-         ltl2ucw_converter:Ltl2UCW,
-         underlying_solver, logic,
-         logger):
-    """ :return: is realizable? """
-
+def _get_automatae(assumptions, guarantees,
+                   optimization,
+                   cutoff,
+                   ltl2ucw_converter:Ltl2UCW,
+                   logger):
     #TODO: check which optimizations are used
-
-    anon_inputs, anon_outputs, assumptions, guarantees = _get_spec(spec_text, logger)
 
     properties = [SpecProperty(assumptions, [g]) for g in guarantees]
     logger.info('original properties:\n%s\n', '\n'.join(map(str, properties)))
@@ -194,7 +200,7 @@ def main(spec_text,
                                     for (p, c) in par_local_property_pairs]
 
     if optimization == SYNC_HUB:
-        pass   # TODO: should add sync_hub assumptions -- but currently they are added on encoder level
+        pass   # TODO: should add sync_hub assumptions -- but currently they are added on SMT (Impl) level
 
     if optimization == ASYNC_HUB:
         # by definition async_hub_assumptions are one-indexed
@@ -212,7 +218,8 @@ def main(spec_text,
 
     local_properties = [p for (p, c) in inst_property_cutoff_pairs if c == 2]
     global_property_cutoff_pairs = [(p, min(c, cutoff))
-                                    for (p, c) in inst_property_cutoff_pairs if p not in local_properties]
+                                    for (p, c) in inst_property_cutoff_pairs
+                                    if p not in local_properties]
 
     logger.info('instantiated local properties:\n%s\n', local_properties)
     logger.info('instantiated global properties:\n%s\n', global_property_cutoff_pairs)
@@ -234,16 +241,69 @@ def main(spec_text,
             glob_automatae_pairs += [(local_automaton, 2)]
 
     sync_automaton = None
-    if optimization >= SYNC_HUB:
+    if OPTS[optimization] >= OPTS[SYNC_HUB]:
         sync_automaton = local_automaton
 
-    return _run(is_moore,
-                anon_inputs, anon_outputs,
-                sync_automaton, glob_automatae_pairs,
-                bounds,
-                underlying_solver,
-                logic,
-                dot_files_prefix, logger)
+    return sync_automaton, glob_automatae_pairs
+
+
+# TODO: slow: get_max_cutoff don't need to instantiate all the properties...
+def _get_max_cutoff(assumptions, guarantees, optimization, ltl2ucw_converter, logger) -> int:  # TODO: not optimal
+    sync_automaton, glob_automatae_pairs = _get_automatae(assumptions,
+                                                          guarantees,
+                                                          optimization,
+                                                          sys.maxsize,
+                                                          ltl2ucw_converter,
+                                                          logger)
+
+    max_cutoff = max([e[1] for e in glob_automatae_pairs])
+    return max_cutoff
+
+
+def main(spec_text,
+         optimization,
+         is_moore,
+         dot_files_prefix,
+         bounds,
+         cutoff,
+         ltl2ucw_converter:Ltl2UCW,
+         underlying_solver_factory:Z3SolverFactory,
+         logic,
+         incr_cutoffs:bool,
+         logger):
+    """ :return: is realizable? """
+    #TODO: check which optimizations are used
+
+    anon_inputs, anon_outputs, assumptions, guarantees = _get_spec(spec_text, logger)
+    max_cutoff = _get_max_cutoff(assumptions, guarantees, optimization, ltl2ucw_converter, logger)
+
+    models = None
+    cutoffs_to_try = range(2, max_cutoff + 1) if incr_cutoffs else [cutoff]
+    for c in cutoffs_to_try:
+        logger.info('cutoff is set to {cutoff}'.format(cutoff=c))
+        sync_automaton, glob_automatae_pairs = _get_automatae(assumptions,
+                                                              guarantees,
+                                                              optimization,
+                                                              c,
+                                                              ltl2ucw_converter,
+                                                              logger)
+        models = _run(models,
+                      is_moore,
+                      anon_inputs, anon_outputs,
+                      sync_automaton, glob_automatae_pairs,
+                      bounds,
+                      underlying_solver_factory,
+                      logic,
+                      logger)
+
+    is_realizable = models is not None
+
+    logger.info(['unrealizable', 'realizable'][is_realizable])
+
+    if is_realizable:
+        _write_results(dot_files_prefix, is_moore, logger, models)
+
+    return is_realizable
 
 
 if __name__ == '__main__':
@@ -259,20 +319,26 @@ if __name__ == '__main__':
 
     parser.add_argument('--dot', metavar='dot', type=str, required=False,
                         help='prefix of dot-graph files for output model')
-    parser.add_argument('--bound', metavar='bound', type=int, default=2, required=False,
-                        help='upper bound on the size of local process (default: %(default)i)')
-    parser.add_argument('--size', metavar='size', type=int, default=0, required=False,
-                        help='exact size of the process implementation(default: %(default)i)')
+
+    group_bound = parser.add_mutually_exclusive_group()
+    group_bound.add_argument('--bound', metavar='bound', type=int, default=2, required=False,
+                             help='upper bound on the size of local process (default: %(default)i)')
+    group_bound.add_argument('--size', metavar='size', type=int, default=0, required=False,
+                             help='exact size of process model (default: %(default)i)')
+
     parser.add_argument('--cutoff', metavar='cutoff', type=int, default=sys.maxsize, required=False,
-                        help='force specified cutoff size')
+                        help='force specified cutoff (can enforce smaller but not bigger) '
+                             '(default: automatic cutoff detection)')
     parser.add_argument('-v', '--verbose',
                         action='count', default=0)
     parser.add_argument('--tmp', action='store_true', required=False, default=False,
-                        help='keep temporary smt2 files')
+                        help='keep temporary smt2 files (not in incr mode)')
     parser.add_argument('--incr', action='store_true', required=False, default=False,
-                        help='produce incremental queries')
+                        help='call solver with incremental queries')
+    parser.add_argument('--cincr', action='store_true', required=False, default=False,
+                        help='try smaller cutoff sizes first')
     parser.add_argument('--opt', choices=sorted(list(OPTS.keys()), key=lambda v: OPTS[v]), required=False, default=NO,
-                        help='apply optimizations (default: %(default)s)')
+                        help='apply an optimization (choose one) (default: %(default)s)')
 
     args = parser.parse_args(sys.argv[1:])
 
@@ -283,8 +349,8 @@ if __name__ == '__main__':
     with tempfile.NamedTemporaryFile(dir='./') as smt_file:
         smt_files_prefix = smt_file.name
 
-    ltl2ucw_converter, z3solver = create_spec_converter_z3(logger, UFLIA(None), args.incr, smt_files_prefix)
-    if not ltl2ucw_converter or not z3solver:
+    ltl2ucw_converter, z3solver_factory = create_spec_converter_z3(logger, UFLIA(None), args.incr, smt_files_prefix)
+    if not ltl2ucw_converter or not z3solver_factory:
         exit(0)
 
     bounds = list(range(2, args.bound + 1) if args.size == 0 else range(args.size, args.size + 1))
@@ -299,8 +365,10 @@ if __name__ == '__main__':
                          args.dot,
                          bounds,
                          args.cutoff,
-                         ltl2ucw_converter, z3solver,
+                         ltl2ucw_converter,
+                         z3solver_factory,
                          logic,
+                         args.cincr,
                          logger)
 
     if not args.tmp:

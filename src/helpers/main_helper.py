@@ -31,6 +31,26 @@ def setup_logging(verbose):
     return logging.getLogger(__name__)
 
 
+class Z3SolverFactory:
+    def __init__(self, smt_tmp_files_prefix, z3_path, logic, logger, is_incremental:bool):
+        self.smt_tmp_files_prefix = smt_tmp_files_prefix
+        self.z3_path = z3_path
+        self.logic = logic
+        self.logger = logger
+        self.is_incremental = is_incremental
+
+    def create(self):
+        if self.is_incremental:
+            solver = Z3_Smt_Interactive(self.logic, self.z3_path, self.logger)
+        else:
+            solver = Z3_Smt_NonInteractive_ViaFiles(self.smt_tmp_files_prefix,
+                                                    self.z3_path,
+                                                    self.logic,
+                                                    self.logger)
+
+        return solver
+
+
 def create_spec_converter_z3(logger:logging.Logger,
                              logic:Logic,
                              is_incremental:bool,
@@ -40,14 +60,10 @@ def create_spec_converter_z3(logger:logging.Logger,
 
     from config import z3_path, ltl3ba_path
 
-    if is_incremental:
-        solver = Z3_Smt_Interactive(logic, z3_path, logger)
-    else:
-        solver = Z3_Smt_NonInteractive_ViaFiles(smt_tmp_files_prefix, z3_path, logic, logger)
-
     converter = Ltl2UCW(ltl3ba_path)
+    solver_factory = Z3SolverFactory(smt_tmp_files_prefix, z3_path, logic, logger, is_incremental)
 
-    return converter, solver
+    return converter, solver_factory
 
 
 def remove_files_prefixed(file_prefix:str):
