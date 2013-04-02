@@ -4,7 +4,7 @@ from itertools import product, chain
 import sys
 from helpers.labels_map import LabelsMap
 from helpers.logging import log_entrance
-from helpers.python_ext import StrAwareList, lmap, lfilter
+from helpers.python_ext import StrAwareList, lmap
 from interfaces.automata import DEAD_END, Label
 from interfaces.lts import LTS
 from interfaces.solver_interface import EncodingSolver, SolverInterface
@@ -447,7 +447,7 @@ class GenericEncoder(EncodingSolver):
         return condition
 
     def encode_model_bound(self, only_states, impl):
-        self._last_only_states = only_states
+        self._last_only_states = only_states   # TODO: bad: stateful
 
         unique_model_tau_descs = set(impl.model_taus_descs)
 
@@ -456,3 +456,23 @@ class GenericEncoder(EncodingSolver):
                 condition = self._get_next_state_restricted_condition(state, only_states, tau_desc, impl.state_arg_name)
 
                 self._underlying_solver.assert_(condition)
+
+    def encode_model_solution(self, model:LTS, impl):  # TODO: no distributed case
+        tau_model = impl.model_taus_descs[0]
+        out_descs_dict = dict(map(lambda desc: (desc.name, desc), impl.outvar_desc_by_process[0].values()))
+
+        for outvar_signal,labels_map in model.output_models.items():
+            out_desc = out_descs_dict[outvar_signal]
+
+            for args_dict, defined_bool_value in labels_map.items():
+                defined_value = [self._underlying_solver.false(), self._underlying_solver.true()][defined_bool_value]
+                computed_value = self._underlying_solver.call_func(out_desc, args_dict)
+
+                condition = self._underlying_solver.op_eq(computed_value, defined_value)
+                self._underlying_solver.assert_(condition)
+
+        for args_dict,defined_next_state in model.tau_model.items():
+            computed_next_state = self._underlying_solver.call_func(tau_model, args_dict)
+
+            condition = self._underlying_solver.op_eq(computed_next_state, defined_next_state)
+            self._underlying_solver.assert_(condition)
