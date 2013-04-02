@@ -4,6 +4,7 @@ from helpers.python_ext import index_of
 class Signal:
     def __init__(self, name:str):
         self.name = name
+        self.__hash_value = hash(self.name)
 
     def __repr__(self):
         return str(self.name)
@@ -11,19 +12,30 @@ class Signal:
     def __eq__(self, other):
         if not isinstance(other, Signal):
             return False
-        return str(self) == str(other)
+        return self.name == other.name
 
     def __hash__(self):
-        return hash(str(self))
+        return self.__hash_value
 
 
 class QuantifiedSignal(Signal):
     def __init__(self, base_name:str, *binding_indices):
         super().__init__(base_name)
-        self.binding_indices = tuple(binding_indices) #binding index: string means parametrization, int - process index
+        self.binding_indices = tuple(binding_indices)  # binding index: str means parametrization, int - process index
+
+        self.__cached_str = self.name + '_' + '_'.join(map(str, self.binding_indices))
+        self.__hash_value = hash(self.__cached_str)
 
     def __repr__(self):
-        return self.name + '_' + '_'.join(map(str, self.binding_indices))
+        return self.__cached_str
+
+    def __hash__(self):
+        return self.__hash_value
+
+    def __eq__(self, other):
+        if not isinstance(other, QuantifiedSignal):
+            return False
+        return self.__cached_str == other.__cached_str
 
     __str__ = __repr__
 

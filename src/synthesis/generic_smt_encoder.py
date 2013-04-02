@@ -46,14 +46,14 @@ class GenericEncoder(EncodingSolver):
 
         output_signals = set(chain(*[d.keys() for d in impl.outvar_desc_by_process]))
 
-        for lbl_signal_, lbl_signal_value in label.items():
+        for lbl_signal, lbl_signal_value in label.items():
             #: :type: QuantifiedSignal
-            lbl_signal = lbl_signal_
+            lbl_signal = lbl_signal
 
             if lbl_signal not in output_signals:
                 continue
 
-            assert len(lbl_signal.binding_indices) == 1  # TODO: remove when finish non-parameterized case
+            assert len(lbl_signal.binding_indices) == 1
 
             proc_index = lbl_signal.binding_indices[0]
 
