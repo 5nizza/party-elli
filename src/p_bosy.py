@@ -90,18 +90,22 @@ def _run(default_models,
     _log_automatae(logger, global_automatae_pairs, sync_automaton)
 
     if default_models:
+        underlying_solver = solver_creater.create('_check')
+
         model_checker = par_model_searcher.ParModelSearcher()
         models = model_checker.check(logic,
                                      is_moore,
                                      global_automatae_pairs,
                                      sync_automaton,
                                      anon_inputs, anon_outputs,
-                                     solver_creater.create(),
+                                     underlying_solver,
                                      BaseNames(SCHED_ID_PREFIX, ACTIVE_NAME, SENDS_NAME, SENDS_PREV_NAME, HAS_TOK_NAME),
                                      default_models[0])
+        underlying_solver.die()
         if models:
             return models
 
+    underlying_solver = solver_creater.create()
     model_searcher = par_model_searcher.ParModelSearcher()
     models = model_searcher.search(logic,
                                    is_moore,
@@ -109,9 +113,11 @@ def _run(default_models,
                                    sync_automaton,
                                    anon_inputs, anon_outputs,
                                    bounds,
-                                   solver_creater.create(),
+                                   underlying_solver,
                                    BaseNames(SCHED_ID_PREFIX, ACTIVE_NAME, SENDS_NAME, SENDS_PREV_NAME,
                                              HAS_TOK_NAME))
+
+    underlying_solver.die()
 
     return models
 

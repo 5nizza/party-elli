@@ -7,6 +7,10 @@ class SolverInterface:
     __metaclass__ = ABCMeta
 
     @abstractmethod
+    def die(self):
+        raise NotImplementedError()
+
+    @abstractmethod
     def declare_enum(self, enum_name:str, values):
         raise NotImplementedError()
 

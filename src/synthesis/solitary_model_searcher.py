@@ -41,7 +41,7 @@ def search(automaton:Automaton,
         new_states = cur_all_states[last_size:]
         last_size = size
 
-        encoding_solver.encode_run_graph(impl, new_states)
+        encoding_solver.encode_run_graph(impl, list((s,) for s in new_states))
 
         encoding_solver.push()
 

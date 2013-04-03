@@ -168,7 +168,7 @@ class GenericEncoder(EncodingSolver):
 
         return assertions
 
-    def get_run_graph_assertions(self, impl, model_states_to_encode):
+    def encode_run_graph(self, impl:BlankImpl, global_states_to_encode):
         for a in impl.get_architecture_requirements():  # TODO: looks hacky! replace with two different encoders?
             self._underlying_solver.assert_(a)
 
@@ -186,13 +186,11 @@ class GenericEncoder(EncodingSolver):
 
                 self._underlying_solver.assert_(init_state_condition)
 
-        global_states = list(product(*(impl.nof_processes * [model_states_to_encode])))
-
         state_to_rejecting_scc = build_state_to_rejecting_scc(impl.automaton)
 
         spec_states = impl.automaton.nodes
 
-        for global_state in global_states:
+        for global_state in global_states_to_encode:
             for spec_state in spec_states:
                 for label, dst_set_list in spec_state.transitions.items():
                     transition_condition = self._encode_transition(spec_state, global_state, label,
@@ -201,9 +199,6 @@ class GenericEncoder(EncodingSolver):
                     self._underlying_solver.assert_(transition_condition)
 
             self._underlying_solver.comment('encoded state ' + self._get_smt_name_sys_state(global_state))
-
-    def encode_run_graph(self, impl:BlankImpl, model_states_to_encode):
-        self.get_run_graph_assertions(impl, model_states_to_encode)
 
     def encode_sys_model_functions(self, impl):
         states_by_type = dict(zip(impl.state_types_by_process, impl.states_by_process))

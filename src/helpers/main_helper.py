@@ -39,11 +39,11 @@ class Z3SolverFactory:
         self.logger = logger
         self.is_incremental = is_incremental
 
-    def create(self):
+    def create(self, seed=''):
         if self.is_incremental:
             solver = Z3_Smt_Interactive(self.logic, self.z3_path, self.logger)
         else:
-            solver = Z3_Smt_NonInteractive_ViaFiles(self.smt_tmp_files_prefix,
+            solver = Z3_Smt_NonInteractive_ViaFiles(self.smt_tmp_files_prefix+seed,
                                                     self.z3_path,
                                                     self.logic,
                                                     self.logger)

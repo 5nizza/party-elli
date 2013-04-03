@@ -38,6 +38,9 @@ class TruncatableQueryStorage_ViaFile:
             self._append(other)
             return self
 
+    def close(self):
+        self._file_writer.close()
+
 
 class EmulatePushPop:
     def __init__(self, query_storage: 'truncate-able query storage'):
@@ -136,6 +139,9 @@ class Z3_Smt_NonInteractive_ViaFiles(SmtSolverWithQueryStorageAbstract):
         self._emulate_push_pop = EmulatePushPop(self._query_storage)
         self._z3_cmd = z3_path + ' -smt2 ' + self._file_name
 
+    def die(self):
+        self._query_storage.close()
+
     def push(self):
         return self._emulate_push_pop.push()
 
@@ -198,6 +204,9 @@ class Z3_Smt_Interactive(SmtSolverWithQueryStorageAbstract):
                                          stderr=subprocess.PIPE)
 
         self._logger.info('created z3 process: ' + str(self._process.pid))
+
+    def die(self):
+        self._process.kill()
 
     def _read_block(self) -> str:
         lines = []

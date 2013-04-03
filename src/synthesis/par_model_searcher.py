@@ -69,7 +69,8 @@ class ParModelSearcher:
                                           nof_processes,
                                           automaton,
                                           model_size,
-                                          all_states)
+                                          all_states,
+                                          [])
 
         # TODO: use separate impl! -- I use sync automaton to encode token ring properties on SMT level
         encoding_solver, impl = self._encode_local_automaton(sync_automaton,
@@ -116,13 +117,14 @@ class ParModelSearcher:
             cur_all_states = [BlankImpl(False).get_state_name(self._SYS_STATE_TYPE, s)  # TODO: hack
                               for s in range(size)]
             new_states = cur_all_states[last_size:]
+            already_encoded_states = cur_all_states[:last_size]
             last_size = size
 
             self._logger.info('trying size %i', size)
 
             for i, (automaton, nof_processes) in enumerate(global_automaton_cutoff_pairs):
                 #noinspection PyTypeChecker
-                self._encode_global_automaton(i, nof_processes, automaton, size, new_states)
+                self._encode_global_automaton(i, nof_processes, automaton, size, new_states, already_encoded_states)
 
             #TODO: mess -- I use sync automaton to encode token ring properties on SMT level, use separate impl!
             encoding_solver, impl = self._encode_local_automaton(sync_automaton, size, init_process_states, new_states)
@@ -189,12 +191,26 @@ class ParModelSearcher:
         encoding_solver.encode_sys_aux_functions(par_impl)
         encoding_solver.encode_run_graph_headers(par_impl)
 
+    def _get_global_states_to_encode(self, new_model_states, already_encoded_model_states, nof_processes:int):
+        assert set(new_model_states) != set(already_encoded_model_states)
+        all_model_states = set(new_model_states)
+        all_model_states.update(already_encoded_model_states)
+
+        global_states = set(product(*(nof_processes * [all_model_states])))
+
+        already_encoded_global_states = set(product(*(nof_processes * [already_encoded_model_states])))
+
+        global_states.difference_update(already_encoded_global_states)
+
+        return global_states
+
     def _encode_global_automaton(self,
                                  automaton_index:int,
                                  nof_processes:int,
                                  automaton:Automaton,
                                  model_size:int,
-                                 model_states_to_encode):
+                                 model_states_to_encode,
+                                 already_encoded_model_states):
 
         sys_intern_funcs_postfix = self._get_glob_sys_intern_func_postfix(automaton_index)
         spec_state_type = self._get_glob_spec_state_type(automaton_index)
@@ -205,7 +221,12 @@ class ParModelSearcher:
                                          par_impl.state_types_by_process,
                                          self._underlying_solver)
 
-        encoding_solver.encode_run_graph(par_impl, model_states_to_encode)
+        global_states_to_encode = self._get_global_states_to_encode(model_states_to_encode,
+                                                                    already_encoded_model_states,
+                                                                    nof_processes)
+        # list(product(*(nof_processes * [model_states_to_encode])))
+        encoding_solver.encode_run_graph(par_impl, global_states_to_encode)
+
         return encoding_solver, par_impl
 
     def _encode_local_headers(self, max_size:int, init_process_states, sync_automaton:Automaton):
@@ -245,7 +266,7 @@ class ParModelSearcher:
                                          impl.state_types_by_process,
                                          self._underlying_solver)
 
-        encoding_solver.encode_run_graph(impl, model_states_to_encode)
+        encoding_solver.encode_run_graph(impl, list((s,) for s in model_states_to_encode))
         return encoding_solver, impl
 
     def _get_par_impl(self,
