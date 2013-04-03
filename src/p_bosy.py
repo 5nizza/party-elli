@@ -107,8 +107,8 @@ def _run(default_models,
         if models:
             logger.info('the model passed checking!')
             return models
-
-    logger.info('the model did not pass the check - searching another one..')
+        
+        logger.info('the model did not pass the check - searching another one..')
 
     underlying_solver = solver_creater.create()
     model_searcher = par_model_searcher.ParModelSearcher()
