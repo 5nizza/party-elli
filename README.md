@@ -8,10 +8,12 @@ Ubuntu 12.04 (likely to work with others)
 Z3 (tested with version 4.1 and 4.3.1)      
 ltl3ba (tested with version 1.0.2)       
 python3 (tested with version 3.2)       
+pygraph py package: download from https://code.google.com/p/python-graph/ 
+and install using python3
 
 ## To configure ##
 modify file config.py in src directory     
-with paths to executables of z3 and ltl3ba       
+with absolute paths to executables of z3 and ltl3ba       
 
 (if you plan to develop smth then you might want 
 to ignore future changes to config.py, to do so run            
