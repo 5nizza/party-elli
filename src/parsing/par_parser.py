@@ -27,7 +27,6 @@ Forall (i) G((((r_i=0)*(g_i=0))->X(g_i=0)) * (((r_i=1)*(g_i=1))->X(g_i=1)));
 Forall (i) G(F(((r_i=1)*(g_i=1)) + ((r_i=0)*(g_i=0))));
 """
 
-
 full_arbiter_spec = """
 [INPUT_VARIABLES] #no support of global variables => all the variables are assumed to be indexed!
 r;
@@ -56,6 +55,7 @@ Forall (i) G( (active_i=1 * (r_i=1)) -> F(g_i=1) );
 Forall (i,j) G(!(g_i=1 * g_j=1));
 """
 
+
 def parse_ltl(par_text:str, logger:Logger) -> dict:
     #TODO: current version of parser is very restrictive: it allows only the specs of the form:
     # Forall (i,j..) ass_i_j -> (Forall(k) gua_k * Forall(l,m) gua_l_m)
@@ -77,6 +77,7 @@ def parse_ltl(par_text:str, logger:Logger) -> dict:
 # tests
 
 from unittest import TestCase
+
 
 class QuantifiedSignalsFinderVisitor(Visitor):
     def __init__(self):
@@ -104,9 +105,9 @@ class Test(TestCase):
             actual = len(data)
             expected = expected_result[section_name]
             assert actual == expected, '{actual} != {expected}: {section}: {section_data}'.format(
-                actual = actual,
-                expected =expected,
-                section = section_name,
+                actual=actual,
+                expected=expected,
+                section=section_name,
                 section_data=str(section_name_to_data[section_name]))
 
         quantified_signals_finder = QuantifiedSignalsFinderVisitor()
@@ -116,18 +117,15 @@ class Test(TestCase):
 
         quantified_signal_names = set(map(lambda qs: qs.name, quantified_signals_finder.quantified_signals))
         assert quantified_signal_names_expected == quantified_signal_names, \
-               'expected {0}, got {1}'.format(quantified_signal_names_expected, quantified_signal_names)
-
+            'expected {0}, got {1}'.format(quantified_signal_names_expected, quantified_signal_names)
 
     def test_pnueli(self):
         self._do_test('pnueli', pnueli_arbiter_spec, {'r', 'g'},
-            {PAR_INPUT_VARIABLES:1, PAR_OUTPUT_VARIABLES:1, PAR_ASSUMPTIONS:3, PAR_GUARANTEES:4})
-
+                      {PAR_INPUT_VARIABLES: 1, PAR_OUTPUT_VARIABLES: 1, PAR_ASSUMPTIONS: 3, PAR_GUARANTEES: 4})
 
     def test_full(self):
         self._do_test('full', full_arbiter_spec, {'active', 'r', 'g'},
-            {PAR_INPUT_VARIABLES:1, PAR_OUTPUT_VARIABLES:1, PAR_ASSUMPTIONS:1, PAR_GUARANTEES:6})
-
+                      {PAR_INPUT_VARIABLES: 1, PAR_OUTPUT_VARIABLES: 1, PAR_ASSUMPTIONS: 1, PAR_GUARANTEES: 6})
 
     def test_priorities(self):
         whole_text = '''
@@ -145,7 +143,6 @@ class Test(TestCase):
 
         assert len(expressions) == 1, str(expressions)
         assert expressions[0].name == '->'
-
 
     def _get_all_properties(self, section_name_to_data:dict):
         return list(section_name_to_data[PAR_ASSUMPTIONS]) + list(section_name_to_data[PAR_GUARANTEES])
