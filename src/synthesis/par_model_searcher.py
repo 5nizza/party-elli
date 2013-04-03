@@ -34,7 +34,6 @@ class ParModelSearcher:
         self._loc_spec_state_prefix = 'LQ'
         self._loc_counters_postfix = 'l'
 
-    @log_entrance(logging.getLogger(), logging.INFO)
     def check(self,  # TODO: careful with incrementality: nof_states >= 2
               logic,
               is_moore,
@@ -60,7 +59,6 @@ class ParModelSearcher:
 
         init_process_states = self._get_init_process_states(global_automaton_cutoff_pairs, model_size)
 
-        self._logger.info('model is given, lets try it first: model checking..')
         all_states = model.states
 
         for i, (automaton, nof_processes) in enumerate(global_automaton_cutoff_pairs):

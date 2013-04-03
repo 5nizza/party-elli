@@ -1,6 +1,6 @@
+from functools import lru_cache
 from itertools import chain
 import logging
-from helpers.logging import log_entrance
 from helpers.shell import execute_shell
 from interfaces.automata import Automaton
 from interfaces.parser_expr import UnaryOp, Expr, Signal
@@ -24,8 +24,10 @@ class Ltl2UCW:
         self._execute_cmd = ltl2ba_path + ' -M -f'
         self._logger = logging.getLogger(__name__)
 
-    @log_entrance(logging.getLogger(), logging.INFO)
+    @lru_cache()
     def convert(self, expr:Expr) -> Automaton:
+        self._logger.info('Ltl2UCW: converting..')
+
         format_converter = ConverterToLtl2BaFormatVisitor()
         property_in_ltl2ba_format = format_converter.dispatch(_negate(expr))
 

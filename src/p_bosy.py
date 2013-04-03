@@ -90,6 +90,8 @@ def _run(default_models,
     _log_automatae(logger, global_automatae_pairs, sync_automaton)
 
     if default_models:
+        logger.info('model is given: checking it..')
+
         underlying_solver = solver_creater.create('_check')
 
         model_checker = par_model_searcher.ParModelSearcher()
@@ -103,7 +105,10 @@ def _run(default_models,
                                      default_models[0])
         underlying_solver.die()
         if models:
+            logger.info('the model passed checking!')
             return models
+
+    logger.info('the model did not pass the check - searching another one..')
 
     underlying_solver = solver_creater.create()
     model_searcher = par_model_searcher.ParModelSearcher()
@@ -286,13 +291,15 @@ def main(spec_text,
     models = None
     cutoffs_to_try = range(2, max_cutoff + 1) if incr_cutoffs else [cutoff]
     for c in cutoffs_to_try:
-        logger.info('cutoff is set to {cutoff}'.format(cutoff=c))
         sync_automaton, glob_automatae_pairs = _get_automatae(assumptions,
                                                               guarantees,
                                                               optimization,
                                                               c,
                                                               ltl2ucw_converter,
                                                               logger)
+
+        logger.info('current cutoff = {cutoff}'.format(cutoff=c))
+
         models = _run(models,
                       is_moore,
                       anon_inputs, anon_outputs,

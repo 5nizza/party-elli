@@ -8,8 +8,10 @@ Ubuntu 12.04 (likely to work with others)
 Z3 (tested with version 4.1 and 4.3.1)      
 ltl3ba (tested with version 1.0.2)       
 python3 (tested with version 3.2)       
-pygraph py package: download from https://code.google.com/p/python-graph/ 
-and install using python3
+python-graph-core package: 
+  download from 
+  https://code.google.com/p/python-graph/ 
+  and install using python3
 
 ## To configure ##
 modify file config.py in src directory     
