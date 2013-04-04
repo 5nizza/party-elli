@@ -46,7 +46,7 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
                  sends_signals,
                  sends_prev_signals,
                  #sends_prev is input signals, sends_signals are output, though essentially they are the same
-                 has_tok_signals,  # it is part of the state, but can be emulated as Moore-like output signal
+                 has_tok_signals, # it is part of the state, but can be emulated as Moore-like output signal
                  state_type,
                  tau_name,
                  internal_funcs_postfix:str):
@@ -76,6 +76,7 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
         self._IS_ACTIVE_NAME = 'is_active' + internal_funcs_postfix
         self._EQUAL_BITS_NAME = 'equal_bits' + internal_funcs_postfix
         self._PREV_IS_SCHED_NAME = 'prev_is_sched' + internal_funcs_postfix
+        self._NEXT_IS_SCHED_NAME = 'next_is_sched' + internal_funcs_postfix
         self._TAU_SCHED_WRAPPER_NAME = 'tau_sch' + internal_funcs_postfix
         self._PROC_ID_PREFIX = 'proc'  # TODO: check necessity
 
@@ -104,12 +105,11 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
         self.orig_inputs = _build_model_inputs(nof_processes, all_models_inputs)
 
         self.init_states = self._build_init_states()
-        self.aux_func_descs_ordered = self._build_aux_func_descs()
-
         self.outvar_desc_by_process = [self._build_desc_by_out(_filter_by_proc(i, orig_outputs),
                                                                _filter_by_proc(i, archi_outputs),
                                                                _filter_by_proc(i, all_models_inputs))
                                        for i in range(nof_processes)]
+        self.aux_func_descs_ordered = self._build_aux_func_descs()
 
         self.taus_descs = self._build_taus_descs(all_models_inputs)
         self.model_taus_descs = self._build_model_taus_descs(all_models_inputs)
@@ -146,7 +146,8 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
 
     def _build_aux_func_descs(self):
         return [self._get_desc_equal_bools(),
-                self._get_desc_prev_is_sched(),
+                self._get_desc_prev_next_is_sched(True),
+                self._get_desc_prev_next_is_sched(False),
                 self._get_desc_is_active(0)]  # TODO: hack: here proc_index does not matter
 
     def _build_model_taus_descs(self, all_models_input_signals):
@@ -171,7 +172,7 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
         return value_by_signal
 
     def get_architecture_trans_assumption(self, label, sys_state_vector) -> str:
-        """ It handles 'is_active' variable in the specification. """
+        """ It handles 'is_active' and 'tok' variables in the specification. """
 
         #TODO: here I can add G(tok -> !prev) for the hub abstraction instead of specifying this on LTL level
 
@@ -208,7 +209,10 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
         value_by_sched, _ = build_signals_values(self._sched_signals, label)
         value_by_proc, _ = build_signals_values(self._proc_signals, self._build_label_from_proc_index(proc_index))
 
-        value_by_signal = add_dicts(value_by_sched, value_by_proc, {sends_prev_signal: sends_prev_value})
+        value_by_signal = add_dicts(value_by_sched,
+                                    value_by_proc,
+                                    {sends_prev_signal: sends_prev_value},
+                                    {self.state_arg_name:sys_state_vector[proc_index]})
 
         is_active_func_desc = self._get_desc_is_active(proc_index)
 
@@ -266,6 +270,12 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
         return description
 
     def _get_desc_is_active(self, proc_index:int):   # TODO: should not dependent on proc_index!
+        #: :type: FuncDescription
+        sends_func = self.outvar_desc_by_process[proc_index][self._sends_signals[proc_index]]
+        assert len(sends_func.inputs) == 1, 'consider easy case for now'
+        assert list(sends_func.inputs)[0][0] == self.state_arg_name, 'consider easy case for now'
+        sends_args = sends_func.get_args_list({self.state_arg_name: self.state_arg_name})
+
         #: :type: QuantifiedSignal
         sends_prev_signal = self._sends_prev_signals[proc_index]
 
@@ -275,23 +285,36 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
         sched_eq_proc_args = self._get_desc_equal_bools().get_args_list(sched_eq_proc_arg_by_signal)
 
         prev_is_sched_args = map(lambda signal_type: str(signal_type[0]),
-                                 self._get_desc_prev_is_sched().inputs)  # order is important
+                                 self._get_desc_prev_next_is_sched(True).inputs)  # order is important
+
+        next_is_sched_args = map(lambda signal_type: str(signal_type[0]),
+                                 self._get_desc_prev_next_is_sched(False).inputs)
 
         if self.nof_processes > 1:
-            body_template = '(or (and (not {sends_prev}) ({equal_bits} {sched_eq_proc_args})) ' \
-                            '    (and {sends_prev} ({prev_is_sched} {prev_is_sched_args})))'
-        elif self.nof_processes == 1:
-            body_template = '(or ({equal_bits} {sched_eq_proc_args}) ' \
+            body_template = '(or ({equal_bits} {sched_eq_proc_args}) \n' \
+                            '    (and {sends_prev} ({prev_is_sched} {prev_is_sched_args}) ) \n' \
+                            '    (and ({sends} {sends_args}) ({next_is_sched} {next_is_sched_args}) ) \n' \
+                            ')'
+        else:
+            assert self.nof_processes == 1
+            body_template = '(or ({equal_bits} {sched_eq_proc_args}) \n' \
                             '    {sends_prev})'
 
         body = body_template.format_map({'equal_bits': self._EQUAL_BITS_NAME,
                                          'sched_eq_proc_args': ' '.join(sched_eq_proc_args),
                                          'prev_is_sched': self._PREV_IS_SCHED_NAME,
                                          'prev_is_sched_args': ' '.join(prev_is_sched_args),
-                                         'sends_prev': str(sends_prev_signal)
-                                         })
+                                         'sends_prev': str(sends_prev_signal),
+                                         'sends': sends_func.name,
+                                         'sends_args': ' '.join(sends_args),
+                                         'next_is_sched': self._NEXT_IS_SCHED_NAME,
+                                         'next_is_sched_args': ' '.join(next_is_sched_args)
+        })
 
-        type_by_arg = dict([(sends_prev_signal, 'Bool')] + self._sched_arg_type_pairs + self._proc_arg_type_pairs)
+        type_by_arg = dict([(sends_prev_signal, 'Bool')] +
+                           self._sched_arg_type_pairs +
+                           self._proc_arg_type_pairs +
+                           list(sends_func.inputs))
 
         description = FuncDescription(self._IS_ACTIVE_NAME,
                                       type_by_arg,
@@ -319,34 +342,39 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
 
         return value_by_arg
 
-    def _get_desc_prev_is_sched(self):  # TODO: optimize
+    def _accumulator(self, prev_proc, crt_proc, enum_clauses):
+        equals_desc = self._get_desc_equal_bools()
+
+        proc_eq_crt_args_dict = self._get_equal_func_args(lmap(str, self._proc_signals), crt_proc)
+        sched_eq_prev_args_dict = self._get_equal_func_args(lmap(str, self._sched_signals), prev_proc)
+
+        proc_eq_crt_args = equals_desc.get_args_list(proc_eq_crt_args_dict)
+        sched_eq_prev_args = equals_desc.get_args_list(sched_eq_prev_args_dict)
+
+        enum_clauses.append('(and ({equals} {proc_eq_crt}) ({equals} {sched_eq_prev}))'.format_map(
+            {
+                'equals': self._EQUAL_BITS_NAME,
+                'proc_eq_crt': ' '.join(proc_eq_crt_args),
+                'sched_eq_prev': ' '.join(sched_eq_prev_args)
+            }))
+
+    def _get_desc_prev_next_is_sched(self, get_prev:bool):
         enum_clauses = []
 
-        def accumulator(prev_proc, crt_proc):
-            equals_desc = self._get_desc_equal_bools()
-
-            proc_eq_crt_args_dict = self._get_equal_func_args(lmap(str, self._proc_signals), crt_proc)
-            sched_eq_prev_args_dict = self._get_equal_func_args(lmap(str, self._sched_signals), prev_proc)
-
-            proc_eq_crt_args = equals_desc.get_args_list(proc_eq_crt_args_dict)
-            sched_eq_prev_args = equals_desc.get_args_list(sched_eq_prev_args_dict)
-
-            enum_clauses.append('(and ({equals} {proc_eq_crt}) ({equals} {sched_eq_prev}))'
-            .format_map({'equals': self._EQUAL_BITS_NAME,
-                         'proc_eq_crt': ' '.join(proc_eq_crt_args),
-                         'sched_eq_prev': ' '.join(sched_eq_prev_args)
-            }))
+        if get_prev:
+            accumulator = lambda prev,crt: self._accumulator(prev, crt, enum_clauses)
+            func_name = self._PREV_IS_SCHED_NAME
+        else:
+            accumulator = lambda prev,crt: self._accumulator(crt, prev, enum_clauses)
+            func_name = self._NEXT_IS_SCHED_NAME
 
         self._ring_modulo_iterate(self.nof_processes, accumulator)
 
         type_by_arg = dict(self._sched_arg_type_pairs + self._proc_arg_type_pairs)
 
-        body = """(or {enum_clauses})""".format(enum_clauses='\n\t'.join(enum_clauses))
+        body = '(or {enum_clauses})'.format(enum_clauses='\n\t'.join(enum_clauses))
 
-        description = FuncDescription(self._PREV_IS_SCHED_NAME,
-                                      type_by_arg,
-                                      'Bool',
-                                      body)
+        description = FuncDescription(func_name, type_by_arg, 'Bool', body)
 
         return description
 
@@ -422,8 +450,8 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
 
         tok_func_desc = self.outvar_desc_by_process[0][self._has_tok_signals[0]]
 
-        conditions += call_func(tok_func_desc, {self.state_arg_name:s1})
-        conditions += op_not(call_func(tok_func_desc, {self.state_arg_name:s0}))
+        conditions += call_func(tok_func_desc, {self.state_arg_name: s1})
+        conditions += op_not(call_func(tok_func_desc, {self.state_arg_name: s0}))
 
         return conditions
 
