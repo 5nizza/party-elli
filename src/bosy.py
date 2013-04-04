@@ -93,7 +93,7 @@ if __name__ == "__main__":
                         help='writes the output and the specification into NuSMV file')
 
     group_bound = parser.add_mutually_exclusive_group()
-    group_bound.add_argument('--bound', metavar='bound', type=int, default=2, required=False,
+    group_bound.add_argument('--bound', metavar='bound', type=int, default=128, required=False,
                              help='upper bound on the size of local process (default: %(default)i)')
     group_bound.add_argument('--size', metavar='size', type=int, default=0, required=False,
                              help='exact size of the process implementation(default: %(default)i)')

@@ -107,7 +107,7 @@ def _run(default_models,
         if models:
             logger.info('the model passed checking!')
             return models
-        
+
         logger.info('the model did not pass the check - searching another one..')
 
     underlying_solver = solver_creater.create()
@@ -266,8 +266,11 @@ def _get_max_cutoff(assumptions, guarantees, optimization, ltl2ucw_converter, lo
                                                           sys.maxsize,
                                                           ltl2ucw_converter,
                                                           logger)
+    if glob_automatae_pairs:
+        max_cutoff = max([e[1] for e in glob_automatae_pairs])
+    else:
+        max_cutoff = None
 
-    max_cutoff = max([e[1] for e in glob_automatae_pairs])
     return max_cutoff
 
 
@@ -287,6 +290,10 @@ def main(spec_text,
 
     anon_inputs, anon_outputs, assumptions, guarantees = _get_spec(spec_text, logger)
     max_cutoff = _get_max_cutoff(assumptions, guarantees, optimization, ltl2ucw_converter, logger)
+
+    if max_cutoff is None:
+        # no global automata
+        max_cutoff = 2
 
     models = None
     cutoffs_to_try = range(2, max_cutoff + 1) if incr_cutoffs else [cutoff]
@@ -334,7 +341,7 @@ if __name__ == '__main__':
                         help='prefix of dot-graph files for output model')
 
     group_bound = parser.add_mutually_exclusive_group()
-    group_bound.add_argument('--bound', metavar='bound', type=int, default=2, required=False,
+    group_bound.add_argument('--bound', metavar='bound', type=int, default=128, required=False,
                              help='upper bound on the size of local process (default: %(default)i)')
     group_bound.add_argument('--size', metavar='size', type=int, default=0, required=False,
                              help='exact size of process model (default: %(default)i)')
@@ -350,7 +357,8 @@ if __name__ == '__main__':
                         help='call solver with incremental queries')
     parser.add_argument('--cincr', action='store_true', required=False, default=False,
                         help='try smaller cutoff sizes first')
-    parser.add_argument('--opt', choices=sorted(list(OPTS.keys()), key=lambda v: OPTS[v]), required=False, default=NO,
+    parser.add_argument('--opt', choices=sorted(list(OPTS.keys()), key=lambda v: OPTS[v]), required=False,
+                        default=ASYNC_HUB,
                         help='apply an optimization (choose one) (default: %(default)s)')
 
     args = parser.parse_args(sys.argv[1:])
