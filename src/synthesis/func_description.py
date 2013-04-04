@@ -46,14 +46,12 @@ class FuncDescription:
         inputs = ['({name} {type})'.format(name=input_type[0], type=input_type[1])
                   for input_type in self._ordered_input_type_pairs]
 
-        return """(define-fun {name} ({inputs}) {output}
-        {body}
-        )""".format(
-            name=self._name,
-            inputs=' '.join(inputs),
-            output=self._output,
-            body=self._body
-        )
+        return ('(define-fun {name} ({inputs}) {output} \n' +
+                '{body}\n' +
+                ')').format(name=self._name,
+                            inputs=' '.join(inputs),
+                            output=self._output,
+                            body=self._body)
 
     def get_args_list(self, value_by_argname:dict) -> list:
         assert set([p[0] for p in self._ordered_input_type_pairs]).issubset(set(value_by_argname.keys())), \
