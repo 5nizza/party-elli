@@ -23,8 +23,8 @@ git update-index --assume-unchanged src/config.py)
 (.gitignore is not enough)           
 
 ## To run ##
-python3 p_bosy.py -- to run parameterized synthesis tool         
-python3 bosy.py -- to run monolithic synthesis tool         
+python3 p_bosy.py --help to run parameterized synthesis tool         
+python3 bosy.py --help to run monolithic synthesis tool         
 
 ## To test ##
 nosetests ./        
