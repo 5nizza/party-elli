@@ -72,9 +72,13 @@ _UNREALIZABLE = [
     "parameterized/full_arbiter.ltl --cutoff 3 --bound 2 --opt async_hub --incr",
     "parameterized/full_arbiter.ltl --cutoff 3 --bound 2 --opt sync_hub --incr",
 
-    "parameterized/pnueli_arbiter.ltl --cutoff 3 --bound 2 --opt strength --incr",
-    "parameterized/pnueli_arbiter.ltl --cutoff 3 --bound 2 --opt async_hub --incr",
-    "parameterized/pnueli_arbiter.ltl --cutoff 3 --bound 2 --opt sync_hub --incr",
+    "parameterized/full_arbiter.ltl --cutoff 3 --size 3 --moore --opt strength --incr",
+    "parameterized/full_arbiter.ltl --cutoff 3 --size 3 --moore --opt async_hub --incr",
+    "parameterized/full_arbiter.ltl --cutoff 3 --size 3 --moore --opt sync_hub --incr",
+
+    "parameterized/pnueli_arbiter.ltl --cutoff 3 --size 2 --opt strength --incr",
+    "parameterized/pnueli_arbiter.ltl --cutoff 3 --size 2 --opt async_hub --incr",
+    "parameterized/pnueli_arbiter.ltl --cutoff 3 --size 2 --opt sync_hub --incr",
 ]
 
 
@@ -111,9 +115,10 @@ _UNREALIZABLE_SUBSET = [
     "parameterized/pnueli_arbiter.ltl --cutoff 2 --size 2 --opt sync_hub",
 
     # some subset to test --incr
-    "parameterized/full_arbiter.ltl --cutoff 3 --bound 2 --opt strength --incr",
-    "parameterized/pnueli_arbiter.ltl --cutoff 3 --bound 2 --opt async_hub --incr",
-    "parameterized/pnueli_arbiter.ltl --cutoff 3 --bound 2 --opt sync_hub --incr",
+    "parameterized/full_arbiter.ltl --cutoff 3 --size 2 --opt strength --incr",
+    "parameterized/full_arbiter.ltl --cutoff 3 --size 3 --moore --opt strength --incr",
+    "parameterized/pnueli_arbiter.ltl --cutoff 3 --size 2 --opt async_hub --incr",
+    "parameterized/pnueli_arbiter.ltl --cutoff 3 --size 2 --opt sync_hub --incr",
 ]
 
 
