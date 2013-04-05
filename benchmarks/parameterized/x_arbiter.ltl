@@ -1,0 +1,35 @@
+# This (Moore) spec says: each received request should be granted at the next step by the grant of length 3
+# The spec demonstrates the use of local neXt operator. To synthesize it, run with option --sync_hub.
+# Option --sync_hub assumes that the process is always scheduled (sync), therefore neXt operator is 
+#    not a problem. 'Hub' part just abstracts aways other processes in the token ring.
+#
+# Under other options (strength or no or async_hub) the spec is not realizable 
+# because env can always not schedule a process and therefore violate guarantees.
+#
+# The model synthesized with --sync_hub works in asynchronous setting too if assume that neXt operator 
+# in the specification means 'next whenever process is scheduled' (local next).
+#
+# The spec is surprisingly difficult for Party, therefore run it with --cincr option.
+
+[INPUT_VARIABLES]
+r;
+
+
+[OUTPUT_VARIABLES]
+g;
+
+
+[ASSUMPTIONS]
+Forall(i) r_i=0;
+Forall(i) G( (r_i=0 * X(g_i=1)) -> X(r_i=0) );
+Forall(i) G( (r_i=1 * X(g_i=0)) -> X(r_i=1) );
+Forall(i) G( (r_i=1 * X(g_i=1)) -> X(r_i=0) );
+
+
+[GUARANTEES]
+Forall (i) g_i=0; 
+Forall (i) G( (r_i=0 * g_i=0) -> X(g_i=0) );
+Forall (i) G( r_i=1 -> X(F(g_i=1)) );
+Forall (i) G( r_i=1 * X(g_i=1) -> X(X(g_i=1)) * X(X(X(g_i=1))) * X(X(X(X(g_i=0)))) );
+
+Forall (i,j) G( !(g_i=1 * g_j=1) );

@@ -1,5 +1,5 @@
 import math
-from interfaces.parser_expr import Number, BinOp, UnaryOp, Bool, Signal, ForallExpr, QuantifiedSignal
+from interfaces.parser_expr import Number, BinOp, UnaryOp, Bool, Signal, ForallExpr
 
 
 class Visitor:
