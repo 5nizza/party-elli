@@ -6,14 +6,14 @@ from parsing.par_lexer_desc import *
 
 precedence = (
     ('right', 'QUANTIFIER'),
-    ('left','OR'),
-    ('right','IMPLIES','EQUIV'),
-    ('left','AND'),
+    ('left', 'OR'),
+    ('right', 'IMPLIES','EQUIV'),
+    ('left', 'AND'),
     ('left', 'TEMPORAL_BINARY'),
-    ('left', 'NEG'),            #left - right should not matter..
-    ('left', 'TEMPORAL_UNARY'), #left - right should not matter..
+    ('left', 'NEG'),             # left - right should not matter..
+    ('left', 'TEMPORAL_UNARY'),  # left - right should not matter..
     ('nonassoc','EQUALS')
-    )
+)
 
 
 def p_start(p):
@@ -159,7 +159,7 @@ def p_vars_many(p):
 def p_var_name(p):
     """ var_name : SIGNAL_NAME
     """
-    p[0] = p[1] #just a string name without type
+    p[0] = p[1]  # just a string name without type
 
 
 def p_number(p):

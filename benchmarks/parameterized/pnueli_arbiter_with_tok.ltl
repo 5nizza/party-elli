@@ -19,4 +19,4 @@ Forall (i) G((((r_i=0)*(g_i=0))->X(g_i=0)) * (((r_i=1)*(g_i=1))->X(g_i=1)));
 
 Forall (i) G(F(((r_i=1)*(g_i=1)) + ((r_i=0)*(g_i=0))));
 
-Forall (i,j) G(!(g_i=1 * g_j=1));
+Forall (i) G(tok_i=0 -> g_i=0);

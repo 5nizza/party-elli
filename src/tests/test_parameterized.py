@@ -13,6 +13,16 @@ _REALIZABLE = [
     "parameterized/pnueli_arbiter.ltl --cutoff 2 --size 3 --opt strength",
     "parameterized/pnueli_arbiter.ltl --cutoff 3 --size 3 --opt strength",
 
+    "parameterized/full_arbiter_with_tok.ltl --moore --size 4 --opt strength",  # cannot enforce bigger cutoff anyway
+    "parameterized/full_arbiter_with_tok.ltl --moore --size 4 --opt async_hub",  # cannot enforce bigger cutoff anyway
+    "parameterized/full_arbiter_with_tok.ltl --moore --size 4 --opt sync_hub",  # cannot enforce bigger cutoff anyway
+    "parameterized/full_arbiter_with_tok.ltl --mealy --size 4 --opt async_hub",  # cannot enforce bigger cutoff anyway
+
+    "parameterized/pnueli_arbiter_with_tok.ltl --size 3 --opt strength",  # cannot enforce bigger cutoff anyway
+    "parameterized/pnueli_arbiter_with_tok.ltl --size 3 --opt async_hub",  # cannot enforce bigger cutoff anyway
+    "parameterized/pnueli_arbiter_with_tok.ltl --size 3 --opt sync_hub",  # cannot enforce bigger cutoff anyway
+    "parameterized/pnueli_arbiter_with_tok.ltl --moore --size 3 --opt async_hub",  # cannot enforce bigger cutoff anyway
+
     #
     "parameterized/full_arbiter.ltl --cutoff 2 --size 3 --opt async_hub",
     "parameterized/full_arbiter.ltl --cutoff 3 --size 3 --opt async_hub",
@@ -53,6 +63,10 @@ _UNREALIZABLE = [
     "parameterized/pnueli_arbiter.ltl --cutoff 2 --size 2 --opt strength",
     "parameterized/pnueli_arbiter.ltl --cutoff 3 --size 2 --opt strength",
 
+    "parameterized/full_arbiter_with_tok.ltl --moore --size 3 --opt async_hub",  # cannot enforce bigger cutoff anyway
+    "parameterized/full_arbiter_with_tok.ltl --mealy --size 3 --opt async_hub",  # cannot enforce bigger cutoff anyway
+    "parameterized/pnueli_arbiter_with_tok.ltl --size 2 --opt strength",         # cannot enforce bigger cutoff anyway
+
     #
     "parameterized/full_arbiter.ltl --cutoff 2 --size 2 --opt async_hub",
     "parameterized/full_arbiter.ltl --cutoff 3 --size 2 --opt async_hub",
@@ -89,6 +103,9 @@ _REALIZABLE_SUBSET = [
     "parameterized/full_arbiter.ltl --cutoff 3 --size 3 --opt async_hub",
     "parameterized/pnueli_arbiter.ltl --cutoff 3 --size 3 --opt sync_hub",
 
+    "parameterized/full_arbiter_with_tok.ltl --size 4 --opt async_hub",  # cannot enforce bigger cutoff anyway
+    "parameterized/pnueli_arbiter_with_tok.ltl --size 4 --opt sync_hub",  # cannot enforce bigger cutoff anyway
+
     # some subset to test --incr
     "parameterized/full_arbiter.ltl --cutoff 3 --bound 3 --opt strength --incr",
     "parameterized/pnueli_arbiter.ltl --cutoff 3 --bound 3 --opt async_hub --incr",
@@ -113,6 +130,9 @@ _UNREALIZABLE_SUBSET = [
     "parameterized/pnueli_arbiter.ltl --cutoff 2 --size 2 --opt strength",
     "parameterized/pnueli_arbiter.ltl --cutoff 2 --size 2 --opt async_hub",
     "parameterized/pnueli_arbiter.ltl --cutoff 2 --size 2 --opt sync_hub",
+
+    "parameterized/full_arbiter_with_tok.ltl --size 3 --opt async_hub",  # cannot enforce bigger cutoff anyway
+    "parameterized/pnueli_arbiter_with_tok.ltl --size 2 --opt sync_hub",  # cannot enforce bigger cutoff anyway
 
     # some subset to test --incr
     "parameterized/full_arbiter.ltl --cutoff 3 --size 2 --opt strength --incr",

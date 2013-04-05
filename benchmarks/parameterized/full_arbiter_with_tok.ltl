@@ -1,0 +1,33 @@
+# In this example mutual exclusion 
+#   is achieded by assuring that grants can be high only in states with token
+
+#no support of global variables => all the variables are assumed to be indexed!
+
+#variable 'active' is always present
+#variable 'tok' is always present
+
+
+[INPUT_VARIABLES] 
+r;
+
+[OUTPUT_VARIABLES]
+g;
+
+[ASSUMPTIONS]
+
+[GUARANTEES]
+
+#no spurious grants on start
+Forall (i) (!((r_i=0 * g_i=0) U (r_i=0 * g_i=1)));
+
+#no spurious grants
+Forall (i) (!F(g_i=1 * X(r_i=0 * g_i=0) * X((r_i=0 * g_i=0) U (g_i=1 * r_i=0) )) );
+
+#every grant is lowered unless request keeps staying high
+Forall (i) G( (active_i=1 * r_i=0 * g_i=1) -> F((r_i=1 * g_i=1) + (g_i=0)) );
+
+#every request is granted
+Forall (i) G( (active_i=1 * r_i=1) -> F(g_i=1) );
+
+#mutual exclusion
+Forall (i) G(tok_i=0 -> g_i=0);

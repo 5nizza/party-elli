@@ -2,10 +2,11 @@ from itertools import permutations
 from helpers.python_ext import bin_fixed_list, StrAwareList, index_of, add_dicts, lmap
 from interfaces.automata import Label, Automaton
 from interfaces.parser_expr import QuantifiedSignal
+from interfaces.solver_interface import SolverInterface
 from parsing.helpers import get_log_bits
 from synthesis.blank_impl import BlankImpl
 from synthesis.func_description import FuncDescription
-from synthesis.smt_helper import op_and, op_not, build_signals_values, call_func
+from synthesis.smt_helper import build_signals_values
 
 
 def get_signals_definition(signal_base_name, nof_bits):
@@ -46,12 +47,14 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
                  sends_signals,
                  sends_prev_signals,
                  #sends_prev is input signals, sends_signals are output, though essentially they are the same
-                 has_tok_signals, # it is part of the state, but can be emulated as Moore-like output signal
+                 has_tok_signals,  # it is part of the state, but can be emulated as Moore-like output signal
                  state_type,
                  tau_name,
-                 internal_funcs_postfix:str):
+                 internal_funcs_postfix:str,
+                 underlying_solver:SolverInterface):
 
         super().__init__(is_mealy)
+        self._underlying_solver = underlying_solver
 
         for s in orig_inputs:  # TODO: remove me after debug
             assert isinstance(s, QuantifiedSignal)
@@ -147,7 +150,6 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
     def _build_aux_func_descs(self):
         return [self._get_desc_equal_bools(),
                 self._get_desc_prev_next_is_sched(True),
-                self._get_desc_prev_next_is_sched(False),
                 self._get_desc_is_active(0)]  # TODO: hack: here proc_index does not matter
 
     def _build_model_taus_descs(self, all_models_input_signals):
@@ -164,9 +166,9 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
         value_by_proc, _ = build_signals_values(self._proc_signals, proc_index_label)
         value_by_signal.update(value_by_proc)
 
-        if self.nof_processes > 1:  # for nof_processes=1 sends_prev_expr is not calculated, since it is an input
+        if self.nof_processes > 1:  # for nof_processes=1 sends_prev_expr is not calculated, but an input
             sends_prev_signal = _filter_by_proc(proc_index, self._sends_prev_signals)[0]
-            sends_prev_expr = self._get_sends_prev_expr(proc_index, sys_state_vector)
+            sends_prev_expr = self._get_wrapped_prev_expr(proc_index, sys_state_vector, value_by_sched)
             value_by_signal.update({sends_prev_signal: sends_prev_expr})
 
         return value_by_signal
@@ -181,7 +183,7 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
 
         index_of_prev = index_of(lambda s: s in label, self._sends_prev_signals)
         assert index_of_prev is None or self.nof_processes == 1, \
-            'using prev in the specification is not supported; prev in async hub abstraction works with local properties only'
+            'using prev in the spec is not supported; prev in async hub abstraction works with local properties only'
 
         if not active_signals and not index_of_prev:
             return ''
@@ -196,8 +198,12 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
 
         sends_prev_signal = _filter_by_proc(proc_index, self._sends_prev_signals)[0]
 
+        value_by_sched, _ = build_signals_values(self._sched_signals, label)
+
         if self.nof_processes > 1:
-            sends_prev_value = self._get_sends_prev_expr(proc_index, sys_state_vector)
+            sends_prev_value = self._get_wrapped_prev_expr(proc_index,
+                                                           sys_state_vector,
+                                                           value_by_sched)
         else:
             #async_hub
             value_by_signal, _ = build_signals_values([sends_prev_signal], label)
@@ -206,8 +212,7 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
         if not active_signals:
             return sends_prev_value
 
-        value_by_sched, _ = build_signals_values(self._sched_signals, label)
-        value_by_proc, _ = build_signals_values(self._proc_signals, self._build_label_from_proc_index(proc_index))
+        value_by_proc = self._build_label_from_proc_index(proc_index)
 
         value_by_signal = add_dicts(value_by_sched,
                                     value_by_proc,
@@ -216,7 +221,7 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
 
         is_active_func_desc = self._get_desc_is_active(proc_index)
 
-        func = call_func(is_active_func_desc, value_by_signal)
+        func = self._underlying_solver.call_func(is_active_func_desc, value_by_signal)
 
         return func
 
@@ -236,8 +241,8 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
         local_tau_arg_type_pairs = list(map(lambda signal_type: signal_type[0], local_tau_arg_type_pairs))
 
         is_active_desc = self._get_desc_is_active(proc_index)
-        is_active_inputs = list(
-            map(lambda signal: signal[0], is_active_desc.inputs))  # TODO: hack: knowledge: var names are the same
+        is_active_inputs = lmap(lambda signal: signal[0],
+                                is_active_desc.inputs)  # TODO: hack: knowledge: var names are the same
 
         body = """
         (ite ({is_active} {is_active_inputs}) ({tau} {local_tau_inputs}) {state})
@@ -254,12 +259,12 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
         return description
 
     def _get_desc_equal_bools(self):
-        cmp_stmnt = op_and(
+        cmp_stmnt = self._underlying_solver.op_and(
             map(lambda p: '(= {0} {1})'.format(p[0], p[1]), zip(self._equals_first_args, self._equals_second_args)))
 
         body = '{cmp}'.format(cmp=cmp_stmnt)
 
-        inputname_to_type = dict([(s, 'Bool') for s in self._equals_first_args] + \
+        inputname_to_type = dict([(s, 'Bool') for s in self._equals_first_args] +
                                  [(s, 'Bool') for s in self._equals_second_args])
 
         description = FuncDescription(self._EQUAL_BITS_NAME,
@@ -287,13 +292,9 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
         prev_is_sched_args = map(lambda signal_type: str(signal_type[0]),
                                  self._get_desc_prev_next_is_sched(True).inputs)  # order is important
 
-        next_is_sched_args = map(lambda signal_type: str(signal_type[0]),
-                                 self._get_desc_prev_next_is_sched(False).inputs)
-
         if self.nof_processes > 1:
             body_template = '(or ({equal_bits} {sched_eq_proc_args}) \n' \
-                            '    (and {sends_prev} ({prev_is_sched} {prev_is_sched_args}) ) \n' \
-                            '    (and ({sends} {sends_args}) ({next_is_sched} {next_is_sched_args}) ) \n' \
+                            '    (and {sends_prev} ({prev_is_sched} {prev_is_sched_args}) )' \
                             ')'
         else:
             assert self.nof_processes == 1
@@ -307,14 +308,11 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
                                          'sends_prev': str(sends_prev_signal),
                                          'sends': sends_func.name,
                                          'sends_args': ' '.join(sends_args),
-                                         'next_is_sched': self._NEXT_IS_SCHED_NAME,
-                                         'next_is_sched_args': ' '.join(next_is_sched_args)
-        })
+                                         })
 
         type_by_arg = dict([(sends_prev_signal, 'Bool')] +
                            self._sched_arg_type_pairs +
-                           self._proc_arg_type_pairs +
-                           list(sends_func.inputs))
+                           self._proc_arg_type_pairs)
 
         description = FuncDescription(self._IS_ACTIVE_NAME,
                                       type_by_arg,
@@ -404,7 +402,7 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
 
         return description
 
-    def _get_sends_prev_expr(self, proc_index, sys_states_vector) -> str:
+    def _get_wrapped_prev_expr(self, proc_index, sys_states_vector, value_by_sched:dict) -> str:
         assert self.nof_processes > 1, 'nonsense'
 
         prev_proc = (proc_index - 1) % self.nof_processes
@@ -416,9 +414,19 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
         #: :type: FuncDescription
         sends_func_desc = self.outvar_desc_by_process[prev_proc][sends_signal]
 
-        call_sends = call_func(sends_func_desc, {self.state_arg_name: prev_proc_state})
+        sends_prev_call = self._underlying_solver.call_func(sends_func_desc,
+                                                            {self.state_arg_name:prev_proc_state})
 
-        expr = '{call_sends}'.format(call_sends=call_sends)
+        prev_is_sched_func = self._get_desc_prev_next_is_sched(True)
+
+        curr_proc_index_label = self._build_label_from_proc_index(proc_index)
+        prev_is_sched_args = add_dicts(value_by_sched, curr_proc_index_label)
+
+        prev_is_sched_expr = self._underlying_solver.call_func(prev_is_sched_func,
+                                                               prev_is_sched_args)
+
+        expr = self._underlying_solver.op_and([sends_prev_call, prev_is_sched_expr])
+
         return expr
 
     def filter_label_by_process(self, label, proc_index:int):  # TODO: hack
@@ -450,8 +458,9 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
 
         tok_func_desc = self.outvar_desc_by_process[0][self._has_tok_signals[0]]
 
-        conditions += call_func(tok_func_desc, {self.state_arg_name: s1})
-        conditions += op_not(call_func(tok_func_desc, {self.state_arg_name: s0}))
+        conditions += self._underlying_solver.call_func(tok_func_desc, {self.state_arg_name: s1})
+        conditions += self._underlying_solver.op_not(self._underlying_solver.call_func(tok_func_desc,
+                                                                                       {self.state_arg_name:s0}))
 
         return conditions
 
@@ -475,4 +484,3 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
         label = Label(dict(zip(map(lambda at: at[0], self._proc_arg_type_pairs), bits)))
 
         return label
-

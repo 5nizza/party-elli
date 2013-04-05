@@ -19,7 +19,7 @@ def _get_cmd_result(result, out, err):
 def _failed(reason, cmd_args, result, out, err):
     print()
     print(_get_cmd_result(result, out, err))
-    error_message = 'FAILED: {cmd_args}\n' \
+    error_message = 'FAILED: \n{cmd_args}\n' \
                     'REASON: {reason}'.format(cmd_args=cmd_args, reason=reason)
     print(error_message)
     print()
@@ -37,7 +37,7 @@ def run_benchmark(python_script_relative_path, benchmark, is_realizable) -> bool
     result, out, err = execute_shell(exec_cmd)
 
     if (result != 0 and result != 1) or not is_empty_str(err):
-        _failed('error while executing the command', cmd_args, result, out, err)
+        _failed('error while executing the command', exec_cmd, result, out, err)
         return False
 
     else:
@@ -49,6 +49,6 @@ def run_benchmark(python_script_relative_path, benchmark, is_realizable) -> bool
         else:
             _failed('invalid realizability status(should be {status})'.
                     format(status=['unrealizable', 'realizable'][is_realizable]),
-                    cmd_args, result, out, err)
+                    exec_cmd, result, out, err)
             return False
 

@@ -149,7 +149,10 @@ class ParModelSearcher:
 
         sys_intern_funcs_postfix = self._get_glob_sys_intern_func_postfix(automaton_index)
 
-        par_impl = self._get_par_impl(automaton, max_size, nof_processes, sys_intern_funcs_postfix)
+        par_impl = self._get_par_impl(automaton,
+                                      max_size,
+                                      nof_processes,
+                                      sys_intern_funcs_postfix)
 
         init_process_states = set(states[0] for states in par_impl.init_states)
 
@@ -290,5 +293,6 @@ class ParModelSearcher:
                            sched_input_signals, is_active_signals, sends_signals, sends_prev_signals, has_tok_signals,
                            self._SYS_STATE_TYPE,
                            self._TAU_NAME,
-                           sys_intern_funcs_postfix)
+                           sys_intern_funcs_postfix,
+                           self._underlying_solver)
         return par_impl

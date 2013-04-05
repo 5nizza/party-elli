@@ -18,14 +18,14 @@ reserved_all = add_dicts(reserved_bools, reserved_quantifiers, reserved_section_
 #    ('quantified', 'inclusive'),
 #)
 
-tokens = [
-             'COMMA', 'SIGNAL_NAME', 'NUMBER', 'BOOL',
-             'TEMPORAL_UNARY', 'NEG', 'TEMPORAL_BINARY',
-             'OR', 'AND', 'IMPLIES', 'EQUIV', 'EQUALS',
-             'LPAREN', 'RPAREN', 'LBRACKET', 'RBRACKET',
-             'SEP'
-         ] + list(reserved_section_names.values()) + \
-             list(set(reserved_quantifiers.values()))
+tokens = ['COMMA', 'SIGNAL_NAME', 'NUMBER', 'BOOL',
+          'TEMPORAL_UNARY', 'NEG', 'TEMPORAL_BINARY',
+          'OR', 'AND', 'IMPLIES', 'EQUIV', 'EQUALS',
+          'LPAREN', 'RPAREN', 'LBRACKET', 'RBRACKET',
+          'SEP'
+         ] +\
+         list(reserved_section_names.values()) + \
+         list(set(reserved_quantifiers.values()))
 #             list(reserved_bools.values()) #i use BOOL currently
 
 #constant to ensure consistency of the code
@@ -53,17 +53,17 @@ t_ignore_comment = r"\#.*"
 
 def t_SEP(t):
     r""";+"""
-    t.lexer.begin('INITIAL') #end of quantified state
+    t.lexer.begin('INITIAL')  # end of quantified state
     return t
 
 
 def t_TEMPORAL_UNARY(t):
-    r"""(G|F|X)(?=[ \t]*\()""" #temporal operators require parenthesis
+    r"""(G|F|X)(?=[ \t]*\()"""  # temporal operators require parenthesis
     return t
 
 
 def t_TEMPORAL_BINARY(t):
-    r"""U(?=[ \t]*\()""" #temporal operators require parenthesis
+    r"""U(?=[ \t]*\()"""  # temporal operators require parenthesis
     return t
 
 

@@ -21,11 +21,13 @@ Forall (i) G(F((r_i=0)+(g_i=0)));
 
 [GUARANTEES]
 Forall (i) g_i=0;
-Forall (i,j) G(!((g_i=1) * (g_j=1)));
 Forall (i) G((((r_i=0)*(g_i=0))->X(g_i=0)) * (((r_i=1)*(g_i=1))->X(g_i=1)));
 
 Forall (i) G(F(((r_i=1)*(g_i=1)) + ((r_i=0)*(g_i=0))));
+
+Forall (i,j) G(!((g_i=1) * (g_j=1)));
 """
+
 
 full_arbiter_spec = """
 [INPUT_VARIABLES] #no support of global variables => all the variables are assumed to be indexed!
@@ -68,6 +70,8 @@ def parse_ltl(par_text:str, logger:Logger) -> dict:
 
     logger.info('parsing input spec..')
     section_name_to_data = dict(par_parser.parse(par_text, lexer=par_lexer))
+
+
 
     #TODO: check unknown signals
     return section_name_to_data
