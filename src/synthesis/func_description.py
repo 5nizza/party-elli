@@ -22,8 +22,7 @@ class FuncDescription:
         # To assure this, lets sort signals with respect to their str(s) implementation.
 
         self._ordered_input_type_pairs = sorted(list(type_by_arg.items()),
-                                                key=lambda t_a: str(t_a[0]) if not isinstance(t_a[0], QuantifiedSignal)
-                                                else str(t_a[0].name))  # sorting ignores indices
+                                                key=lambda t_a: str(t_a[0]))
 
     @property
     def name(self):
