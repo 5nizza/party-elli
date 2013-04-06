@@ -108,7 +108,9 @@ def _define_signals(signals, root:Element):
 
 def _define_properties(properties, root:Element):
     for p in properties:
-        root.append(ConverterToUnbeast().dispatch(p))
+        ltl_node = ET.Element('LTL')
+        ltl_node.append(ConverterToUnbeast().dispatch(p))
+        root.append(ltl_node)
 
 
 def _get_doctype():
@@ -116,8 +118,8 @@ def _get_doctype():
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 3:
-        print('Missing arguments. \n{me} <acacia_ltl> <output_prefix>'.format(me=__file__))
+    if len(sys.argv) != 2:
+        print('Missing arguments. \n{me} <acacia_ltl>'.format(me=__file__))
         exit(0)
 
     ltl_text = open(sys.argv[1]).read()
@@ -156,6 +158,6 @@ if __name__ == '__main__':
     # hack: i don't know how to add doctype
     unbeast_content = _get_doctype() + str(tmp_out.getvalue(), encoding='utf8')
 
-    out_file_name = sys.argv[2].strip() + '.xml'
+    out_file_name = sys.argv[1].replace('.ltl', '.xml')
     with open(out_file_name, 'w') as output:
         output.write(unbeast_content)
