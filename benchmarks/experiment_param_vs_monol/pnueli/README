@@ -1,0 +1,8 @@
+I used original pnueli arbiter spec from parameterized folder.
+Parameterized PARTY applies strengthenings -- for example, 
+it removes liveness assumptions for safety guarantees.
+But I don't do that for comparison (sorry, was lazy a bit) with other tools. 
+Partly because Unbeast does not support (a1->g1) & (a2->g2) specs.
+
+Another strengthening - localization - makes the spec unrealizable 
+in non-parameterized case, and therefore not applied too.
