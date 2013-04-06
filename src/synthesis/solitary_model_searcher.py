@@ -1,6 +1,6 @@
 import logging
 
-from helpers.logging import log_entrance
+from helpers.logging_helper import log_entrance
 from helpers.automata_helper import to_dot
 from interfaces.automata import Automaton
 from interfaces.solver_interface import SolverInterface

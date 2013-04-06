@@ -1,6 +1,6 @@
 import itertools
 import logging
-from helpers.logging import log_entrance
+from helpers.logging_helper import log_entrance
 from helpers.python_ext import get_add
 from interfaces.automata import Node
 

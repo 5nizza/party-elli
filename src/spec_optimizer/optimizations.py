@@ -255,9 +255,9 @@ def strengthen(property:SpecProperty, ltl2ucw_converter) -> (list, list):
     liveness_properties = []
 
     denormalized_props = _get_denormalized_property(property)
-    for p_ in denormalized_props:
+    for p in denormalized_props:
         #: :type: SpecProperty
-        p = p_
+        p = p
 
         safety_ass = normalize_conjuncts([a for a in p.assumptions if is_safety(a, ltl2ucw_converter)])
 

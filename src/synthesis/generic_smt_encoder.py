@@ -3,7 +3,7 @@ import logging
 from itertools import product, chain
 import sys
 from helpers.labels_map import LabelsMap
-from helpers.logging import log_entrance
+from helpers.logging_helper import log_entrance
 from helpers.python_ext import StrAwareList, lmap
 from interfaces.automata import DEAD_END, Label
 from interfaces.lts import LTS

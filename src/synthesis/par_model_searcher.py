@@ -1,7 +1,7 @@
 from itertools import product
 import logging
 
-from helpers.logging import log_entrance
+from helpers.logging_helper import log_entrance
 from interfaces.automata import Automaton
 from interfaces.lts import LTS
 from interfaces.parser_expr import QuantifiedSignal

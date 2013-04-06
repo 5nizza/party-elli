@@ -1,4 +1,4 @@
-import logging
+# import logging
 
 from itertools import chain
 from logging import Logger
@@ -87,6 +87,8 @@ group_order = (u1 u2);
 
 
 from unittest import TestCase
+
+
 class Test(TestCase):
     def tests_all(self):
         input_signals, output_signals, data_by_name = parse(test_string_ltl,test_string_part, logging.getLogger())
