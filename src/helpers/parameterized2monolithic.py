@@ -6,8 +6,7 @@ import sys
 from architecture.scheduler import ACTIVE_NAME
 from architecture.tok_ring import HAS_TOK_NAME
 from interfaces.parser_expr import Signal, Bool, BinOp, UnaryOp, ForallExpr, Number, QuantifiedSignal
-from interfaces.spec import SpecProperty
-from spec_optimizer.optimizations import _instantiate_expr2, strengthen
+from spec_optimizer.optimizations import _instantiate_expr2
 from parsing.helpers import Visitor
 from parsing.par_lexer_desc import PAR_GUARANTEES, PAR_ASSUMPTIONS
 from parsing.par_parser import parse_ltl
