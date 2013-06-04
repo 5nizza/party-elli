@@ -148,7 +148,7 @@ class TestStrengthen(unittest.TestCase):
         print('liveness_properties', liveness_properties)
 
 
-class TestDenormalize(unittest.TestCase):
+class TestNormalizeDenormalize(unittest.TestCase):
     def test_denormalize(self):
         a_i, b_i = _get_is_true('a', 'i'), _get_is_true('b', 'i')
 
@@ -156,6 +156,24 @@ class TestDenormalize(unittest.TestCase):
 
         denormalized_expressions = _denormalize(expr)
         assert len(denormalized_expressions) == 2, str(denormalized_expressions)
+
+    def test_normalize(self):
+        a_i, b_j = _get_is_true('a', 'i'), _get_is_true('b', 'j')
+
+        expressions = [ForallExpr(['i'], a_i), ForallExpr(['j'], b_j)]
+
+        normalized_expr = normalize_conjuncts(expressions)
+        assert isinstance(normalized_expr, ForallExpr)
+
+        base_expr = normalized_expr.arg2
+        assert base_expr.name == '*'
+
+        #: :type: BinOp
+        base_expr = base_expr
+
+        a_j, b_i = _get_is_true('a', 'j'), _get_is_true('b', 'i')
+        assert {base_expr.arg1, base_expr.arg2} == {a_i, b_i} or \
+               {base_expr.arg1, base_expr.arg2} == {a_j, b_j}
 
 
 class TestGetConjucts(unittest.TestCase):
@@ -412,7 +430,7 @@ class TestSchedulerOptimization(unittest.TestCase):
         scheduler = InterleavingScheduler()
         forall_expr = normalize_conjuncts([parse_expr('Forall(i) a_i=1'), scheduler.assumptions[0]])
 
-        instantiated_expr = _instantiate_expr(forall_expr, 4, False) # GFsched_0=1 * GFsched_1=1
+        instantiated_expr = _instantiate_expr(forall_expr, 4, False)  # GFsched_0=1 * GFsched_1=1
 
         result_expr = _apply_log_bit_optimization('sch', instantiated_expr, 4, scheduler)
         print('''::test_sched_visual::
