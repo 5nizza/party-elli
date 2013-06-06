@@ -33,26 +33,25 @@ def is_safety(expr:Expr, ltl2ba_converter) -> bool:
     return res
 
 
-def normalize_conjuncts(expressions:list) -> Expr:
+def normalize_conjuncts(conjuncts:list) -> Expr:
     """ sound, complete
     forall(i,j) a_i_j and forall(i) b_i  ----> forall(i,j) (a_i_j and b_i)
     forall(i) a_i and forall(j) b_j      ----> forall(i) (a_i and b_i)
     """
-    if len(expressions) == 0:
+    if len(conjuncts) == 0:
         return Bool(True)
 
-    if len(expressions) == 1 and isinstance(expressions[0], Bool):
-        return expressions[0]
+    if len(conjuncts) == 1 and isinstance(conjuncts[0], Bool):
+        return conjuncts[0]
 
-    for e in expressions:
+    for e in conjuncts:
         assert isinstance(e, ForallExpr), 'global non-parameterized properties are not supported'
 
-    max_indices = max(expressions, key=lambda e: len(e.arg1))
+    max_indices = max(conjuncts, key=lambda e: len(e.arg1))
     new_indices = max_indices.arg1
 
     normalized_underlying_expr = None
-    for e in expressions:
-        assert isinstance(e, ForallExpr), 'global non-parameterized properties are not supported'
+    for e in conjuncts:
         old_indices = e.arg1
         new_by_old = dict((o, new_indices[i]) for i, o in enumerate(old_indices))
 
@@ -236,6 +235,7 @@ def _get_denormalized_property(property:SpecProperty) -> list:
 
     denormalized_assumptions = list(chain(*[_denormalize(a) for a in property.assumptions]))
     denormalized_guarantees = list(chain(*[_denormalize(g) for g in property.guarantees]))
+
     for g in denormalized_guarantees:
         new_p = SpecProperty(denormalized_assumptions, [g])
         denormalized_props.append(new_p)
@@ -256,6 +256,8 @@ def strengthen(property:SpecProperty, ltl2ucw_converter) -> (list, list):
 
     denormalized_props = _get_denormalized_property(property)
     for p in denormalized_props:
+        print('denormalized property p: ' + str(p))
+        print()
         #: :type: SpecProperty
         p = p
 
