@@ -5,21 +5,25 @@ import sys
 import tempfile
 
 from helpers.main_helper import setup_logging, create_spec_converter_z3, remove_files_prefixed
-from interfaces.parser_expr import BinOp, and_expressions, UnaryOp
+from interfaces.parser_expr import BinOp, and_expressions, UnaryOp, ForallExpr, Expr
 from interfaces.spec import SpecProperty, to_expr, and_properties
 from module_generation.dot import to_dot, moore_to_dot
 from module_generation.nusmv import to_boolean_nusmv
-from parsing import acacia_parser
-from spec_optimizer.optimizations import strengthen
+from parsing import acacia_parser, anzu_parser
+from parsing.anzu_lexer_desc import ANZU_OUTPUT_VARIABLES, ANZU_INPUT_VARIABLES, ANZU_ENV_INITIAL, ANZU_SYS_INITIAL, ANZU_SYS_TRANSITIONS, ANZU_SYS_FAIRNESS, ANZU_ENV_FAIRNESS, ANZU_ENV_TRANSITIONS
+from spec_optimizer.optimizations import strengthen_many
 from synthesis import generic_smt_encoder
 from synthesis.solitary_model_searcher import search
 from synthesis.smt_logic import UFLIA
+from translation2uct.ltl2automaton import Ltl2UCW
 
 
 converter = None
 
 NO, STRENGTH = 'no', 'strength'
 OPTS = {NO: 0, STRENGTH: 1}
+
+SPEC_TYPES = ANZU, ACACIA = 'anzu', 'acacia'
 
 
 #TODO: implement safety-liveness separation
@@ -29,64 +33,34 @@ def _weak_until(guarantee, not_assumption):
                  UnaryOp('G', guarantee))
 
 
-def _get_acacia_spec(ltl_text:str, part_text:str, use_until:bool, logger:logging.Logger) -> (list, list, SpecProperty):
+def _get_acacia_spec(ltl_text:str, part_text:str, weak_until:bool, logger:logging.Logger) -> (list, list, list):
     """
-    :param use_until: a, g treated as g W !a, rather than a->g:
-        - case G(a) -> G(g) is clear -- should become: g W !a
-        - other cases? canonic safety property is of the form: G(past_formula), if we could get such a canonic formula..
+    :return: inputs, outputs, spec_properties
+
+    :param weak_until: ...TBD...
     """
+
     input_signals, output_signals, data_by_name = acacia_parser.parse(ltl_text, part_text, logger)
 
     if data_by_name is None:
-        return None, None, None
+        return [], [], []
 
     spec_properties = []
     for (unit_name, unit_data) in data_by_name.items():
         assumptions = unit_data[0]
         guarantees = unit_data[1]
 
-        print('---------------- assumptions')
-        for a in assumptions:
-            print(a)
-
-        print()
-        print('---------------- guarantees')
-        for g in guarantees:
-            print(g)
-        print()
-        global converter
-
-        if use_until:
-            guarantee = _weak_until(
-                and_expressions(guarantees),
-                UnaryOp('!', and_expressions(assumptions)))
+        if weak_until:
+            assert False, 'not supported'
+            # guarantee = _weak_until(
+            #     and_expressions(guarantees),
+            #     _neg(and_expressions(assumptions)))
+            #
+            # spec_properties.append(SpecProperty([], [guarantee]))
         else:
-            # guarantee = BinOp('->',
-            #                   UnaryOp('G', and_expressions(assumptions)),
-            #                   UnaryOp('G', and_expressions(guarantees)))
-            logger.info('using default ->')
-            guarantee = BinOp('->',
-                              and_expressions(assumptions),
-                              and_expressions(guarantees))
-
-        print()
-        print(guarantee)
-        print()
-
-        automaton = converter.convert(to_expr(SpecProperty([], [guarantee])))
-        logger.info('spec automaton has {0} states'.format(len(automaton.nodes)))
-
-        # exit(0)
-        #
-        if not use_until:
-            spec_properties.append(SpecProperty(assumptions, guarantees))
-        else:
-
             spec_properties.append(SpecProperty(assumptions, guarantees))
 
-    spec_property = and_properties(spec_properties)
-
-    return input_signals, output_signals, spec_property
+    return input_signals, output_signals, spec_properties
 
 
 def _write_out(model, is_moore, file_type, file_name, logger):
@@ -98,36 +72,165 @@ def _write_out(model, is_moore, file_type, file_name, logger):
             file=out.name))
 
 
-def _strengthen(spec_property, ltl2ucw_converter):
-    logger.info('strengthening properties..')
+def _empty_quantify(spec_property:SpecProperty):
+    quantified_assumptions = [ForallExpr([], e) for e in spec_property.assumptions]
+    quantified_quantifiers = [ForallExpr([], e) for e in spec_property.guarantees]
 
-    pseudo_safety_properties, pseudo_liveness_properties = strengthen(spec_property, ltl2ucw_converter)
-
-    assert len(pseudo_liveness_properties) <= 1, str(pseudo_liveness_properties)
-    assert len(pseudo_safety_properties) <= 1, str(pseudo_safety_properties)
-
-    logger.info('strengthening resulted in pseudo_safety_properties (a_s -> g_s):\n"%s"\n',
-                '\n'.join(map(str, pseudo_safety_properties)))
-    logger.info('..and in pseudo_liveness_properties (a_s&a_l -> g_l):\n"%s"\n',
-                '\n'.join(map(str, pseudo_liveness_properties)))
-
-    spec_property = and_properties(pseudo_safety_properties + pseudo_liveness_properties)
-    return spec_property
+    return SpecProperty(quantified_assumptions, quantified_quantifiers)
 
 
-def main(ltl_text:str, part_text:str, is_moore, dot_file_name, nusmv_file_name, bounds,
-         use_until,
+def _analyze_props(name:str, class_name:str, props, ltl2ucw):
+    logger.info('analyzing %s', name)
+
+    for p in props:
+        #: :type: SpecProperty
+        p = p
+
+        logger.info('looking at %s property: %s', class_name, str(p))
+
+        logger.info('number of assumptions is %s', str(len(p.assumptions)))
+
+        for a in p.assumptions:
+            logger.info('looking at assumption %s', str(a))
+
+            automaton = ltl2ucw.convert(a)
+            logger.info('the automaton has %s nodes', str(len(automaton.nodes)))
+            logger.info('the automaton name is %s', automaton.name)
+
+            assert len(automaton.initial_sets_list) == 1
+            assert len(automaton.initial_sets_list[0]) == 1
+            print()
+
+        for g in p.guarantees:
+            logger.info('looking at guarantee %s', str(g))
+
+            automaton = ltl2ucw.convert(g)
+            logger.info('the automaton has %s nodes', str(len(automaton.nodes)))
+            logger.info('the automaton name is %s', automaton.name)
+
+            assert len(automaton.initial_sets_list) == 1
+            assert len(automaton.initial_sets_list[0]) == 1
+            print()
+            #: :type: Node
+            # node = list(automaton.initial_sets_list[0])[0]
+            # print(node.transitions)
+        logger.info('\n' * 5)
+
+
+def analyze_properties(pseudo_safety_props, pseudo_liveness_props, ltl2ucw:Ltl2UCW):
+    logger.info('\n' * 40)
+
+    _analyze_props('pseudo safety properties', 'safety', pseudo_safety_props, ltl2ucw)
+    logger.info('\n' * 10)
+    _analyze_props('pseudo liveness properties', 'liveness', pseudo_liveness_props, ltl2ucw)
+
+
+def _neg(expr):
+    return UnaryOp('!', expr)
+
+
+def _remove_G(safety_expressions:list) -> list:
+    assert 0
+
+
+def _get_anzu_spec(ltl_text:str, use_weak_until:bool, logger) -> (list, list, list):
+    section_by_name = anzu_parser.parse_ltl(ltl_text, logger)
+
+    input_signals, output_signals = section_by_name[ANZU_INPUT_VARIABLES], section_by_name[ANZU_OUTPUT_VARIABLES]
+
+    live_assumptions = section_by_name[ANZU_ENV_FAIRNESS]
+    safety_assumptions = section_by_name[ANZU_ENV_TRANSITIONS]
+    init_assumptions = section_by_name[ANZU_ENV_INITIAL]
+
+    live_guarantees = section_by_name[ANZU_SYS_FAIRNESS]
+    safety_guarantees = section_by_name[ANZU_SYS_TRANSITIONS]
+    init_guarantees = section_by_name[ANZU_SYS_INITIAL]
+
+    if use_weak_until:
+        init_part = _weak_until(and_expressions(init_guarantees),
+                                _neg(and_expressions(init_assumptions)))
+
+        wo_G_safety_assumptions = _remove_G(safety_assumptions)
+        wo_G_safety_guarantees = _remove_G(safety_guarantees)
+
+        safety_part = _weak_until(and_expressions(safety_guarantees),
+                                  _neg(and_expressions(safety_assumptions)))
+
+        liveness_part = BinOp('->',
+                              and_expressions(live_assumptions),
+                              and_expressions(live_guarantees))
+
+        init_assumptions_expr = and_expressions(init_assumptions)
+        safety_assumptions_expr = and_expressions(safety_assumptions)
+
+        properties = [SpecProperty([], [init_part]),
+                      SpecProperty([init_assumptions_expr],
+                                   [safety_part]),
+                      SpecProperty([safety_assumptions_expr, init_assumptions_expr],
+                                   [liveness_part])]
+
+    else:
+        init_part = BinOp('->',
+                          and_expressions(init_assumptions),
+                          and_expressions(init_guarantees))
+
+        safety_part = BinOp('->',
+                            and_expressions(safety_assumptions),
+                            and_expressions(safety_guarantees))
+
+        liveness_part = BinOp('->',
+                              and_expressions(live_assumptions),
+                              and_expressions(live_guarantees))
+
+        init_assumptions_expr = and_expressions(init_assumptions)
+        safety_assumptions_expr = and_expressions(safety_assumptions)
+
+        properties = [SpecProperty([], [init_part]),
+                      SpecProperty([init_assumptions_expr],
+                                   [safety_part]),
+                      SpecProperty([safety_assumptions_expr, init_assumptions_expr],
+                                   [liveness_part])]
+
+    return input_signals, output_signals, properties
+
+
+def main(spec_type,
+         ltl_text:str, part_text:str, is_moore, dot_file_name, nusmv_file_name, bounds,
+         use_weak_until,
          ltl2ucw_converter, underlying_solver,
          optimization,
          logger):
     """:return: is realizable? """
     global converter
     converter = ltl2ucw_converter
-    input_signals, output_signals, spec_property = _get_acacia_spec(ltl_text, part_text, use_until, logger)
 
-    if OPTS[optimization] >= OPTS[STRENGTH]:
-        spec_property = _strengthen(spec_property, ltl2ucw_converter)
+    if spec_type == 'acacia':
+        input_signals, output_signals, spec_properties = _get_acacia_spec(ltl_text, part_text, use_weak_until, logger)
+    else:
+        input_signals, output_signals, spec_properties = _get_anzu_spec(ltl_text, use_weak_until, logger)
 
+    if not spec_properties:
+        logger.info('No properties are given in the input file. Return unrealizable status.')
+        return False
+
+    if spec_type == ACACIA and OPTS[optimization] >= OPTS[STRENGTH]:
+        logger.info('strengthening..')
+
+        spec_properties = [_empty_quantify(p) for p in spec_properties]
+        pseudo_safety_props, pseudo_liveness_props = strengthen_many(spec_properties, ltl2ucw_converter)
+
+        analyze_properties(pseudo_safety_props, pseudo_liveness_props, ltl2ucw_converter)
+
+        logger.info('-' * 80)
+        logger.info('pseudo_safety_props %s\n', str(pseudo_safety_props))
+        logger.info('-' * 40)
+        logger.info('pseudo_liveness_props %s\n', str(pseudo_liveness_props))
+        logger.info('-' * 80)
+
+        spec_properties = pseudo_safety_props + pseudo_liveness_props
+        #
+
+    spec_property = and_properties(spec_properties)
     if not input_signals or not output_signals or not spec_property:
         return None
 
@@ -187,13 +290,17 @@ if __name__ == "__main__":
                         help='produce incremental queries')
     parser.add_argument('-v', '--verbose', action='count', default=0)
 
-    parser.add_argument('-u', '--until',
+    parser.add_argument('-w', '--weak',
                         action='store_true', default=False,
                         help='treat assume-guarantee with weak Until operator rather than an implication (g W !a)')
 
     parser.add_argument('--opt', choices=sorted(list(OPTS.keys()), key=lambda v: OPTS[v]), required=False,
-                        default=STRENGTH,
+                        default=NO,
                         help='apply an optimization (choose one) (default: %(default)s)')
+
+    parser.add_argument('--spec', choices=SPEC_TYPES, required=False,
+                        default=ACACIA,
+                        help='type of spec language')
 
     args = parser.parse_args(sys.argv[1:])
 
@@ -213,14 +320,17 @@ if __name__ == "__main__":
 
     ltl_text = args.ltl.read()
 
-    part_file_name = '.'.join(args.ltl.name.split('.')[:-1]) + '.part'
-    with open(part_file_name) as part_file:
-        part_text = part_file.read()
+    part_text = 'none'
+    if args.spec == ACACIA:
+        part_file_name = '.'.join(args.ltl.name.split('.')[:-1]) + '.part'
+        with open(part_file_name) as part_file:
+            part_text = part_file.read()
 
     generic_smt_encoder.ENCODE_INCREMENTALLY = args.incr
 
-    is_realizable = main(ltl_text, part_text, args.moore, args.dot, args.nusmv, bounds,
-                         args.until,
+    is_realizable = main(args.spec,
+                         ltl_text, part_text, args.moore, args.dot, args.nusmv, bounds,
+                         args.weak,
                          ltl2ucw_converter,
                          solver_factory.create(),
                          args.opt,

@@ -18,10 +18,11 @@ precedence = (
     ('left','IMPLIES','EQUIV'),
     ('left','AND'),
     ('left', 'TEMPORAL_BINARY'),
-    ('left', 'NEG'),            #left - right should not matter..
-    ('left', 'TEMPORAL_UNARY'), #left - right should not matter..
+    ('left', 'NEG'),             # left - right should not matter..
+    ('left', 'TEMPORAL_UNARY'),  # left - right should not matter..
     ('nonassoc','EQUALS')
     )
+
 
 def p_start(p):
     """start :  empty

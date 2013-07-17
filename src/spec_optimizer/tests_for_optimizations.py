@@ -37,7 +37,7 @@ class TestStrengthen(unittest.TestCase):
         'liveness': []
         """
 
-        a_i, b_j = QuantifiedSignal('a', 'i'), QuantifiedSignal('b', 'j')
+        a_i, b_j = _get_is_true('a', 'i'), _get_is_true('b', 'j')
 
         liveness_ass = ForallExpr(['i'], UnaryOp('G', UnaryOp('F', a_i)))
         safety_gua = ForallExpr(['j'], UnaryOp('G', b_j))
@@ -58,7 +58,7 @@ class TestStrengthen(unittest.TestCase):
         Forall(i) GFa_i -> Forall(j) GF(b_j)
         is left as it is
         """
-        a_i, b_j = QuantifiedSignal('a', 'i'), QuantifiedSignal('b', 'j')
+        a_i, b_j = _get_is_true('a', 'i'), _get_is_true('b', 'j')
 
         liveness_ass = ForallExpr(['i'], UnaryOp('G', UnaryOp('F', a_i)))
         liveness_gua = ForallExpr(['j'], UnaryOp('G', UnaryOp('F', b_j)))
@@ -74,7 +74,7 @@ class TestStrengthen(unittest.TestCase):
         expected = property
         assert str(actual) == str(expected), str(actual) + ' vs ' + str(expected)
 
-    def test_strengthen2(self):
+    def test_strengthen3(self):
         """
         Forall(i) GFa_i and G(b_i)  ->  Forall(j) GF(c_j) and G(d_j)
         replaced by
@@ -83,8 +83,8 @@ class TestStrengthen(unittest.TestCase):
         'safety': Forall(i) G(b_i)  ->  Forall(j) G(d_j)
         """
 
-        a_i, b_i = QuantifiedSignal('a', 'i'), QuantifiedSignal('b', 'i')
-        c_j, d_j = QuantifiedSignal('c', 'j'), QuantifiedSignal('d', 'j')
+        a_i, b_i = _get_is_true('a', 'i'), _get_is_true('b', 'i')
+        c_j, d_j = _get_is_true('c', 'j'), _get_is_true('d', 'j')
 
         ass = ForallExpr(['i'],
                          BinOp('*',
@@ -116,7 +116,7 @@ class TestStrengthen(unittest.TestCase):
         expected_safety_prop = SpecProperty([expected_safety_ass], [expected_safety_gua])
         assert str(expected_safety_prop) == str(safety_prop), str(safety_prop)
 
-    def test_strengthen3(self):
+    def test_strengthen4(self):
         """
         Forall(i,j) GFa_i * GFb_i_j * Gc_i_j -> Forall(k,m) GF(d_k_m) * G(e_k)
         replaced by
@@ -147,6 +147,34 @@ class TestStrengthen(unittest.TestCase):
 
         print('liveness_properties', liveness_properties)
 
+    def test_strengthen_extreme0(self):
+        """
+        An extreme case: empty quantifiers. Empty quantifiers are used in bosy.py.
+
+        Forall([]) Ga -> Gb
+
+        """
+
+        a_, b_ = _get_is_true('a'), _get_is_true('b')
+
+        liveness_ass = ForallExpr([],
+                                  UnaryOp('G',
+                                          UnaryOp('F', a_)))
+
+        safety_gua = ForallExpr([],
+                                UnaryOp('G', b_))
+
+        property = SpecProperty([liveness_ass], [safety_gua])
+
+        safety_properties, liveness_properties = strengthen(property, self._get_converter())
+
+        assert len(liveness_properties) == 0, str(liveness_properties)
+        assert len(safety_properties) == 1, str(safety_properties)
+
+        actual_guarantees = safety_properties[0].guarantees
+        assert str(actual_guarantees) == str([safety_gua]), \
+            '\n' + str(actual_guarantees) + '\nvs\n' + str([safety_gua])
+
 
 class TestNormalizeDenormalize(unittest.TestCase):
     def test_denormalize(self):
@@ -160,9 +188,10 @@ class TestNormalizeDenormalize(unittest.TestCase):
     def test_normalize(self):
         a_i, b_j = _get_is_true('a', 'i'), _get_is_true('b', 'j')
 
-        expressions = [ForallExpr(['i'], a_i), ForallExpr(['j'], b_j)]
+        conjuncts = [ForallExpr(['i'], a_i),
+                     ForallExpr(['j'], b_j)]
 
-        normalized_expr = normalize_conjuncts(expressions)
+        normalized_expr = normalize_conjuncts(conjuncts)
         assert isinstance(normalized_expr, ForallExpr)
 
         base_expr = normalized_expr.arg2

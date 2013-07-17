@@ -50,7 +50,8 @@ def to_expr(spec_property:SpecProperty) -> Expr:
 
 
 def and_properties(properties) -> SpecProperty:
-    property_expressions = [BinOp('->', and_expressions(p.assumptions),
+    property_expressions = [BinOp('->',
+                                  and_expressions(p.assumptions),
                                   and_expressions(p.guarantees))
                             for p in properties]
 

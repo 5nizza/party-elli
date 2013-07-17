@@ -7,6 +7,12 @@ class ConverterToLtl2BaFormatVisitor(Visitor):
         self.signal_by_name = dict()
 
     def visit_binary_op(self, binary_op:BinOp):
+        if binary_op.name == 'W':  # LTL2BA doesn't handle Weak Until
+            bin_op_expr = BinOp('+',
+                                BinOp('U', binary_op.arg1, binary_op.arg2),
+                                UnaryOp('G', binary_op.arg1))
+            return self.dispatch(bin_op_expr)
+
         arg1 = self.dispatch(binary_op.arg1)
         arg2 = self.dispatch(binary_op.arg2)
 
@@ -23,7 +29,7 @@ class ConverterToLtl2BaFormatVisitor(Visitor):
         if binary_op.name == '+':
             return '({arg1}) || ({arg2})'.format(arg1=arg1, arg2=arg2)
 
-        if binary_op.name == 'U' or binary_op.name == 'W' or binary_op.name == '->' or binary_op.name == '<->':
+        if binary_op.name == 'U' or binary_op.name == '->' or binary_op.name == '<->':
             return '({arg1}) {op} ({arg2})'.format(arg1=arg1, arg2=arg2, op=binary_op.name)
 
         assert 0, 'unknown binary operator: ' + "'" + str(binary_op.name) + "'"

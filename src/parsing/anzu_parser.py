@@ -5,7 +5,7 @@ from parsing.anzu_parser_desc import anzu_parser
 from parsing.sanity_checker import check_unknown_signals_in_properties
 
 
-def parse_ltl(anzu_text, logger:Logger):
+def parse_ltl(anzu_text, logger:Logger) -> dict:
     """ Return {section:data} or None in case of error """
     section_name_to_data = dict(anzu_parser.parse(anzu_text, lexer=anzu_lexer))
 

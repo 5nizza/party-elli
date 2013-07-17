@@ -276,6 +276,18 @@ def strengthen(property:SpecProperty, ltl2ucw_converter) -> (list, list):
     return safety_properties, liveness_properties
 
 
+def strengthen_many(properties:list, ltl2ucw_converter) -> (list, list):
+    """ Return [a_s -> g_s], [a_s & a_l -> g_l]
+    """
+    pseudo_safety_properties, pseudo_liveness_properties = [], []
+    for p in properties:
+        safety_props, liveness_props = strengthen(p, ltl2ucw_converter)
+        pseudo_safety_properties += safety_props
+        pseudo_liveness_properties += liveness_props
+
+    return pseudo_safety_properties, pseudo_liveness_properties
+
+
 def _instantiate_expr2(expr:Expr, cutoff:int, forbid_zero_index:bool) -> list:
     if not is_quantified_expr(expr):
         return [expr]
