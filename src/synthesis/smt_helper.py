@@ -28,7 +28,8 @@ def get_bits_definition(arg_prefix, nof_bits):
 
 
 def make_check_sat():
-    return "(check-sat)"
+    # return "(check-sat)"
+    return "(check-sat-using (then qe smt))"
 
 
 def make_push(level=1):
