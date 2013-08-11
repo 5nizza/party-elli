@@ -11,6 +11,7 @@ from module_generation.dot import to_dot, moore_to_dot
 from module_generation.nusmv import to_boolean_nusmv
 from parsing import acacia_parser, anzu_parser
 from parsing.anzu_lexer_desc import ANZU_OUTPUT_VARIABLES, ANZU_INPUT_VARIABLES, ANZU_ENV_INITIAL, ANZU_SYS_INITIAL, ANZU_SYS_TRANSITIONS, ANZU_SYS_FAIRNESS, ANZU_ENV_FAIRNESS, ANZU_ENV_TRANSITIONS
+from parsing.helpers import WeakToUntilConverterVisitor
 from spec_optimizer.optimizations import strengthen_many
 from synthesis import generic_smt_encoder
 from synthesis.solitary_model_searcher import search
@@ -194,6 +195,15 @@ def _get_anzu_spec(ltl_text:str, use_weak_until:bool, logger) -> (list, list, li
     return input_signals, output_signals, properties
 
 
+def convert_weak_until(p: SpecProperty) -> SpecProperty:
+    def handle(e:Expr) -> Expr:
+        return WeakToUntilConverterVisitor().dispatch(e)
+
+    assumptions = [handle(a) for a in p.assumptions]
+    guarantees = [handle(g) for g in p.guarantees]
+    return SpecProperty(assumptions, guarantees)
+
+
 def main(spec_type,
          ltl_text:str, part_text:str, is_moore, dot_file_name, nusmv_file_name, bounds,
          use_weak_until,
@@ -208,6 +218,8 @@ def main(spec_type,
         input_signals, output_signals, spec_properties = _get_acacia_spec(ltl_text, part_text, use_weak_until, logger)
     else:
         input_signals, output_signals, spec_properties = _get_anzu_spec(ltl_text, use_weak_until, logger)
+
+    spec_properties = [convert_weak_until(p) for p in spec_properties]
 
     if not spec_properties:
         logger.info('No properties are given in the input file. Return unrealizable status.')
@@ -234,6 +246,9 @@ def main(spec_type,
     if not input_signals or not output_signals or not spec_property:
         return None
 
+    # print('-' * 80)
+    # print(spec_property)
+    # exit(0)
     automaton = ltl2ucw_converter.convert(to_expr(spec_property))
     logger.info('spec automaton has {0} states'.format(len(automaton.nodes)))
 
