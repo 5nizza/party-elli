@@ -38,7 +38,7 @@ test_monolithic.py
 or directly to Ayrat: ayrat.khalimov(gmail)
 
 ## Authors ##
-Ayrat Khalimov,Swen Jacobs,Roderick Bloem, TU Graz.
+Ayrat Khalimov,Swen Jacobs,Roderick Bloem, TU Graz.         
 
 ## License ## 
 free for any use with references to the original authors
