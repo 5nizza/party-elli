@@ -58,12 +58,12 @@ def t_SEP(t):
 
 
 def t_TEMPORAL_UNARY(t):
-    r"""(G|F|X)(?=[ \t]*\()"""  # temporal operators require parenthesis
+    r"""(G|F|X)(?=[ \t\n]*\()"""  # temporal operators require parenthesis
     return t
 
 
 def t_TEMPORAL_BINARY(t):
-    r"""U(?=[ \t]*\()"""  # temporal operators require parenthesis
+    r"""U(?=[ \t\n]*\()"""  # temporal operators require parenthesis
     return t
 
 
