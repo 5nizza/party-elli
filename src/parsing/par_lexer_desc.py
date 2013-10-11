@@ -72,9 +72,6 @@ def t_SIGNAL_NAME(t):
     # Check for reserved words
     t.type = reserved_all.get(t.value, t.type)
 
-    #    if t.type == 'QUANTIFIER':
-    #        t.lexer.begin('quantified')
-
     return t
 
 
