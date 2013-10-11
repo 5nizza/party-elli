@@ -182,8 +182,9 @@ def p_section_data_property_grouping(p):
 def p_error(p):
     if p:
         print("Syntax error at '%s'" % p.value)
+        print("lineno: %d" % p.lineno)
     else:
-        print('Syntax error, t is None')
+        print('Syntax error, no info available')
     assert 0
 
 
