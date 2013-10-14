@@ -9,10 +9,11 @@ sready;
 mbusreq; 
 
 mlocked;
-# if low => one tick request 
-# TODO: extend later to support INCR (really INCR) signal
-mburst;
-
+mburst;  # if low => one tick request or non-interruptible locked request
+# i.e. supported combinations:
+# - mlocked, mburst
+# - !mlocked, !mburst
+# - mlocked, !mburst 
 
 [OUTPUT_VARIABLES]
 # TODO: check which other variables to add
@@ -22,9 +23,10 @@ mburst;
 agrant;
 
 #auxiliary variables to ease to make specification readable
-#they are like bits of the memory: the actual output may be mealy-dependent on them
+#they are like bits of the memory: the actual output may be mealy-dependent(?check?) on them
 auxonegrant;
 auxlockedburstgrant;
+auxlockedincr;
 
 
 [ASSUMPTIONS]
@@ -39,17 +41,13 @@ auxlockedburstgrant;
 Forall(i) 
 G(F(sready_i=1));
 
-## TODO: until we handle more types of requests
-#Forall(i)
-#G (mburst_i=0 * mlocked_i=0 + 
-#   mburst_i=1 * mlocked_i=1);
-
 
 [GUARANTEES]
 ## initially
 Forall(i) 
 auxonegrant_i=0 * 
 auxlockedburstgrant_i=0 * 
+auxlockedincr_i=0 * 
 agrant_i=0;
 
 
@@ -70,6 +68,11 @@ G ( active_i=1 * mbusreq_i=1 * mlocked_i=1 * mburst_i=1 * X(agrant_i=0) ->
     X (auxonegrant_i=0 * auxlockedburstgrant_i=1) 
 );
 
+Forall(i) 
+G ( active_i=1 * mbusreq_i=1 * mlocked_i=1 * mburst_i=0 * X(agrant_i=0) -> 
+    X (auxonegrant_i=0 * auxlockedburstgrant_i=0 * auxlockedincr=1) 
+);
+
 # no spurious aux risings
 Forall(i)
 !F ( (active_i=1 * auxonegrant_i=0 * mbusreq_i=0) *   # we need to ensure at least on tick with zero values
@@ -78,6 +81,10 @@ Forall(i)
 Forall(i)
 !F ( (active_i=1 * auxlockedburstgrant_i=0 * mbusreq_i=0) * 
      ((auxlockedburstgrant_i=0 * mbusreq_i=0) U (auxlockedburstgrant_i=1) ));
+
+Forall(i)
+!F ( (active_i=1 * auxlockedincr_i=0 * mbusreq_i=0) * 
+     ((auxlockedincr_i=0 * mbusreq_i=0) U (auxlockedincr_i=1) ));
 
 
 ## Granting based on aux variables, and clearing aux
@@ -88,23 +95,6 @@ G (auxonegrant_i=1 * tok_i=1 ->
       ((agrant_i=1 * auxonegrant_i=0) U (sready_i=1 * X(agrant_i=0)))
       )
 );
-
-# Forall(i)
-# G(F(mbusreq_i=1 * mlocked_i=1 * mburst_i=1 * agrant_i=0)) -> 
-#   G(F(auxlockedburstgrant_i=1));
-
-# Forall(i)
-# G(F(mbusreq_i=1 * mlocked_i=1 * mburst_i=1 * agrant_i=0)) -> 
-#   G(F(auxlockedburstgrant_i=0));
-
-# Forall(i)
-# G (auxonegrant_i=1 * tok_i=1 -> 
-#     (auxonegrant_i=1 * tok_i=1) U 
-#       ( (agrant_i=1 * auxonegrant_i=0) U 
-#         (agrant_i=0))
-# );
- 
-# );
 
 # welcome to the hell: "every burst4 request is granted for times, 'granted' means agrant_i=1 * sready_i=1"
 Forall(i) 
@@ -133,13 +123,21 @@ G ( auxlockedburstgrant_i=1 * tok_i=1 ->
       )
      )
   );
-
 # Forall(i) 
 # G ( auxlockedburstgrant_i=1 * tok_i=1 ->
 #     X(agrant_i=1 * auxlockedburstgrant_i=0) *
 #     X(X(agrant_i=1 * auxlockedburstgrant_i=0)) * 
 #     X(X(X(agrant_i=1 * auxlockedburstgrant_i=0))) * 
 #     X(X(X(X(agrant_i=0)))));
+
+# TODO: do we need assumption 'mbusreq_i -> mbusreq_i=1 U agrant_i=1'?
+# TODO: add 'mbusreq_i -> everything is reset'?
+Forall(i)
+G (auxlockedincr_i=1 * tok_i=1 -> 
+    X (agrant_i=1 * auxlockedincr_i=0 * 
+      ((agrant_i=1 * auxlockedincr_i=0) U (sready_i=1 * mbusreq_i=0 * X(agrant_i=0)))
+      )
+);
 
 # no spurious grants
 Forall(i)
