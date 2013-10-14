@@ -1,0 +1,88 @@
+auxonegrant_i=0 * 
+auxlockedburstgrant_i=0 * 
+auxlockedincr_i=0 * 
+agrant_i=0;
+
+
+## Setting aux variables 
+# Note: later updates rewrite aux values
+# Note: when granting ignore requests
+
+G ( mbusreq_i=1 * mlocked_i=0 * mburst_i=0 * X(agrant_i=0) -> 
+    X (auxonegrant_i=1 * auxlockedburstgrant_i=0 * auxlockedincr_i=0) # can use X due to active_i 
+);
+
+G ( mbusreq_i=1 * mlocked_i=1 * mburst_i=1 * X(agrant_i=0) -> 
+    X (auxonegrant_i=0 * auxlockedburstgrant_i=1 * auxlockedincr_i=0) 
+);
+ 
+G ( mbusreq_i=1 * mlocked_i=1 * mburst_i=0 * X(agrant_i=0) -> 
+    X (auxonegrant_i=0 * auxlockedburstgrant_i=0 * auxlockedincr_i=1) 
+);
+
+# no spurious aux risings
+
+!F ( (auxonegrant_i=0 * mbusreq_i=0) *   # we need to ensure at least on tick with zero values
+    ((auxonegrant_i=0 * mbusreq_i=0) U (auxonegrant_i=1)) );
+
+!F ( (auxlockedburstgrant_i=0 * mbusreq_i=0) * 
+     ((auxlockedburstgrant_i=0 * mbusreq_i=0) U (auxlockedburstgrant_i=1) ));
+
+!F ( (auxlockedincr_i=0 * mbusreq_i=0) * 
+     ((auxlockedincr_i=0 * mbusreq_i=0) U (auxlockedincr_i=1) ));
+
+
+## Granting based on aux variables, and clearing aux
+# TODO: hm, we lose ticks here
+
+G(F(sready_i=1)) ->
+G (auxonegrant_i=1 -> 
+    X (agrant_i=1 * auxonegrant_i=0 * 
+      ((agrant_i=1 * auxonegrant_i=0) U (sready_i=1 * X(agrant_i=0)))
+      )
+);
+
+# welcome to the hell: "every burst4 request is granted three times, 'granted' means agrant_i=1 * sready_i=1"
+# TODO: replace with four ticks
+# 
+
+G(F(sready_i=1)) ->
+G ( auxlockedburstgrant_i=1 ->
+    X(agrant_i=1 * auxlockedburstgrant_i=0 * 
+      ((agrant_i=1 * auxlockedburstgrant_i=0) 
+      U 
+      (sready_i=1 * 
+        X(agrant_i=1 * auxlockedburstgrant_i=0 * 
+          ((agrant_i=1 * auxlockedburstgrant_i=0) 
+          U 
+          (sready_i=1 * 
+            X(agrant_i=1 * auxlockedburstgrant_i=0 * 
+              ((agrant_i=1 * auxlockedburstgrant_i=0) 
+              U 
+              (sready_i=1 * X(agrant_i=0)))
+             )
+          )
+          )
+         )
+      )
+      )
+     )
+  );
+
+# TODO: add 'mbusreq_i -> everything is reset'?
+
+G(F(sready_i=1 * mbusreq_i=0)) ->
+G (auxlockedincr_i=1 -> 
+    X (agrant_i=1 * auxlockedincr_i=0 * 
+      ((agrant_i=1 * auxlockedincr_i=0) U (sready_i=1 * mbusreq_i=0 * X(agrant_i=0)))
+      )
+);
+
+# no spurious grants
+
+!F( (auxlockedburstgrant_i=0 * auxonegrant_i=0 * auxlockedincr_i=0 * agrant_i=0) * 
+    ((auxlockedburstgrant_i=0 * auxonegrant_i=0 * auxlockedincr_i=0 * agrant_i=0) 
+     U 
+     (agrant_i=1)
+    )
+);
