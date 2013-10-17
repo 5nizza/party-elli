@@ -23,6 +23,7 @@ precedence = (
     ('nonassoc','EQUALS')
     )
 
+
 def p_start(p):
     """start :  empty
              |  units """
@@ -71,6 +72,7 @@ def p_unit_data(p):
         assumptions = lmap(lambda e: e.data, filter(lambda e: isinstance(e, Assumption), p[1]))
         guarantees = lmap(lambda e: e.data, filter(lambda e: isinstance(e, Guarantee), p[1]))
         p[0] = (assumptions, guarantees)
+
 
 def p_signal_name(p):
     """ signal_name : NAME
@@ -129,6 +131,7 @@ def p_unit_data_property_grouping(p):
 def p_error(p):
     if p:
         print("----> Syntax error at '%s'" % p.value)
+        print("lineno: %d" % p.lineno)
     else:
         print('----> Syntax error, t is None')
     assert 0

@@ -98,29 +98,48 @@ G (auxonegrant_i=1 * tok_i=1 ->
 
 # welcome to the hell: "every burst4 request is granted three times, 'granted' means agrant_i=1 * sready_i=1"
 # TODO: replace with four ticks
-Forall(i)
-G(F(sready_i=1)) ->
-G ( auxlockedburstgrant_i=1 * tok_i=1 ->
-    X(agrant_i=1 * auxlockedburstgrant_i=0 * 
-      ((agrant_i=1 * auxlockedburstgrant_i=0) 
-      U 
-      (sready_i=1 * 
-        X(agrant_i=1 * auxlockedburstgrant_i=0 * 
-          ((agrant_i=1 * auxlockedburstgrant_i=0) 
-          U 
-          (sready_i=1 * 
-            X(agrant_i=1 * auxlockedburstgrant_i=0 * 
-              ((agrant_i=1 * auxlockedburstgrant_i=0) 
-              U 
-              (sready_i=1 * X(agrant_i=0)))
-             )
-          )
-          )
-         )
-      )
-      )
-     )
-  );
+# Forall(i)
+# G(F(sready_i=1)) ->
+# G ( auxlockedburstgrant_i=1 * tok_i=1 ->
+#     X(agrant_i=1 * auxlockedburstgrant_i=0 * 
+#       ((agrant_i=1 * auxlockedburstgrant_i=0) 
+#       U 
+#       (sready_i=1 * 
+#         X(agrant_i=1 * auxlockedburstgrant_i=0 * 
+#           ((agrant_i=1 * auxlockedburstgrant_i=0) 
+#           U 
+#           ( sready_i=1 * X(agrant_i=0)
+#           )
+#           )
+#          )
+#       )
+#       )
+#      )
+#   );i
+# TODO: not sure that Until version _requires_ to have _exactly_ X ticks
+# Forall(i)
+# G(F(sready_i=1)) ->
+# G ( auxlockedburstgrant_i=1 * tok_i=1 ->
+#     X(agrant_i=1 * auxlockedburstgrant_i=0 * 
+#       ((agrant_i=1 * auxlockedburstgrant_i=0) 
+#       U 
+#       (sready_i=1 * 
+#         X(agrant_i=1 * auxlockedburstgrant_i=0 * 
+#           ((agrant_i=1 * auxlockedburstgrant_i=0) 
+#           U 
+#           (sready_i=1 * 
+#             X(agrant_i=1 * auxlockedburstgrant_i=0 * 
+#               ((agrant_i=1 * auxlockedburstgrant_i=0) 
+#               U 
+#               (sready_i=1 * X(agrant_i=0)))
+#              )
+#           )
+#           )
+#          )
+#       )
+#       )
+#      )
+#   );
 
 
 # Forall(i) 
@@ -130,8 +149,21 @@ G ( auxlockedburstgrant_i=1 * tok_i=1 ->
 #     X(X(X(agrant_i=1 * auxlockedburstgrant_i=0))) * 
 #     X(X(X(X(agrant_i=0)))));
 
+Forall(i) 
+G ( auxlockedburstgrant_i=1 * tok_i=1 ->
+    X(agrant_i=1 * auxlockedburstgrant_i=0) *
+    X(X(agrant_i=1 * auxlockedburstgrant_i=0)) * 
+    X(X(X(agrant_i=0))));
+
 # TODO: do we need assumption 'mbusreq_i -> mbusreq_i=1 U agrant_i=1'?
 # TODO: add 'mbusreq_i -> everything is reset'?
+# Forall(i)
+# G(F(sready_i=1 * mbusreq_i=0)) ->
+# G (auxlockedincr_i=1 * tok_i=1 -> 
+#     X (agrant_i=1 * auxlockedincr_i=0 * 
+#       ((agrant_i=1 * auxlockedincr_i=0) U (sready_i=1 * mbusreq_i=0 * X(agrant_i=0)))
+#       )
+# );
 Forall(i)
 G(F(sready_i=1 * mbusreq_i=0)) ->
 G (auxlockedincr_i=1 * tok_i=1 -> 

@@ -1,7 +1,7 @@
 from interfaces.parser_expr import *
 
 #reserved words: syntactic sugar to help to match exactly reserved word
-reserved_bools =  dict((s, s) for s in ('TRUE', 'FALSE'))
+reserved_bools = dict((s, s) for s in ('TRUE', 'FALSE'))
 
 tokens = [
              'ASSUME', 'SPEC_UNIT', 'NAME', 'NUMBER', 'BOOL',
@@ -56,13 +56,13 @@ def t_SPEC_UNIT(t):
 
 
 def t_TEMPORAL_UNARY(t):
-    r"""(G|F|X)(?=[ \t]*\()""" #temporal operators require parenthesis
+    r"""(G|F|X)(?=[ \t\n]*\()""" #temporal operators require parenthesis
     return t
 
 
 def t_TEMPORAL_BINARY(t):
 #    r"""U(?=[ \t]*\()""" #temporal operators require parenthesis
-    r"""U(?=[ \t])""" #temporal operators require parenthesis
+    r"""U(?=[ \t\n])""" #temporal operators require parenthesis
     return t
 
 
@@ -90,9 +90,11 @@ def t_NUMBER(t):
 
     return t
 
+
 def t_newline(t):
     r"""\n+"""
     t.lexer.lineno += t.value.count("\n")
+
 
 def t_error(t):
     if t:
@@ -101,7 +103,6 @@ def t_error(t):
     else:
         print('Error somewhere, current token is None')
     assert 0
-
 
 
 import third_party.ply.lex as lex
