@@ -8,4 +8,5 @@ src/config.py
 benchmarks/non_parameterized/others/*.smt2
 benchmarks/non_parameterized/others/*.dot
 benchmarks/non_parameterized/others/callgrind*
+*.smt2
 
