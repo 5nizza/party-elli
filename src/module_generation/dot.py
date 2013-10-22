@@ -9,7 +9,8 @@ def _colorize_nodes(lts):
 
     for state in lts.states:
         dot_lines += '"{state}" [{color}]'.format_map({'state': state,
-                                                       'color': ['', 'color="green"'][state in lts.init_states]})
+                                                       'color': ['', 'fillcolor="green",style=filled'][
+                                                           state in lts.init_states]})
 
     return dot_lines
 
@@ -17,7 +18,7 @@ def _colorize_nodes(lts):
 def _convert_to_dot(value_by_signal:dict) -> str:
     #TODO: create FuncDescription with name as QuantifiedSignal_i in Impl?
 
-    values_str = '.'.join(
+    values_str = '\\n'.join(
         ['{value}{var}'.format(
             value=['-', ''][value],
             var=signal.name if isinstance(signal, QuantifiedSignal) else signal)
@@ -68,7 +69,7 @@ def to_dot(lts:LTS, outvars_treated_as_moore=()):
         inputvals_str = _convert_to_dot(inputvals)
 
         dot_lines += '"{state}" -> "{x_state}" [label="{in}{mark_out}"]'.format_map(
-            {'state': label['state'],  # TODO: hack
+            {'state': label['state'], # TODO: hack
              'x_state': next_state,
              'in': inputvals_str,
              'mark_out': outvals_str})
