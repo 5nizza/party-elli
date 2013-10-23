@@ -220,7 +220,7 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
 
         is_active_func_desc = self._get_desc_is_active(proc_index)
 
-        func = self._underlying_solver.call_func(is_active_func_desc, value_by_signal)
+        func = self.underlying_solver.call_func(is_active_func_desc, value_by_signal)
 
         return func
 
@@ -258,7 +258,7 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
         return description
 
     def _get_desc_equal_bools(self):
-        cmp_stmnt = self._underlying_solver.op_and(
+        cmp_stmnt = self.underlying_solver.op_and(
             map(lambda p: '(= {0} {1})'.format(p[0], p[1]), zip(self._equals_first_args, self._equals_second_args)))
 
         body = '{cmp}'.format(cmp=cmp_stmnt)
@@ -413,7 +413,7 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
         #: :type: FuncDescription
         sends_func_desc = self.outvar_desc_by_process[prev_proc][sends_signal]
 
-        sends_prev_call = self._underlying_solver.call_func(sends_func_desc,
+        sends_prev_call = self.underlying_solver.call_func(sends_func_desc,
                                                             {self.state_arg_name:prev_proc_state})
 
         prev_is_sched_func = self._get_desc_prev_next_is_sched(True)
@@ -421,10 +421,10 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
         curr_proc_index_label = self._build_label_from_proc_index(proc_index)
         prev_is_sched_args = add_dicts(value_by_sched, curr_proc_index_label)
 
-        prev_is_sched_expr = self._underlying_solver.call_func(prev_is_sched_func,
+        prev_is_sched_expr = self.underlying_solver.call_func(prev_is_sched_func,
                                                                prev_is_sched_args)
 
-        expr = self._underlying_solver.op_and([sends_prev_call, prev_is_sched_expr])
+        expr = self.underlying_solver.op_and([sends_prev_call, prev_is_sched_expr])
 
         return expr
 
@@ -457,8 +457,8 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
 
         tok_func_desc = self.outvar_desc_by_process[0][self._has_tok_signals[0]]
 
-        conditions += self._underlying_solver.call_func(tok_func_desc, {self.state_arg_name: s1})
-        conditions += self._underlying_solver.op_not(self._underlying_solver.call_func(tok_func_desc,
+        conditions += self.underlying_solver.call_func(tok_func_desc, {self.state_arg_name: s1})
+        conditions += self.underlying_solver.op_not(self.underlying_solver.call_func(tok_func_desc,
                                                                                        {self.state_arg_name:s0}))
 
         return conditions

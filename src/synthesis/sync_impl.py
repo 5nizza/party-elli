@@ -200,8 +200,8 @@ class SyncImpl(BlankImpl):  # TODO: This class was never tested separately from 
 
         tok_func_desc = self.outvar_desc_by_process[0][self._has_tok_signal]
 
-        conditions += self._underlying_solver.call_func(tok_func_desc, {self.state_arg_name: s1})
-        conditions += self._underlying_solver.op_not(self._underlying_solver.call_func(tok_func_desc,
+        conditions += self.underlying_solver.call_func(tok_func_desc, {self.state_arg_name: s1})
+        conditions += self.underlying_solver.op_not(self.underlying_solver.call_func(tok_func_desc,
                                                                                        {self.state_arg_name: s0}))
         return conditions
 
