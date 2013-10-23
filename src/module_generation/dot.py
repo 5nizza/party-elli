@@ -1,3 +1,4 @@
+from unittest import TestCase
 from helpers.labels_map import LabelsMap
 from helpers.python_ext import StrAwareList, add_dicts
 from interfaces.automata import Label
@@ -50,12 +51,12 @@ def _label_states_with_outvalues(lts:LTS, filter='all'):
     for state in lts.states:
         signal_vals_pairs = [(var, vals) for (var, vals) in lts.model_by_name.items()
                              if var in filter or filter == 'all']
-        outvals = dict([(var, vals[Label({'state': state})])
-                        for (var, vals) in signal_vals_pairs])  # TODO: hack
+        outvals = dict([(var, vals[Label({'state': state})])  # TODO: hack
+                        for (var, vals) in signal_vals_pairs])
 
         outvals_str = _convert_to_dot(outvals)
         if outvals_str != '':
-            dot_lines += '"{state}"[label="{out}"]'.format(state=state, out=outvals_str)
+            dot_lines += '"{state}"[label="{out}\\n({state})"]'.format(state=state, out=outvals_str)
 
     return dot_lines
 
@@ -134,8 +135,8 @@ def _simplify_srcdst_to_io_labels(srcdst_to_io_labels:dict) -> dict:
         for le in io_labels_as_exprs:
             io_labels_as_dnf = io_labels_as_dnf + le
 
-        simplified_io_labels_as_exprs = tuple()  # FALSE is impossible
-        if io_labels_as_dnf != boolean.TRUE:
+        simplified_io_labels_as_exprs = tuple()
+        if io_labels_as_dnf != boolean.TRUE:  # FALSE is impossible
             simplified_io_labels_as_exprs = boolean.normalize(boolean.OR, io_labels_as_dnf)
 
         simplified_io_labels = [_to_label(e) for e in simplified_io_labels_as_exprs]
@@ -157,6 +158,10 @@ def to_dot(lts:LTS, outvars_treated_as_moore=()):
     dot_lines += _label_states_with_outvalues(lts, outvars_treated_as_moore)
 
     srcdst_to_io_labels = _build_srcdst_to_io_labels(lts, outvars_treated_as_moore)
+
+    print(srcdst_to_io_labels)
+
+    assert 0
 
     simplified_srcdst_to_io_labels = _simplify_srcdst_to_io_labels(srcdst_to_io_labels)
 
@@ -198,3 +203,84 @@ def to_dot(lts:LTS, outvars_treated_as_moore=()):
 def moore_to_dot(moore:LTS):
     outvars = [var for (var, vals) in moore.model_by_name.items()]
     return to_dot(moore, tuple(outvars))
+
+
+class Test(TestCase):
+
+    def test_simplify_srcdst_to_io_labels___basic1(self):
+        srcdst_io_labels = dict()
+        srcdst_io_labels[('t0','t1')] = [{'r':True,'g':False},
+                                         {'r':False, 'g':False}]
+
+        simplified_srcdst_io_labels = _simplify_srcdst_to_io_labels(srcdst_io_labels)
+
+        self.assertDictEqual(simplified_srcdst_io_labels,
+                             {('t0', 't1'):[{'g':False}]})
+
+    def test_simplify_srcdst_to_io_labels___basic2(self):
+        srcdst_io_labels = dict()
+
+        srcdst_io_labels[('t0','t1')] = [{'r':True,'g':False}]
+
+        srcdst_io_labels[('t0','t2')] = [{'r':False, 'g':False}]
+
+        simplified_srcdst_io_labels = _simplify_srcdst_to_io_labels(srcdst_io_labels)
+
+        self.assertDictEqual(simplified_srcdst_io_labels,
+                             srcdst_io_labels)
+
+    def test_simplify_srcdst_to_io_labels___complex(self):
+        srcdst_io_labels = dict()
+
+        srcdst_io_labels[('t0','t1')] = [{'r':True,'g':False},
+                                         {'r':True,'g':True}]
+
+        srcdst_io_labels[('t0','t2')] = [{'r':True, 'g':False}]
+
+        srcdst_io_labels[('t2','t0')] = [{'r':True, 'g':True}]
+
+        srcdst_io_labels[('t0','t0')] = [{'r':True, 'g':True},
+                                         {'r':True, 'g':False, 'x':False}]
+
+        simplified_srcdst_io_labels = _simplify_srcdst_to_io_labels(srcdst_io_labels)
+
+        self.assertDictEqual(simplified_srcdst_io_labels,
+                             {('t0','t1'):[{'r':True}],
+                              ('t0','t1'):[{'r':True}],
+                              ('t0','t2'):[{'r':True, 'g':False}],
+                              ('t2','t0'):[{'r':True, 'g':True}],
+                              ('t0','t0'):[{'r':True, 'g':True},
+                                           {'r':True, 'x':False}],
+                              })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

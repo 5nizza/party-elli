@@ -48,8 +48,8 @@ Forall(i)
 auxonegrant_i=0 * 
 # auxlockedburstgrant_i=0 * 
 auxlockedincr_i=0 * 
-agrant_i=0 * 
-rcvtok_i=0;
+agrant_i=0;
+# we don't set init value of rcv tok
 
 
 ## Mutual exclusion in token rings: "grant only when possess the token"
