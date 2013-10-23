@@ -18,7 +18,7 @@ mlocked;
 [OUTPUT_VARIABLES]
 # TODO: check which other variables to add
 
-start; # just received the token
+rcvtok; # just received the token, used to kickoff the granting process
 agrant;
 
 #auxiliary variables to ease to make specification readable
@@ -38,6 +38,9 @@ G(F(mbusreq_i=0));
 Forall(i) 
 G(F(sready_i=1));
 
+# Otherwise the dead4 guarantee for locked incremental will fail.
+Forall(i)
+G(F(sready_i=1 * mbusreq_i=0));
 
 [GUARANTEES]
 ## initially
@@ -46,7 +49,7 @@ auxonegrant_i=0 *
 # auxlockedburstgrant_i=0 * 
 auxlockedincr_i=0 * 
 agrant_i=0 * 
-start_i=0;
+rcvtok_i=0;
 
 
 ## Mutual exclusion in token rings: "grant only when possess the token"
@@ -54,7 +57,7 @@ Forall(i)
 G (agrant_i=1 -> tok_i=1);
 
 Forall(i)
-G (X(start_i=1) <-> (X(tok_i=1) * tok_i=0));
+G (X(rcvtok_i=1) <-> (X(tok_i=1) * tok_i=0));
 
 ## Setting aux variables 
 # Note: later updates rewrite aux values
@@ -84,14 +87,14 @@ Forall(i)
 ## Granting based on aux variables, and clearing aux
 # TODO: hm, we lose ticks here
 Forall(i)
-!F(X(start_i=1) * 
+!F(auxonegrant_i=1 * X(rcvtok_i=1) * 
   X((auxonegrant_i=0 * agrant_i=1 * sready_i=0) 
     U
     (auxonegrant_i=1 + agrant_i=0)
   )
 );
 Forall(i)
-!F(X(start_i=1) * 
+!F(auxonegrant_i=1 * X(rcvtok_i=1) * 
   X((auxonegrant_i=0 * agrant_i=1 * sready_i=0)
     U
     (auxonegrant_i=0 * agrant_i=1 * sready_i=1 * X(agrant_i=1))
@@ -202,68 +205,56 @@ Forall(i)
 
 # TODO: do we need assumption 'mbusreq_i -> mbusreq_i=1 U agrant_i=1'?
 # TODO: add 'mbusreq_i -> everything is reset'?
-# Forall(i)
-# G(F(sready_i=1 * mbusreq_i=0)) ->
-# G (auxlockedincr_i=1 * tok_i=1 -> 
-#     X (agrant_i=1 * auxlockedincr_i=0 * 
-#       ((agrant_i=1 * auxlockedincr_i=0) U (sready_i=1 * mbusreq_i=0 * X(agrant_i=0)))
-#       )
-# );
-# Forall(i)
-# G(F(sready_i=1 * mbusreq_i=0)) ->
-# G (auxlockedincr_i=1 * tok_i=1 -> 
-#     X (agrant_i=1 * auxlockedincr_i=0 * 
-#       ((agrant_i=1 * auxlockedincr_i=0) U (sready_i=1 * mbusreq_i=0 * X(agrant_i=0)))
-#       )
-# );
-
 # dead 1
-# Forall(i)
-# !F(auxlockedincr_i=1 * tok_i=1 * 
-#   X((auxlockedincr_i=0 * agrant_i=1 * mbusreq_i=1) 
-#     U
-#     (!(auxlockedincr_i=0 * agrant_i=1))
-#   )
-# );
+Forall(i)
+!F(auxlockedincr_i=1 * X(rcvtok_i=1) * 
+  X(
+    (auxlockedincr_i=0 * agrant_i=1 * mbusreq_i=1) 
+    U
+    (auxlockedincr_i=1 + agrant_i=0)
+  )
+);
 
-# # dead 2
-# Forall(i)
-# !F(auxlockedincr_i=1 * tok_i=1 * 
-#   X((auxlockedincr_i=0 * agrant_i=1 * mbusreq_i=1) 
-#     U
-#     ( (auxlockedincr_i=0 * agrant_i=1 * sready_i=0 * mbusreq_i=0) * 
-#       (
-#         (auxlockedincr_i=0 * agrant_i=1 * sready_i=0)
-#         U
-#         (!(auxlockedincr_i=0 * agrant_i=1))
-#       )
-#     )
-#   )
-# );
+# dead 2
+Forall(i)
+!F(auxlockedincr_i=1 * X(rcvtok_i=1) * 
+  X(
+    (auxlockedincr_i=0 * agrant_i=1 * mbusreq_i=1) 
+    U
+    ( (auxlockedincr_i=0 * agrant_i=1 * sready_i=0 * mbusreq_i=0) * 
+      (
+        (auxlockedincr_i=0 * agrant_i=1 * sready_i=0)
+        U
+        (auxlockedincr_i=1 + agrant_i=0)
+      )
+    )
+  )
+);
 
-# # dead 3
-# Forall(i)
-# !F(auxlockedincr_i=1 * tok_i=1 * 
-#   X((auxlockedincr_i=0 * agrant_i=1 * mbusreq_i=1) 
-#     U
-#     ( (auxlockedincr_i=0 * agrant_i=1 * sready_i=0 * mbusreq_i=0) * 
-#       (
-#         (auxlockedincr_i=0 * agrant_i=1 * sready_i=0)
-#         U
-#         (auxlockedincr_i=0 * agrant_i=1 * sready_i=1 * X(agrant_i=1))
-#       )
-#     )
-#   )
-# );
+# dead 3
+Forall(i)
+!F(auxlockedincr_i=1 * X(rcvtok_i=1) * 
+  X((auxlockedincr_i=0 * agrant_i=1 * mbusreq_i=1) 
+    U
+    ( (auxlockedincr_i=0 * agrant_i=1 * sready_i=0 * mbusreq_i=0) * 
+      (
+        (auxlockedincr_i=0 * agrant_i=1 * sready_i=0)
+        U
+        (auxlockedincr_i=0 * agrant_i=1 * sready_i=1 * X(agrant_i=1))
+      )
+    )
+  )
+);
 
-# # dead 4
-# Forall(i)
-# !F(auxlockedincr_i=1 * tok_i=1 * 
-#   X((auxlockedincr_i=0 * agrant_i=1 * mbusreq_i=1) 
-#     U
-#     ( auxlockedincr_i=0 * agrant_i=1 * sready_i=1 * mbusreq_i=0 * X(agrant_i=1) )
-#   )
-# );
+# dead 4
+Forall(i)
+!F(auxlockedincr_i=1 * X(rcvtok_i=1) * 
+  X(
+    (auxlockedincr_i=0 * agrant_i=1 * mbusreq_i=1) 
+    U
+    ( auxlockedincr_i=0 * agrant_i=1 * sready_i=1 * mbusreq_i=0 * X(agrant_i=1) )
+  )
+);
 
 
 # no spurious grants
