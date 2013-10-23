@@ -4,8 +4,10 @@
 class BlankImpl:
     """ Blank implementation which does nothing but still can be fed to GenericEncoder """
 
-    def __init__(self, is_mealy):
+    def __init__(self, is_mealy, underlying_solver):
         self.is_mealy = is_mealy
+
+        self._underlying_solver = underlying_solver  # TODO: rename
 
         self.state_arg_name = 'state'
 

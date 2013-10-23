@@ -3,8 +3,8 @@ from synthesis.func_description import FuncDescription
 
 
 class SolitaryImpl(BlankImpl):
-    def __init__(self, automaton, is_mealy, inputs, outputs, nof_local_states, sys_state_type):
-        super().__init__(is_mealy)
+    def __init__(self, automaton, is_mealy, inputs, outputs, nof_local_states, sys_state_type, underlying_solver):
+        super().__init__(is_mealy, underlying_solver)
 
         inputs = tuple(inputs)
         outputs = tuple(outputs)

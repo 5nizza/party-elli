@@ -53,8 +53,7 @@ class ParImpl(BlankImpl):  # TODO: separate architecture from the spec
                  internal_funcs_postfix:str,
                  underlying_solver:SolverInterface):
 
-        super().__init__(is_mealy)
-        self._underlying_solver = underlying_solver
+        super().__init__(is_mealy, underlying_solver)
 
         for s in orig_inputs:  # TODO: remove me after debug
             assert isinstance(s, QuantifiedSignal)

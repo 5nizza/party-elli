@@ -101,7 +101,8 @@ class ParModelSearcher:
         init_process_states = set(states[0] for states in par_impl.init_states)
 
         return init_process_states
-# TODO: bureaucracy in coding.. simplify
+
+    # TODO: bureaucracy in coding.. simplify
     def _encode_headers(self, max_model_size,
                         sync_automaton,
                         global_automaton_cutoff_pairs):
@@ -110,8 +111,6 @@ class ParModelSearcher:
 
         for i, (automaton, nof_processes) in enumerate(global_automaton_cutoff_pairs):
             self._encode_global_headers(automaton, i, max_model_size, nof_processes)
-
-
 
     def _get_glob_spec_state_type(self, automaton_index:int) -> str:
         spec_states_type = 'Q' + str(automaton_index)
@@ -149,7 +148,8 @@ class ParModelSearcher:
 
         last_size = 0
         for size in process_model_bounds:
-            cur_all_states = [BlankImpl(False).get_state_name(self._SYS_STATE_TYPE, s)  # TODO: hack
+            # TODO: that is a hack!
+            cur_all_states = [BlankImpl(False, self._underlying_solver).get_state_name(self._SYS_STATE_TYPE, s)
                               for s in range(size)]
             new_states = cur_all_states[last_size:]
             already_encoded_states = cur_all_states[:last_size]
@@ -254,7 +254,8 @@ class ParModelSearcher:
                         QuantifiedSignal(self._names.sends_signal, 0),
                         QuantifiedSignal(self._names.sends_prev_signal, 0),
                         self._TAU_NAME,
-                        init_process_states)
+                        init_process_states,
+                        self._underlying_solver)
         return impl
 
     def _encode_local_automaton(self, local_automaton,

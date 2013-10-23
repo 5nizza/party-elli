@@ -23,7 +23,8 @@ def search(automaton:Automaton,
     spec_states_type = 'Q'
     sys_states_type = 'T'
 
-    impl = SolitaryImpl(automaton, is_mealy, input_signals, output_signals, list(sizes)[-1], sys_states_type)
+    impl = SolitaryImpl(automaton, is_mealy, input_signals, output_signals, list(sizes)[-1], sys_states_type,
+                        underlying_solver)
 
     encoding_solver = GenericEncoder(logic, spec_states_type, '', impl.state_types_by_process, underlying_solver)
 
