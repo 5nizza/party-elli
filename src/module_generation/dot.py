@@ -159,10 +159,6 @@ def to_dot(lts:LTS, outvars_treated_as_moore=()):
 
     srcdst_to_io_labels = _build_srcdst_to_io_labels(lts, outvars_treated_as_moore)
 
-    print(srcdst_to_io_labels)
-
-    assert 0
-
     simplified_srcdst_to_io_labels = _simplify_srcdst_to_io_labels(srcdst_to_io_labels)
 
     for (src, dst), io_labels in simplified_srcdst_to_io_labels.items():
@@ -184,16 +180,6 @@ def to_dot(lts:LTS, outvars_treated_as_moore=()):
              'x_state': dst,
              'in': i_vals_str,
              'mark_out': o_vals_str})
-
-    #outvar_vals = [(var, vals) for (var, vals) in lts.model_by_name.items()
-    #               if var not in outvars_treated_as_moore]
-    #
-    #outvals = dict([(var, values[label]) for (var, values) in outvar_vals])
-    #outvals_str = _convert_to_dot(outvals)
-    #outvals_str = '/' + outvals_str if outvals_str != '' else ''
-    #
-    #inputvals = _get_inputvals(label)
-    #inputvals_str = _convert_to_dot(inputvals)
 
     dot_lines += '}'
 
