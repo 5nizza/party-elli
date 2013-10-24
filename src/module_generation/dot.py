@@ -1,10 +1,13 @@
+import unittest
+import logging
+
 from unittest import TestCase
 from helpers.labels_map import LabelsMap
 from helpers.python_ext import StrAwareList, add_dicts
 from interfaces.automata import Label
 from interfaces.lts import LTS
 from interfaces.parser_expr import QuantifiedSignal
-import third_party.boolean as boolean
+from third_party import boolean
 
 
 def _colorize_nodes(lts):
@@ -58,36 +61,6 @@ def _label_states_with_outvalues(lts:LTS, filter='all'):
             dot_lines += '"{state}"[label="{out}\\n({state})"]'.format(state=state, out=outvals_str)
 
     return dot_lines
-
-
-#def old_to_dot(lts:LTS, outvars_treated_as_moore=()):
-#    dot_lines = StrAwareList()
-#    dot_lines += 'digraph module {\n'
-#
-#    dot_lines += _colorize_nodes(lts) + '\n'
-#
-#    dot_lines += _label_states_with_outvalues(lts, outvars_treated_as_moore)
-#
-#    for label, next_state in lts.tau_model.items():
-#        outvar_vals = [(var, vals) for (var, vals) in lts.model_by_name.items()
-#                       if var not in outvars_treated_as_moore]
-#
-#        outvals = dict([(var, values[label]) for (var, values) in outvar_vals])
-#        outvals_str = _convert_to_dot(outvals)
-#        outvals_str = '/' + outvals_str if outvals_str != '' else ''
-#
-#        inputvals = _get_inputvals(label)
-#        inputvals_str = _convert_to_dot(inputvals)
-#
-#        dot_lines += '"{state}" -> "{x_state}" [label="{in}{mark_out}"]'.format_map(
-#            {'state': label['state'], # TODO: hack
-#             'x_state': next_state,
-#             'in': inputvals_str,
-#             'mark_out': outvals_str})
-#
-#    dot_lines += '}'
-#
-#    return '\n'.join(dot_lines)
 
 
 def _to_expr(l:LabelsMap) -> boolean.Expression:
@@ -144,6 +117,8 @@ def _simplify_srcdst_to_io_labels(srcdst_to_io_labels:dict) -> dict:
 
 
 def to_dot(lts:LTS, outvars_treated_as_moore=()):
+    logger = logging.getLogger(__file__)
+
     dot_lines = StrAwareList()
     dot_lines += 'digraph module {\n'
 
@@ -152,28 +127,30 @@ def to_dot(lts:LTS, outvars_treated_as_moore=()):
     dot_lines += _label_states_with_outvalues(lts, outvars_treated_as_moore)
 
     srcdst_to_io_labels = _build_srcdst_to_io_labels(lts, outvars_treated_as_moore)
+    logger.debug('non-simplified model: ', srcdst_to_io_labels)
 
     simplified_srcdst_to_io_labels = _simplify_srcdst_to_io_labels(srcdst_to_io_labels)
+    logger.debug('the model after edge simplifications: ', srcdst_to_io_labels)
 
     for (src, dst), io_labels in simplified_srcdst_to_io_labels.items():
-        i_vals = dict()
-        o_vals = dict()
         for io_label in io_labels:
-            for signal,value in io_label.items():
+            i_vals = dict()
+            o_vals = dict()
+            for signal, value in io_label.items():
                 if signal in lts.input_signals:
                     i_vals[signal] = value
                 else:
                     o_vals[signal] = value
 
-        i_vals_str = _convert_to_dot(i_vals) or '*'
-        o_vals_str = _convert_to_dot(o_vals)
-        o_vals_str = '/' + '\\n' + o_vals_str if o_vals_str != '' else ''
+            i_vals_str = _convert_to_dot(i_vals) or '*'
+            o_vals_str = _convert_to_dot(o_vals)
+            o_vals_str = '/' + '\\n' + o_vals_str if o_vals_str != '' else ''
 
-        dot_lines += '"{state}" -> "{x_state}" [label="{in}{mark_out}"]'.format_map(
-            {'state': src,
-             'x_state': dst,
-             'in': i_vals_str,
-             'mark_out': o_vals_str})
+            dot_lines += '"{state}" -> "{x_state}" [label="{in}{mark_out}"]'.format_map(
+                {'state': src,
+                 'x_state': dst,
+                 'in': i_vals_str,
+                 'mark_out': o_vals_str})
 
     dot_lines += '}'
 
@@ -186,23 +163,22 @@ def moore_to_dot(moore:LTS):
 
 
 class Test(TestCase):
-
     def test_simplify_srcdst_to_io_labels___basic1(self):
         srcdst_io_labels = dict()
-        srcdst_io_labels[('t0','t1')] = [{'r':True,'g':False},
-                                         {'r':False, 'g':False}]
+        srcdst_io_labels[('t0', 't1')] = [{'r': True, 'g': False},
+                                          {'r': False, 'g': False}]
 
         simplified_srcdst_io_labels = _simplify_srcdst_to_io_labels(srcdst_io_labels)
 
         self.assertDictEqual(simplified_srcdst_io_labels,
-                             {('t0', 't1'):[{'g':False}]})
+                             {('t0', 't1'): [{'g': False}]})
 
     def test_simplify_srcdst_to_io_labels___basic2(self):
         srcdst_io_labels = dict()
 
-        srcdst_io_labels[('t0','t1')] = [{'r':True,'g':False}]
+        srcdst_io_labels[('t0', 't1')] = [{'r': True, 'g': False}]
 
-        srcdst_io_labels[('t0','t2')] = [{'r':False, 'g':False}]
+        srcdst_io_labels[('t0', 't2')] = [{'r': False, 'g': False}]
 
         simplified_srcdst_io_labels = _simplify_srcdst_to_io_labels(srcdst_io_labels)
 
@@ -212,55 +188,67 @@ class Test(TestCase):
     def test_simplify_srcdst_to_io_labels___complex(self):
         srcdst_io_labels = dict()
 
-        srcdst_io_labels[('t0','t1')] = [{'r':True,'g':False},
-                                         {'r':True,'g':True}]
+        srcdst_io_labels[('t0', 't1')] = [{'r': True, 'g': False},
+                                          {'r': True, 'g': True}]
 
-        srcdst_io_labels[('t0','t2')] = [{'r':True, 'g':False}]
+        srcdst_io_labels[('t0', 't2')] = [{'r': True, 'g': False}]
 
-        srcdst_io_labels[('t2','t0')] = [{'r':True, 'g':True}]
+        srcdst_io_labels[('t2', 't0')] = [{'r': True, 'g': True}]
 
-        srcdst_io_labels[('t0','t0')] = [{'r':True, 'g':True},
-                                         {'r':True, 'g':False, 'x':False}]
+        srcdst_io_labels[('t0', 't0')] = [{'r': True, 'g': True},
+                                          {'r': True, 'g': False, 'x': False}]
 
         simplified_srcdst_io_labels = _simplify_srcdst_to_io_labels(srcdst_io_labels)
 
         self.assertDictEqual(simplified_srcdst_io_labels,
-                             {('t0','t1'):[{'r':True}],
-                              ('t0','t1'):[{'r':True}],
-                              ('t0','t2'):[{'r':True, 'g':False}],
-                              ('t2','t0'):[{'r':True, 'g':True}],
-                              ('t0','t0'):[{'r':True, 'g':True},
-                                           {'r':True, 'x':False}],
-                              })
+                             {('t0', 't1'): [{'r': True}],
+                              ('t0', 't1'): [{'r': True}],
+                              ('t0', 't2'): [{'r': True, 'g': False}],
+                              ('t2', 't0'): [{'r': True, 'g': True}],
+                              ('t0', 't0'): [{'r': True, 'g': True},
+                                             {'r': True, 'x': False}],
+                             })
+
+    def test_simplify_srcdst_to_io_labels___bug(self):
+        # ('t2', 't5') :
+        #[{prev_0: True, mlocked_0: True, sready_0: True, mbusreq_0: True},
+        # {prev_0: True, mlocked_0: True, sready_0: False, mbusreq_0: True},
+        # {prev_0: True, mlocked_0: False, sready_0: True, mbusreq_0: False},
+        # {prev_0: True, mlocked_0: True, sready_0: True, mbusreq_0: False},
+        # {prev_0: True, mlocked_0: True, sready_0: False, mbusreq_0: False},
+        # {prev_0: True, mlocked_0: False, sready_0: False, mbusreq_0: False},
+        # {prev_0: True, mlocked_0: False, sready_0: False, mbusreq_0: True},
+        # {prev_0: True, mlocked_0: False, sready_0: True, mbusreq_0: True}]
+        # was simplified into:
+        #[{prev_0: True, sready_0: True},
+        # {prev_0: True, mbusreq_0: True},
+        # {prev_0: True, mlocked_0: False}]
+        # but the right solution is:
+        # [{prev_0: True}]
+        # ------------------------------------------------
+        srcdst_io_labels = dict()
+        srcdst_io_labels[('t2', 't5')] = [{'prev_0': True, 'mlocked_0': True, 'sready_0': True, 'mbusreq_0': True},
+                                          {'prev_0': True, 'mlocked_0': True, 'sready_0': False, 'mbusreq_0': True},
+                                          {'prev_0': True, 'mlocked_0': False, 'sready_0': True, 'mbusreq_0': False},
+                                          {'prev_0': True, 'mlocked_0': True, 'sready_0': True, 'mbusreq_0': False},
+                                          {'prev_0': True, 'mlocked_0': True, 'sready_0': False, 'mbusreq_0': False},
+                                          {'prev_0': True, 'mlocked_0': False, 'sready_0': False, 'mbusreq_0': False},
+                                          {'prev_0': True, 'mlocked_0': False, 'sready_0': False, 'mbusreq_0': True},
+                                          {'prev_0': True, 'mlocked_0': False, 'sready_0': True, 'mbusreq_0': True}]
+
+        simplified_srcdst_io_labels = _simplify_srcdst_to_io_labels(srcdst_io_labels)
+
+        self.assertDictEqual(simplified_srcdst_io_labels,
+                             {
+                                 ('t2', 't5'): [{'prev_0': True}],
+                             })
 
 
+    #def test_simplify_srcdst_to_io_labels___stress(self):
+    #    for i in range(500):
+    #        self.test_simplify_srcdst_to_io_labels___bug()
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+if __name__ == "__main__":
+    unittest.main()
 
