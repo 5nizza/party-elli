@@ -1,5 +1,10 @@
 #TODO: check that active_i variables inserted where necessary -- to achieve this use cutoffs bigger than 2
 
+# CURRENT STATUS
+# I believe it works now.
+# The spec is not optimal -- it can be optimized for smaller model sizes (and faster replies).
+
+
 [INPUT_VARIABLES]
 #variable 'active' is always present
 
@@ -46,9 +51,9 @@ G(F(sready_i=1 * mbusreq_i=0));
 ## initially
 Forall(i) 
 auxonegrant_i=0 * 
-# auxlockedburstgrant_i=0 * 
 auxlockedincr_i=0 * 
 agrant_i=0;
+# rcvtok_i=0 <-> tok_i=0;
 # we don't set init value of rcv tok
 
 

@@ -127,10 +127,10 @@ def to_dot(lts:LTS, outvars_treated_as_moore=()):
     dot_lines += _label_states_with_outvalues(lts, outvars_treated_as_moore)
 
     srcdst_to_io_labels = _build_srcdst_to_io_labels(lts, outvars_treated_as_moore)
-    logger.debug('non-simplified model: ', srcdst_to_io_labels)
+    logger.debug('non-simplified model: \n' + str(srcdst_to_io_labels))
 
     simplified_srcdst_to_io_labels = _simplify_srcdst_to_io_labels(srcdst_to_io_labels)
-    logger.debug('the model after edge simplifications: ', srcdst_to_io_labels)
+    logger.debug('the model after edge simplifications: \n' + str(srcdst_to_io_labels))
 
     for (src, dst), io_labels in simplified_srcdst_to_io_labels.items():
         for io_label in io_labels:
