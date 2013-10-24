@@ -40,7 +40,6 @@ def _get_outputvals(label:dict, lts:LTS, outvars_treated_as_moore) -> dict:
     outvar_vals = [(var, vals) for (var, vals) in lts.model_by_name.items()
                    if var not in outvars_treated_as_moore]
 
-    print('should be sig,dict type: ', outvar_vals)
     outvals = dict([(var, values[label]) for (var, values) in outvar_vals])
     return outvals
 
@@ -107,7 +106,6 @@ def _to_label(clause:boolean.Expression) -> LabelsMap:
         assert len(list(l.symbols)) == 1
         symbol = list(l.symbols)[0]
         labels_map[symbol.obj] = not isinstance(l, boolean.NOT)
-    print('labels_map for clause is ', clause, labels_map)
     return labels_map
 
 
@@ -141,10 +139,6 @@ def _simplify_srcdst_to_io_labels(srcdst_to_io_labels:dict) -> dict:
 
         simplified_io_labels = [_to_label(e) for e in simplified_io_labels_as_exprs]
         simplified_srcdst_to_io_labels[(src, dst)] = simplified_io_labels
-
-        print('orig: ', (src,dst), ':', io_labels)
-        print('simplified: ', (src,dst), ':', simplified_io_labels)
-        print()
 
     return simplified_srcdst_to_io_labels
 
