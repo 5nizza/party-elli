@@ -13,21 +13,22 @@ Parameterized Synthesis of Token Rings
   and install using python3
 
 ## To configure ##
-modify file config.py in src directory 
+Modify file config.py in src directory 
 with absolute paths to executables of z3 and ltl3ba
 
-(if you plan to develop smth then you might want to ignore future changes to config.py, to do so run
+If you plan to develop smth then you might want to ignore future changes to config.py, to do so run:
 	
 	git update-index --assume-unchanged src/config.py)
 
-(.gitignore is not enough)
+`.gitignore` is not enough.
 
 ## To run ##
-	python3 p_bosy.py --help to run parameterized synthesis tool         
-	python3 bosy.py --help to run monolithic synthesis tool         
+`python3 p_bosy.py --help` to run parameterized synthesis tool
+
+`python3 bosy.py --help` to run monolithic synthesis tool
 
 ## To test ##
-- nosetests ./
+- `nosetests ./`
 Requires nosetests package.
 - Also directory ./tests contains functional tests
   - test_parameterized.py
@@ -37,7 +38,7 @@ Requires nosetests package.
 , suggestions and bug reports submit to github or directly to Ayrat: ayrat.khalimov(gmail)
 
 ## Authors ##
-Ayrat Khalimov,Swen Jacobs,Roderick Bloem, TU Graz.
+Ayrat Khalimov, Swen Jacobs, Roderick Bloem, TU Graz.
 
 ## License ## 
-free for any use with references to the original authors
+Free for any use with references to the original authors. For bibtex check http://link.springer.com/chapter/10.1007%2F978-3-642-39799-8_66
