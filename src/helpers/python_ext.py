@@ -2,6 +2,12 @@ from collections import Iterable
 import math
 
 
+def distinct(iterable):
+    d = dict((repr(x),x) for x in iterable)
+    res = list(d.values())
+    return res
+
+
 def to_str(enumerable:Iterable) -> str:
     return ', '.join(map(str, enumerable))
 

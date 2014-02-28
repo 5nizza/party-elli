@@ -1,12 +1,11 @@
-Party
-=====
+Party =====
 
 Parameterized Synthesis of Token Rings
 
 ## Requirements ##
 Ubuntu 12.04 (likely to work with others)            
 Z3 (tested with version 4.1 and 4.3.1)      
-ltl3ba (tested with version 1.0.2)       
+ltl3ba (tested with version 1.0.2, please change the size of dumpbuf in trans.c to 4096, otherwise buffer overflow)       
 python3 (tested with version 3.2)       
 python-graph-core package: 
   download from 
