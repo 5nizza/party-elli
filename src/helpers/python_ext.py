@@ -14,6 +14,16 @@ def lfilter(lambda_func, iterable) -> list:
     return list(filter(lambda_func, iterable))
 
 
+def separate(criteria, iterable) -> (list,list):
+    yes, no = [],[]
+    for e in iterable:
+        if criteria(e):
+            yes.append(e)
+        else:
+            no.append(e)
+    return yes,no
+
+
 def add_dicts(*dicts) -> dict:
     resulting_items = []
     for d in dicts:

@@ -5,14 +5,16 @@ import sys
 import tempfile
 
 from helpers.main_helper import setup_logging, create_spec_converter_z3, remove_files_prefixed
+from helpers.python_ext import separate
 from interfaces.parser_expr import BinOp, and_expressions, UnaryOp, ForallExpr, Expr
 from interfaces.spec import SpecProperty, to_expr, and_properties
 from module_generation.dot import to_dot, moore_to_dot
 from module_generation.nusmv import to_boolean_nusmv
 from parsing import acacia_parser, anzu_parser
-from parsing.anzu_lexer_desc import ANZU_OUTPUT_VARIABLES, ANZU_INPUT_VARIABLES, ANZU_ENV_INITIAL, ANZU_SYS_INITIAL, ANZU_SYS_TRANSITIONS, ANZU_SYS_FAIRNESS, ANZU_ENV_FAIRNESS, ANZU_ENV_TRANSITIONS
-from parsing.helpers import WeakToUntilConverterVisitor
-from spec_optimizer.optimizations import strengthen_many
+from parsing.anzu_lexer_desc import ANZU_OUTPUT_VARIABLES, ANZU_INPUT_VARIABLES, ANZU_ENV_INITIAL, ANZU_SYS_INITIAL, \
+    ANZU_SYS_TRANSITIONS, ANZU_SYS_FAIRNESS, ANZU_ENV_FAIRNESS, ANZU_ENV_TRANSITIONS
+from parsing.helpers import Visitor
+from spec_optimizer.optimizations import strengthen_many, is_safety
 from synthesis import generic_smt_encoder
 from synthesis.solitary_model_searcher import search
 from synthesis.smt_logic import UFLIA
@@ -27,14 +29,70 @@ OPTS = {NO: 0, STRENGTH: 1}
 SPEC_TYPES = ANZU, ACACIA = 'anzu', 'acacia'
 
 
-#TODO: implement safety-liveness separation
 def _weak_until(guarantee, not_assumption):
     return BinOp('+',
                  BinOp('U', guarantee, not_assumption),
                  UnaryOp('G', guarantee))
 
 
-def _get_acacia_spec(ltl_text:str, part_text:str, weak_until:bool, logger:logging.Logger) -> (list, list, list):
+def _isG(expr:Expr):
+    return expr.name == 'G'
+
+
+def _is_propositional(a):
+    class Found(BaseException):
+        pass
+
+    class TemporalOperatorFinder(Visitor):
+        def visit_binary_op(self, binary_op:BinOp):
+            if binary_op.name in ['W', 'U']:
+                raise Found()  # interrupts immediately
+            return BinOp(binary_op.name, self.dispatch(binary_op.arg1), self.dispatch(binary_op.arg2))
+
+        def visit_unary_op(self, unary_op:UnaryOp):
+            if unary_op.name in ['G', 'F']:
+                raise Found()  # interrupts immediately
+            return UnaryOp(unary_op.name, self.dispatch(unary_op.arg))
+
+    try:
+        TemporalOperatorFinder().dispatch(a)
+        return True
+    except Found:
+        return False
+
+
+def _extract_spec_components(assumptions, guarantees, ltl2ucw_converter) -> (list, list, list, list):
+    init_ass, init_gua, safe_ass, safe_gua, live_ass, live_gua = [], [], [], [], [], []
+    # init is:
+    # - safety
+    # - does not have temporal operators inside
+    # safe is:
+    # - is safety and not init
+    # live is:
+    # - the rest..
+    for a in assumptions:
+        if is_safety(a, ltl2ucw_converter):
+            if _is_propositional(a):
+                init_ass.append(a)
+            else:
+                safe_ass.append(a)
+        else:
+            live_ass.append(a)
+
+    for g in guarantees:
+        if is_safety(g, ltl2ucw_converter):
+            if _is_propositional(g):
+                init_gua.append(g)
+            else:
+                safe_gua.append(g)
+        else:
+            live_gua.append(g)
+
+    return init_ass, init_gua, safe_ass, safe_gua, live_ass, live_gua
+
+
+def _get_acacia_spec(ltl_text:str, part_text:str, weak_until:bool, logger:logging.Logger, ltl2ucw_converter) -> (
+        list, list, list):
     """
     :return: inputs, outputs, spec_properties
 
@@ -52,12 +110,25 @@ def _get_acacia_spec(ltl_text:str, part_text:str, weak_until:bool, logger:loggin
         guarantees = unit_data[1]
 
         if weak_until:
-            assert False, 'not supported'
-            # guarantee = _weak_until(
-            #     and_expressions(guarantees),
-            #     _neg(and_expressions(assumptions)))
-            #
-            # spec_properties.append(SpecProperty([], [guarantee]))
+            init_ass, init_gua, safe_ass, safe_gua, live_ass, live_gua = _extract_spec_components(assumptions,
+                                                                                                  guarantees,
+                                                                                                  ltl2ucw_converter)
+            spec_properties.extend(_optimize_assume_guarantee(init_ass, init_gua,
+                                                              safe_ass, safe_gua,
+                                                              live_ass, live_gua))
+            # print('init_ass:\n  ', init_ass)
+            # print()
+            # print('init_gua:\n  ', init_gua)
+            # print()
+            # print('safe_ass:\n  ', safe_ass)
+            # print()
+            # print('safe_gua:\n  ', safe_gua)
+            # print()
+            # print('live_ass:\n  ', live_ass)
+            # print()
+            # print('live_gua:\n  ', live_gua)
+            # print()
+            # print('-'*80)
         else:
             spec_properties.append(SpecProperty(assumptions, guarantees))
 
@@ -130,8 +201,49 @@ def _neg(expr):
     return UnaryOp('!', expr)
 
 
-def _remove_G(safety_expressions:list) -> list:
-    assert 0
+def _optimize_assume_guarantee(init_gua, init_ass,
+                               saf_ass, saf_gua,
+                               liv_ass, liv_gua) -> list:
+    """
+    init_ass  ->  init_gua
+    && init_ass & init_gua  ->  fin_saf_gua W !fin_saf_ass
+    && init_ass & init_gua & saf_ass & sav_gua & liv_ass  ->  liv_gua
+    """
+    properties = []
+
+    if init_gua:
+        init_part = BinOp('->',
+                          and_expressions(init_gua),
+                          and_expressions(init_ass))
+        properties.append(SpecProperty([], [init_part]))
+
+    fin_sa_ass, inf_sa_ass = separate(lambda expr: expr.name == 'G', saf_ass)  # TODO: if ass = Ga & Gb then fails..
+    fin_sa_gua, inf_sa_gua = separate(lambda expr: expr.name == 'G', saf_gua)
+
+    assert not inf_sa_ass, "what to do with them?"
+    assert not inf_sa_gua
+
+    if saf_gua:
+        saf_part = BinOp('->',
+                         and_expressions(init_ass + init_gua),
+                         _weak_until(
+                             and_expressions([e.arg for e in fin_sa_gua]),  # strip away G
+                             _neg(and_expressions([e.arg for e in fin_sa_ass]))))
+        properties.append(SpecProperty([], [saf_part]))
+        print('saf_part\n', saf_part)
+
+    if liv_gua:
+        # liv_part = BinOp('->',
+        #                  and_expressions(init_ass + init_gua + fin_sa_ass + fin_sa_gua + liv_ass),
+        #                  and_expressions(liv_gua))
+
+        liv_part = BinOp('->',
+                         and_expressions(init_ass + fin_sa_ass + liv_ass),
+                         and_expressions(liv_gua))
+        properties.append(SpecProperty([], [liv_part]))
+        print('liv_part\n', liv_part)
+    print('-'*80)
+    return properties
 
 
 def _get_anzu_spec(ltl_text:str, use_weak_until:bool, logger) -> (list, list, list):
@@ -148,28 +260,9 @@ def _get_anzu_spec(ltl_text:str, use_weak_until:bool, logger) -> (list, list, li
     init_guarantees = section_by_name[ANZU_SYS_INITIAL]
 
     if use_weak_until:
-        init_part = _weak_until(and_expressions(init_guarantees),
-                                _neg(and_expressions(init_assumptions)))
-
-        wo_G_safety_assumptions = _remove_G(safety_assumptions)
-        wo_G_safety_guarantees = _remove_G(safety_guarantees)
-
-        safety_part = _weak_until(and_expressions(safety_guarantees),
-                                  _neg(and_expressions(safety_assumptions)))
-
-        liveness_part = BinOp('->',
-                              and_expressions(live_assumptions),
-                              and_expressions(live_guarantees))
-
-        init_assumptions_expr = and_expressions(init_assumptions)
-        safety_assumptions_expr = and_expressions(safety_assumptions)
-
-        properties = [SpecProperty([], [init_part]),
-                      SpecProperty([init_assumptions_expr],
-                                   [safety_part]),
-                      SpecProperty([safety_assumptions_expr, init_assumptions_expr],
-                                   [liveness_part])]
-
+        properties = _optimize_assume_guarantee(init_assumptions, init_guarantees,
+                                                safety_assumptions, safety_guarantees,
+                                                live_assumptions, live_guarantees)
     else:
         init_part = BinOp('->',
                           and_expressions(init_assumptions),
@@ -195,15 +288,6 @@ def _get_anzu_spec(ltl_text:str, use_weak_until:bool, logger) -> (list, list, li
     return input_signals, output_signals, properties
 
 
-def convert_weak_until(p: SpecProperty) -> SpecProperty:
-    def handle(e:Expr) -> Expr:
-        return WeakToUntilConverterVisitor().dispatch(e)
-
-    assumptions = [handle(a) for a in p.assumptions]
-    guarantees = [handle(g) for g in p.guarantees]
-    return SpecProperty(assumptions, guarantees)
-
-
 def main(spec_type,
          ltl_text:str, part_text:str, is_moore, dot_file_name, nusmv_file_name, bounds,
          use_weak_until,
@@ -215,11 +299,10 @@ def main(spec_type,
     converter = ltl2ucw_converter
 
     if spec_type == 'acacia':
-        input_signals, output_signals, spec_properties = _get_acacia_spec(ltl_text, part_text, use_weak_until, logger)
+        input_signals, output_signals, spec_properties = _get_acacia_spec(ltl_text, part_text, use_weak_until, logger,
+                                                                          ltl2ucw_converter)
     else:
         input_signals, output_signals, spec_properties = _get_anzu_spec(ltl_text, use_weak_until, logger)
-
-    spec_properties = [convert_weak_until(p) for p in spec_properties]
 
     if not spec_properties:
         logger.info('No properties are given in the input file. Return unrealizable status.')

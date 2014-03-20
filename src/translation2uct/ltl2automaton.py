@@ -4,6 +4,7 @@ import logging
 from helpers.shell import execute_shell
 from interfaces.automata import Automaton
 from interfaces.parser_expr import UnaryOp, Expr, Signal
+from parsing.helpers import WeakToUntilConverterVisitor
 from translation2uct.ast_to_ltl3ba import ConverterToLtl2BaFormatVisitor
 from translation2uct.ltl2ba import parse_ltl2ba_ba
 
@@ -26,7 +27,10 @@ class Ltl2UCW:
 
     @lru_cache()
     def convert(self, expr:Expr) -> Automaton:
-        self._logger.info('Ltl2UCW: converting..')
+        self._logger.info('Ltl2UCW: converting..\n'+str(expr))
+
+        #make sure we don't have Weak Until since ltl2ba does not accept it..
+        expr = WeakToUntilConverterVisitor().dispatch(expr)
 
         format_converter = ConverterToLtl2BaFormatVisitor()
         property_in_ltl2ba_format = format_converter.dispatch(_negate(expr))
