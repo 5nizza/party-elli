@@ -61,8 +61,8 @@ def t_TEMPORAL_UNARY(t):
 
 
 def t_TEMPORAL_BINARY(t):
-#    r"""U(?=[ \t]*\()"""
-    r"""U(?=[ \t\n])"""   # TODO: temporal operators require parenthesis
+#    r"""U(?=[ \t]*\()""" #temporal operators require parenthesis
+    r"""(U|W)(?=[ \t\n])"""  # temporal operators require parenthesis
     return t
 
 
