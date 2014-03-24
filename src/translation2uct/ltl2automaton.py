@@ -1,6 +1,7 @@
 from functools import lru_cache
 from itertools import chain
 import logging
+from helpers.parameterized2monolithic import ConverterToWringVisitor
 from helpers.shell import execute_shell
 from interfaces.automata import Automaton
 from interfaces.parser_expr import UnaryOp, Expr, Signal
@@ -27,10 +28,12 @@ class Ltl2UCW:
 
     @lru_cache()
     def convert(self, expr:Expr) -> Automaton:
-        self._logger.info('Ltl2UCW: converting..\n'+str(expr))
+        # self._logger.info('Ltl2UCW: converting..\n' + ConverterToWringVisitor().dispatch(expr))
 
         #make sure we don't have Weak Until since ltl2ba does not accept it..
         expr = WeakToUntilConverterVisitor().dispatch(expr)
+
+        self._logger.info('Ltl2UCW: converting..(non-negated version)\n' + ConverterToWringVisitor().dispatch(expr))
 
         format_converter = ConverterToLtl2BaFormatVisitor()
         property_in_ltl2ba_format = format_converter.dispatch(_negate(expr))

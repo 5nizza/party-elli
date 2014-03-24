@@ -5,6 +5,7 @@ import sys
 import tempfile
 
 from helpers.main_helper import setup_logging, create_spec_converter_z3, remove_files_prefixed
+from helpers.parameterized2monolithic import ConverterToWringVisitor
 from helpers.python_ext import separate
 from interfaces.parser_expr import BinOp, and_expressions, UnaryOp, ForallExpr, Expr
 from interfaces.spec import SpecProperty, to_expr, and_properties
@@ -330,8 +331,9 @@ def main(spec_type,
         return None
 
     # print('-' * 80)
-    # print(spec_property)
+    # print(ConverterToWringVisitor().dispatch(to_expr(spec_property)))
     # exit(0)
+
     automaton = ltl2ucw_converter.convert(to_expr(spec_property))
     logger.info('spec automaton has {0} states'.format(len(automaton.nodes)))
 

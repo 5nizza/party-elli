@@ -26,9 +26,10 @@ from interfaces.lts import LTS
 #
 # LTLSPEC G(in_r -> F(out_g))
 
-from interfaces.parser_expr import QuantifiedSignal
+from interfaces.parser_expr import QuantifiedSignal, BinOp, and_expressions
 from interfaces.spec import SpecProperty, expr_from_property
 from module_generation.ast_to_smv_property import AstToSmvProperty
+from parsing.helpers import WeakToUntilConverterVisitor
 
 
 def _ith_state_bit(i:int) -> str:
@@ -112,6 +113,9 @@ def to_boolean_nusmv(lts:LTS, specification:SpecProperty) -> str:
         dot_lines += '    TRUE : FALSE;'  # default: unreachable states, don't care
         dot_lines += '    esac;'
 
-    dot_lines += 'LTLSPEC ' + AstToSmvProperty().dispatch(expr_from_property(specification))
+    expr = BinOp('->', and_expressions(specification.assumptions), and_expressions(specification.guarantees))
+    expr = WeakToUntilConverterVisitor().dispatch(expr)  # SMV does not have Weak until
+
+    dot_lines += 'LTLSPEC ' + AstToSmvProperty().dispatch(expr)
 
     return '\n'.join(dot_lines)

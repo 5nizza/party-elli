@@ -78,26 +78,24 @@ def to_dot(automaton) -> str:
     for n in automaton.nodes:
         colors = 'black purple green yellow blue orange red brown pink gray'.split()
 
-    for label, list_of_sets in n.transitions.items():
-        for flagged_states in list_of_sets:
-            if len(colors):
-                color = colors.pop(0)
-            else:
-                color = 'gray'
+        for label, list_of_sets in n.transitions.items():
+            for flagged_states in list_of_sets:
+                if len(colors):
+                    color = colors.pop(0)
+                else:
+                    color = 'gray'
 
-            edge_is_labelled = False
+                edge_is_labelled = False
 
-            for dst, is_rejecting in flagged_states:
+                for dst, is_rejecting in flagged_states:
+                    edge_label_add = ''
+                    if not edge_is_labelled:
+                        edge_label_add = ', label="{0}"'.format(label_to_short_string(label))
+                        edge_is_labelled = True
+                    trans_dot.append('"{0}" -> "{1}" [color={2}{3}, arrowhead="{4}"];'.format(
+                        n.name, dst.name, color, edge_label_add, ['normal', 'normalnormal'][is_rejecting]))
 
-                edge_label_add = ''
-                if not edge_is_labelled:
-                    edge_label_add = ', label="{0}"'.format(label_to_short_string(label))
-                    edge_is_labelled = True
-
-                trans_dot.append('"{0}" -> "{1}" [color={2}{3}, arrowhead="{4}"];'.format(
-                    n.name, dst.name, color, edge_label_add, ['normal', 'normalnormal'][is_rejecting]))
-
-            trans_dot.append('\n')
+                trans_dot.append('\n')
     dot_lines = ['digraph "automaton" {'] + \
                 init_header + ['\n'] + \
                 rej_header + ['\n'] + \
@@ -132,7 +130,7 @@ def get_relevant_edges(var_values, spec_state):
 
     for label, dst_set_list in spec_state.transitions.items():
         if not satisfied(label, var_values):
-            continue #consider only edges with labels that are satisfied by current signal values
+            continue  # consider only edges with labels that are satisfied by current signal values
 
         relevant_edges.extend(dst_set_list)
 

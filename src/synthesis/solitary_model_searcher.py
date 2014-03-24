@@ -18,7 +18,7 @@ def search(automaton:Automaton,
     logger = logging.getLogger()
 
     logger.debug(automaton)
-    logger.debug(to_dot(automaton))
+    logger.debug('search: automaton (dot) is:\n' + to_dot(automaton))
 
     spec_states_type = 'Q'
     sys_states_type = 'T'
