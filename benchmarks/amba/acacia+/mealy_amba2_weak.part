@@ -1,0 +1,2 @@
+.inputs hbusreq0 hlock0 hbusreq1 hlock1 hready hburst0 hburst1
+.outputs hmaster0 hmaster1 hmaster2 hmaster3 hgrant0 hgrant1 hmastlock locked start decide

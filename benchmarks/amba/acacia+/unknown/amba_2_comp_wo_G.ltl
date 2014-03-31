@@ -1,0 +1,49 @@
+  ###############
+  [spec_unit u1]
+  ###############
+  assume( (FALSE  + (!(TRUE  * (X(hmastlock=1)) * (TRUE  * (!(hburst0=1)) * (hburst1=1)) * (TRUE  * (!(X(hmaster0=1)))))) + (X (F (!(hbusreq0=1))))));
+  assume( (FALSE  + (!(TRUE  * (X(hmastlock=1)) * (TRUE  * (!(hburst0=1)) * (hburst1=1)) * (TRUE  * (X(hmaster0=1))))) + (X (F (!(hbusreq1=1))))));
+  assume ((FALSE  + (!(hlock0=1)) + (hbusreq0=1)));
+  assume ((FALSE  + (!(hlock1=1)) + (hbusreq1=1)));
+  assume (!(hbusreq0=1)) * (!(hlock0=1)) * (!(hbusreq1=1)) * (!(hlock1=1)) * (!(hready=1));
+  
+( (FALSE  + (hready=1) + (X (!(X(start=1))))));
+( (FALSE  + (!(TRUE  * (X(hmastlock=1)) * (TRUE  * (!(hburst0=1)) * (hburst1=1)) * (X(start=1)) * (TRUE  * (!(X(hmaster0=1)))))) + (X ((!(X(start=1))) U (!(hbusreq0=1))))));
+( (FALSE  + (!(TRUE  * (X(hmastlock=1)) * (TRUE  * (!(hburst0=1)) * (hburst1=1)) * (X(start=1)) * (TRUE  * (X(hmaster0=1))))) + (X ((!(X(start=1))) U (!(hbusreq1=1))))));
+( (FALSE  + (!(TRUE  * (X(hmastlock=1)) * (TRUE  * (hburst0=1) * (hburst1=1)) * (X(start=1)))) + (TRUE  * (hready=1) * (X ((!(X(start=1))) U (TRUE  * (hready=1) * (X ((!(X(start=1))) U (TRUE  * (hready=1) * (X ((!(X(start=1))) U (TRUE  * (hready=1))))))))))) + (TRUE  * (!(hready=1)) * (X ((!(X(start=1))) U (TRUE  * (hready=1) * (X ((!(X(start=1))) U (TRUE  * (hready=1) * (X ((!(X(start=1))) U (TRUE  * (hready=1) * (X ((!(X(start=1))) U (TRUE  * (hready=1))))))))))))))));
+  
+  ###############
+  [spec_unit u2]
+  ###############
+  assume( (FALSE  + (!(TRUE  * (X(hmastlock=1)) * (TRUE  * (!(hburst0=1)) * (hburst1=1)) * (TRUE  * (!(X(hmaster0=1)))))) + (X (F (!(hbusreq0=1))))));
+  assume( (FALSE  + (!(TRUE  * (X(hmastlock=1)) * (TRUE  * (!(hburst0=1)) * (hburst1=1)) * (TRUE  * (X(hmaster0=1))))) + (X (F (!(hbusreq1=1))))));
+  assume( (F (hready=1))) * (G (FALSE  + (!(hlock0=1)) + (hbusreq0=1))) * (G (FALSE  + (!(hlock1=1)) + (hbusreq1=1)));
+  assume (!(hbusreq0=1)) * (!(hlock0=1)) * (!(hbusreq1=1)) * (!(hlock1=1)) * (!(hready=1));
+  
+( (FALSE  + (!(TRUE  * (X(hmastlock=1)) * (TRUE  * (hburst0=1) * (hburst1=1)) * (X(start=1)))) + (TRUE  * (hready=1) * (X ((!(X(start=1))) U (TRUE  * (hready=1) * (X ((!(X(start=1))) U (TRUE  * (hready=1) * (X ((!(X(start=1))) U (TRUE  * (hready=1))))))))))) + (TRUE  * (!(hready=1)) * (X ((!(X(start=1))) U (TRUE  * (hready=1) * (X ((!(X(start=1))) U (TRUE  * (hready=1) * (X ((!(X(start=1))) U (TRUE  * (hready=1) * (X ((!(X(start=1))) U (TRUE  * (hready=1))))))))))))))));
+( (FALSE  + (!(hready=1)) + ((X(hgrant0=1)) <-> (X (TRUE  * (!(X(hmaster0=1))))))));
+( (FALSE  + (!(hready=1)) + ((X(hgrant1=1)) <-> (X (TRUE  * (X(hmaster0=1)))))));
+( (FALSE  + (!(hready=1)) + ((X(locked=1)) <-> (X (X(hmastlock=1))))));
+( (FALSE  + (!(X (!(X(start=1))))) + ((TRUE  * (!(X(hmaster0=1)))) <-> (X (TRUE  * (!(X(hmaster0=1))))))));
+( (FALSE  + (!(X (!(X(start=1))))) + ((TRUE  * (X(hmaster0=1))) <-> (X (TRUE  * (X(hmaster0=1)))))));
+( (FALSE  + (!(X (!(X(start=1))))) + ((X(hmastlock=1)) <-> (X (X(hmastlock=1))))));
+  
+  ###############
+  [spec_unit u3]
+  ###############
+  assume( (FALSE  + (!(TRUE  * (X(hmastlock=1)) * (TRUE  * (!(hburst0=1)) * (hburst1=1)) * (TRUE  * (!(X(hmaster0=1)))))) + (X (F (!(hbusreq0=1))))));
+  assume( (FALSE  + (!(TRUE  * (X(hmastlock=1)) * (TRUE  * (!(hburst0=1)) * (hburst1=1)) * (TRUE  * (X(hmaster0=1))))) + (X (F (!(hbusreq1=1))))));
+  assume( (F (hready=1))) * (G (FALSE  + (!(hlock0=1)) + (hbusreq0=1))) * (G (FALSE  + (!(hlock1=1)) + (hbusreq1=1)));
+  assume (!(hbusreq0=1)) * (!(hlock0=1)) * (!(hbusreq1=1)) * (!(hlock1=1)) * (!(hready=1));
+  
+( (FALSE  + (!(TRUE  * (X(decide=1)) * (X (X(hgrant0=1))))) + ((hlock0=1) <-> (X(locked=1)))));
+( (FALSE  + (!(TRUE  * (X(decide=1)) * (X (X(hgrant1=1))))) + ((hlock1=1) <-> (X(locked=1)))));
+( (FALSE  + (!(X(decide=1))) + ((X(hgrant0=1)) <-> (X (X(hgrant0=1))))));
+( (FALSE  + (!(X(decide=1))) + ((X(hgrant1=1)) <-> (X (X(hgrant1=1))))));
+( (FALSE  + (!(X(decide=1))) + ((X(locked=1)) <-> (X (X(locked=1))))));
+( (FALSE  + (!(hbusreq0=1)) + (F (FALSE  + (!(hbusreq0=1)) + (TRUE  * (!(X(hmaster0=1))))))));
+( (FALSE  + (!(hbusreq1=1)) + (F (FALSE  + (!(hbusreq1=1)) + (TRUE  * (X(hmaster0=1)))))));
+( (FALSE  + (X(hgrant1=1)) + (G (!(X(hgrant1=1)))) + ((!(X(hgrant1=1))) U (hbusreq1=1))));
+( (FALSE  + (!(X(decide=1))) + (hbusreq0=1) + (hbusreq1=1) + (X (X(hgrant0=1)))));
+  
+  group_order = FLAT;

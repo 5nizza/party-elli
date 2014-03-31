@@ -1,0 +1,93 @@
+# incr is:  hburst0,1 = 0,1
+# burst is: hburst0,1 = 1,1 
+# non-incr, non-burst means 'single' 
+
+###############
+#  [spec_unit u1]
+##############
+assume G ( ((hmastlock=1) * (hburst0=0) * (hburst1=1)) -> X (F (hbusreq0=0)));     # A1
+assume G ( ((hmastlock=1) * (hburst0=0) * (hburst1=1)) -> X (F (hbusreq1=0)));     # A1
+assume G (F (hready=1));    # A2
+assume G ((hlock0=1) -> (hbusreq0=1));     # A3
+assume G ((hlock1=1) -> (hbusreq1=1));     # A3
+assume (hbusreq0=0) * (hlock0=0) * (hbusreq1=0) * (hlock1=0) * (hready=0);    # A4
+
+#assume G(hbusreq0=0);
+#assume G(hlock0=0);
+#assume G(hlock1=0);   
+#assume G(hburst0=0);
+#assume G(hburst1=1);
+
+
+G ((hready=0) -> X (start=0));     # G1
+G (((hmastlock=1) * (hburst0=0)*(hburst1=1) * (start=1) * (Hmaster0=0)) -> X((start=0) W ((start=0) * (hbusreq0=0))));    # G2
+G (((hmastlock=1) * (hburst0=0)*(hburst1=1) * (start=1) * (Hmaster0=1)) -> X((start=0) W ((start=0) * (hbusreq1=0))));    # G2
+
+G (((hmastlock=1) * (hburst0=1)*(hburst1=1) * (start=1) * (hready=1)) 
+  ->
+  X(
+    (start=0) W 
+            ((start=0) * (hready=1) * X((start=0) W 
+                                                ((start=0)*(hready=1))))
+   )
+  );    # G3  REDUCED BURST!
+ 
+G (((hmastlock=1) * (hburst0=1)*(hburst1=1) * (start=1) * (hready=0)) 
+  ->  
+  X(
+    (start=0) W 
+            ((start=0) * (hready=1) * X((start=0) W 
+                                                ((start=0) * (hready=1) * X((start=0) W 
+                                                                                    ((start=0) * (hready=1))))))
+   )
+  );   # G3  REDUCED BURST!
+
+
+#  ###############
+#  [spec_unit u2]
+#  ###############
+#   assume (G ((!( (hmastlock=1) * ( (hburst0=0) * (hburst1=1)) * ( (Hmaster0=0)))) + (X (F (hbusreq0=0)))));    # A1
+#   assume (G ((!( (hmastlock=1) * ( (hburst0=0) * (hburst1=1)) * ( (Hmaster0=1)))) + (X (F (hbusreq1=0)))));    # A1
+#
+#  assume (G (F (hready=1)));
+#  assume (G ((hlock0=0) + (hbusreq0=1))); 
+#  assume (G ((hlock1=0) + (hbusreq1=1)));     # A2 & A3
+#  assume (hbusreq0=0) * (hlock0=0) * (hbusreq1=0) * (hlock1=0) * (hready=0);    # A4
+  
+G ((hready=1) -> ((hgrant0=1) <-> X(Hmaster0=0)));   # G4
+G ((hready=1) -> ((hgrant1=1) <-> X(Hmaster0=1)));   # G4
+
+G ((hready=1) -> ((locked=1) <-> X(hmastlock=1)));  # G5
+
+G (X(start=0) -> ((Hmaster0=1) <-> X(Hmaster0=1)));    # G6
+G (X(start=0) -> ((hmastlock=1) <-> X(hmastlock=1)));    # G6
+ 
+#  ###############
+#  [spec_unit u3]
+#  ###############
+#  assume (G ((!( (hmastlock=1) * ( (hburst0=0) * (hburst1=1)) * ( (Hmaster0=0)))) + (X (F (hbusreq0=0)))));
+#  assume (G ((!( (hmastlock=1) * ( (hburst0=0) * (hburst1=1)) * ( (Hmaster0=1)))) + (X (F (hbusreq1=0)))));
+#  assume (G (F (hready=1)));
+#  assume (G ((hlock0=0) + (hbusreq0=1))); 
+#  assume (G ((hlock1=0) + (hbusreq1=1)));     # A2 & A3
+#  assume (hbusreq0=0) * (hlock0=0) * (hbusreq1=0) * (hlock1=0) * (hready=0);    # A4
+  
+G (((decide=1) * X(hgrant0=1)) -> ((hlock0=1) <-> X(locked=1)));    # G7
+G (((decide=1) * X(hgrant1=1)) -> ((hlock1=1) <-> X(locked=1)));    # G7
+
+G ((decide=0) -> ((hgrant0=1) <-> X(hgrant0=1)));    # G8
+G ((decide=0) -> ((hgrant1=1) <-> X(hgrant1=1)));    # G8
+G ((decide=0) -> ((locked=1) <-> X(locked=1)));     # G8
+
+G ((hbusreq0=1) -> F((hbusreq0=0) + (Hmaster0=0)));    # G9
+G ((hbusreq1=1) -> F((hbusreq1=0) + (Hmaster0=1)));    # G9
+
+G ((hgrant1=0) -> ((hgrant1=0) W (hbusreq1=1)));   # G10
+G (((decide=1) * (hbusreq0=0) * (hbusreq1=0)) -> X(hgrant0=1));    # G10
+
+(decide=1);    # G11
+(start=1);    # G11
+(hgrant0=1);    # G11
+(Hmaster0=0);    # G11
+(hmastlock=0);    # G11
+(hgrant1=0);    # G11
