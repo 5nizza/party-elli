@@ -17,8 +17,7 @@ class ConverterToWringVisitor(Visitor):
         return str(number)
 
     def visit_forall(self, node:ForallExpr):
-        # assert 0, str(node)
-        return self.dispatch(node.arg2)
+        assert 0
 
     def visit_unary_op(self, unary_op:UnaryOp):
         arg = self.dispatch(unary_op.arg)
@@ -35,7 +34,7 @@ class ConverterToWringVisitor(Visitor):
             return '({arg1} {op} {arg2})'.format(arg1=arg1, arg2=arg2, op=binary_op.name)
 
     def visit_tuple(self, node:tuple):
-        assert 0, str(node)
+        assert 0
 
     def visit_bool(self, bool_const:Bool):
         return str(bool_const).upper()
