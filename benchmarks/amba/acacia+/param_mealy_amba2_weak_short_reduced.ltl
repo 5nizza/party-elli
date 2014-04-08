@@ -1,0 +1,121 @@
+#variable 'active' is always present
+#variable 'tok' is always present
+
+[INPUT_VARIABLES]
+# hready,hburst[0,1] are really global variables 
+
+# incr is:  hburst0,1 = 0,1
+# burst is: hburst0,1 = 1,1 
+# non-incr, non-burst means 'single' 
+hready;
+hbusreq;
+hburst0;
+hburst1;
+hlock0;
+hlock1;
+
+
+[OUTPUT_VARIABLES]
+# hmastlock,hmaster[0..n],locked,decide,start are really global variables
+# all except hmaster can be modeled as an "or" over local variables
+# hmaster can be modeled as a special variable that gives the value/id of the unique process for which local variable is high
+# in this variant, we LOCALIZE all auxiliary variables 
+hmastlock;
+hmaster;
+hgrant;
+start;
+decide;
+locked;
+
+
+[ASSUMPTIONS]
+
+# A1: hbusreq is eventually lowered -- TODO: slightly different from the original one!
+Forall (i) G ( (hmastlock_i=1 * hburst0_i=0 * hburst1_i=1 * hmaster_i=1) -> X (F (hbusreq_i=0)));
+
+# A2: hready will eventually be high
+Forall (i) G (F (hready_i=1));
+
+# A3: hlock is low if hbusreq is low
+Forall (i) G ((hlock_i=1) -> (hbusreq_i=1));
+
+# A4: initial inputs are all low 
+Forall (i) (hbusreq_i=0) * (hlock0_i=0) * (hlock1_i=0) * (hready_i=0);
+
+######## SHORTCUT TO REMOVE SOME OF GUARANTEES  ######
+#  assume G(hbusreq0=0);
+# Forall (i) G(hlock_i=0);
+#  assume G(hlock1=0);   
+# assume G(hburst0=0);
+# assume G(hburst1=1);
+
+# We cannot use this version because G9: G(req -> F(grant or !reg)) which becomes trivially satisfied
+# assume (G (F (hbusreq0=0)));
+# assume (G (F (hbusreq1=0)));
+
+
+[GUARANTEES]
+
+# G1: start is never high when hready is low
+Forall (i) 
+G ((hready_i=0 * active_i=1) -> X (start_i=0));
+
+# G2: incremental bursts last until hbusreq is lowered
+Forall (i) 
+G ((hmastlock_i=1 * hburst0_i=0 * hburst1_i=1 * start_i=1 * active_i=1) 
+  -> 
+  X ((start_i=0) W (start_i=0 * hbusreq_i=0 * active_i=1)));
+
+
+# G3: burst4 lasts until we have seen 3/4 hready signals
+# for easy realizability, REDUCED to 2/3 hready signals
+Forall (i) 
+G ((hmastlock_i=1 * hburst0_i=1 * hburst1_i=1 * start_i=1 * hready_i=1 * active_i=1) 
+  ->
+  X(
+    (start_i=0) W 
+            (start_i=0 * hready_i=1 * active_i=1 * X((start_i=0) W 
+                                                (start_i=0 * active_i=1 * hready_i=1)))
+   )
+  );
+
+Forall (i) 
+G ((hmastlock_i=1 * hburst0_i=1 * hburst1_i=1 * start_i=1 * hready_i=0 * active_i=1) 
+  ->
+  X(
+    (start_i=0) W 
+            (start_i=0 * hready_i=1 * active_i=1 * X((start_i=0) W 
+                                                (start_i=0 * hready_i=1 * active_i=1 * X((start_i=0) W 
+                                                (start_i=0 * active_i=1 * hready_i=1)))))
+   )
+  );
+
+# G4: update hmaster on hready
+Forall (i) G ((hready_i=1 * active_i=1) -> ((hgrant_i=1) <-> X(hmaster_i=1)));
+
+# G5: update locked on hready
+Forall (i) G ((hready_i=1 * active_i=1) -> ((locked_i=1) <-> X(hmastlock_i=1)));
+
+# G6: set start if we change hmaster or hmastlock 
+Forall (i) G (X(start_i=0) -> ((hmaster_i=1) <-> X(hmaster_i=1)));
+Forall (i) G (X(start_i=0) -> ((hmastlock_i=1) <-> X(hmastlock_i=1)));
+
+# G7: if we give a new hgrant, need to update locked with input hlock (OPTIMIZE: can we remove active from here?)
+Forall (i) G ((decide_i=1 * active_i=1 * X(hgrant_i=1)) -> ((hlock_i=1) <-> X(locked_i=1)));
+
+# G8: set decide if we change hgrant or locked 
+Forall (i) G ((decide_i=0) -> ((hgrant_i=1) <-> X(hgrant_i=1))); 
+Forall (i) G ((decide_i=0) -> ((locked_i=1) <-> X(locked_i=1)));
+
+# G9: every hbusreq is either lowered or answered
+Forall (i) G ((hbusreq_i=1) -> F((hbusreq_i=0) + (hmaster_i=1)));
+
+# G10: no grants without requests (without exception for now)
+# (exception can be modeled with additional input "no_hbusreq" and synthesis of a special process template for process 0)
+Forall (i) G ((hgrant_i=0) -> ((hgrant_i=0) W (hbusreq_i=1)));
+
+# G11: initial output values (again, no exceptions for now)
+Forall (i) (decide_i=1 * start_i=1 * hgrant_i=0 * hmaster_i=0 * hmastlock_i=0);
+
+# additional token guarantee: only give hgrant if we have token
+Forall (i) G (hgrant_i=1 -> tok_i=1);
