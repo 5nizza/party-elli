@@ -256,8 +256,6 @@ def strengthen(property:SpecProperty, ltl2ucw_converter) -> (list, list):
 
     denormalized_props = _get_denormalized_property(property)
     for p in denormalized_props:
-        print('denormalized property p: ' + str(p))
-        print()
         #: :type: SpecProperty
         p = p
 
