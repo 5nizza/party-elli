@@ -2,6 +2,10 @@ from collections import Iterable
 import math
 
 
+def stripped_tokens(list_of_tokens) -> []:
+    return [t.strip() for t in list_of_tokens if t.strip()]
+
+
 def to_str(enumerable:Iterable) -> str:
     return ', '.join(map(str, enumerable))
 
