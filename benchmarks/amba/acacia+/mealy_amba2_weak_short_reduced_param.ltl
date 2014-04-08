@@ -1,0 +1,99 @@
+# In this example mutual exclusion 
+#   is achieded by assuring that grants can be high only in states with token
+
+#no support of global variables => all the variables are assumed to be indexed!
+
+#variable 'active' is always present
+#variable 'tok' is always present
+
+
+[INPUT_VARIABLES] 
+# hready,hburst[0,1] are really global variables 
+hready;hbusreq;hburst0;hburst1;hlock; 
+
+[OUTPUT_VARIABLES]
+# hmastlock,hmaster[0..n],locked,decide,start are really global variables
+# all except hmaster can be modeled as an "or" over local variables
+# hmaster can be modeled as a special variable that gives the value/id of the unique process for which local variable is high
+# in this variant, we LOCALIZE all auxiliary variables  
+hmastlock;hmaster;hgrant;locked;decide;start;
+
+[ASSUMPTIONS]
+
+# A1: hbusreq is eventually lowered
+Forall (i) G ( ((hmastlock_i=1) * (hburst0_i=0) * (hburst1_i=1)) -> X (F (hbusreq_i=0)));
+
+# A2: hready will eventually be high
+Forall (i) G (F (hready_i=1));
+
+# A3: hlock is low if hbusreq is low
+Forall (i) G ((hlock_i=1) -> (hbusreq_i=1));
+
+# A4: initial inputs are all low 
+Forall (i) (hbusreq_i=0) * (hlock_i=0) * (hready_i=0);
+
+# additional token assumption: will eventually receive token (NEEDED?)
+ Forall (i) (G (F (tok_i=1)));
+
+[GUARANTEES]
+
+# G1: start must follow ready (???)
+Forall (i) G ((hready_i=0 * active_i=1) -> X (start_i=0));
+
+# G2: incremental bursts last until hbusreq is lowered
+Forall (i) G (((hmastlock_i=1) * (hburst0_i=0) * (hburst1_i=1) * (start_i=1) * (hmaster_i=1) * (active_i=1)) -> X ((start_i=0) W ((start_i=0) * (hbusreq_i=0) * (active_i=1))));
+
+# G3: burst4 lasts until we have seen 3/4 hready signals
+# for easy realizability, REDUCED to 2/3 hready signals
+Forall (i) G (((hmastlock_i=1) * (hburst0_i=1)*(hburst1_i=1) * (start_i=1) * (hready_i=1) * active_i=1) 
+  ->
+  X(
+    (start_i=0) W 
+            ((start_i=0) * (hready_i=1) * active_i=1 * X((start_i=0) W 
+                                                ((start_i=0) * active_i=1 * (hready_i=1))))
+   )
+  );
+
+Forall (i) G (((hmastlock_i=1) * (hburst0_i=1)*(hburst1_i=1) * (start_i=1) * (hready_i=0) * active_i=1) 
+  ->
+  X(
+    (start_i=0) W 
+            ((start_i=0) * (hready_i=1) * active_i=1 * X((start_i=0) W 
+                                                ((start_i=0) * (hready_i=1) * active_i=1 * X((start_i=0) W 
+                                                ((start_i=0) * active_i=1 * (hready_i=1))))))
+   )
+  );
+
+# G4: update hmaster on hready
+Forall (i) G ((hready_i=1 * active_i=1) -> ((hgrant_i=1) <-> X(hmaster_i=1)));
+
+# G5: update locked on hready
+Forall (i) G ((hready_i=1 * active_i=1) -> ((locked_i=1) <-> X(hmastlock_i=1)));
+
+# G6: set start if we change hmaster or hmastlock (CHECK: do not need active_i?)
+Forall (i) G (X(start_i=0) -> ((hmaster_i=1) <-> X(hmaster_i=1)));
+Forall (i) G (X(start_i=0) -> ((hmastlock_i=1) <-> X(hmastlock_i=1)));
+
+# G7: if we give a new hgrant, need to update locked with input hlock
+Forall (i) G (((decide_i=1) * active_i=1 * X(hgrant0=1)) -> ((hlock_i=1) <-> X(locked_i=1)));
+
+# G8: set decide if we change hgrant or locked (CHECK: do not need active_i?)
+Forall (i) G ((decide_i=0) -> ((hgrant_i=1) <-> X(hgrant_i=1))); 
+Forall (i) G ((decide_i=0) -> ((locked_i=1) <-> X(locked_i=1)));
+
+# G9: every hbusreq is either lowered or answered
+Forall (i) G ((hbusreq_i=1) -> F((hbusreq_i=0) + (hmaster_i=1)));
+
+# G10: no grants without requests (without exception for now)
+# (exception can be modeled with additional input "no_hbusreq" and synthesis of a special process template for process 0)
+Forall (i) G ((hgrant_i=0) -> ((hgrant_i=0) W (hbusreq_i=1)));
+
+# G11: initial output values (again, no exceptions for now)
+Forall (i) (decide_i=1 * start_i=1 * hgrant_i=0 * hmaster_i=0 * hmastlock_i=0)
+
+# additional token guarantee: only give hgrant if we have token
+Forall (i) G (hgrant_i=1 -> tok_i=1);
+
+# additional token guarantee: eventually release token (NEEDED?)
+Forall (i) ((G F active_i=1) -> (G F tok_i=0));  
+
