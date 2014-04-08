@@ -88,6 +88,7 @@ def to_dot(automaton) -> str:
                 edge_is_labelled = False
 
                 for dst, is_rejecting in flagged_states:
+
                     edge_label_add = ''
                     if not edge_is_labelled:
                         edge_label_add = ', label="{0}"'.format(label_to_short_string(label))
@@ -133,7 +134,7 @@ def get_relevant_edges(var_values, spec_state):
 
     for label, dst_set_list in spec_state.transitions.items():
         if not satisfied(label, var_values):
-            continue  # consider only edges with labels that are satisfied by current signal values
+            continue #consider only edges with labels that are satisfied by current signal values
 
         relevant_edges.extend(dst_set_list)
 
