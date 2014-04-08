@@ -29,7 +29,7 @@ tokens = ['COMMA', 'SIGNAL_NAME', 'NUMBER', 'BOOL',
 #             list(reserved_bools.values()) #i use BOOL currently
 
 #constant to ensure consistency of the code
-BIN_OPS = ('+', '*', '->', '<->', '=', 'U')  # TODO: what about Forall?
+BIN_OPS = ('+', '*', '->', '<->', '=', 'U', 'W')  # TODO: what about Forall?
 
 ############################################################
 t_OR = r'\+'
@@ -63,7 +63,8 @@ def t_TEMPORAL_UNARY(t):
 
 
 def t_TEMPORAL_BINARY(t):
-    r"""U(?=[ \t\n]*\()"""  # temporal operators require parenthesis
+    # r"""U(?=[ \t\n]*\()"""  # temporal operators require parenthesis
+    r"""(U|W)(?=[ \t\n])"""  # temporal operators require parenthesis
     return t
 
 
