@@ -17,7 +17,7 @@ from interfaces.parser_expr import Bool, Expr
 from interfaces.spec import SpecProperty, and_properties, expr_from_property
 from module_generation.dot import moore_to_dot, to_dot
 from spec_optimizer.optimizations import localize, strengthen, inst_property, apply_log_bit_scheduler_optimization, \
-    RemoveSchedulerSignalsVisitor
+    RemoveSchedulerSignalsVisitor, strengthen_many
 from parsing import par_parser
 from parsing.par_lexer_desc import PAR_INPUT_VARIABLES, PAR_OUTPUT_VARIABLES, PAR_ASSUMPTIONS, PAR_GUARANTEES
 from synthesis import par_model_searcher
@@ -135,18 +135,6 @@ def _join_properties(properties:Iterable):
     return SpecProperty(all_ass, all_gua)
 
 
-def _strengthen_many(properties:list, ltl2ucw_converter) -> (list, list):
-    """ Return [a_s -> g_s], [a_s & a_l -> g_l]
-    """
-    pseudo_safety_properties, pseudo_liveness_properties = [], []
-    for p in properties:
-        safety_props, liveness_props = strengthen(p, ltl2ucw_converter)
-        pseudo_safety_properties += safety_props
-        pseudo_liveness_properties += liveness_props
-
-    return pseudo_safety_properties, pseudo_liveness_properties
-
-
 def _replace_sched_in_expr_by_true(e:Expr, scheduler) -> Expr:
     return RemoveSchedulerSignalsVisitor(scheduler).do(e)
 
@@ -187,7 +175,7 @@ def _get_automatae(assumptions, guarantees,
     if OPTS[optimization] >= OPTS[STRENGTH]:
         logger.info('strengthening properties..')
 
-        pseudo_safety_properties, pseudo_liveness_properties = _strengthen_many(properties, ltl2ucw_converter)
+        pseudo_safety_properties, pseudo_liveness_properties = strengthen_many(properties, ltl2ucw_converter)
         properties = pseudo_safety_properties + pseudo_liveness_properties
 
         logger.info('strengthening resulted in pseudo_safety_properties (a_s -> g_s):\n%s\n',
