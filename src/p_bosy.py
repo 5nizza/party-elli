@@ -319,7 +319,8 @@ def main(spec_text,
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Parametrized Synthesis of Token Rings')
     parser.add_argument('ltl', metavar='ltl', type=FileType(),
-                        help='LTL file with parameterized specification')
+                        help='LTL file with parameterized specification'
+                             ' (see par_parser_desc.py:precedence for priorities of operators)')
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--moore', action='store_true', required=False,

@@ -1,6 +1,3 @@
-from interfaces.parser_expr import QuantifiedSignal
-
-
 class FuncDescription:
     def __init__(self, func_name,
                  type_by_arg:dict,

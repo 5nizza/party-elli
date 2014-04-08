@@ -365,7 +365,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Bounded Synthesis Tool')
     parser.add_argument('ltl', metavar='ltl', type=argparse.FileType(),
                         help='loads the LTL formula from the given input file, '
-                             'also assumes existence of file with .part extension')
+                             'assumes the existence of file with .part extension'
+                             ' (see acacia_parser_desc.py:precedence for priorities of operators)')
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--moore', action='store_true', required=False,

@@ -35,7 +35,7 @@ class LabelsMap:
 
     def __iter__(self):
         print()
-        return iter([l for (l,v) in self._value_by_label])
+        return iter([l for (l, v) in self._value_by_label])
 
     def __contains__(self, item):
         try:
@@ -52,32 +52,33 @@ class LabelsMap:
 ################################################################################
 
 import unittest
+
+
 class Test(unittest.TestCase):
     def test_map_getitem(self):
         label_map = LabelsMap()
 
-        label_map[Label({'a':False, 'b':False})] = True
+        label_map[Label({'a': False, 'b': False})] = True
 
-        assert Label({'a':False, 'b':False}) in label_map
-        assert label_map[Label({'a':False, 'b':False})] == True
+        assert Label({'a': False, 'b': False}) in label_map
+        assert label_map[Label({'a': False, 'b': False})] == True
 
-        assert Label({'a':False, 'b':False, 'c':False}) in label_map
-        assert label_map[Label({'a':False, 'b':False, 'c':False})] == True
+        assert Label({'a': False, 'b': False, 'c': False}) in label_map
+        assert label_map[Label({'a': False, 'b': False, 'c': False})] == True
 
-        assert Label({'a':True, 'b':False}) not in label_map
-        assert Label({'a':True}) not in label_map
-
+        assert Label({'a': True, 'b': False}) not in label_map
+        assert Label({'a': True}) not in label_map
 
     def test_map_setitem(self):
         map = LabelsMap()
 
-        map[Label({'a':True})] = True
-        assert map[Label({'a':True})] == True
+        map[Label({'a': True})] = True
+        assert map[Label({'a': True})] == True
 
-#        map[Label({'a':True})] = False
-#        assert map[Label({'a':True})] == False
+        #        map[Label({'a':True})] = False
+        #        assert map[Label({'a':True})] == False
 
-        assert Label({'a':True, 'c':True}) in map
+        assert Label({'a': True, 'c': True}) in map
 
         assert Label({}) not in map
 

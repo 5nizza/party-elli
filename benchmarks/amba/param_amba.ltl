@@ -1,0 +1,276 @@
+#TODO: check that active_i variables inserted where necessary -- to achieve this use cutoffs bigger than 2
+
+# CURRENT STATUS
+# I believe it works now.
+# The spec is not optimal -- it can be optimized for smaller model sizes (and faster replies).
+
+
+[INPUT_VARIABLES]
+#variable 'active' is always present
+
+sready;
+
+mbusreq; 
+
+mlocked;
+# mburst;  # if low => one tick request or non-interruptible locked request
+# TODO: supported combinations:
+# - mlocked, mburst
+# - !mlocked, !mburst
+# - mlocked, !mburst 
+
+
+[OUTPUT_VARIABLES]
+# TODO: check which other variables to add
+
+rcvtok; # just received the token, used to kickoff the granting process
+agrant;
+
+#auxiliary variables to ease to make specification readable
+#they are like bits of the memory: the actual output may be mealy-dependent(?check?) on them
+auxonegrant;
+auxlockedincr;
+
+
+[ASSUMPTIONS]
+# TODO: doesn't look fair? -- we tailored the spec to Token Rings
+
+# "Every master lowers request at some point"
+Forall(i) 
+G(F(mbusreq_i=0));
+
+# "Every slave raises 'sready' at some point"
+Forall(i) 
+G(F(sready_i=1));
+
+# Otherwise the dead4 guarantee for locked incremental will fail.
+Forall(i)
+G(F(sready_i=1 * mbusreq_i=0));
+
+[GUARANTEES]
+## initially
+Forall(i) 
+auxonegrant_i=0 * 
+auxlockedincr_i=0 * 
+agrant_i=0;
+# rcvtok_i=0 <-> tok_i=0;
+# we don't set init value of rcv tok
+
+
+## Mutual exclusion in token rings: "grant only when possess the token"
+Forall(i)
+G (agrant_i=1 -> tok_i=1);
+
+Forall(i)
+G (X(rcvtok_i=1) <-> (X(tok_i=1) * tok_i=0));
+
+## Setting aux variables 
+# Note: later updates rewrite aux values
+# Note: when granting ignore requests
+Forall(i) 
+G ( active_i=1 * mbusreq_i=1 * mlocked_i=0 * X(agrant_i=0) -> 
+    X (auxonegrant_i=1 * auxlockedincr_i=0) # can use X due to active_i 
+);
+
+Forall(i) 
+G ( active_i=1 * mbusreq_i=1 * mlocked_i=1 * X(agrant_i=0) -> 
+    X (auxonegrant_i=0 * auxlockedincr_i=1)
+);
+
+# no spurious aux risings
+Forall(i)
+!F ( (active_i=1 * auxonegrant_i=0 * mbusreq_i=0) *   # we need to ensure at least on tick with zero values
+    ((auxonegrant_i=0 * mbusreq_i=0) U (auxonegrant_i=1)) );
+
+Forall(i)
+!F ( (active_i=1 * auxlockedincr_i=0 * mbusreq_i=0) * 
+     ((auxlockedincr_i=0 * mbusreq_i=0) U (auxlockedincr_i=1) ));
+
+
+# TODO: add: no spurious lowering of aux variables when has no token??
+
+## Granting based on aux variables, and clearing aux
+# TODO: hm, we lose ticks here
+Forall(i)
+!F(auxonegrant_i=1 * X(rcvtok_i=1) * 
+  X((auxonegrant_i=0 * agrant_i=1 * sready_i=0) 
+    U
+    (auxonegrant_i=1 + agrant_i=0)
+  )
+);
+Forall(i)
+!F(auxonegrant_i=1 * X(rcvtok_i=1) * 
+  X((auxonegrant_i=0 * agrant_i=1 * sready_i=0)
+    U
+    (auxonegrant_i=0 * agrant_i=1 * sready_i=1 * X(agrant_i=1))
+  )
+);
+
+# welcome to the hell: "every burst4 request is granted three times, 'granted' means agrant_i=1 * sready_i=1"
+# TODO: replace with four ticks
+# Forall(i)
+# G(F(sready_i=1)) ->
+# G ( auxlockedburstgrant_i=1 * tok_i=1 ->
+#     X(agrant_i=1 * auxlockedburstgrant_i=0 * 
+#       ((agrant_i=1 * auxlockedburstgrant_i=0) 
+#       U 
+#       (sready_i=1 * 
+#         X(agrant_i=1 * auxlockedburstgrant_i=0 * 
+#           ((agrant_i=1 * auxlockedburstgrant_i=0) 
+#           U 
+#           ( sready_i=1 * X(agrant_i=0)
+#           )
+#           )
+#          )
+#       )
+#       )
+#      )
+#   );i
+# TODO: not sure that Until version _requires_ to have _exactly_ X ticks
+# Forall(i)
+# G(F(sready_i=1)) ->
+# G ( auxlockedburstgrant_i=1 * tok_i=1 ->
+#     X(agrant_i=1 * auxlockedburstgrant_i=0 * 
+#       ((agrant_i=1 * auxlockedburstgrant_i=0) 
+#       U 
+#       (sready_i=1 * 
+#         X(agrant_i=1 * auxlockedburstgrant_i=0 * 
+#           ((agrant_i=1 * auxlockedburstgrant_i=0) 
+#           U 
+#           (sready_i=1 * 
+#             X(agrant_i=1 * auxlockedburstgrant_i=0 * 
+#               ((agrant_i=1 * auxlockedburstgrant_i=0) 
+#               U 
+#               (sready_i=1 * X(agrant_i=0)))
+#              )
+#           )
+#           )
+#          )
+#       )
+#       )
+#      )
+#   );
+
+
+# Forall(i) 
+# G ( auxlockedburstgrant_i=1 * tok_i=1 ->
+#     X(agrant_i=1 * auxlockedburstgrant_i=0) *
+#     X(X(agrant_i=1 * auxlockedburstgrant_i=0)) * 
+#     X(X(X(agrant_i=1 * auxlockedburstgrant_i=0))) * 
+#     X(X(X(X(agrant_i=0)))));
+
+# Forall(i) 
+# G ( auxlockedburstgrant_i=1 * tok_i=1 ->
+#     X(agrant_i=1 * auxlockedburstgrant_i=0) *
+#     X(X(agrant_i=1 * auxlockedburstgrant_i=0)) * 
+#     X(X(X(agrant_i=0))));
+
+# dead 1
+# Forall(i)
+# !F(auxlockedburstgrant_i=1 * tok_i=1 *
+#   X((auxlockedburstgrant_i=0 * agrant_i=1 * sready_i=0) 
+#     U
+#     (!(auxlockedburstgrant_i=0 * agrant_i=1))
+#   )
+# );
+
+# # dead 2
+# Forall(i)
+# !F(auxlockedburstgrant_i=1 * tok_i=1 *
+#   X(
+#     (auxlockedburstgrant_i=0 * agrant_i=1 * sready_i=0) 
+#     U
+#     (auxlockedburstgrant_i=0 * agrant_i=1 * sready_i=1 * 
+#       X(
+#         (auxlockedburstgrant_i=0 * agrant_i=1 * sready_i=0) 
+#         U
+#         (!(auxlockedburstgrant_i=0 * agrant_i=1))
+#       )
+#     )
+#   )
+# );
+# # dead 3
+# Forall(i)
+# !F(auxlockedburstgrant_i=1 * tok_i=1 *
+#   X((auxlockedburstgrant_i=0 * agrant_i=1 * sready_i=0) 
+#     U
+#     (auxlockedburstgrant_i=0 * agrant_i=1 * sready_i=1 * 
+#       X(
+#         (auxlockedburstgrant_i=0 * agrant_i=1 * sready_i=0) 
+#         U
+#         (auxlockedburstgrant_i=0 * agrant_i=1 * sready_i=1 * X(agrant_i=1))
+#       )
+#     )
+#   )
+# );
+
+
+
+
+
+# TODO: do we need assumption 'mbusreq_i -> mbusreq_i=1 U agrant_i=1'?
+# TODO: add 'mbusreq_i -> everything is reset'?
+# dead 1
+Forall(i)
+!F(auxlockedincr_i=1 * X(rcvtok_i=1) * 
+  X(
+    (auxlockedincr_i=0 * agrant_i=1 * mbusreq_i=1) 
+    U
+    (auxlockedincr_i=1 + agrant_i=0)
+  )
+);
+
+# dead 2
+Forall(i)
+!F(auxlockedincr_i=1 * X(rcvtok_i=1) * 
+  X(
+    (auxlockedincr_i=0 * agrant_i=1 * mbusreq_i=1) 
+    U
+    ( (auxlockedincr_i=0 * agrant_i=1 * sready_i=0 * mbusreq_i=0) * 
+      (
+        (auxlockedincr_i=0 * agrant_i=1 * sready_i=0)
+        U
+        (auxlockedincr_i=1 + agrant_i=0)
+      )
+    )
+  )
+);
+
+# dead 3
+Forall(i)
+!F(auxlockedincr_i=1 * X(rcvtok_i=1) * 
+  X((auxlockedincr_i=0 * agrant_i=1 * mbusreq_i=1) 
+    U
+    ( (auxlockedincr_i=0 * agrant_i=1 * sready_i=0 * mbusreq_i=0) * 
+      (
+        (auxlockedincr_i=0 * agrant_i=1 * sready_i=0)
+        U
+        (auxlockedincr_i=0 * agrant_i=1 * sready_i=1 * X(agrant_i=1))
+      )
+    )
+  )
+);
+
+# dead 4
+Forall(i)
+!F(auxlockedincr_i=1 * X(rcvtok_i=1) * 
+  X(
+    (auxlockedincr_i=0 * agrant_i=1 * mbusreq_i=1) 
+    U
+    ( auxlockedincr_i=0 * agrant_i=1 * sready_i=1 * mbusreq_i=0 * X(agrant_i=1) )
+  )
+);
+
+
+# no spurious grants
+Forall(i)
+!F( (auxonegrant_i=0 * auxlockedincr_i=0 * agrant_i=0) * 
+    ((auxonegrant_i=0 * auxlockedincr_i=0 * agrant_i=0) 
+     U 
+     (agrant_i=1)
+    )
+);
+
+# # TODO: try this shorter version
+# Forall(i)
+# !F( auxlockedburstgrant_i=0 * auxonegrant_i=0 * auxlockedincr_i=0 * agrant_i=0 * X(agrant_i=1) );

@@ -71,14 +71,14 @@ def _instantiate(spec_text):
 
 if __name__ == '__main__':
     if len(sys.argv) != 4:
-        print('Provide <parameterized spec> <the number of clients> and <output file prefix>')
+        print('Provide <parameterized spec> <the number of processes> and <output file prefix>')
         exit(0)
 
     spec = open(sys.argv[1]).read()
     nof_processes = int(sys.argv[2])
     out_file_prefix = sys.argv[3]
 
-    assert nof_processes > 1, 'should be at least two clients: ' + str(nof_processes)
+    assert nof_processes > 1, 'should be at least two processes: ' + str(nof_processes)
 
     input_signals, output_signals, assumptions, guarantees = _instantiate(spec)
 

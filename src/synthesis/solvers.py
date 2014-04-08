@@ -156,6 +156,8 @@ class Z3_Smt_NonInteractive_ViaFiles(SmtSolverWithQueryStorageAbstract):
         #change the name of file and z3_cmd if necessary
         ret, out, err = execute_shell(self._z3_cmd)
 
+        self._logger.debug('solver returned: \n' + out)
+
         out_lines = [s.strip() for s in out.splitlines() if s]
         if ret == 1 and out_lines[0].strip() != 'unsat':
             assert 0, 'error while executing z3: ret: {ret}\n' \

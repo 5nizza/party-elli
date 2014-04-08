@@ -2,6 +2,7 @@ from functools import lru_cache
 from itertools import chain
 import logging
 from helpers.parameterized2monolithic import ConverterToWringVisitor
+from helpers.automata_helper import to_dot
 from helpers.shell import execute_shell
 from interfaces.automata import Automaton
 from interfaces.parser_expr import UnaryOp, Expr, Signal
@@ -48,4 +49,7 @@ class Ltl2UCW:
         _assert_are_signals_in_labels(list(chain(*initial_nodes)) + rejecting_nodes + nodes)
 
         automaton = Automaton(initial_nodes, rejecting_nodes, nodes, name=str(property_in_ltl2ba_format))
+
+        self._logger.debug(to_dot(automaton))
+
         return automaton

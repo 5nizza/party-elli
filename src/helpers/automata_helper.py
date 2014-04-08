@@ -92,14 +92,17 @@ def to_dot(automaton) -> str:
                     if not edge_is_labelled:
                         edge_label_add = ', label="{0}"'.format(label_to_short_string(label))
                         edge_is_labelled = True
+
                     trans_dot.append('"{0}" -> "{1}" [color={2}{3}, arrowhead="{4}"];'.format(
                         n.name, dst.name, color, edge_label_add, ['normal', 'normalnormal'][is_rejecting]))
 
                 trans_dot.append('\n')
+
     dot_lines = ['digraph "automaton" {'] + \
                 init_header + ['\n'] + \
                 rej_header + ['\n'] + \
                 trans_dot + ['}']
+
     return '\n'.join(dot_lines)
 
 

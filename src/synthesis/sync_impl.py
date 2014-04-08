@@ -5,6 +5,7 @@ from synthesis.func_description import FuncDescription
 from synthesis.smt_helper import op_and, op_not, op_implies, forall_bool, build_signals_values, call_func
 
 
+# TODO: add intermediate base class: BlankImpl -> BaseParImpl -> [ParImpl, SyncImpl] and move common code there
 class SyncImpl(BlankImpl):  # TODO: This class was never tested separately from ParImpl.
     """
     Class method "get_architecture_trans_assumption" returns G(tok -> !sends_prev).
@@ -25,14 +26,16 @@ class SyncImpl(BlankImpl):  # TODO: This class was never tested separately from 
 
                  sends_prev_signal,
                  tau_name,
-                 init_process_states):
+                 init_process_states,
+                 underlying_solver):
 
         if not init_process_states:
+            # possible if no global automata
             s1 = self.get_state_name(sys_state_type, 1)
             s0 = self.get_state_name(sys_state_type, 0)
             init_process_states = [s1, s0]
 
-        super().__init__(is_mealy)
+        super().__init__(is_mealy, underlying_solver)
 
         self._tau_name = tau_name
         self._has_tok_signal = has_tok_signal
@@ -189,10 +192,24 @@ class SyncImpl(BlankImpl):  # TODO: This class was never tested separately from 
 
         return smt_lines
 
-    def get_architecture_requirements(self):
-        #TODO: 'One process only possesses the token initially' is added by ParImpl
+    def _get_init_condition_on_tokens(self):
+        conditions = StrAwareList()
 
-        smt_lines = self._get_tok_rings_safety_props()
+        states = self.states_by_process[0]
+        s0, s1 = states[0], states[1]
+
+        tok_func_desc = self.outvar_desc_by_process[0][self._has_tok_signal]
+
+        conditions += self.underlying_solver.call_func(tok_func_desc, {self.state_arg_name: s1})
+        conditions += self.underlying_solver.op_not(self.underlying_solver.call_func(tok_func_desc,
+                                                                                       {self.state_arg_name: s0}))
+        return conditions
+
+    def get_architecture_requirements(self):
+        #TODO: init condition is probably repeating
+
+        smt_lines = self._get_init_condition_on_tokens()
+        smt_lines += self._get_tok_rings_safety_props()
 
         return smt_lines
 

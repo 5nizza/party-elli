@@ -84,6 +84,42 @@ class ParModelSearcher:
         found_model = encoding_solver.solve(impl)
         return found_model
 
+    def _get_init_process_states(self, global_automaton_cutoff_pairs, max_size):
+        if not global_automaton_cutoff_pairs:
+            return None
+
+        automaton, nof_processes = global_automaton_cutoff_pairs[0]
+        automaton_index = 0
+
+        sys_intern_funcs_postfix = self._get_glob_sys_intern_func_postfix(automaton_index)
+
+        par_impl = self._get_par_impl(automaton,
+                                      max_size,
+                                      nof_processes,
+                                      sys_intern_funcs_postfix)
+
+        init_process_states = set(states[0] for states in par_impl.init_states)
+
+        return init_process_states
+
+    # TODO: bureaucracy in coding.. simplify
+    def _encode_headers(self, max_model_size,
+                        sync_automaton,
+                        global_automaton_cutoff_pairs):
+        init_process_states = self._get_init_process_states(global_automaton_cutoff_pairs, max_model_size)
+        self._encode_local_headers(max_model_size, init_process_states, sync_automaton)
+
+        for i, (automaton, nof_processes) in enumerate(global_automaton_cutoff_pairs):
+            self._encode_global_headers(automaton, i, max_model_size, nof_processes)
+
+    def _get_glob_spec_state_type(self, automaton_index:int) -> str:
+        spec_states_type = 'Q' + str(automaton_index)
+        return spec_states_type
+
+    def _get_glob_sys_intern_func_postfix(self, automaton_index:int) -> str:
+        sys_intern_funcs_postfix = '_' + str(automaton_index)
+        return sys_intern_funcs_postfix
+
     @log_entrance(logging.getLogger(), logging.INFO)
     def search(self,  # TODO: careful with incrementality: nof_states >= 2
                logic,
@@ -112,7 +148,8 @@ class ParModelSearcher:
 
         last_size = 0
         for size in process_model_bounds:
-            cur_all_states = [BlankImpl(False).get_state_name(self._SYS_STATE_TYPE, s)  # TODO: hack
+            # TODO: that is a hack!
+            cur_all_states = [BlankImpl(False, self._underlying_solver).get_state_name(self._SYS_STATE_TYPE, s)
                               for s in range(size)]
             new_states = cur_all_states[last_size:]
             already_encoded_states = cur_all_states[:last_size]
@@ -138,42 +175,6 @@ class ParModelSearcher:
             encoding_solver.pop()
 
         return None
-
-    # TODO: bureaucracy in coding.. simplify
-    def _get_init_process_states(self, global_automaton_cutoff_pairs, max_size):
-        if not global_automaton_cutoff_pairs:
-            return None
-
-        automaton, nof_processes = global_automaton_cutoff_pairs[0]
-        automaton_index = 0
-
-        sys_intern_funcs_postfix = self._get_glob_sys_intern_func_postfix(automaton_index)
-
-        par_impl = self._get_par_impl(automaton,
-                                      max_size,
-                                      nof_processes,
-                                      sys_intern_funcs_postfix)
-
-        init_process_states = set(states[0] for states in par_impl.init_states)
-
-        return init_process_states
-
-    def _encode_headers(self, max_model_size,
-                        sync_automaton,
-                        global_automaton_cutoff_pairs):
-        init_process_states = self._get_init_process_states(global_automaton_cutoff_pairs, max_model_size)
-        self._encode_local_headers(max_model_size, init_process_states, sync_automaton)
-
-        for i, (automaton, nof_processes) in enumerate(global_automaton_cutoff_pairs):
-            self._encode_global_headers(automaton, i, max_model_size, nof_processes)
-
-    def _get_glob_spec_state_type(self, automaton_index:int) -> str:
-        spec_states_type = 'Q' + str(automaton_index)
-        return spec_states_type
-
-    def _get_glob_sys_intern_func_postfix(self, automaton_index:int) -> str:
-        sys_intern_funcs_postfix = '_' + str(automaton_index)
-        return sys_intern_funcs_postfix
 
     def _encode_global_headers(self,
                                automaton,
@@ -253,7 +254,8 @@ class ParModelSearcher:
                         QuantifiedSignal(self._names.sends_signal, 0),
                         QuantifiedSignal(self._names.sends_prev_signal, 0),
                         self._TAU_NAME,
-                        init_process_states)
+                        init_process_states,
+                        self._underlying_solver)
         return impl
 
     def _encode_local_automaton(self, local_automaton,

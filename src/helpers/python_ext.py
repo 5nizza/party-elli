@@ -2,8 +2,14 @@ from collections import Iterable
 import math
 
 
-def stripped_tokens(list_of_tokens) -> []:
+def stripped_tokens(list_of_tokens) -> list:
     return [t.strip() for t in list_of_tokens if t.strip()]
+
+
+def distinct(iterable):
+    d = dict((repr(x),x) for x in iterable)
+    res = list(d.values())
+    return res
 
 
 def to_str(enumerable:Iterable) -> str:
