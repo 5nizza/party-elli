@@ -41,8 +41,8 @@ class ConverterToWringVisitor(Visitor):
         return str(bool_const).upper()
 
     def visit_signal(self, signal:Signal):
-        assert signal.name != ACTIVE_NAME, 'not supported:' + str(signal.name)
-        assert signal.name != HAS_TOK_NAME, 'not supported:' + str(signal.name)
+        # assert signal.name != ACTIVE_NAME, 'not supported:' + str(signal.name)
+        # assert signal.name != HAS_TOK_NAME, 'not supported:' + str(signal.name)
 
         return str(signal)
 
