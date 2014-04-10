@@ -1,12 +1,14 @@
 from functools import lru_cache
 from itertools import chain, permutations
+import logging
 import math
 from architecture.scheduler import InterleavingScheduler
 from helpers.automata_helper import is_safety_automaton
-from helpers.python_ext import bin_fixed_list
+from helpers.python_ext import bin_fixed_list, separate
 from interfaces.spec import SpecProperty
 from parsing.helpers import Visitor
-from interfaces.parser_expr import ForallExpr, BinOp, Signal, Expr, Bool, QuantifiedSignal, and_expressions, Number, is_quantified_property
+from interfaces.parser_expr import ForallExpr, BinOp, Signal, Expr, Bool, QuantifiedSignal, and_expressions, Number, \
+    is_quantified_property, UnaryOp
 from parsing.par_lexer_desc import PAR_GUARANTEES
 from parsing.par_parser import QuantifiedSignalsFinderVisitor
 from parsing.par_parser_desc import par_parser
@@ -31,6 +33,178 @@ def is_safety(expr:Expr, ltl2ba_converter) -> bool:
     automaton = ltl2ba_converter.convert(expr)
     res = is_safety_automaton(automaton)
     return res
+
+
+def _is_propositional(a):
+    class Found(BaseException):
+        pass
+
+    class TemporalOperatorFinder(Visitor):
+        def visit_binary_op(self, binary_op:BinOp):
+            if binary_op.name in ['W', 'U']:
+                raise Found()  # interrupts immediately
+            return BinOp(binary_op.name, self.dispatch(binary_op.arg1), self.dispatch(binary_op.arg2))
+
+        def visit_unary_op(self, unary_op:UnaryOp):
+            if unary_op.name in ['G', 'F']:
+                raise Found()  # interrupts immediately
+            return UnaryOp(unary_op.name, self.dispatch(unary_op.arg))
+
+    try:
+        TemporalOperatorFinder().dispatch(a)
+        return True
+    except Found:
+        return False
+
+
+def _split_conjuncts(expr:Expr) -> list:
+    if expr.name != '*':
+        return [expr]
+    return _split_conjuncts(expr.arg1) + _split_conjuncts(expr.arg2)
+
+
+def _add_quantifiers(expr_with_free_vars:Expr):
+    quantified_signals = QuantifiedSignalsFinderVisitor().find_quantified_signals(expr_with_free_vars)
+    indices = set()
+    for qs in quantified_signals:
+        indices.update(set(qs.binding_indices))
+
+    return ForallExpr(indices, expr_with_free_vars)
+
+
+def param_optimize_assume_guarantee(expr:Expr, ltl2ucw_converter) -> list:
+    """
+    Assumes that the guarantee is of the form gua
+    """
+    if expr == Bool(True) or expr == Bool(False):
+        return expr
+
+    assert isinstance(expr, ForallExpr), str(expr.name)
+
+    implication = expr.arg2
+    assert implication.name == '->', str(implication.name)
+
+    assumptions = _split_conjuncts(implication.arg1)
+    if assumptions == [Bool(True)]:
+        assumptions = []
+    guarantees = _split_conjuncts(implication.arg2)
+
+    init_ass, init_gua, saf_ass, saf_gua, liv_ass, liv_gua = extract_spec_components(assumptions, guarantees,
+                                                                                     ltl2ucw_converter)
+    interm_properties = optimize_assume_guarantee(init_ass, init_gua, saf_ass, saf_gua, liv_ass, liv_gua)
+
+    properties = []
+    for p in interm_properties:
+        new_expr = BinOp('->', and_expressions(p.assumptions), and_expressions(p.guarantees))
+        new_p = SpecProperty([], [_add_quantifiers(new_expr)])
+        properties.append(new_p)
+
+    return properties
+
+
+def extract_spec_components(assumptions, guarantees, ltl2ucw_converter) -> (list, list, list, list):
+    init_ass, init_gua, safe_ass, safe_gua, live_ass, live_gua = [], [], [], [], [], []
+    # init is:
+    # - safety
+    # - does not have temporal operators inside
+    # safe is:
+    # - is safety and not init
+    # live is:
+    # - the rest..
+    for a in assumptions:
+        if is_safety(a, ltl2ucw_converter):
+            if _is_propositional(a):
+                init_ass.append(a)
+            else:
+                safe_ass.append(a)
+        else:
+            live_ass.append(a)
+
+    for g in guarantees:
+        if is_safety(g, ltl2ucw_converter):
+            if _is_propositional(g):
+                init_gua.append(g)
+            else:
+                safe_gua.append(g)
+        else:
+            live_gua.append(g)
+
+    return init_ass, init_gua, safe_ass, safe_gua, live_ass, live_gua
+
+
+def _neg(expr):
+    if expr == Bool(True):
+        return Bool(False)
+    if expr == Bool(False):
+        return Bool(True)
+
+    return UnaryOp('!', expr)
+
+
+def _weak_until(guarantee, not_assumption):
+    if not_assumption == Bool(False):
+        return UnaryOp('G', guarantee)
+
+    if not_assumption == Bool(True):
+        return Bool(True)
+
+    if guarantee == Bool(True):
+        return guarantee
+
+    return BinOp('W', guarantee, not_assumption)
+
+
+def optimize_assume_guarantee(init_ass, init_gua,
+                              saf_ass, saf_gua,
+                              liv_ass, liv_gua) -> list:
+    """
+    return:
+    [ init_ass  ->  init_gua,
+      init_ass & inf_sa_ass  ->  fin_saf_gua W !fin_saf_ass,
+      init_ass & saf_ass  ->  inf_sa_gua,
+      init_ass & saf_ass & liv_ass  ->  liv_gua]
+    """
+    logger = logging.getLogger(__name__)
+
+    properties = []
+
+    logger.debug('init_ass', init_ass)
+    logger.debug('init_gua', init_gua)
+    logger.debug('saf_ass', saf_ass)
+    logger.debug('saf_gua', saf_gua)
+    logger.debug('liv_ass', liv_ass)
+    logger.debug('liv_gua', liv_gua)
+
+    if init_gua:
+        init_part = SpecProperty(init_ass, init_gua)
+        properties.append(init_part)
+
+    fin_sa_ass, inf_sa_ass = separate(lambda expr: expr.name == 'G', saf_ass)  # TODO: if ass = Ga & Gb then fails..
+    fin_sa_gua, inf_sa_gua = separate(lambda expr: expr.name == 'G', saf_gua)
+
+    if inf_sa_ass:
+        logger.warning('Not all safety assumptions are of form G(...). We will treat them with "->".')
+        pass
+
+    if inf_sa_gua:
+        logger.warning('Not all safety guarantees are of form G(...). We will treat them with "->".')
+        properties.append(SpecProperty(init_ass + saf_ass, inf_sa_gua))
+
+    if fin_sa_gua:
+        weak_until_expr = _weak_until(
+            and_expressions([e.arg for e in fin_sa_gua]),  # strip away G
+            _neg(and_expressions([e.arg for e in fin_sa_ass])))
+        properties.append(SpecProperty(init_ass + inf_sa_ass,
+                                       [weak_until_expr]))
+
+    logger.info('saf_part\n %s', properties)
+
+    if liv_gua:
+        liv_property = SpecProperty(init_ass + saf_ass + liv_ass, liv_gua)
+        properties.append(liv_property)
+        logger.info('liv_part\n %s', liv_property)
+
+    return properties
 
 
 def normalize_conjuncts(conjuncts:list) -> Expr:
@@ -246,8 +420,8 @@ def _get_denormalized_property(property:SpecProperty) -> list:
 def strengthen(property:SpecProperty, ltl2ucw_converter) -> (list, list):
     """
     Return:
-        'safety' properties (a_s -> g_s),
-        'liveness' properties (a_s and a_l -> g_l)
+        'safety-like' properties (a_s -> g_s),
+        'liveness-like' properties (a_s and a_l -> g_l)
     Also removes ground variables that becomes useless.
     """
 
@@ -276,14 +450,15 @@ def strengthen(property:SpecProperty, ltl2ucw_converter) -> (list, list):
 
 def strengthen_many(properties:list, ltl2ucw_converter) -> (list, list):
     """ Return [a_s -> g_s], [a_s & a_l -> g_l]
+    Note that the property ois safety iff the automaton is absorbing.
     """
-    pseudo_safety_properties, pseudo_liveness_properties = [], []
+    safety_part, liveness_part = [], []
     for p in properties:
         safety_props, liveness_props = strengthen(p, ltl2ucw_converter)
-        pseudo_safety_properties += safety_props
-        pseudo_liveness_properties += liveness_props
+        safety_part += safety_props
+        liveness_part += liveness_props
 
-    return pseudo_safety_properties, pseudo_liveness_properties
+    return safety_part, liveness_part
 
 
 def _instantiate_expr2(expr:Expr, cutoff:int, forbid_zero_index:bool) -> list:

@@ -2,8 +2,11 @@ from itertools import chain
 import unittest
 from architecture.scheduler import InterleavingScheduler
 from interfaces.spec import SpecProperty
-from spec_optimizer.optimizations import strengthen, localize, _reduce_quantifiers, _get_conjuncts, _denormalize, _fix_indices, _replace_indices, _instantiate_expr, inst_property, _apply_log_bit_optimization, normalize_conjuncts, parse_expr
-from interfaces.parser_expr import QuantifiedSignal, ForallExpr, UnaryOp, BinOp, Signal, Expr, Number, Bool, and_expressions
+from spec_optimizer.optimizations import strengthen, localize, _reduce_quantifiers, _get_conjuncts, _denormalize, \
+    _fix_indices, _replace_indices, _instantiate_expr, inst_property, _apply_log_bit_optimization, normalize_conjuncts, \
+    parse_expr, param_optimize_assume_guarantee
+from interfaces.parser_expr import QuantifiedSignal, ForallExpr, UnaryOp, BinOp, Signal, Expr, Number, Bool, \
+    and_expressions
 from translation2uct.ltl2automaton import Ltl2UCW
 
 
@@ -23,12 +26,13 @@ def _get_is_false(signal_name:str, *binding_indices):
     return _get_is_value(signal_name, Number(0), *binding_indices)
 
 
+def _get_converter():
+    from config import ltl3ba_path
+
+    return Ltl2UCW(ltl3ba_path)
+
+
 class TestStrengthen(unittest.TestCase):
-    def _get_converter(self):
-        from config import ltl3ba_path
-
-        return Ltl2UCW(ltl3ba_path)
-
     def test_strengthen1(self):
         """
         Forall(i) GFa_i -> Forall(j) G(b_j)
@@ -44,7 +48,7 @@ class TestStrengthen(unittest.TestCase):
 
         property = SpecProperty([liveness_ass], [safety_gua])
 
-        safety_properties, liveness_properties = strengthen(property, self._get_converter())
+        safety_properties, liveness_properties = strengthen(property, _get_converter())
 
         assert len(liveness_properties) == 0, str(liveness_properties)
         assert len(safety_properties) == 1, str(safety_properties)
@@ -65,7 +69,7 @@ class TestStrengthen(unittest.TestCase):
 
         property = SpecProperty([liveness_ass], [liveness_gua])
 
-        safety_properties, liveness_properties = strengthen(property, self._get_converter())
+        safety_properties, liveness_properties = strengthen(property, _get_converter())
 
         assert len(liveness_properties) == 1, str(liveness_properties)
         assert len(safety_properties) == 0, str(safety_properties)
@@ -98,7 +102,7 @@ class TestStrengthen(unittest.TestCase):
 
         property = SpecProperty([ass], [gua])
 
-        safety_properties, liveness_properties = strengthen(property, self._get_converter())
+        safety_properties, liveness_properties = strengthen(property, _get_converter())
 
         assert len(liveness_properties) == 1, str(liveness_properties)
         assert len(safety_properties) == 1, str(safety_properties)
@@ -137,7 +141,7 @@ class TestStrengthen(unittest.TestCase):
                                UnaryOp('G', e_k)))
 
         property = SpecProperty([ass], [gua])
-        safety_properties, liveness_properties = strengthen(property, self._get_converter())
+        safety_properties, liveness_properties = strengthen(property, _get_converter())
 
         #lazy..
         print('safety_properties', safety_properties)
@@ -158,15 +162,15 @@ class TestStrengthen(unittest.TestCase):
         a_, b_ = _get_is_true('a'), _get_is_true('b')
 
         liveness_ass = ForallExpr([],
-                                  UnaryOp('G',
-                                          UnaryOp('F', a_)))
+                                    UnaryOp('G',
+                                            UnaryOp('F', a_)))
 
         safety_gua = ForallExpr([],
-                                UnaryOp('G', b_))
+                                  UnaryOp('G', b_))
 
         property = SpecProperty([liveness_ass], [safety_gua])
 
-        safety_properties, liveness_properties = strengthen(property, self._get_converter())
+        safety_properties, liveness_properties = strengthen(property, _get_converter())
 
         assert len(liveness_properties) == 0, str(liveness_properties)
         assert len(safety_properties) == 1, str(safety_properties)
@@ -334,24 +338,7 @@ class TestLocalize(unittest.TestCase):
         assert str(localized_prop) == str(expected_prop), str(localized_prop)
 
 
-class ReplaceIndicesTests(unittest.TestCase):
-    def test_replace_indices(self):
-        expr = parse_expr('Forall (i,j) (a_i_j=1 * b_j=1)')
-        result = _replace_indices({'i': 'k', 'j': 'm'}, expr)
-        expected = parse_expr('Forall (k,m) (a_k_m=1 * b_m=1)')
-
-        self.assertEqual(str(expected), str(result))
-
-
 class FixIndicesTests(unittest.TestCase):
-    def test_fix_indices_main(self):
-        expr = parse_expr('Forall(i,j,k,m) (a_i_j_k=1 * b_i_m=1)')
-
-        result = _fix_indices({'i': 1, 'j': 2, 'k': 3}, expr)
-        expected_result = ForallExpr(['m'], BinOp('*', _get_is_true('a', 1, 2, 3), _get_is_true('b', 1, 'm')))
-
-        self.assertEqual(str(expected_result), str(result))
-
     def test_fix_indices_partially_fixed(self):
         a_i_1 = _get_is_true('a', 'i', 1)
         c_0 = _get_is_true('c', 0)
@@ -382,14 +369,6 @@ class TestInstantiate(unittest.TestCase):
         expected = parse_expr('a_0=1 * a_1=1')
 
         self.assertEqual(str(expected), str(result))
-
-    def test_instantiate_expr_two_indices(self):
-        result = _instantiate_expr(parse_expr('Forall (i,j) a_i_j=1'), 2, False)
-        expected = parse_expr('a_0_1=1 * a_1_0=1')
-
-        result_data = _get_sorted_conjuncts_str(result)
-        expected_data = _get_sorted_conjuncts_str(expected)
-        self.assertEqual(expected_data, result_data)
 
     def test_instantiate_expr_not_quantified(self):
         result = _instantiate_expr(parse_expr('a_1=1'), 2, False)
@@ -441,9 +420,9 @@ class TestSchedulerOptimization(unittest.TestCase):
     def test_sched_optimization(self):
         scheduler = InterleavingScheduler()
 
-        forall_expr = scheduler.assumptions[0] # Forall(i) GFsched_i=1
+        forall_expr = scheduler.assumptions[0]  # Forall(i) GFsched_i=1
 
-        instantiated_expr = _instantiate_expr(forall_expr, 2, False) # GFsched_0=1 * GFsched_1=1
+        instantiated_expr = _instantiate_expr(forall_expr, 2, False)  # GFsched_0=1 * GFsched_1=1
 
         result_expr = _apply_log_bit_optimization('sch', instantiated_expr, 2, scheduler)
         expected_expr = BinOp('*',
@@ -477,20 +456,27 @@ The original expr is Forall(i) a_i=1 * GFfair_sched_i=1,
         print(result_expr)
 
 
+class Test_extract_spec_components(unittest.TestCase):
+    def test_param_extract_spec_components(self):
+        expr = parse_expr('Forall (i) a_i=1 -> b_i=1')
 
+        properties = param_optimize_assume_guarantee(expr, _get_converter())
+        print(properties)
 
+        self.assertEqual(len(properties), 1)
+        self.assertEqual(len(properties[0].guarantees), 1)
 
+    def test_param_extract_spec_components2(self):
+        expr = parse_expr('Forall(i) ((a_i=1 * b_i=1 * G(c_i=1)) * G(F(d_i=1))) -> (x_i=1 * y_i=1 * G(z_i=1) * G(F(zz_i=1)))')
 
+        properties = param_optimize_assume_guarantee(expr, _get_converter())
+        print(properties)
 
+        self.assertEqual(len(properties), 3)   # consists of three parts: init, safety, liveness
 
+    def test_param_extract_spec_components3(self):
+        expr = parse_expr('Forall(i,j) ((a_i=1 * b_i=1 * G(c_i=1)) * G(F(d_i=1))) -> (x_i=1 * y_i=1 * G(z_i=1 * z_j=1) * G(F(zz_i=1)))')
 
+        properties = param_optimize_assume_guarantee(expr, _get_converter())
 
-
-
-
-
-
-
-
-
-
+        self.assertEqual(len(properties), 3)   # consists of three parts: init, safety, liveness

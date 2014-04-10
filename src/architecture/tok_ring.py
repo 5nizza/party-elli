@@ -1,3 +1,4 @@
+from helpers.console_helpers import print_red
 from interfaces.parser_expr import UnaryOp, QuantifiedSignal, BinOp, ForallExpr, Number, Bool, is_quantified_property, Expr
 from interfaces.spec import SpecProperty
 from spec_optimizer.optimizations import parse_expr
@@ -37,8 +38,10 @@ def _get_rank(property:SpecProperty) -> int:
     # (exists(i) a_i) -> forall(i) g_i, which is 2-indexed
     #
     # Currently we forbid concrete assumptions/guarantees
-
-    ass_max_len = max(map(lambda e: len(e.arg1) if is_quantified_expr(e) else 0, property.assumptions))
+    if property.assumptions:
+        ass_max_len = max(map(lambda e: len(e.arg1) if is_quantified_expr(e) else 0, property.assumptions))
+    else:
+        ass_max_len = 0
     gua_max_len = max(map(lambda e: len(e.arg1) if is_quantified_expr(e) else 0, property.guarantees))
     rank = ass_max_len + gua_max_len
 

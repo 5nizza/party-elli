@@ -2,22 +2,21 @@
 import argparse
 import sys
 import tempfile
-
 from argparse import FileType
 from collections import Iterable
 from itertools import chain
 from logging import Logger
+
 from architecture.scheduler import InterleavingScheduler, SCHED_ID_PREFIX, ACTIVE_NAME
 from architecture.tok_ring import TokRingArchitecture, SENDS_NAME, HAS_TOK_NAME, SENDS_PREV_NAME
 from helpers import automata_helper
-
 from helpers.main_helper import setup_logging, create_spec_converter_z3, remove_files_prefixed, Z3SolverFactory
 from interfaces.automata import Automaton
 from interfaces.parser_expr import Bool, Expr
 from interfaces.spec import SpecProperty, and_properties, expr_from_property
 from module_generation.dot import moore_to_dot, to_dot
-from spec_optimizer.optimizations import localize, strengthen, inst_property, apply_log_bit_scheduler_optimization, \
-    RemoveSchedulerSignalsVisitor, strengthen_many
+from spec_optimizer.optimizations import localize, inst_property, apply_log_bit_scheduler_optimization, \
+    RemoveSchedulerSignalsVisitor, strengthen_many, param_optimize_assume_guarantee
 from parsing import par_parser
 from parsing.par_lexer_desc import PAR_INPUT_VARIABLES, PAR_OUTPUT_VARIABLES, PAR_ASSUMPTIONS, PAR_GUARANTEES
 from synthesis import par_model_searcher
@@ -148,51 +147,69 @@ def _replace_sched_by_true(spec_property:SpecProperty, scheduler) -> SpecPropert
 
 def _get_automatae(assumptions, guarantees,
                    optimization,
+                   weak_assume_guarantee,
                    cutoff,
                    ltl2ucw_converter:Ltl2UCW,
                    logger):
     #TODO: check which optimizations are used
+    scheduler = InterleavingScheduler()
+    assumptions = assumptions + scheduler.assumptions
 
-    properties = [SpecProperty(assumptions, [g]) for g in guarantees]
-    logger.info('original properties:\n%s\n', '\n'.join(map(str, properties)))
+    # properties = [SpecProperty(assumptions, [g]) for g in guarantees]
+    # logger.info('original properties:\n%s\n', '\n'.join(map(str, properties)))
+    properties = [SpecProperty(assumptions, guarantees)]
 
     archi = TokRingArchitecture()
-    archi_properties = [SpecProperty(assumptions, [g]) for g in archi.guarantees()]
-    logger.info('architecture properties:\n%s\n', '\n'.join(map(str, archi_properties)))
-
     if OPTS[optimization] >= OPTS[STRENGTH]:
-        # we don't need this in case of async_hub since its assumptions implies GF(tok), put it is here for simplicity
-        properties = [SpecProperty(p.assumptions + archi.implications(), p.guarantees) for p in properties]
+        # we don't need this in case of async_hub since its assumptions implies GF(tok), put it here for simplicity
+        properties = [SpecProperty(assumptions + archi.implications(), p.guarantees) for p in properties]
 
-    properties = properties + archi_properties
+    archi_property = SpecProperty(assumptions, archi.guarantees())
+    properties = properties + [archi_property]
+    # Now properties contain smth like: [ ∀ass & sched & GF(tok) -> ∀orig_guarantees,
+    #                                     ∀ass & sched           -> ∀G(tok->Fsend) ]
+    #                               or: [ ∀ass & sched -> ∀orig_guarantees,
+    #                                     ∀ass & sched -> ∀G(tok -> Fsend) ]
 
-    scheduler = InterleavingScheduler()
-    properties = [SpecProperty(p.assumptions + scheduler.assumptions, p.guarantees)
-                  for p in properties]
-    logger.info('after updating with scheduling assumptions:\n%s\n', '\n'.join(map(str, properties)))
+    # logger.info('architecture properties:\n%s\n', '\n'.join(map(str, archi_properties)))
 
     #TODO: add support of using other options without using strengthening
+
     if OPTS[optimization] >= OPTS[STRENGTH]:
         logger.info('strengthening properties..')
 
-        pseudo_safety_properties, pseudo_liveness_properties = strengthen_many(properties, ltl2ucw_converter)
-        properties = pseudo_safety_properties + pseudo_liveness_properties
+        safety_part, liveness_part = strengthen_many(properties, ltl2ucw_converter)
+        properties = safety_part + liveness_part
 
-        logger.info('strengthening resulted in pseudo_safety_properties (a_s -> g_s):\n%s\n',
-                    '\n'.join(map(str, pseudo_safety_properties)))
-        logger.info('..and in pseudo_liveness_properties (a_s&a_l -> g_l):\n%s\n',
-                    '\n'.join(map(str, pseudo_liveness_properties)))
+        logger.info('strengthening resulted in safety part (a_s -> g_s):\n%s\n',
+                    '\n'.join(map(str, safety_part)))
+        logger.info('..and in liveness part (a_s&a_l -> g_l):\n%s\n',
+                    '\n'.join(map(str, liveness_part)))
+        # Now the properties look like: [ (∀(safety -> safety), ∀(safety&liveness -> liveness)]
 
     if OPTS[optimization] >= OPTS[STRENGTH]:
         properties = [localize(p) for p in properties]
         logger.info('properties after localizing:\n%s\n', '\n'.join(map(str, properties)))
+        # Now the properties look like: [SpecProperty( true->∀(ass -> gua) ),...]
+
+    #
+    if weak_assume_guarantee:
+        new_properties = []
+        for p in properties:
+            assert p.assumptions == [Bool(True)] or not p.assumptions, 'this means either i) bug or ii) or you run the tool without strengthening optimization'
+            for g in p.guarantees:
+                new_p = param_optimize_assume_guarantee(g, ltl2ucw_converter)
+                new_properties += new_p
+
+        properties = new_properties
+        logger.info('properties after weak-until optimization \n %s \n', properties)
 
     prop_real_cutoff_pairs = [(p, archi.get_cutoff(p)) for p in properties]
 
     par_global_property_pairs = [(p, c) for (p, c) in prop_real_cutoff_pairs if c != 2]
     par_local_property_pairs = [(p, c) for (p, c) in prop_real_cutoff_pairs if c == 2]
     for (p, c) in par_local_property_pairs:
-        assert p.assumptions == [Bool(True)]
+        assert p.assumptions == [Bool(True)] or p.assumptions == []
         assert c == 2
 
     if optimization == SYNC_HUB:  # removing GF(sch) from one-indexed properties
@@ -200,7 +217,7 @@ def _get_automatae(assumptions, guarantees,
                                     for (p, c) in par_local_property_pairs]
 
     if optimization == SYNC_HUB:
-        pass   # TODO: should add sync_hub assumptions -- but currently they are added on SMT (Impl) level
+        pass  # TODO: should add sync_hub assumptions -- but currently they are added on SMT (Impl) level
 
     if optimization == ASYNC_HUB:
         # by definition async_hub_assumptions are one-indexed
@@ -248,10 +265,11 @@ def _get_automatae(assumptions, guarantees,
 
 
 # TODO: slow: get_max_cutoff don't need to instantiate all the properties...
-def _get_max_cutoff(assumptions, guarantees, optimization, ltl2ucw_converter, logger) -> int:  # TODO: not optimal
+def _get_max_cutoff(assumptions, guarantees, optimization, weak_assume_guarantee, ltl2ucw_converter, logger) -> int:  # TODO: not optimal
     sync_automaton, glob_automatae_pairs = _get_automatae(assumptions,
                                                           guarantees,
                                                           optimization,
+                                                          weak_assume_guarantee,
                                                           sys.maxsize,
                                                           ltl2ucw_converter,
                                                           logger)
@@ -265,6 +283,7 @@ def _get_max_cutoff(assumptions, guarantees, optimization, ltl2ucw_converter, lo
 
 def main(spec_text,
          optimization,
+         weak_assume_guarantee,
          is_moore,
          dot_files_prefix,
          bounds,
@@ -278,7 +297,7 @@ def main(spec_text,
     #TODO: check which optimizations are used
 
     anon_inputs, anon_outputs, assumptions, guarantees = _get_spec(spec_text, logger)
-    max_cutoff = _get_max_cutoff(assumptions, guarantees, optimization, ltl2ucw_converter, logger)
+    max_cutoff = _get_max_cutoff(assumptions, guarantees, optimization, weak_assume_guarantee, ltl2ucw_converter, logger)
 
     if max_cutoff is None:
         # no global automata
@@ -290,6 +309,7 @@ def main(spec_text,
         sync_automaton, glob_automatae_pairs = _get_automatae(assumptions,
                                                               guarantees,
                                                               optimization,
+                                                              weak_assume_guarantee,
                                                               c,
                                                               ltl2ucw_converter,
                                                               logger)
@@ -351,6 +371,9 @@ if __name__ == '__main__':
                         default=ASYNC_HUB,
                         help='apply an optimization (choose one) (default: %(default)s)')
 
+    parser.add_argument('--weakag', action='store_true', required=False, default=False,
+                        help='treat assume guarantee with weak until')
+
     args = parser.parse_args(sys.argv[1:])
 
     logger = setup_logging(args.verbose)
@@ -372,6 +395,7 @@ if __name__ == '__main__':
 
     is_realizable = main(args.ltl.read(),
                          args.opt,
+                         args.weakag,
                          args.moore,
                          args.dot,
                          bounds,

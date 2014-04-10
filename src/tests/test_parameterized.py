@@ -119,6 +119,13 @@ _REALIZABLE_SUBSET = [
     "parameterized/pnueli_arbiter.ltl --cutoff 4 --bound 3 --opt strength --cincr --incr",
     "parameterized/pnueli_arbiter.ltl --cutoff 4 --bound 3 --opt async_hub --cincr --incr",
     "parameterized/pnueli_arbiter.ltl --cutoff 4 --bound 3 --opt sync_hub --cincr --incr",
+
+    # weakag option -- should work as original one
+    "parameterized/full_arbiter.ltl --cutoff 3 --size 3 --opt async_hub --weakag",  # does not make any sense
+    "parameterized/full_arbiter_with_tok.ltl --size 4 --opt async_hub --weakag",    # does not make any sense
+
+    "parameterized/pnueli_arbiter.ltl --cutoff 3 --size 3 --opt sync_hub --weakag",
+    "parameterized/pnueli_arbiter_with_tok.ltl --size 4 --opt sync_hub --weakag",
 ]
 
 
@@ -139,6 +146,13 @@ _UNREALIZABLE_SUBSET = [
     "parameterized/full_arbiter.ltl --cutoff 3 --size 3 --moore --opt strength --incr",
     "parameterized/pnueli_arbiter.ltl --cutoff 3 --size 2 --opt async_hub --incr",
     "parameterized/pnueli_arbiter.ltl --cutoff 3 --size 2 --opt sync_hub --incr",
+
+    # weakag option -- should work as original one
+    "parameterized/full_arbiter.ltl --cutoff 3 --size 3 --moore --opt strength --weakag",
+    "parameterized/pnueli_arbiter.ltl --cutoff 3 --size 2 --opt sync_hub --weakag",
+    "parameterized/pnueli_arbiter_with_tok.ltl --size 2 --opt sync_hub --weakag",
+    "parameterized/pnueli_arbiter.ltl --cutoff 3 --size 2 --opt async_hub --weakag",
+    "parameterized/pnueli_arbiter_with_tok.ltl --size 3 --opt async_hub --weakag",
 ]
 
 

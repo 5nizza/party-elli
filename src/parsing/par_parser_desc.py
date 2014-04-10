@@ -117,6 +117,7 @@ class QuantifiedSignalsCreatorVisitor(Visitor):
 
     def visit_signal(self, signal:Signal):
         tokens = signal.name.split('_')
+        assert len(tokens) < 3, 'not clear what does two indices mean'
 
         base_name_tokens = [t for t in tokens if t not in self.binding_indices]
         indices_tokens = tuple(t for t in tokens if t not in base_name_tokens)
