@@ -63,6 +63,26 @@ class Test(unittest.TestCase):
             else:
                 assert False, 'unknown node: {0}'.format(str(n))
 
+    def test_parse_ltl2ba_output_names_with_if_fi(self):
+        text = """
+            never { /* F(r && !g) */
+            T0_if_init :    /* init */
+                if
+                :: (1) -> goto T0_if_init
+                :: (r && !g) -> goto accept_if_fi_all
+                fi;
+            accept_if_fi_all :    /* 1 */
+                skip
+            }"""
+        sig_g = QuantifiedSignal('g')
+        sig_r = QuantifiedSignal('r')
+        signal_by_name = {'r': sig_r, 'g': sig_g}
+        initial_nodes, _, nodes, _ = _get_hacked_ucw(text, signal_by_name)
+
+        assert len(initial_nodes) == 1, str(len(initial_nodes))
+        assert len(nodes) == 2, str(nodes)
+
+        assert len(list(initial_nodes)[0].transitions) == 2
 
     def test_parse_ltl2ba_output__skip(self):
         text = """
@@ -94,7 +114,6 @@ class Test(unittest.TestCase):
         dst, is_rejecting = flagged_dst_set.pop()
         assert dst == accept_all_node, str(dst)
         assert label == {}, str(label)
-
 
     def test_parse_ltl2ba_output__or(self):
         text = """
@@ -128,7 +147,6 @@ class Test(unittest.TestCase):
                            or (label == {sig_r: True} and dst != init_node) \
                     or (label == {sig_g: False} and dst != init_node)
 
-
     def test_unwind_labels__true_lbl(self):
         pattern_lbl = {}
         vars = {'r', 'g'}
@@ -139,14 +157,12 @@ class Test(unittest.TestCase):
             [{'r': True, 'g': True}, {'r': True, 'g': False},
              {'r': False, 'g': True}, {'r': False, 'g': False}])
 
-
     def test_unwind_labels__concrete_lbl(self):
         pattern_lbl = {'r': True}
         vars = {'r'}
 
         concrete_labels = _unwind_label(pattern_lbl, vars)
         assert concrete_labels == [{'r': True}]
-
 
     def test_unwind_labels__main_case(self):
         pattern_lbl = {'r': True}
