@@ -165,7 +165,18 @@ def _get_hacked_ucw(text:str, signal_by_name:dict): #TODO: bad smell - it is lef
         src_tok = lines[0].split(':')[0].strip()
         src = _get_create(src_tok, name_to_node, initial_nodes, rejecting_nodes)
 
-        trans_toks = [x.strip(':').strip() for x in lines[1:] if x.strip() != 'if' and x.strip().strip(';') != 'fi']
+        trans_block = lines[1:]
+        # if
+        # :: (!a && !g && r) || (g) -> goto accept_init
+        # :: (1) -> goto T0_S2
+        # fi;
+
+        #    accept_all :    /* 1 */
+        #    skip
+        if len(trans_block) > 1:
+            trans_toks = [x.strip(':').strip() for x in trans_block[1:-1]]
+        else:
+            trans_toks = [trans_block[0].strip()]
 
         if trans_toks == ['skip']:
             src.add_transition({}, {(src, src in rejecting_nodes)})
