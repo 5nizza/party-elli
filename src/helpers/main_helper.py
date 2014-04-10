@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 from synthesis.smt_logic import Logic
 
 from synthesis.solvers import Z3_Smt_NonInteractive_ViaFiles, Z3_Smt_Interactive
@@ -24,6 +25,7 @@ def setup_logging(verbose):
 
     handler = ColorizingStreamHandler()
     handler.setFormatter(logging.Formatter(fmt="%(asctime)-10s%(message)s", datefmt="%H:%M:%S"))
+    handler.stream = sys.stdout
 
     root = logging.getLogger()
     root.addHandler(handler)
