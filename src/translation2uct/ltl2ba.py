@@ -165,7 +165,7 @@ def _get_hacked_ucw(text:str, signal_by_name:dict): #TODO: bad smell - it is lef
         src_tok = lines[0].split(':')[0].strip()
         src = _get_create(src_tok, name_to_node, initial_nodes, rejecting_nodes)
 
-        trans_toks = [x.strip(':').strip() for x in lines[1:] if 'if' not in x and 'fi' not in x]
+        trans_toks = [x.strip(':').strip() for x in lines[1:] if x.strip() != 'if' and x.strip().strip(';') != 'fi']
 
         if trans_toks == ['skip']:
             src.add_transition({}, {(src, src in rejecting_nodes)})
