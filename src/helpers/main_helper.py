@@ -1,10 +1,9 @@
-from lib2to3.pytree import convert
 import logging
 import os
-import sys
 from synthesis.smt_logic import Logic
 
 from synthesis.solvers import Z3_Smt_NonInteractive_ViaFiles, Z3_Smt_Interactive
+from third_party.ansistrm import ColorizingStreamHandler
 from translation2uct.ltl2automaton import Ltl2UCW
 
 
@@ -23,10 +22,12 @@ def setup_logging(verbose):
     elif verbose >= 1:
         level = logging.DEBUG
 
-    logging.basicConfig(format="%(asctime)-10s%(message)s",
-                        datefmt="%H:%M:%S",
-                        level=level,
-                        stream=sys.stdout)
+    handler = ColorizingStreamHandler()
+    handler.setFormatter(logging.Formatter(fmt="%(asctime)-10s%(message)s", datefmt="%H:%M:%S"))
+
+    root = logging.getLogger()
+    root.addHandler(handler)
+    root.setLevel(level)
 
     return logging.getLogger(__name__)
 
