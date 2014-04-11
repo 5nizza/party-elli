@@ -168,12 +168,12 @@ def optimize_assume_guarantee(init_ass, init_gua,
 
     properties = []
 
-    logger.debug('init_ass', init_ass)
-    logger.debug('init_gua', init_gua)
-    logger.debug('saf_ass', saf_ass)
-    logger.debug('saf_gua', saf_gua)
-    logger.debug('liv_ass', liv_ass)
-    logger.debug('liv_gua', liv_gua)
+    logger.debug('init_ass %s', init_ass)
+    logger.debug('init_gua %s', init_gua)
+    logger.debug('saf_ass %s', saf_ass)
+    logger.debug('saf_gua %s', saf_gua)
+    logger.debug('liv_ass %s', liv_ass)
+    logger.debug('liv_gua %s', liv_gua)
 
     if init_gua:
         init_part = SpecProperty(init_ass, init_gua)

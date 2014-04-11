@@ -371,7 +371,7 @@ if __name__ == '__main__':
                         default=ASYNC_HUB,
                         help='apply an optimization (choose one) (default: %(default)s)')
 
-    parser.add_argument('--weakag', action='store_true', required=False, default=False,
+    parser.add_argument('-w', '--weakag', action='store_true', required=False, default=False,
                         help='treat assume guarantee with weak until')
 
     args = parser.parse_args(sys.argv[1:])

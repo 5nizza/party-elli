@@ -17,8 +17,8 @@ _REALIZABLE = [
     "non_parameterized/others/pnueli_arbiter2.ltl --moore --size 3",
     "non_parameterized/others/pnueli_arbiter2.ltl --mealy --size 3",
 
-    "non_parameterized/others/pnueli_arbiter2.ltl --moore --size 3 --weak",
-    "non_parameterized/others/pnueli_arbiter2.ltl --mealy --size 3 --weak",
+    "non_parameterized/others/pnueli_arbiter2.ltl --moore --size 3 --weakag",
+    "non_parameterized/others/pnueli_arbiter2.ltl --mealy --size 3 --weakag",
 
     "non_parameterized/others/elevator2.ltl --moore --size 2",
     "non_parameterized/others/elevator2.ltl --mealy --size 2",
@@ -44,8 +44,8 @@ _UNREALIZABLE = [
     "non_parameterized/others/pnueli_arbiter2.ltl --moore --size 2",
     "non_parameterized/others/pnueli_arbiter2.ltl --mealy --size 2",
 
-    "non_parameterized/others/pnueli_arbiter2.ltl --moore --size 2 --weak",
-    "non_parameterized/others/pnueli_arbiter2.ltl --mealy --size 2 --weak",
+    "non_parameterized/others/pnueli_arbiter2.ltl --moore --size 2 --weakag",
+    "non_parameterized/others/pnueli_arbiter2.ltl --mealy --size 2 --weakag",
 
     "non_parameterized/others/elevator2.ltl --moore --size 1",
     "non_parameterized/others/elevator2.ltl --mealy --size 1",

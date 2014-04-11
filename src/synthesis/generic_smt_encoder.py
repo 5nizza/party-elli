@@ -1,10 +1,13 @@
+from collections import Iterable
 import logging
 
 from itertools import product, chain
 import sys
+from helpers.boolean_helpers import minimize_dnf_set
+from helpers.console_helpers import print_green, print_red
 from helpers.labels_map import LabelsMap
 from helpers.logging_helper import log_entrance
-from helpers.python_ext import StrAwareList, lmap
+from helpers.python_ext import StrAwareList, lmap, separate
 from interfaces.automata import DEAD_END, Label
 from interfaces.lts import LTS
 from interfaces.solver_interface import EncodingSolver, SolverInterface
@@ -287,7 +290,7 @@ class GenericEncoder(EncodingSolver):
         if self._last_only_states:
             model_states = self._last_only_states
         else:
-            model_states = impl.states_by_process[0]  # TODO: doesn't work in distributive case
+            model_states = impl.states_by_process[0]  # TODO: doesn't work in distributed case
 
         processed_func_names = set()
 
@@ -340,6 +343,7 @@ class GenericEncoder(EncodingSolver):
             tau_func_desc = impl.model_taus_descs[i]
 
             tau_model = LabelsMap(self._build_func_model_from_smt(get_value_lines, tau_func_desc))
+            # tau_model = self._simplify_tau(tau_model, tau_func_desc, impl.states_by_process[0])
 
             outputs_descs = impl.get_outputs_descs()[i]
             output_models = dict()
@@ -418,7 +422,7 @@ class GenericEncoder(EncodingSolver):
             return None
 
         model = self.parse_sys_model(out, impl)
-        self._last_only_states = None   # TODO: i don't like this state-shit here
+        self._last_only_states = None   # TODO: remove this 'state'
         return model
 
     def _get_next_state_restricted_condition(self, state, only_states,
@@ -476,3 +480,37 @@ class GenericEncoder(EncodingSolver):
 
             condition = self._underlying_solver.op_eq(computed_next_state, defined_next_state)
             self._underlying_solver.assert_(condition)
+
+    # def _simplify_tau(self, tau_model:LabelsMap, tau_func_desc:FuncDescription, states) -> LabelsMap:
+    #     tau_dict = dict()  # (t1,t2) -> labels
+    #
+    #     for (t1,t2) in product(states, repeat=2):
+    #         labels = self._get_transitions(t1, t2, tau_model)
+    #
+    #         set_of_labels_wo_state = set()
+    #         for lbl in labels:
+    #             assert lbl['state'] == t2
+    #
+    #             lbl, _ = separate(lambda signal_value: signal_value[0] != 'state', lbl.items())
+    #             set_of_labels_wo_state.add(lbl)
+    #
+    #         simplified_set = minimize_dnf_set(set_of_labels_wo_state)
+    #         # notice that if the empty set then it is True
+    #         tau_dict[(t1,t2)] = simplified_set
+    #
+    #     simplified_tau_model = LabelsMap()
+    #     for ((t1,t2),labels) in tau_dict.items():
+    #         for lbl in labels:
+    #             # restore labels and add 'state'
+    #             lbl['state'] = t1
+    #             simplified_tau_model[lbl] = t2
+    #
+    #     return simplified_tau_model
+
+    # def _get_transitions(self, t1, t2, tau_model:LabelsMap) -> Iterable:
+    #     transitions = set()
+    #     for (label,next_state) in tau_model.items():
+    #         if label['state'] == t1 and next_state == t2:
+    #             transitions.add(label)
+    #     return transitions
+

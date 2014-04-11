@@ -21,10 +21,10 @@ while True:
 
     for l in lines:
         if l.startswith('"{0}"'.format(state)) and '->' in l:
-            signals_in_line = ''.join((l[l.index('=')+1:l.index('/')])).split('.')
+            signals_in_line = ''.join((l[l.index('=')+2:l.index('/')])).split('\\n')
             correct = True
             for s in signals:
-                if s in l:
+                if s in signals_in_line:
                     pass
                 else:
                     correct = False

@@ -275,7 +275,7 @@ if __name__ == "__main__":
                         help='produce incremental queries')
     parser.add_argument('-v', '--verbose', action='count', default=0)
 
-    parser.add_argument('-w', '--weak',
+    parser.add_argument('-w', '--weakag',
                         action='store_true', default=False,
                         help='treat assume-guarantee with weak Until operator rather than an implication (g W !a)')
 
@@ -315,7 +315,7 @@ if __name__ == "__main__":
 
     is_realizable = main(args.spec,
                          ltl_text, part_text, args.moore, args.dot, args.nusmv, bounds,
-                         args.weak,
+                         args.weakag,
                          ltl2ucw_converter,
                          solver_factory.create(),
                          args.opt,

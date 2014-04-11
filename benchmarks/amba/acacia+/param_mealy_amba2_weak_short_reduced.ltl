@@ -11,8 +11,7 @@ hready;
 hbusreq;
 hburst0;
 hburst1;
-hlock0;
-hlock1;
+hlock;
 
 
 [OUTPUT_VARIABLES]
@@ -40,14 +39,13 @@ Forall (i) G (F (hready_i=1));
 Forall (i) G ((hlock_i=1) -> (hbusreq_i=1));
 
 # A4: initial inputs are all low 
-Forall (i) (hbusreq_i=0) * (hlock0_i=0) * (hlock1_i=0) * (hready_i=0);
+Forall (i) (hbusreq_i=0) * (hlock_i=0) * (hready_i=0);
 
 ######## SHORTCUT TO REMOVE SOME OF GUARANTEES  ######
-#  assume G(hbusreq0=0);
+# Forall (i) G(hbusreq_i=0);
 # Forall (i) G(hlock_i=0);
-#  assume G(hlock1=0);   
-# assume G(hburst0=0);
-# assume G(hburst1=1);
+# Forall (i) G(hburst0_i=0);
+# Forall (i) G(hburst1_i=1);
 
 # We cannot use this version because G9: G(req -> F(grant or !reg)) which becomes trivially satisfied
 # assume (G (F (hbusreq0=0)));
@@ -112,10 +110,10 @@ Forall (i) G ((hbusreq_i=1) -> F((hbusreq_i=0) + (hmaster_i=1)));
 
 # G10: no grants without requests (without exception for now)
 # (exception can be modeled with additional input "no_hbusreq" and synthesis of a special process template for process 0)
-Forall (i) G ((hgrant_i=0) -> ((hgrant_i=0) W (hbusreq_i=1)));
+# Forall (i) G ((hgrant_i=0) -> ((hgrant_i=0) W (hbusreq_i=1)));
 
 # G11: initial output values (again, no exceptions for now)
 Forall (i) (decide_i=1 * start_i=1 * hgrant_i=0 * hmaster_i=0 * hmastlock_i=0);
 
 # additional token guarantee: only give hgrant if we have token
-Forall (i) G (hgrant_i=1 -> tok_i=1);
+# Forall (i) G (hgrant_i=1 -> tok_i=1);
