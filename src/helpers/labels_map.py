@@ -4,7 +4,7 @@ from interfaces.automata import Label
 class LabelsMap:
     def __init__(self, value_by_label:dict=None):
         if value_by_label is None:
-            value_by_label = []
+            value_by_label = dict()
         self._value_by_label = list(value_by_label.items())
 
     def __getitem__(self, key:Label):
@@ -68,6 +68,11 @@ class Test(unittest.TestCase):
 
         assert Label({'a': True, 'b': False}) not in label_map
         assert Label({'a': True}) not in label_map
+
+    def test_map_getitem2(self):
+        label_map = LabelsMap()
+        label_map[Label()] = True
+        assert Label({'a': False, 'b': False}) in label_map
 
     def test_map_setitem(self):
         map = LabelsMap()
