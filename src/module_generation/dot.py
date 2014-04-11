@@ -1,7 +1,7 @@
 import unittest
 import logging
-
 from unittest import TestCase
+
 from helpers.labels_map import LabelsMap
 from helpers.python_ext import StrAwareList, add_dicts
 from interfaces.automata import Label
@@ -133,6 +133,8 @@ def to_dot(lts:LTS, outvars_treated_as_moore=()):
     logger.debug('the model after edge simplifications: \n' + str(srcdst_to_io_labels))
 
     for (src, dst), io_labels in simplified_srcdst_to_io_labels.items():
+        if not io_labels:
+            dot_lines += '"{state}" -> "{x_state}" [label="1"]'.format(state=src, x_state=dst)
         for io_label in io_labels:
             i_vals = dict()
             o_vals = dict()
