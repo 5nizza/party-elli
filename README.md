@@ -28,7 +28,7 @@ If you plan to develop smth then you might want to ignore future changes to conf
 `python3 bosy.py --help` to run monolithic synthesis tool
 
 ## To test ##
-- `nosetests ./`
+- `nosetests ./ --all-modules`
 Requires nosetests package.
 - Also directory ./tests contains functional tests
   - test_parameterized.py
