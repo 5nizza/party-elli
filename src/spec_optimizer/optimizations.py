@@ -2,11 +2,11 @@ from functools import lru_cache
 from itertools import chain, permutations
 import logging
 import math
-from architecture.scheduler import InterleavingScheduler
+from architecture.scheduler import InterleavingScheduler, ACTIVE_NAME
 from helpers.automata_helper import is_safety_automaton
 from helpers.python_ext import bin_fixed_list, separate
 from interfaces.spec import SpecProperty
-from parsing.helpers import Visitor
+from parsing.visitor import Visitor
 from interfaces.parser_expr import ForallExpr, BinOp, Signal, Expr, Bool, QuantifiedSignal, and_expressions, Number, \
     is_quantified_property, UnaryOp
 from parsing.par_lexer_desc import PAR_GUARANTEES
@@ -575,13 +575,21 @@ def _get_sched_signal(arg, scheduler):
     return None
 
 
-class RemoveSchedulerSignalsVisitor(Visitor):
+def _is_active_signal(arg):
+    if isinstance(arg, QuantifiedSignal) and arg.name.startswith(ACTIVE_NAME):
+        return True
+
+    return False
+
+
+class RemoveActiveAndSchedulerSignalsVisitor(Visitor):
     def __init__(self, scheduler:InterleavingScheduler):
         self._scheduler = scheduler
 
     def visit_binary_op(self, binary_op:BinOp):
         if binary_op.name == '=':
-            if _get_sched_signal(binary_op.arg1, self._scheduler) or _get_sched_signal(binary_op.arg2, self._scheduler):
+            if _get_sched_signal(binary_op.arg1, self._scheduler) or _get_sched_signal(binary_op.arg2, self._scheduler) \
+                    or _is_active_signal(binary_op.arg1) or _is_active_signal(binary_op.arg2):
                 return Bool(True)
 
         return super().visit_binary_op(binary_op)

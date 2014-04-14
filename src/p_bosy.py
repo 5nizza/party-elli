@@ -10,13 +10,14 @@ from logging import Logger
 from architecture.scheduler import InterleavingScheduler, SCHED_ID_PREFIX, ACTIVE_NAME
 from architecture.tok_ring import TokRingArchitecture, SENDS_NAME, HAS_TOK_NAME, SENDS_PREV_NAME
 from helpers import automata_helper
+from helpers.console_helpers import print_green
 from helpers.main_helper import setup_logging, create_spec_converter_z3, remove_files_prefixed, Z3SolverFactory
 from interfaces.automata import Automaton
 from interfaces.parser_expr import Bool, Expr
 from interfaces.spec import SpecProperty, and_properties, expr_from_property
 from module_generation.dot import moore_to_dot, to_dot
 from spec_optimizer.optimizations import localize, inst_property, apply_log_bit_scheduler_optimization, \
-    RemoveSchedulerSignalsVisitor, strengthen_many, param_optimize_assume_guarantee
+    RemoveActiveAndSchedulerSignalsVisitor, strengthen_many, param_optimize_assume_guarantee
 from parsing import par_parser
 from parsing.par_lexer_desc import PAR_INPUT_VARIABLES, PAR_OUTPUT_VARIABLES, PAR_ASSUMPTIONS, PAR_GUARANTEES
 from synthesis import par_model_searcher
@@ -134,13 +135,13 @@ def _join_properties(properties:Iterable):
     return SpecProperty(all_ass, all_gua)
 
 
-def _replace_sched_in_expr_by_true(e:Expr, scheduler) -> Expr:
-    return RemoveSchedulerSignalsVisitor(scheduler).do(e)
+def _replace_sched_or_active_in_expr_by_true(e:Expr, scheduler) -> Expr:
+    return RemoveActiveAndSchedulerSignalsVisitor(scheduler).do(e)
 
 
-def _replace_sched_by_true(spec_property:SpecProperty, scheduler) -> SpecProperty:
-    new_assumptions = [_replace_sched_in_expr_by_true(a, scheduler) for a in spec_property.assumptions]
-    new_guarantees = [_replace_sched_in_expr_by_true(g, scheduler) for g in spec_property.guarantees]
+def _replace_active_by_true(spec_property:SpecProperty, scheduler) -> SpecProperty:
+    new_assumptions = [_replace_sched_or_active_in_expr_by_true(a, scheduler) for a in spec_property.assumptions]
+    new_guarantees = [_replace_sched_or_active_in_expr_by_true(g, scheduler) for g in spec_property.guarantees]
 
     return SpecProperty(new_assumptions, new_guarantees)
 
@@ -213,7 +214,7 @@ def _get_automatae(assumptions, guarantees,
         assert c == 2
 
     if optimization == SYNC_HUB:  # removing GF(sch) from one-indexed properties
-        par_local_property_pairs = [(_replace_sched_by_true(p, scheduler), c)
+        par_local_property_pairs = [(_replace_active_by_true(p, scheduler), c)
                                     for (p, c) in par_local_property_pairs]
 
     if optimization == SYNC_HUB:
@@ -313,7 +314,6 @@ def main(spec_text,
                                                               c,
                                                               ltl2ucw_converter,
                                                               logger)
-
         logger.info('current cutoff = {cutoff}'.format(cutoff=c))
 
         models = _run(models,
@@ -353,6 +353,8 @@ if __name__ == '__main__':
     group_bound = parser.add_mutually_exclusive_group()
     group_bound.add_argument('--bound', metavar='bound', type=int, default=128, required=False,
                              help='upper bound on the size of local process (default: %(default)i)')
+    group_bound.add_argument('--startsize', metavar='startsize', type=int, default=0, required=False,
+                             help='exact size of process model (default: %(default)i)')
     group_bound.add_argument('--size', metavar='size', type=int, default=0, required=False,
                              help='exact size of process model (default: %(default)i)')
 
@@ -387,7 +389,11 @@ if __name__ == '__main__':
     if not ltl2ucw_converter or not z3solver_factory:
         exit(0)
 
-    bounds = list(range(2, args.bound + 1) if args.size == 0 else range(args.size, args.size + 1))
+    if args.startsize != 0:
+        assert args.startsize > 1, 'startsize should be at least 2: ' + str(args.startsize)
+        bounds = list(range(args.startsize, args.bound))
+    else:
+        bounds = list(range(2, args.bound + 1) if args.size == 0 else range(args.size, args.size + 1))
 
     logic = UFLIA(None)
 
