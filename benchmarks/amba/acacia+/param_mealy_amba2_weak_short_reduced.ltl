@@ -105,8 +105,8 @@ Forall (i) G (X(start_i=0) -> ((hmastlock_i=1) <-> X(hmastlock_i=1)));
 Forall (i) G ((decide_i=1 * active_i=1 * X(hgrant_i=1)) -> ((hlock_i=1) <-> X(locked_i=1)));
 
 # G8: set decide if we change hgrant or locked   # not sure if need active_i here 
-Forall (i) G ((active_i=1 * ((hgrant_i=0) <-> X(hgrant_i=1))) -> (decide_i=1)); 
-Forall (i) G ((active_i=1 * ((locked_i=0) <-> X(locked_i=1))) -> (decide_i=1));
+Forall (i) G ((decide_i=0 * active_i=1) -> (hgrant_i=1 <-> X(hgrant_i=1))); 
+Forall (i) G ((decide_i=0 * active_i=1) -> (locked_i=1 <-> X(locked_i=1))); 
 
 # G9: every hbusreq is either lowered or answered  # no need for active here because either: 
                                                    # - req goes low (and we haven't noticed these reqs at all), or 
