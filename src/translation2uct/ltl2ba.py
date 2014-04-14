@@ -117,10 +117,9 @@ def _parse_trans_tok(trans:str,
                      signal_by_name:dict) -> (Node, list):
 
     if trans == 'false;':
-        #dead end -- rejecting state with self-loop
+        # falling out of the automaton?
         dst = src
         labels = [{}]  # empty label means 'true'
-        rejecting_nodes.add(src)
     else:
         label_tok, dst_tok = [x.strip() for x in trans.split('-> goto')]
         dst = _get_create(dst_tok, name_to_node, initial_nodes, rejecting_nodes)
