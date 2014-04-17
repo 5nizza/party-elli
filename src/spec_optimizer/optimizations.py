@@ -242,13 +242,13 @@ def optimize_assume_guarantee(init_ass, init_gua,
         stripped_ass = and_expressions([e.arg for e in fin_sa_ass])
         stripped_gua = and_expressions([e.arg for e in fin_sa_gua])
 
-        gr1_safety = UnaryOp('G', BinOp('->', stripped_ass, stripped_gua))
+        # gr1_safety = UnaryOp('G', BinOp('->', stripped_ass, stripped_gua))
 
-        # weak_until_expr = _weak_until(stripped_gua, _neg(stripped_ass))
-        # properties.append(SpecProperty(init_ass + inf_sa_ass,
-        #                                [weak_until_expr]))
-        properties.append(SpecProperty(init_ass + inf_sa_ass, [gr1_safety]))
-        print_green(gr1_safety)
+        weak_until_expr = _weak_until(stripped_gua, _neg(stripped_ass))
+        properties.append(SpecProperty(init_ass + inf_sa_ass,
+                                       [weak_until_expr]))
+        # properties.append(SpecProperty(init_ass + inf_sa_ass, [gr1_safety]))
+        # print_green(gr1_safety)
 
     logger.info('saf_part\n %s', properties)
 
