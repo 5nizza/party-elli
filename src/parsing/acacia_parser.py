@@ -1,4 +1,4 @@
-# import logging
+import logging
 
 from itertools import chain
 from logging import Logger

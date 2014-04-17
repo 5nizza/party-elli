@@ -29,7 +29,7 @@ from interfaces.lts import LTS
 from interfaces.parser_expr import QuantifiedSignal, BinOp, and_expressions
 from interfaces.spec import SpecProperty, expr_from_property
 from module_generation.ast_to_smv_property import AstToSmvProperty
-from parsing.helpers import WeakToUntilConverterVisitor
+from parsing.visitor import WeakToUntilConverterVisitor
 
 
 def _ith_state_bit(i:int) -> str:

@@ -1,5 +1,5 @@
 from interfaces.parser_expr import Number, QuantifiedSignal, UnaryOp, BinOp, ForallExpr
-from parsing.helpers import Visitor
+from parsing.visitor import Visitor
 
 
 class AstToSmvProperty(Visitor):

@@ -10,6 +10,7 @@ from logging import Logger
 from architecture.scheduler import InterleavingScheduler, SCHED_ID_PREFIX, ACTIVE_NAME
 from architecture.tok_ring import TokRingArchitecture, SENDS_NAME, HAS_TOK_NAME, SENDS_PREV_NAME
 from helpers import automata_helper
+import helpers.automata_helper
 from helpers.console_helpers import print_green
 from helpers.main_helper import setup_logging, create_spec_converter_z3, remove_files_prefixed, Z3SolverFactory
 from interfaces.automata import Automaton
@@ -72,10 +73,12 @@ def _log_automatae(logger, global_automatae_pairs, sync_automaton):
         logger.info('..corresponding cutoff=%i', cutoff)
         logger.info('..nof_nodes=%i', len(glob_automaton.nodes))
         logger.debug('..corresponding dot:\n%s', automata_helper.to_dot(glob_automaton))
-        logger.info('\n')
+        logger.debug('\n')
     if sync_automaton:
         logger.info('local automaton %s', sync_automaton.name)
         logger.info('nof_nodes=%i', len(sync_automaton.nodes))
+        logger.debug('.. corresponding dot:\n%s', automata_helper.to_dot(sync_automaton))
+        logger.debug('\n')
     else:
         logger.info('no local automaton')
 

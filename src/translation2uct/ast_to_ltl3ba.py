@@ -1,5 +1,5 @@
 from interfaces.parser_expr import BinOp, Number, UnaryOp, QuantifiedSignal, ForallExpr
-from parsing.helpers import Visitor
+from parsing.visitor import Visitor
 
 
 class ConverterToLtl2BaFormatVisitor(Visitor):

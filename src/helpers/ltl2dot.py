@@ -17,7 +17,7 @@ def main(lines, ltl2ucw:Ltl2UCW):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Translate ltl(of ltl2ba format) into dot (using ltl2ba)')
+    parser = argparse.ArgumentParser(description='Translate ltl(of ltl2ba format) into UCW in dot (using ltl2ba)')
 
     parser.add_argument('--file', '-f', required=False, type=argparse.FileType(),
                         default=None,

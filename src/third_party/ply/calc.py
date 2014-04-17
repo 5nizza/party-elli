@@ -125,9 +125,11 @@ def p_error(t):
 import third_party.ply.yacc as yacc
 yacc.yacc()
 
-while 1:
-    try:
-        s = input('calc > ')   # Use raw_input on Python 2
-    except EOFError:
-        break
-    yacc.parse(s)
+
+if __name__ == '__main__':
+    while 1:
+        try:
+            s = input('calc > ')   # Use raw_input on Python 2
+        except EOFError:
+            break
+        yacc.parse(s)

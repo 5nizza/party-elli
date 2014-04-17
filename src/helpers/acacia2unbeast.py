@@ -10,7 +10,7 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../')
 import logging
 
 from interfaces.parser_expr import BinOp, Number, UnaryOp, QuantifiedSignal, ForallExpr
-from parsing.helpers import Visitor
+from parsing.visitor import Visitor
 from parsing import acacia_parser
 
 import xml.etree.ElementTree as ET

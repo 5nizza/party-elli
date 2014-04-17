@@ -3,7 +3,7 @@ from helpers.python_ext import bin_fixed_list, StrAwareList, index_of, add_dicts
 from interfaces.automata import Label, Automaton
 from interfaces.parser_expr import QuantifiedSignal
 from interfaces.solver_interface import SolverInterface
-from parsing.helpers import get_log_bits
+from parsing.visitor import get_log_bits
 from synthesis.blank_impl import BlankImpl
 from synthesis.func_description import FuncDescription
 from synthesis.smt_helper import build_signals_values

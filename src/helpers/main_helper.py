@@ -16,11 +16,13 @@ def get_root_dir() -> str:
     return root_dir
 
 
-def setup_logging(verbose):
+def setup_logging(verbose_level:int):
     level = None
-    if verbose is 0:
+    if verbose_level == -1:
+        level = logging.CRITICAL
+    if verbose_level is 0:
         level = logging.INFO
-    elif verbose >= 1:
+    elif verbose_level >= 1:
         level = logging.DEBUG
 
     handler = ColorizingStreamHandler()

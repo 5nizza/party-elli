@@ -1,4 +1,4 @@
-from parsing.helpers import Visitor
+from parsing.visitor import Visitor
 from interfaces.parser_expr import BinOp, UnaryOp, Signal, Number
 
 

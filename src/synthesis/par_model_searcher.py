@@ -6,7 +6,7 @@ from interfaces.automata import Automaton
 from interfaces.lts import LTS
 from interfaces.parser_expr import QuantifiedSignal
 from interfaces.solver_interface import SolverInterface
-from parsing.helpers import get_log_bits
+from parsing.visitor import get_log_bits
 from synthesis.blank_impl import BlankImpl
 from synthesis.generic_smt_encoder import GenericEncoder
 from synthesis.sync_impl import SyncImpl

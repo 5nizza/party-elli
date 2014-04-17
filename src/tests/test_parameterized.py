@@ -152,7 +152,7 @@ _UNREALIZABLE_SUBSET = [
     "parameterized/pnueli_arbiter.ltl --cutoff 3 --size 2 --opt sync_hub --weakag",
     "parameterized/pnueli_arbiter_with_tok.ltl --size 2 --opt sync_hub --weakag",
     "parameterized/pnueli_arbiter.ltl --cutoff 3 --size 2 --opt async_hub --weakag",
-    "parameterized/pnueli_arbiter_with_tok.ltl --size 3 --opt async_hub --weakag",
+    "parameterized/pnueli_arbiter_with_tok.ltl --size 2 --opt async_hub --weakag",
 ]
 
 

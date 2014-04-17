@@ -1,3 +1,4 @@
+from functools import total_ordering
 from helpers.python_ext import index_of
 
 
@@ -39,6 +40,21 @@ class QuantifiedSignal(Signal):
 
     __str__ = __repr__
 
+
+    # def __lt__(self, other):
+    #     raise RuntimeError()
+    #     return self.__cached_str < str(other)
+
+    # def __gt__(self, other):
+    #     return self.__cached_str > str(other)
+    #     # return self.__cached_str < other.__cached_str  # hm, what about other being None?
+    #     # raise NotImplementedError()
+    # # def __gt__(self, other):
+    # #     return NotImplemented
+    # def __ge__(self, other):
+    #     return self.__cached_str >= str(other)
+    # def __le__(self, other):
+    #     return self.__cached_str <= str(other)
 
 class Number:
     def __init__(self, number:int):

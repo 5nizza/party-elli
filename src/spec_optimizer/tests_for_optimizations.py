@@ -1,9 +1,10 @@
 from itertools import chain
 import unittest
+
 from architecture.scheduler import InterleavingScheduler
 from interfaces.spec import SpecProperty
 from spec_optimizer.optimizations import strengthen, localize, _reduce_quantifiers, _get_conjuncts, _denormalize, \
-    _fix_indices, _replace_indices, _instantiate_expr, inst_property, _apply_log_bit_optimization, normalize_conjuncts, \
+    _fix_indices, _instantiate_expr, inst_property, _apply_log_bit_optimization, normalize_conjuncts, \
     parse_expr, param_optimize_assume_guarantee
 from interfaces.parser_expr import QuantifiedSignal, ForallExpr, UnaryOp, BinOp, Signal, Expr, Number, Bool, \
     and_expressions
@@ -338,7 +339,7 @@ class TestLocalize(unittest.TestCase):
         assert str(localized_prop) == str(expected_prop), str(localized_prop)
 
 
-class FixIndicesTests(unittest.TestCase):
+class TestsFixIndices(unittest.TestCase):
     def test_fix_indices_partially_fixed(self):
         a_i_1 = _get_is_true('a', 'i', 1)
         c_0 = _get_is_true('c', 0)

@@ -4,6 +4,7 @@ import logging
 import math
 from architecture.scheduler import InterleavingScheduler, ACTIVE_NAME
 from helpers.automata_helper import is_safety_automaton
+from helpers.console_helpers import print_green
 from helpers.python_ext import bin_fixed_list, separate
 from interfaces.spec import SpecProperty
 from parsing.visitor import Visitor
@@ -154,13 +155,60 @@ def _weak_until(guarantee, not_assumption):
     return BinOp('W', guarantee, not_assumption)
 
 
+class FindAllTemporalOperatorsVisitor(Visitor):
+    def __init__(self):
+        self.temporal_operators = set()
+
+    def visit_binary_op(self, binary_op:BinOp):
+        if binary_op.name in ['W', 'U']:
+            self.temporal_operators.add(binary_op.name)
+
+        return super().visit_binary_op(binary_op)
+
+    def visit_unary_op(self, unary_op:UnaryOp):
+        if unary_op.name in ['G','F', 'X']:
+            self.temporal_operators.add(unary_op.name)
+
+        return super().visit_unary_op(unary_op)
+
+    @staticmethod
+    def find_temporal_operators(expr:Expr) -> set:
+        impl = FindAllTemporalOperatorsVisitor()
+        impl.dispatch(expr)
+        return impl.temporal_operators
+
+
+def _is_ag_guarantee(expr:Expr):
+    """ not precise -- it accepts more than just G(..->X..), e.g. it accepts G(a->Xb&XXb)
+
+    >>> _is_ag_guarantee(parse_expr('G(a=1->X(b=1))'))
+    True
+    >>> _is_ag_guarantee(parse_expr('G(a=1->(b=1))'))
+    True
+    >>> _is_ag_guarantee(parse_expr('G(a=1 W b=1)'))
+    False
+    """
+
+    if not expr.name == 'G':
+        return False
+    #: :type: UnaryOp
+    expr = expr
+    stripped = expr.arg
+
+    temporal_ops = FindAllTemporalOperatorsVisitor.find_temporal_operators(stripped)
+    if temporal_ops == set() or temporal_ops == {'X'}:
+        return True
+
+    return False
+
+
 def optimize_assume_guarantee(init_ass, init_gua,
                               saf_ass, saf_gua,
                               liv_ass, liv_gua) -> list:
     """
     return:
     [ init_ass  ->  init_gua,
-      init_ass & inf_sa_ass  ->  fin_saf_gua W !fin_saf_ass,
+      init_ass & inf_sa_ass  ->  G(fin_saf_ass -> fin_saf_gua),
       init_ass & saf_ass  ->  inf_sa_gua,
       init_ass & saf_ass & liv_ass  ->  liv_gua]
     """
@@ -179,8 +227,8 @@ def optimize_assume_guarantee(init_ass, init_gua,
         init_part = SpecProperty(init_ass, init_gua)
         properties.append(init_part)
 
-    fin_sa_ass, inf_sa_ass = separate(lambda expr: expr.name == 'G', saf_ass)  # TODO: if ass = Ga & Gb then fails..
-    fin_sa_gua, inf_sa_gua = separate(lambda expr: expr.name == 'G', saf_gua)
+    fin_sa_ass, inf_sa_ass = separate(_is_ag_guarantee, saf_ass)  # TODO: if ass = Ga & Gb then fails..
+    fin_sa_gua, inf_sa_gua = separate(_is_ag_guarantee, saf_gua)
 
     if inf_sa_ass:
         logger.warning('Not all safety assumptions are of form G(...). We will treat them with "->".')
@@ -191,11 +239,16 @@ def optimize_assume_guarantee(init_ass, init_gua,
         properties.append(SpecProperty(init_ass + saf_ass, inf_sa_gua))
 
     if fin_sa_gua:
-        weak_until_expr = _weak_until(
-            and_expressions([e.arg for e in fin_sa_gua]),  # strip away G
-            _neg(and_expressions([e.arg for e in fin_sa_ass])))
-        properties.append(SpecProperty(init_ass + inf_sa_ass,
-                                       [weak_until_expr]))
+        stripped_ass = and_expressions([e.arg for e in fin_sa_ass])
+        stripped_gua = and_expressions([e.arg for e in fin_sa_gua])
+
+        gr1_safety = UnaryOp('G', BinOp('->', stripped_ass, stripped_gua))
+
+        # weak_until_expr = _weak_until(stripped_gua, _neg(stripped_ass))
+        # properties.append(SpecProperty(init_ass + inf_sa_ass,
+        #                                [weak_until_expr]))
+        properties.append(SpecProperty(init_ass + inf_sa_ass, [gr1_safety]))
+        print_green(gr1_safety)
 
     logger.info('saf_part\n %s', properties)
 
@@ -576,10 +629,19 @@ def _get_sched_signal(arg, scheduler):
 
 
 def _is_active_signal(arg):
-    if isinstance(arg, QuantifiedSignal) and arg.name.startswith(ACTIVE_NAME):
+    if isinstance(arg, QuantifiedSignal) and arg.name == ACTIVE_NAME:
         return True
 
     return False
+
+
+def _get_sig_num(arg1, arg2):
+    if isinstance(arg1, Number):
+        return arg2, arg1
+    elif isinstance(arg2, Number):
+        return arg1, arg2
+    else:
+        assert 0, str(arg1) + ', ' + str(arg2)
 
 
 class RemoveActiveAndSchedulerSignalsVisitor(Visitor):
@@ -588,9 +650,10 @@ class RemoveActiveAndSchedulerSignalsVisitor(Visitor):
 
     def visit_binary_op(self, binary_op:BinOp):
         if binary_op.name == '=':
-            if _get_sched_signal(binary_op.arg1, self._scheduler) or _get_sched_signal(binary_op.arg2, self._scheduler) \
-                    or _is_active_signal(binary_op.arg1) or _is_active_signal(binary_op.arg2):
-                return Bool(True)
+            sig_arg, num_arg = _get_sig_num(binary_op.arg1, binary_op.arg2)
+            if _get_sched_signal(sig_arg, self._scheduler) or _is_active_signal(sig_arg):
+                assert num_arg == Number(1) or num_arg == Number(0)
+                return Bool(num_arg == Number(1))   # replace active_i=0 with False and active_i=1 with True
 
         return super().visit_binary_op(binary_op)
 

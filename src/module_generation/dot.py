@@ -1,9 +1,10 @@
 import unittest
 import logging
 from unittest import TestCase
+from helpers.console_helpers import print_green, print_red
 
 from helpers.labels_map import LabelsMap
-from helpers.python_ext import StrAwareList, add_dicts
+from helpers.python_ext import StrAwareList, add_dicts, lmap
 from interfaces.automata import Label
 from interfaces.lts import LTS
 from interfaces.parser_expr import QuantifiedSignal
@@ -63,23 +64,26 @@ def _label_states_with_outvalues(lts:LTS, filter='all'):
     return dot_lines
 
 
-def _to_expr(l:LabelsMap) -> boolean.Expression:
+def _to_expr(l:Label) -> boolean.Expression:
     expr = boolean.TRUE
     for var, val in l.items():
-        s = boolean.Symbol(var)
+        s = boolean.Symbol(str(var))   # boolean.py has the bug when object is not a string
+        # s = boolean.Symbol(var)
         expr = (expr * s) if val else (expr * ~s)
     return expr
 
 
-def _to_label(clause:boolean.Expression) -> LabelsMap:
-    labels_map = dict()
-    for l in clause.literals:
+def _to_label(cube:boolean.Expression) -> Label:
+    label = dict()
+    for l in cube.literals:
         #: :type: boolean.Expression
         l = l
         assert len(list(l.symbols)) == 1
         symbol = list(l.symbols)[0]
-        labels_map[symbol.obj] = not isinstance(l, boolean.NOT)
-    return labels_map
+        assert str(symbol.obj) not in label
+        label[str(symbol.obj)] = not isinstance(l, boolean.NOT)
+
+    return label
 
 
 def _build_srcdst_to_io_labels(lts:LTS, outvars_treated_as_moore) -> dict:
@@ -98,6 +102,10 @@ def _build_srcdst_to_io_labels(lts:LTS, outvars_treated_as_moore) -> dict:
 
 
 def _simplify_srcdst_to_io_labels(srcdst_to_io_labels:dict) -> dict:
+    """ Careful -- side effect is that every signal becomes string in the returned result.
+    """
+    assert 0, 'there is a bug somewhere here, do not comment me!'
+
     simplified_srcdst_to_io_labels = dict()
     for (src, dst), io_labels in srcdst_to_io_labels.items():
         io_labels_as_exprs = [_to_expr(l) for l in io_labels]
@@ -106,8 +114,11 @@ def _simplify_srcdst_to_io_labels(srcdst_to_io_labels:dict) -> dict:
         for le in io_labels_as_exprs:
             io_labels_as_dnf = io_labels_as_dnf + le
 
+        assert io_labels_as_dnf != boolean.FALSE
+
         simplified_io_labels_as_exprs = tuple()
-        if io_labels_as_dnf != boolean.TRUE:  # FALSE is impossible
+
+        if io_labels_as_dnf != boolean.TRUE:
             simplified_io_labels_as_exprs = boolean.normalize(boolean.OR, io_labels_as_dnf)
 
         simplified_io_labels = [_to_label(e) for e in simplified_io_labels_as_exprs]
@@ -120,7 +131,7 @@ def to_dot(lts:LTS, outvars_treated_as_moore=()):
     logger = logging.getLogger(__file__)
 
     dot_lines = StrAwareList()
-    dot_lines += 'digraph module {\n'
+    dot_lines += 'digraph module {\n rankdir=LR;\n'
 
     dot_lines += _colorize_nodes(lts) + '\n'
 
@@ -129,8 +140,10 @@ def to_dot(lts:LTS, outvars_treated_as_moore=()):
     srcdst_to_io_labels = _build_srcdst_to_io_labels(lts, outvars_treated_as_moore)
     logger.debug('non-simplified model: \n' + str(srcdst_to_io_labels))
 
-    simplified_srcdst_to_io_labels = _simplify_srcdst_to_io_labels(srcdst_to_io_labels)
-    logger.debug('the model after edge simplifications: \n' + str(srcdst_to_io_labels))
+    # the bug is somewhere there: TRY MY OWN IMPLEMENTATION
+    # simplified_srcdst_to_io_labels = _simplify_srcdst_to_io_labels(srcdst_to_io_labels)
+    simplified_srcdst_to_io_labels = srcdst_to_io_labels
+    # logger.debug('the model after edge simplifications: \n' + str(simplified_srcdst_to_io_labels))
 
     for (src, dst), io_labels in simplified_srcdst_to_io_labels.items():
         if not io_labels:
@@ -139,7 +152,7 @@ def to_dot(lts:LTS, outvars_treated_as_moore=()):
             i_vals = dict()
             o_vals = dict()
             for signal, value in io_label.items():
-                if signal in lts.input_signals:
+                if str(signal) in lmap(str, lts.input_signals):  # TODO: hack -- simplification has side-effects -- it turns every signal into string..
                     i_vals[signal] = value
                 else:
                     o_vals[signal] = value
@@ -229,26 +242,18 @@ class Test(TestCase):
         # [{prev_0: True}]
         # ------------------------------------------------
         srcdst_io_labels = dict()
-        srcdst_io_labels[('t2', 't5')] = [{'prev_0': True, 'mlocked_0': True, 'sready_0': True, 'mbusreq_0': True},
-                                          {'prev_0': True, 'mlocked_0': True, 'sready_0': False, 'mbusreq_0': True},
-                                          {'prev_0': True, 'mlocked_0': False, 'sready_0': True, 'mbusreq_0': False},
-                                          {'prev_0': True, 'mlocked_0': True, 'sready_0': True, 'mbusreq_0': False},
-                                          {'prev_0': True, 'mlocked_0': True, 'sready_0': False, 'mbusreq_0': False},
-                                          {'prev_0': True, 'mlocked_0': False, 'sready_0': False, 'mbusreq_0': False},
-                                          {'prev_0': True, 'mlocked_0': False, 'sready_0': False, 'mbusreq_0': True},
-                                          {'prev_0': True, 'mlocked_0': False, 'sready_0': True, 'mbusreq_0': True}]
+        srcdst_io_labels[('t2', 't5')] = [{QuantifiedSignal('prev', 0): True, 'mlocked_0': True, QuantifiedSignal('sready', 0): True, QuantifiedSignal('mbusreq', 0): True},
+                                          {QuantifiedSignal('prev', 0): True, 'mlocked_0': True, QuantifiedSignal('sready', 0): False, QuantifiedSignal('mbusreq', 0): True},
+                                          {QuantifiedSignal('prev', 0): True, 'mlocked_0': False, QuantifiedSignal('sready', 0): True, QuantifiedSignal('mbusreq', 0): False},
+                                          {QuantifiedSignal('prev', 0): True, 'mlocked_0': True, QuantifiedSignal('sready', 0): True, QuantifiedSignal('mbusreq', 0): False},
+                                          {QuantifiedSignal('prev', 0): True, 'mlocked_0': True, QuantifiedSignal('sready', 0): False, QuantifiedSignal('mbusreq', 0): False},
+                                          {QuantifiedSignal('prev', 0): True, 'mlocked_0': False, QuantifiedSignal('sready', 0): False, QuantifiedSignal('mbusreq', 0): False},
+                                          {QuantifiedSignal('prev', 0): True, 'mlocked_0': False, QuantifiedSignal('sready', 0): False, QuantifiedSignal('mbusreq', 0): True},
+                                          {QuantifiedSignal('prev', 0): True, 'mlocked_0': False, QuantifiedSignal('sready', 0): True, QuantifiedSignal('mbusreq', 0): True}]
 
         simplified_srcdst_io_labels = _simplify_srcdst_to_io_labels(srcdst_io_labels)
 
-        self.assertDictEqual(simplified_srcdst_io_labels,
-                             {
-                                 ('t2', 't5'): [{'prev_0': True}],
-                             })
-
-
-    #def test_simplify_srcdst_to_io_labels___stress(self):
-    #    for i in range(500):
-    #        self.test_simplify_srcdst_to_io_labels___bug()
+        self.assertDictEqual(simplified_srcdst_io_labels, {('t2', 't5'): [{'prev_0': True}]})  # kinda hack - returns strings instead of Signals..
 
 
 if __name__ == "__main__":

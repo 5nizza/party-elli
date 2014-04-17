@@ -100,6 +100,7 @@ def to_dot(automaton) -> str:
                 trans_dot.append('\n')
 
     dot_lines = ['digraph "automaton" {'] + \
+                ['rankdir=LR;'] + \
                 init_header + ['\n'] + \
                 rej_header + ['\n'] + \
                 trans_dot + ['}']
@@ -234,19 +235,6 @@ def get_intersection(label1, label2):
     result.update(label2)
     return Label(result)
 
-#overkill?
-#    formula1 = convert_to_formula(label1)
-#    formula2 = convert_to_formula(label2)
-#
-#    intersection = AND(formula1, formula2)
-#    if intersection == FALSE:
-#        return None
-#
-#    labels = convert_to_labels(intersection)
-#
-#    assert len(labels) == 1, str(labels)
-#
-#    return next(iter(labels))
 
 def complement_node(node, variables):
     symbol_from_var = dict(zip(variables, symbols(*variables)))
@@ -264,7 +252,7 @@ def complement_node(node, variables):
         for complemented_label in complemented_labels:
             node.add_transition(complemented_label, {(LIVE_END, False)})
 
-#
+
 def complement_with_live_ends(automaton, variables):
     """ Complement nodes with transitions to live_end_nodes """
 

@@ -193,15 +193,15 @@ class GenericEncoder(EncodingSolver):
 
         spec_states = impl.automaton.nodes
 
-        for global_state in global_states_to_encode:
-            for spec_state in spec_states:
+        for spec_state in spec_states:
+            for global_state in global_states_to_encode:
                 for label, dst_set_list in spec_state.transitions.items():
                     transition_condition = self._encode_transition(spec_state, global_state, label,
                                                                    state_to_rejecting_scc, impl)
 
                     self._underlying_solver.assert_(transition_condition)
 
-            self._underlying_solver.comment('encoded state ' + self._get_smt_name_sys_state(global_state))
+            self._underlying_solver.comment('encoded spec state ' + self._get_smt_name_spec_state(spec_state))
 
     def encode_sys_model_functions(self, impl):
         states_by_type = dict(zip(impl.state_types_by_process, impl.states_by_process))
@@ -233,7 +233,6 @@ class GenericEncoder(EncodingSolver):
         """ Return dict: name->value
             free variables (to be enumerated) have ?var_name value.
         """
-
         proc_label = impl.filter_label_by_process(label, proc_index)
 
         glob_tau_args = dict()
@@ -323,7 +322,6 @@ class GenericEncoder(EncodingSolver):
         """ Return transition(output) graph {label:output}
         """
         func_model = {}
-
         for l in func_smt_lines:
         #            (get-value ((tau t0 true true)))
             l = l.replace('get-value', '').replace('(', '').replace(')', '')
@@ -334,7 +332,6 @@ class GenericEncoder(EncodingSolver):
             values = self._parse_values(tokens[1:])  # the very first - func_name
             args = Label(func_desc.get_args_dict(values[:-1]))
             func_model[args] = values[-1]
-
         return func_model
 
     def parse_sys_model(self, get_value_lines, impl):  # TODO: depends on SMT format
