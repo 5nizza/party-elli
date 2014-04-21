@@ -1,5 +1,7 @@
+from collections import defaultdict
 from itertools import combinations
 import unittest
+from helpers.console_helpers import print_green
 
 from interfaces.automata import Label
 from third_party import boolean
@@ -17,18 +19,24 @@ def parse_label(lbl:Label, variables:dict) -> Expression:
     return cube
 
 
+str_to_signal = None
+signal_to_str = None
+
+
 def _get_set_from_label(lbl:Label) -> set:
     assert isinstance(lbl, Label)
     # print('lbl=', lbl)
     # for l in lbl:
         # print('l=', l)
         # print('lbl[l]=', lbl[l])
+    global signal_to_str
 
-    return set(['~', ''][lbl[l]]+l for l in lbl)
+    return set(('~', '')[lbl[l]]+signal_to_str[l] for l in lbl)
 
 
 def _get_label_from_set(s:set) -> Label:
-    return Label((e.strip('~'), not e.startswith('~')) for e in s)
+    global str_to_signal
+    return Label((str_to_signal[e.strip('~')], not e.startswith('~')) for e in s)
 
 
 def _resolve_consensus(lbl1:Label, lbl2:Label)->Label:
@@ -56,13 +64,39 @@ def _remove_subsumed_except_me(cur_set:set, subsumer:Label)->set:
     return result
 
 
-def minimize_dnf_set(set_of_labels) -> set:
+def _populate_the_dicts(set_of_labels):
+    global str_to_signal
+    global signal_to_str
+    str_to_signal = dict()
+    signal_to_str = dict()
+    for lbl in set_of_labels:
+        for sig in lbl:
+            str_to_signal[str(sig)] = sig
+            signal_to_str[sig] = str(sig)
+
+
+def _check_subsumption(cur_set):
+    to_check = set(cur_set)
+    while to_check:
+        lbl = to_check.pop()
+        updated_set = _remove_subsumed_except_me(cur_set, lbl)
+        removed = cur_set.difference(updated_set)
+        to_check.difference_update(removed)
+        cur_set.difference_update(removed)
+    return cur_set
+
+
+def minimize_dnf_set(set_of_labels) -> set:  # TODO: can be optimized -- numerous requests to get_set_from_label
     if not set_of_labels:
         return set_of_labels
+
+    _populate_the_dicts(set_of_labels)
 
     # consensus rules till fix-point
     cur_set = set(set_of_labels)
     while True:
+        cur_set = _check_subsumption(cur_set)
+
         new_set = set()
         for (lbl1, lbl2) in combinations(cur_set, 2):
             resolvent = _resolve_consensus(lbl1, lbl2)
@@ -76,19 +110,19 @@ def minimize_dnf_set(set_of_labels) -> set:
             break
         cur_set.update(new_set)
 
-    # subsumption rules till fix-point
-    to_check = set(cur_set)
-    while to_check:
-        lbl = to_check.pop()
-        updated_set = _remove_subsumed_except_me(cur_set, lbl)
-        removed = cur_set.difference(updated_set)
-        to_check.difference_update(removed)
-        cur_set.difference_update(removed)
-
     return cur_set
 
 
 class Test(unittest.TestCase):
+    def setUp(self):
+        global str_to_signal
+        global signal_to_str
+        str_to_signal = dict()
+        signal_to_str = dict()
+        for letter in ['a', 'b', 'c', 'd', 'e', 'f']:
+            str_to_signal[letter] = signal_to_str[letter] = letter
+
+
     def test__resolve_consensus(self):
         lbl1 = Label({'a':True, 'c':True, 'b':True})
         lbl2 = Label({'a':True, 'c':True, 'b':False})

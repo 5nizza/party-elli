@@ -1,6 +1,7 @@
 import unittest
 import logging
 from unittest import TestCase
+from helpers.boolean_helpers import minimize_dnf_set
 from helpers.console_helpers import print_green, print_red
 
 from helpers.labels_map import LabelsMap
@@ -94,7 +95,7 @@ def _build_srcdst_to_io_labels(lts:LTS, outvars_treated_as_moore) -> dict:
         i_label = _get_inputvals(label)
         o_label = _get_outputvals(label, lts, outvars_treated_as_moore)
 
-        io_label = add_dicts(i_label, o_label)
+        io_label = Label(add_dicts(i_label, o_label))
 
         srcdst_to_io_labels[(crt_state, next_state)] = srcdst_to_io_labels.get((crt_state, next_state), list())
         srcdst_to_io_labels[(crt_state, next_state)].append(io_label)
@@ -142,7 +143,12 @@ def to_dot(lts:LTS, outvars_treated_as_moore=()):
 
     # the bug is somewhere there: TRY MY OWN IMPLEMENTATION
     # simplified_srcdst_to_io_labels = _simplify_srcdst_to_io_labels(srcdst_to_io_labels)
-    simplified_srcdst_to_io_labels = srcdst_to_io_labels
+    simplified_srcdst_to_io_labels = dict()
+    for (src,dst),io_labels in srcdst_to_io_labels.items():
+        simplified_srcdst_to_io_labels[(src,dst)] = minimize_dnf_set(io_labels)
+
+    # simplified_srcdst_to_io_labels = minimize_dnf_set()
+    # simplified_srcdst_to_io_labels = srcdst_to_io_labels
     # logger.debug('the model after edge simplifications: \n' + str(simplified_srcdst_to_io_labels))
 
     for (src, dst), io_labels in simplified_srcdst_to_io_labels.items():
