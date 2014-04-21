@@ -105,7 +105,7 @@ class EncodingSolver:
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def encode_run_graph(self, impl, model_states_to_encode):
+    def encode_run_graph(self, impl, model_states_to_encode, env_ass_func):
         raise NotImplementedError()
 
     @abstractmethod

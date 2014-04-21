@@ -14,7 +14,9 @@ def search(automaton:Automaton,
            input_signals, output_signals,
            sizes,
            underlying_solver:SolverInterface,
-           logic):
+           logic,
+           env_ass_func,
+           sys_gua_func):
     logger = logging.getLogger()
 
     logger.debug(automaton)
@@ -42,7 +44,7 @@ def search(automaton:Automaton,
         new_states = cur_all_states[last_size:]
         last_size = size
 
-        encoding_solver.encode_run_graph(impl, list((s,) for s in new_states))
+        encoding_solver.encode_run_graph(impl, list((s,) for s in new_states), env_ass_func)
 
         encoding_solver.push()
 

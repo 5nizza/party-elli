@@ -1,11 +1,12 @@
+from collections import defaultdict, Iterable
 from functools import lru_cache
 from itertools import chain, permutations
 import logging
 import math
 from architecture.scheduler import InterleavingScheduler, ACTIVE_NAME
 from helpers.automata_helper import is_safety_automaton
-from helpers.console_helpers import print_green
-from helpers.python_ext import bin_fixed_list, separate
+from helpers.console_helpers import print_green, print_red
+from helpers.python_ext import bin_fixed_list, separate, add_dicts
 from interfaces.spec import SpecProperty
 from parsing.visitor import Visitor
 from interfaces.parser_expr import ForallExpr, BinOp, Signal, Expr, Bool, QuantifiedSignal, and_expressions, Number, \
@@ -16,6 +17,10 @@ from parsing.par_parser_desc import par_parser
 
 
 # TODO: split into several files
+from synthesis import smt_helper
+from synthesis.func_description import FuncDescription
+from synthesis.gr1_encoder import _next
+
 
 def is_quantified_expr(expr:Expr):
     return is_quantified_property(SpecProperty([], [expr]))
@@ -73,9 +78,9 @@ def _add_quantifiers(expr_with_free_vars:Expr):
     return ForallExpr(indices, expr_with_free_vars)
 
 
-def param_optimize_assume_guarantee(expr:Expr, ltl2ucw_converter) -> list:
+def param_optimize_assume_guarantee(expr:Expr, ltl2ucw_converter, return_formulae_for_gr1:bool) -> (list, Expr, Expr):
     """
-    Assumes that the guarantee is of the form gua
+    This version returns env_ass_funcs, env_gua_funcs instead of turning them into properties.
     """
     if expr == Bool(True) or expr == Bool(False):
         return expr
@@ -90,9 +95,13 @@ def param_optimize_assume_guarantee(expr:Expr, ltl2ucw_converter) -> list:
         assumptions = []
     guarantees = _split_conjuncts(implication.arg2)
 
-    init_ass, init_gua, saf_ass, saf_gua, liv_ass, liv_gua = extract_spec_components(assumptions, guarantees,
-                                                                                     ltl2ucw_converter)
-    interm_properties = optimize_assume_guarantee(init_ass, init_gua, saf_ass, saf_gua, liv_ass, liv_gua)
+    init_ass, init_gua, saf_ass, saf_gua, liv_ass, liv_gua = extract_spec_components(assumptions, guarantees, ltl2ucw_converter)
+    interm_properties, env_ass_formula, sys_gua_formula = optimize_assume_guarantee(init_ass, init_gua,
+                                                                                    saf_ass, saf_gua,
+                                                                                    liv_ass, liv_gua,
+                                                                                    return_formulae_for_gr1)
+    env_ass_formula = _add_quantifiers(env_ass_formula)
+    sys_gua_formula = _add_quantifiers(sys_gua_formula)
 
     properties = []
     for p in interm_properties:
@@ -100,7 +109,7 @@ def param_optimize_assume_guarantee(expr:Expr, ltl2ucw_converter) -> list:
         new_p = SpecProperty([], [_add_quantifiers(new_expr)])
         properties.append(new_p)
 
-    return properties
+    return properties, env_ass_formula, sys_gua_formula
 
 
 def extract_spec_components(assumptions, guarantees, ltl2ucw_converter) -> (list, list, list, list):
@@ -178,21 +187,31 @@ class FindAllTemporalOperatorsVisitor(Visitor):
         return impl.temporal_operators
 
 
-def _is_ag_guarantee(expr:Expr):
+def _is_ag2(expr:Expr):
+    """ Returns True for properties of the form G(bool_formula_without_temporal_operators)
+
+    >>> _is_ag2(parse_expr('G(a=1)'))
+    True
+    """
+    if not expr.name == 'G' or FindAllTemporalOperatorsVisitor.find_temporal_operators(expr.arg) != set():
+        return False
+    return True
+
+
+def _is_ag(expr:Expr):
     """ not precise -- it accepts more than just G(..->X..), e.g. it accepts G(a->Xb&XXb)
 
-    >>> _is_ag_guarantee(parse_expr('G(a=1->X(b=1))'))
+    >>> _is_ag(parse_expr('G(a=1->X(b=1))'))
     True
-    >>> _is_ag_guarantee(parse_expr('G(a=1->(b=1))'))
+    >>> _is_ag(parse_expr('G(a=1->(b=1))'))
     True
-    >>> _is_ag_guarantee(parse_expr('G(a=1 W b=1)'))
+    >>> _is_ag(parse_expr('G(a=1 W b=1)'))
     False
     """
 
     if not expr.name == 'G':
         return False
-    #: :type: UnaryOp
-    expr = expr
+
     stripped = expr.arg
 
     temporal_ops = FindAllTemporalOperatorsVisitor.find_temporal_operators(stripped)
@@ -202,9 +221,83 @@ def _is_ag_guarantee(expr:Expr):
     return False
 
 
+class ExprToSmtFormulaVisitor(Visitor):
+    def __init__(self):
+        self._should_prime = False
+        self.max_depth = 0
+        self._crt_depth = 0
+
+    def visit_unary_op(self, unary_op:UnaryOp):
+        if unary_op.name == 'X':
+            self._should_prime = True
+            self._crt_depth += 1
+            self.max_depth = max(self.max_depth, self._crt_depth)
+            res = self.dispatch(unary_op.arg)
+            self._should_prime = False
+            self._crt_depth -= 1
+            return res
+        else:
+            assert 0, 'impossible: ' + str(unary_op)
+
+    def visit_binary_op(self, binary_op:BinOp):
+        if binary_op.name == '*':
+            return smt_helper.op_and([self.dispatch(binary_op.arg1), self.dispatch(binary_op.arg2)])
+
+        elif binary_op.name == '+':
+            return smt_helper.op_or([self.dispatch(binary_op.arg1), self.dispatch(binary_op.arg2)])
+
+        elif binary_op.name == '->':
+            return smt_helper.op_implies(self.dispatch(binary_op.arg1), self.dispatch(binary_op.arg2))
+
+        elif binary_op.name == '<->':
+            return smt_helper.op_eq(self.dispatch(binary_op.arg1), self.dispatch(binary_op.arg2))
+
+        elif binary_op.name == '=':
+            sig, num = _get_sig_num(binary_op)
+            res = str([sig,_next(sig)][self._should_prime])
+            if num == Number(0):
+                res = smt_helper.op_not(res)
+            return res
+
+        else:
+            assert 0, 'should not happen: ' + str(binary_op)
+
+    def visit_bool(self, bool_const:Bool):
+        return (smt_helper.false(), smt_helper.true())[bool_const.name == str(True)]
+
+    #
+    def convert(self, expr:Expr):
+        return self.dispatch(expr)
+
+
+def build_func_desc_from_formula(bool_expr:Expr, func_name:str, forbid_next:bool) -> FuncDescription:
+    """
+    # >>> build_func_desc_from_formula(BinOp('*', BinOp('=', QuantifiedSignal('a', 0), Number(0)), \
+    #                                             UnaryOp('X', BinOp('=', QuantifiedSignal('b', 0), Number(1)))), \
+    #                                  'func_name', False)
+    # >>> build_func_desc_from_formula(BinOp('*', BinOp('=', QuantifiedSignal('a', 0), Number(0)), \
+    #                                             BinOp('=', QuantifiedSignal('b', 0), Number(1))), \
+    #                                  'func_name', True)
+    """
+
+    signals = QuantifiedSignalsFinderVisitor().find_quantified_signals(bool_expr)
+    smt_converter = ExprToSmtFormulaVisitor()
+    smt_formula = smt_converter.convert(bool_expr)
+
+    assert (not forbid_next) or smt_converter.max_depth == 0
+
+    all_args = [(s, 'Bool') for s in signals]
+    for d in range(smt_converter.max_depth):
+        suffix = 'Next'*(d+1)
+        all_args += [(QuantifiedSignal(s.name + suffix, *s.binding_indices), 'Bool') for s in signals]
+
+    return FuncDescription(func_name, dict(all_args), 'Bool', smt_formula)
+
+
 def optimize_assume_guarantee(init_ass, init_gua,
                               saf_ass, saf_gua,
-                              liv_ass, liv_gua) -> list:
+                              liv_ass, liv_gua,
+                              return_formulae_for_gr1:bool) -> (list, Expr, Expr):
     """
     return:
     [ init_ass  ->  init_gua,
@@ -214,8 +307,6 @@ def optimize_assume_guarantee(init_ass, init_gua,
     """
     logger = logging.getLogger(__name__)
 
-    properties = []
-
     logger.debug('init_ass %s', init_ass)
     logger.debug('init_gua %s', init_gua)
     logger.debug('saf_ass %s', saf_ass)
@@ -223,48 +314,50 @@ def optimize_assume_guarantee(init_ass, init_gua,
     logger.debug('liv_ass %s', liv_ass)
     logger.debug('liv_gua %s', liv_gua)
 
+    properties = []
+
+    #
     if init_gua:
         init_part = SpecProperty(init_ass, init_gua)
         properties.append(init_part)
 
-    fin_sa_ass, inf_sa_ass = separate(_is_ag_guarantee, saf_ass)  # TODO: if ass = Ga & Gb then fails..
-    fin_sa_gua, inf_sa_gua = separate(_is_ag_guarantee, saf_gua)
+    fin_sa_ass, inf_sa_ass = separate(_is_ag2, saf_ass)  # TODO: if ass = Ga & Gb then fails..
+    fin_sa_gua, inf_sa_gua = separate(_is_ag, saf_gua)
 
     if inf_sa_ass:
-        logger.warning('Not all safety assumptions are of form G(...). We will treat them with "->".')
+        logger.debug('Not all safety assumptions are of form G(bool_formula). We will treat them with "->".')
         pass
-
     if inf_sa_gua:
-        logger.warning('Not all safety guarantees are of form G(...). We will treat them with "->".')
+        logger.debug('Not all safety guarantees are of form G(bool_formulaOneNext). We will treat them with "->". \n %s', str(inf_sa_gua))
         properties.append(SpecProperty(init_ass + saf_ass, inf_sa_gua))
 
+    env_ass_formula = Bool(True)
+    if fin_sa_ass:
+        stripped = set(e.arg for e in fin_sa_ass)   # since G(arg)
+        env_ass_formula = and_expressions(stripped)
+    sys_gua_formula = Bool(True)
     if fin_sa_gua:
-        stripped_ass = and_expressions([e.arg for e in fin_sa_ass])
-        stripped_gua = and_expressions([e.arg for e in fin_sa_gua])
-
-        # gr1_safety = UnaryOp('G', BinOp('->', stripped_ass, stripped_gua))
-
-        weak_until_expr = _weak_until(stripped_gua, _neg(stripped_ass))
-        properties.append(SpecProperty(init_ass + inf_sa_ass,
-                                       [weak_until_expr]))
-        # properties.append(SpecProperty(init_ass + inf_sa_ass, [gr1_safety]))
-        # print_green(gr1_safety)
+        stripped = set(e.arg for e in fin_sa_gua)   # since forall() ( G(arg) )
+        sys_gua_formula = and_expressions(stripped)
 
     logger.info('saf_part\n %s', properties)
 
+    #
     if liv_gua:
         liv_property = SpecProperty(init_ass + saf_ass + liv_ass, liv_gua)
         properties.append(liv_property)
         logger.info('liv_part\n %s', liv_property)
+    #
+    return properties, env_ass_formula, sys_gua_formula
 
-    return properties
 
-
-def normalize_conjuncts(conjuncts:list) -> Expr:
+def normalize_conjuncts(conjuncts:Iterable) -> Expr:
     """ sound, complete
     forall(i,j) a_i_j and forall(i) b_i  ----> forall(i,j) (a_i_j and b_i)
     forall(i) a_i and forall(j) b_j      ----> forall(i) (a_i and b_i)
     """
+    conjuncts = list(conjuncts)
+
     if len(conjuncts) == 0:
         return Bool(True)
 
@@ -635,7 +728,10 @@ def _is_active_signal(arg):
     return False
 
 
-def _get_sig_num(arg1, arg2):
+def _get_sig_num(binary_op:BinOp) -> (QuantifiedSignal, Number):
+    arg1 = binary_op.arg1
+    arg2 = binary_op.arg2
+
     if isinstance(arg1, Number):
         return arg2, arg1
     elif isinstance(arg2, Number):
@@ -650,7 +746,7 @@ class RemoveActiveAndSchedulerSignalsVisitor(Visitor):
 
     def visit_binary_op(self, binary_op:BinOp):
         if binary_op.name == '=':
-            sig_arg, num_arg = _get_sig_num(binary_op.arg1, binary_op.arg2)
+            sig_arg, num_arg = _get_sig_num(binary_op)
             if _get_sched_signal(sig_arg, self._scheduler) or _is_active_signal(sig_arg):
                 assert num_arg == Number(1) or num_arg == Number(0)
                 return Bool(num_arg == Number(1))   # replace active_i=0 with False and active_i=1 with True

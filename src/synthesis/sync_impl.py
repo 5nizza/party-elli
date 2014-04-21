@@ -96,7 +96,7 @@ class SyncImpl(BlankImpl):  # TODO: This class was never tested separately from 
     def get_proc_tau_additional_args(self, proc_label, sys_state_vector, proc_index):
         return dict()
 
-    def get_architecture_trans_assumption(self, label, sys_state_vector):
+    def get_architecture_trans_assumption(self, label, sys_state_vector):  # TODO: can this be implemented with env_assumptions?
         # ignore active_i
         # add assumption 'G(!(tok & prev))' #TODO: add on LTL level?
 

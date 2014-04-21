@@ -7,6 +7,7 @@ from interfaces.lts import LTS
 from interfaces.parser_expr import QuantifiedSignal
 from interfaces.solver_interface import SolverInterface
 from parsing.visitor import get_log_bits
+from synthesis.gr1_encoder import encode_gr1_transitions
 from synthesis.blank_impl import BlankImpl
 from synthesis.generic_smt_encoder import GenericEncoder
 from synthesis.sync_impl import SyncImpl
@@ -44,7 +45,12 @@ class ParModelSearcher:
 
               solver:SolverInterface,
               base_name_of:BaseNames,
-              model:LTS):
+              model:LTS,
+              env_ass_func,
+              sys_gua_func):
+        """
+        env_ass_funcs is the list: process_index -> env_function (each process has a single environment function)
+        """
 
         self._logger = logging.getLogger()
         self._logic = logic
@@ -68,13 +74,15 @@ class ParModelSearcher:
                                           automaton,
                                           model_size,
                                           all_states,
-                                          [])
+                [])
 
         # TODO: use separate impl! -- I use sync automaton to encode token ring properties on SMT level
         encoding_solver, impl = self._encode_local_automaton(sync_automaton,
                                                              model_size,
                                                              init_process_states,
-                                                             all_states)
+                                                             all_states,
+                                                             env_ass_func,
+                                                             sys_gua_func)
 
         encoding_solver.push()
 
@@ -105,12 +113,17 @@ class ParModelSearcher:
     # TODO: bureaucracy in coding.. simplify
     def _encode_headers(self, max_model_size,
                         sync_automaton,
-                        global_automaton_cutoff_pairs):
+                        global_automaton_cutoff_pairs,
+                        env_ass_func,
+                        sys_gua_func):
         init_process_states = self._get_init_process_states(global_automaton_cutoff_pairs, max_model_size)
         self._encode_local_headers(max_model_size, init_process_states, sync_automaton)
 
         for i, (automaton, nof_processes) in enumerate(global_automaton_cutoff_pairs):
             self._encode_global_headers(automaton, i, max_model_size, nof_processes)
+
+        self._underlying_solver.define_fun(env_ass_func)
+        self._underlying_solver.define_fun(sys_gua_func)
 
     def _get_glob_spec_state_type(self, automaton_index:int) -> str:
         spec_states_type = 'Q' + str(automaton_index)
@@ -131,7 +144,12 @@ class ParModelSearcher:
 
                process_model_bounds,
                solver:SolverInterface,
-               base_name_of:BaseNames):
+               base_name_of:BaseNames,
+               env_ass_func,
+               sys_gua_func):
+        """
+        env_ass_funcs is the list: process_index -> env_function (each process has a single environment function)
+        """
 
         self._logger = logging.getLogger()
         self._logic = logic
@@ -141,7 +159,8 @@ class ParModelSearcher:
         self._underlying_solver = solver
         self._names = base_name_of
 
-        self._encode_headers(process_model_bounds[-1], sync_automaton, global_automaton_cutoff_pairs)
+        self._encode_headers(process_model_bounds[-1], sync_automaton, global_automaton_cutoff_pairs,
+                             env_ass_func, sys_gua_func)
 
         max_size = process_model_bounds[-1]
         init_process_states = self._get_init_process_states(global_automaton_cutoff_pairs, max_size)
@@ -159,10 +178,18 @@ class ParModelSearcher:
 
             for i, (automaton, nof_processes) in enumerate(global_automaton_cutoff_pairs):
                 #noinspection PyTypeChecker
-                self._encode_global_automaton(i, nof_processes, automaton, size, new_states, already_encoded_states)
+                self._encode_global_automaton(i, nof_processes, automaton, size, new_states, already_encoded_states,
+                                              env_ass_func, sys_gua_func)
 
             #TODO: mess -- I use sync automaton to encode token ring properties on SMT level, use separate impl!
-            encoding_solver, impl = self._encode_local_automaton(sync_automaton, size, init_process_states, new_states)
+            encoding_solver, impl = self._encode_local_automaton(sync_automaton, size, init_process_states, new_states,
+                                                                 env_ass_func)
+
+            encode_gr1_transitions(env_ass_func, sys_gua_func,
+                                   impl.taus_descs[0],  # assume isomorphism
+                                   impl.outvar_desc_by_process,
+                                   new_states,
+                                   self._underlying_solver)
 
             encoding_solver.push()
 
@@ -212,7 +239,8 @@ class ParModelSearcher:
                                  automaton:Automaton,
                                  model_size:int,
                                  model_states_to_encode,
-                                 already_encoded_model_states):
+                                 already_encoded_model_states,
+                                 env_ass_func, sys_gua_func):
 
         sys_intern_funcs_postfix = self._get_glob_sys_intern_func_postfix(automaton_index)
         spec_state_type = self._get_glob_spec_state_type(automaton_index)
@@ -227,7 +255,7 @@ class ParModelSearcher:
                                                                     already_encoded_model_states,
                                                                     nof_processes)
         # list(product(*(nof_processes * [model_states_to_encode])))
-        encoding_solver.encode_run_graph(par_impl, global_states_to_encode)
+        encoding_solver.encode_run_graph(par_impl, global_states_to_encode, env_ass_func)
 
         return encoding_solver, par_impl
 
@@ -261,7 +289,8 @@ class ParModelSearcher:
     def _encode_local_automaton(self, local_automaton,
                                 bound,
                                 init_process_states,
-                                model_states_to_encode):
+                                model_states_to_encode,
+                                env_ass_func):
         impl = self._get_sync_impl(bound, init_process_states, local_automaton)
 
         encoding_solver = GenericEncoder(self._logic,
@@ -269,7 +298,7 @@ class ParModelSearcher:
                                          impl.state_types_by_process,
                                          self._underlying_solver)
 
-        encoding_solver.encode_run_graph(impl, list((s,) for s in model_states_to_encode))
+        encoding_solver.encode_run_graph(impl, list((s,) for s in model_states_to_encode), env_ass_func)
         return encoding_solver, impl
 
     def _get_par_impl(self,

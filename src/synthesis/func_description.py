@@ -50,9 +50,11 @@ class FuncDescription:
                             body=self._body)
 
     def get_args_list(self, value_by_argname:dict) -> list:
-        assert set([p[0] for p in self._ordered_input_type_pairs]).issubset(set(value_by_argname.keys())), \
-            'requested \n{0}\n, but I have \n{1}'.format(value_by_argname, self._ordered_input_type_pairs)
+        my_args = set([p[0] for p in self._ordered_input_type_pairs])
+        given_args = set(value_by_argname.keys())
+        assert my_args.issubset(given_args), self.name + ': given values for \n{0}\n, but I need for \n{1}'.format(given_args, my_args)
 
+        #
         ordered_values = []
         for (signal, ty) in self._ordered_input_type_pairs:
             value = value_by_argname[signal]

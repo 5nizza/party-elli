@@ -1,9 +1,12 @@
+from helpers.console_helpers import print_green
 from helpers.python_ext import lmap
 from interfaces.parser_expr import QuantifiedSignal
 from synthesis.func_description import FuncDescription
 
 
 def build_signals_values(signals, label) -> (dict, list):
+    signals = list(signals)
+
     for s in signals:
         assert isinstance(s, QuantifiedSignal)
 

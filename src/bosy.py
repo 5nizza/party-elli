@@ -12,7 +12,8 @@ from module_generation.nusmv import to_boolean_nusmv
 from parsing import acacia_parser, anzu_parser
 from parsing.anzu_lexer_desc import ANZU_OUTPUT_VARIABLES, ANZU_INPUT_VARIABLES, ANZU_ENV_INITIAL, ANZU_SYS_INITIAL, \
     ANZU_SYS_TRANSITIONS, ANZU_SYS_FAIRNESS, ANZU_ENV_FAIRNESS, ANZU_ENV_TRANSITIONS
-from spec_optimizer.optimizations import strengthen_many, extract_spec_components, optimize_assume_guarantee
+from spec_optimizer.optimizations import strengthen_many, extract_spec_components, optimize_assume_guarantee, \
+    build_func_desc_from_formula
 from synthesis import generic_smt_encoder
 from synthesis.solitary_model_searcher import search
 from synthesis.smt_logic import UFLIA
@@ -47,9 +48,14 @@ def _get_acacia_spec(ltl_text:str, part_text:str, weak_until:bool, logger:loggin
             init_ass, init_gua, safe_ass, safe_gua, live_ass, live_gua = extract_spec_components(assumptions,
                                                                                                  guarantees,
                                                                                                  ltl2ucw_converter)
-            spec_properties.extend(optimize_assume_guarantee(init_ass, init_gua,
-                                                             safe_ass, safe_gua,
-                                                             live_ass, live_gua))
+            properties, env_ass_formula, sys_gua_formula = optimize_assume_guarantee(init_ass, init_gua,
+                                                                                     safe_ass, safe_gua,
+                                                                                     live_ass, live_gua,
+                                                                                     True)
+            env_ass_func = build_func_desc_from_formula(env_ass_formula, 'env_ass')
+            sys_gua_func = build_func_desc_from_formula(sys_gua_formula, 'sys_gua')
+            assert 0, 'not finished -- need to join env_ass_func, sys_gua_func together into a single one'
+            spec_properties.extend(properties)
             # print('init_ass:\n  ', init_ass)
             # print()
             # print('init_gua:\n  ', init_gua)
@@ -145,9 +151,11 @@ def _get_anzu_spec(ltl_text:str, use_weak_until:bool, logger) -> (list, list, li
     init_guarantees = section_by_name[ANZU_SYS_INITIAL]
 
     if use_weak_until:
-        properties = optimize_assume_guarantee(init_assumptions, init_guarantees,
-                                               safety_assumptions, safety_guarantees,
-                                               live_assumptions, live_guarantees)
+        properties, env_ass_formula, sys_gua_formula = optimize_assume_guarantee(init_assumptions, init_guarantees,
+                                                                                 safety_assumptions, safety_guarantees,
+                                                                                 live_assumptions, live_guarantees,
+                                                                                 True)
+        assert 0, 'not finished, need to handle env_ass_formula and guarantee'
     else:
         init_part = BinOp('->',
                           and_expressions(init_assumptions),
@@ -214,14 +222,11 @@ def main(spec_type,
     if not input_signals or not output_signals or not spec_property:
         return None
 
-    # print('-' * 80)
-    # print(ConverterToWringVisitor().dispatch(to_expr(spec_property)))
-    # exit(0)
-
     automaton = ltl2ucw_converter.convert(to_expr(spec_property))
     logger.info('spec automaton has {0} states'.format(len(automaton.nodes)))
 
-    models = search(automaton, not is_moore, input_signals, output_signals, bounds, underlying_solver, UFLIA(None))
+    models = search(automaton, not is_moore, input_signals, output_signals, bounds, underlying_solver, UFLIA(None),
+                    env_ass_funcs)
 
     assert models is None or len(models) == 1
 

@@ -1,13 +1,11 @@
-from collections import Iterable
 import logging
-
 from itertools import product, chain
 import sys
-from helpers.boolean_helpers import minimize_dnf_set
 from helpers.console_helpers import print_green, print_red
+
 from helpers.labels_map import LabelsMap
 from helpers.logging_helper import log_entrance
-from helpers.python_ext import StrAwareList, lmap, separate
+from helpers.python_ext import StrAwareList, lmap, add_dicts
 from interfaces.automata import DEAD_END, Label
 from interfaces.lts import LTS
 from interfaces.solver_interface import EncodingSolver, SolverInterface
@@ -15,6 +13,30 @@ from synthesis.blank_impl import BlankImpl
 from synthesis.func_description import FuncDescription
 from synthesis.rejecting_states_finder import build_state_to_rejecting_scc
 from synthesis.smt_helper import build_signals_values
+
+
+def _build_signals_values(signals, models_orig_inputs, outvar_desc_by_process, sys_state_vector,
+                          cur_glob_inputs_dict,
+                          solver:SolverInterface):
+    result = dict()
+    for s in signals:
+        #: :type: QuantifiedSignal
+        s = s
+        proc_index = s.binding_indices[0]
+        orig_proc_inputs = models_orig_inputs[proc_index]
+        if s in orig_proc_inputs:
+            result[s] = cur_glob_inputs_dict[s]
+
+        else:
+            out_desc_by_signal = outvar_desc_by_process[proc_index]
+            out_desc = out_desc_by_signal[s]
+
+            arg_values = dict(cur_glob_inputs_dict)  # copy
+            arg_values['state'] = sys_state_vector[proc_index]
+
+            result[s] = solver.call_func(out_desc, arg_values)
+
+    return result
 
 
 class GenericEncoder(EncodingSolver):
@@ -82,62 +104,78 @@ class GenericEncoder(EncodingSolver):
                            sys_state_vector,
                            label,
                            state_to_rejecting_scc,
-                           impl):
+                           impl,
+                           env_ass_func:FuncDescription):
+        assert impl.nof_processes == 1, 'now make it work for a single process'
+
+        #
         spec_state_name = self._get_smt_name_spec_state(spec_state)
         sys_state_name_dict = {(self._la_s_name + str(i), s)
                                for (i, s) in enumerate(sys_state_vector)}
 
+        #
         next_sys_state = []
         for i in range(impl.nof_processes):
             proc_tau_args = self._get_proc_tau_args(sys_state_vector, label, i, impl)
             next_sys_state.append(self._underlying_solver.call_func(impl.taus_descs[i], proc_tau_args))
 
-        #TODO: forall is evil?
-        free_input_vars = self._get_free_vars(label, impl)
-
-        next_sys_state_name_dict = dict((self._la_s_name + str(i), s)
-                                        for (i, s) in enumerate(next_sys_state))
-
+        #
         assume_laB = self._laB(spec_state_name, sys_state_name_dict)
-
         assume_out = self._get_assumption_on_output_vars(label, sys_state_vector, impl)
 
-        ##addition: scheduling+topology
+        # scheduling+topology
         assume_is_active = impl.get_architecture_trans_assumption(label, sys_state_vector)
 
-        implication_left = self._underlying_solver.op_and([assume_laB, assume_out, assume_is_active])
+        # simple-gr1 env assumptions
+        crt_glob_inputs, _ = build_signals_values(chain(*impl.orig_inputs), label)
 
+        env_ass_func_args = (sig_typ[0] for sig_typ in env_ass_func.inputs)
+        crt_args_dict = _build_signals_values(env_ass_func_args, impl.orig_inputs, impl.outvar_desc_by_process,
+                                              sys_state_vector, crt_glob_inputs, self._underlying_solver)
+        next_args_dict = _build_signals_values(env_ass_func_args, impl.orig_inputs, impl.outvar_desc_by_process,
+                                               next_sys_state, crt_glob_inputs, self._underlying_solver)
+        # currently we provide current and next signals, but the encoding is for G(current) env assumptions only!
+        assume_env_ass = self._underlying_solver.call_func(env_ass_func, add_dicts(crt_args_dict, next_args_dict))
+
+        #
+        all_assumptions = self._underlying_solver.op_and([assume_laB, assume_out, assume_is_active, assume_env_ass])
+
+        #
         dst_set_list = spec_state.transitions[label]
         assert len(dst_set_list) == 1, 'nondetermenistic transitions are not supported'
         dst_set = dst_set_list[0]
 
-        and_args = []
+        #
+        next_sys_state_name_dict = dict((self._la_s_name + str(i), s)
+                                        for (i, s) in enumerate(next_sys_state))
+        guarantees = []
         for spec_next_state, is_rejecting in dst_set:
             if spec_next_state is DEAD_END or spec_next_state.name == 'accept_all':  # TODO: hack
-                implication_right = self._underlying_solver.false()
+                guarantees = [self._underlying_solver.false()]
+                break
+
+            next_spec_state_name = self._get_smt_name_spec_state(spec_next_state)
+            implication_right_lambdaB = self._laB(next_spec_state_name, next_sys_state_name_dict)
+            implication_right_counter = self._get_implication_right_counter(spec_state,
+                                                                            spec_next_state,
+                                                                            is_rejecting,
+                                                                            sys_state_name_dict,
+                                                                            next_sys_state_name_dict,
+                                                                            state_to_rejecting_scc)
+
+            if implication_right_counter is None:
+                implication_right = implication_right_lambdaB
             else:
-                next_spec_state_name = self._get_smt_name_spec_state(spec_next_state)
+                implication_right = self._underlying_solver.op_and([implication_right_lambdaB,
+                                                                    implication_right_counter])
+            guarantees.append(implication_right)
 
-                implication_right_lambdaB = self._laB(next_spec_state_name, next_sys_state_name_dict)
+        all_guarantees = self._underlying_solver.op_and(guarantees)
 
-                implication_right_counter = self._get_implication_right_counter(spec_state,
-                                                                                spec_next_state,
-                                                                                is_rejecting,
-                                                                                sys_state_name_dict,
-                                                                                next_sys_state_name_dict,
-                                                                                state_to_rejecting_scc)
-
-                if implication_right_counter is None:
-                    implication_right = implication_right_lambdaB
-                else:
-                    implication_right = self._underlying_solver.op_and([implication_right_lambdaB,
-                                                                        implication_right_counter])
-
-            and_args.append(implication_right)
-
-        quantified_expr = self._underlying_solver.op_implies(implication_left,
-                                                             self._underlying_solver.op_and(and_args))
-        condition = self._underlying_solver.forall_bool(free_input_vars, quantified_expr)
+        #
+        quantified_expr = self._underlying_solver.op_implies(all_assumptions, all_guarantees)
+        condition = self._underlying_solver.forall_bool(self._get_free_vars(label, impl),
+                                                        quantified_expr)
 
         return condition
 
@@ -171,7 +209,7 @@ class GenericEncoder(EncodingSolver):
 
         return assertions
 
-    def encode_run_graph(self, impl:BlankImpl, global_states_to_encode):
+    def encode_run_graph(self, impl:BlankImpl, global_states_to_encode, env_ass_func):
         for a in impl.get_architecture_requirements():  # TODO: looks hacky! replace with two different encoders?
             self._underlying_solver.assert_(a)
 
@@ -197,7 +235,8 @@ class GenericEncoder(EncodingSolver):
             for global_state in global_states_to_encode:
                 for label, dst_set_list in spec_state.transitions.items():
                     transition_condition = self._encode_transition(spec_state, global_state, label,
-                                                                   state_to_rejecting_scc, impl)
+                                                                   state_to_rejecting_scc, impl,
+                                                                   env_ass_func)
 
                     self._underlying_solver.assert_(transition_condition)
 
@@ -217,11 +256,11 @@ class GenericEncoder(EncodingSolver):
         self._define_declare_functions(func_descs)
 
     @log_entrance(logging.getLogger(), logging.INFO)
-    def encode(self, impl, states_to_encode):
+    def encode(self, impl, states_to_encode, env_ass_func, sys_gua_func):
         self.encode_sys_model_functions(impl)
         self.encode_sys_aux_functions(impl)
         self.encode_run_graph_headers(impl)
-        self.encode_run_graph(impl, states_to_encode)
+        self.encode_run_graph(impl, states_to_encode, env_ass_func)
 
     def _get_smt_name_spec_state(self, spec_state):
         return '{0}_{1}'.format(self._spec_states_type.lower(), spec_state.name)
@@ -323,7 +362,7 @@ class GenericEncoder(EncodingSolver):
         """
         func_model = {}
         for l in func_smt_lines:
-        #            (get-value ((tau t0 true true)))
+            #            (get-value ((tau t0 true true)))
             l = l.replace('get-value', '').replace('(', '').replace(')', '')
             tokens = l.split()
             if tokens[0] != func_desc.name:
@@ -413,19 +452,19 @@ class GenericEncoder(EncodingSolver):
 
     def solve(self, impl) -> LTS:
         self._underlying_solver.add_check_sat()
-        self._make_get_values(impl)   # incremental solvers should not fail for such a strange case if UNSAT:)
+        self._make_get_values(impl)  # incremental solvers should not fail for such a strange case if UNSAT:)
         out = self._underlying_solver.solve()
         if not out:
             return None
 
         model = self.parse_sys_model(out, impl)
-        self._last_only_states = None   # TODO: remove this 'state'
+        self._last_only_states = None  # TODO: remove this 'state'
         return model
 
     def _get_next_state_restricted_condition(self, state, only_states,
                                              tau_desc:FuncDescription,
                                              state_arg_name:str):
-        input_signals = [var for var,ty in tau_desc.inputs if var != state_arg_name]
+        input_signals = [var for var, ty in tau_desc.inputs if var != state_arg_name]
 
         values_by_signal, free_vars = build_signals_values(input_signals, Label())
 
@@ -443,7 +482,7 @@ class GenericEncoder(EncodingSolver):
         return condition
 
     def encode_model_bound(self, only_states, impl):
-        self._last_only_states = only_states   # TODO: bad: stateful
+        self._last_only_states = only_states  # TODO: bad: stateful
 
         unique_model_tau_descs = set(impl.model_taus_descs)
 
@@ -461,7 +500,7 @@ class GenericEncoder(EncodingSolver):
         tau_model = impl.model_taus_descs[0]
         out_descs_dict = dict(map(lambda desc: (desc.name, desc), impl.outvar_desc_by_process[0].values()))
 
-        for outvar_signal,labels_map in model.output_models.items():
+        for outvar_signal, labels_map in model.output_models.items():
             out_desc = out_descs_dict[outvar_signal]
 
             for args_dict, defined_bool_value in labels_map.items():
@@ -472,42 +511,42 @@ class GenericEncoder(EncodingSolver):
                 condition = self._underlying_solver.op_eq(computed_value, defined_value)
                 self._underlying_solver.assert_(condition)
 
-        for args_dict,defined_next_state in model.tau_model.items():
+        for args_dict, defined_next_state in model.tau_model.items():
             computed_next_state = self._underlying_solver.call_func(tau_model, args_dict)
 
             condition = self._underlying_solver.op_eq(computed_next_state, defined_next_state)
             self._underlying_solver.assert_(condition)
 
-    # def _simplify_tau(self, tau_model:LabelsMap, tau_func_desc:FuncDescription, states) -> LabelsMap:
-    #     tau_dict = dict()  # (t1,t2) -> labels
-    #
-    #     for (t1,t2) in product(states, repeat=2):
-    #         labels = self._get_transitions(t1, t2, tau_model)
-    #
-    #         set_of_labels_wo_state = set()
-    #         for lbl in labels:
-    #             assert lbl['state'] == t2
-    #
-    #             lbl, _ = separate(lambda signal_value: signal_value[0] != 'state', lbl.items())
-    #             set_of_labels_wo_state.add(lbl)
-    #
-    #         simplified_set = minimize_dnf_set(set_of_labels_wo_state)
-    #         # notice that if the empty set then it is True
-    #         tau_dict[(t1,t2)] = simplified_set
-    #
-    #     simplified_tau_model = LabelsMap()
-    #     for ((t1,t2),labels) in tau_dict.items():
-    #         for lbl in labels:
-    #             # restore labels and add 'state'
-    #             lbl['state'] = t1
-    #             simplified_tau_model[lbl] = t2
-    #
-    #     return simplified_tau_model
+            # def _simplify_tau(self, tau_model:LabelsMap, tau_func_desc:FuncDescription, states) -> LabelsMap:
+            #     tau_dict = dict()  # (t1,t2) -> labels
+            #
+            #     for (t1,t2) in product(states, repeat=2):
+            #         labels = self._get_transitions(t1, t2, tau_model)
+            #
+            #         set_of_labels_wo_state = set()
+            #         for lbl in labels:
+            #             assert lbl['state'] == t2
+            #
+            #             lbl, _ = separate(lambda signal_value: signal_value[0] != 'state', lbl.items())
+            #             set_of_labels_wo_state.add(lbl)
+            #
+            #         simplified_set = minimize_dnf_set(set_of_labels_wo_state)
+            #         # notice that if the empty set then it is True
+            #         tau_dict[(t1,t2)] = simplified_set
+            #
+            #     simplified_tau_model = LabelsMap()
+            #     for ((t1,t2),labels) in tau_dict.items():
+            #         for lbl in labels:
+            #             # restore labels and add 'state'
+            #             lbl['state'] = t1
+            #             simplified_tau_model[lbl] = t2
+            #
+            #     return simplified_tau_model
 
-    # def _get_transitions(self, t1, t2, tau_model:LabelsMap) -> Iterable:
-    #     transitions = set()
-    #     for (label,next_state) in tau_model.items():
-    #         if label['state'] == t1 and next_state == t2:
-    #             transitions.add(label)
-    #     return transitions
+            # def _get_transitions(self, t1, t2, tau_model:LabelsMap) -> Iterable:
+            #     transitions = set()
+            #     for (label,next_state) in tau_model.items():
+            #         if label['state'] == t1 and next_state == t2:
+            #             transitions.add(label)
+            #     return transitions
 

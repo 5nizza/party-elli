@@ -9,16 +9,19 @@ from logging import Logger
 
 from architecture.scheduler import InterleavingScheduler, SCHED_ID_PREFIX, ACTIVE_NAME
 from architecture.tok_ring import TokRingArchitecture, SENDS_NAME, HAS_TOK_NAME, SENDS_PREV_NAME
+# from hardcoded_ass_gua import ENV_ASS_FORMULA, SYS_GUA_FORMULA
 from helpers import automata_helper
 import helpers.automata_helper
-from helpers.console_helpers import print_green
+from helpers.console_helpers import print_green, print_red
 from helpers.main_helper import setup_logging, create_spec_converter_z3, remove_files_prefixed, Z3SolverFactory
+from helpers.python_ext import lmap
 from interfaces.automata import Automaton
-from interfaces.parser_expr import Bool, Expr
+from interfaces.parser_expr import Bool, Expr, and_expressions, ForallExpr
 from interfaces.spec import SpecProperty, and_properties, expr_from_property
 from module_generation.dot import moore_to_dot, to_dot
 from spec_optimizer.optimizations import localize, inst_property, apply_log_bit_scheduler_optimization, \
-    RemoveActiveAndSchedulerSignalsVisitor, strengthen_many, param_optimize_assume_guarantee
+    RemoveActiveAndSchedulerSignalsVisitor, strengthen_many, param_optimize_assume_guarantee, _instantiate_expr, \
+    build_func_desc_from_formula, normalize_conjuncts
 from parsing import par_parser
 from parsing.par_lexer_desc import PAR_INPUT_VARIABLES, PAR_OUTPUT_VARIABLES, PAR_ASSUMPTIONS, PAR_GUARANTEES
 from synthesis import par_model_searcher
@@ -90,7 +93,9 @@ def _run(default_models,
          bounds,
          solver_creater:Z3SolverFactory,
          logic,
-         logger) -> Bool:
+         logger,
+         env_ass_func,
+         sys_gua_func) -> Bool:
     _log_automatae(logger, global_automatae_pairs, sync_automaton)
 
     if default_models:
@@ -106,7 +111,9 @@ def _run(default_models,
                                      anon_inputs, anon_outputs,
                                      underlying_solver,
                                      BaseNames(SCHED_ID_PREFIX, ACTIVE_NAME, SENDS_NAME, SENDS_PREV_NAME, HAS_TOK_NAME),
-                                     default_models[0])
+                                     default_models[0],
+                                     env_ass_func,
+                                     sys_gua_func)
         underlying_solver.die()
         if models:
             logger.info('the model passed checking!')
@@ -124,7 +131,8 @@ def _run(default_models,
                                    bounds,
                                    underlying_solver,
                                    BaseNames(SCHED_ID_PREFIX, ACTIVE_NAME, SENDS_NAME, SENDS_PREV_NAME,
-                                             HAS_TOK_NAME))
+                                             HAS_TOK_NAME),
+                                   env_ass_func, sys_gua_func)
 
     underlying_solver.die()
 
@@ -197,25 +205,59 @@ def _get_automatae(assumptions, guarantees,
         # Now the properties look like: [SpecProperty( true->∀(ass -> gua) ),...]
 
     #
+    assert optimization == SYNC_HUB, 'we instantiate sys env transition formulae with cutoff=1, probably other parts were also affected by these changes'
+
     if weak_assume_guarantee:
         new_properties = []
+        env_ass_expressions = set()
+        sys_gua_expressions = set()
         for p in properties:
-            assert p.assumptions == [Bool(True)] or not p.assumptions, 'this means either i) bug or ii) or you run the tool without strengthening optimization'
+            assert p.assumptions == [Bool(
+                True)] or not p.assumptions, 'this means either i) bug or ii) or you run the tool without strengthening optimization'
             for g in p.guarantees:
-                new_p = param_optimize_assume_guarantee(g, ltl2ucw_converter)
+                # For now we just ignore ass and gua at all and take them from hardcoded file
+                new_p, env_ass_expr, sys_gua_expr = param_optimize_assume_guarantee(g, ltl2ucw_converter, True)
+
+                if env_ass_expr != Bool(True) and env_ass_expr != ForallExpr((), Bool(True)):
+                    env_ass_expressions.add(env_ass_expr)
+                if sys_gua_expr != Bool(True) and sys_gua_expr != ForallExpr((), Bool(True)):
+                    sys_gua_expressions.add(sys_gua_expr)
+
                 new_properties += new_p
+
+        # print_green('env ass expr', '\n'.join(lmap(str, env_ass_expressions)))
+        # print_green('sys gua expr', '\n'.join(lmap(str, sys_gua_expressions)))
+        # print()
+        # print_red('non GR1 properties are', '\n'.join(lmap(str, new_properties)))
+
+        env_ass_expr = normalize_conjuncts(env_ass_expressions)
+        sys_gua_expr = normalize_conjuncts(sys_gua_expressions)
+
+        inst_env_ass = _instantiate_expr(_replace_sched_or_active_in_expr_by_true(env_ass_expr, scheduler),
+                                         1, False)
+        inst_sys_gua = _instantiate_expr(_replace_sched_or_active_in_expr_by_true(sys_gua_expr, scheduler),
+                                         1, False)
+
+        env_ass_func = build_func_desc_from_formula(inst_env_ass, 'env_ass', True)   # generic encoder cannot handle assumptions with neXt
+        sys_gua_func = build_func_desc_from_formula(inst_sys_gua, 'sys_gua', False)
+
+        print_green(env_ass_func)
+        print_red(sys_gua_func)
 
         properties = new_properties
         logger.info('properties after weak-until optimization \n %s \n', properties)
 
+    #
     prop_real_cutoff_pairs = [(p, archi.get_cutoff(p)) for p in properties]
 
     par_global_property_pairs = [(p, c) for (p, c) in prop_real_cutoff_pairs if c != 2]
     par_local_property_pairs = [(p, c) for (p, c) in prop_real_cutoff_pairs if c == 2]
+
     for (p, c) in par_local_property_pairs:
         assert p.assumptions == [Bool(True)] or p.assumptions == []
         assert c == 2
 
+    #
     if optimization == SYNC_HUB:  # removing GF(sch) from one-indexed properties
         par_local_property_pairs = [(_replace_active_by_true(p, scheduler), c)
                                     for (p, c) in par_local_property_pairs]
@@ -223,12 +265,14 @@ def _get_automatae(assumptions, guarantees,
     if optimization == SYNC_HUB:
         pass  # TODO: should add sync_hub assumptions -- but currently they are added on SMT (Impl) level
 
+    #
     if optimization == ASYNC_HUB:
         # by definition async_hub_assumptions are one-indexed
         async_hub_assumptions = archi.get_async_hub_assumptions()
         par_local_property_pairs = [(localize(SpecProperty(async_hub_assumptions, p.guarantees)), c)
                                     for (p, c) in par_local_property_pairs]
 
+    #
     inst_property_cutoff_pairs = []
     for (p, c) in par_global_property_pairs + par_local_property_pairs:
         inst_c = min(c, cutoff)
@@ -245,6 +289,7 @@ def _get_automatae(assumptions, guarantees,
     logger.info('instantiated local properties:\n%s\n', local_properties)
     logger.info('instantiated global properties:\n%s\n', global_property_cutoff_pairs)
 
+    #
     local_automaton = None
     if len(local_properties) > 0:
         local_property = and_properties(local_properties)
@@ -255,28 +300,33 @@ def _get_automatae(assumptions, guarantees,
         glob_automatae_pairs = [(ltl2ucw_converter.convert(expr_from_property(p)), c)
                                 for (p, c) in global_property_cutoff_pairs]
 
+    #
     if OPTS[optimization] < OPTS[SYNC_HUB] and local_automaton:
         if optimization == ASYNC_HUB:
             glob_automatae_pairs += [(local_automaton, 1)]
         else:
             glob_automatae_pairs += [(local_automaton, 2)]
 
+    #
     sync_automaton = None
     if OPTS[optimization] >= OPTS[SYNC_HUB]:
         sync_automaton = local_automaton
 
-    return sync_automaton, glob_automatae_pairs
+    #
+    assert not glob_automatae_pairs, 'probably other parts are affected by env and sys formula (All guarantees stay? all assumptions stay? Are they instantiated correctly?'
+    return sync_automaton, glob_automatae_pairs, env_ass_func, sys_gua_func
 
 
 # TODO: slow: get_max_cutoff don't need to instantiate all the properties...
-def _get_max_cutoff(assumptions, guarantees, optimization, weak_assume_guarantee, ltl2ucw_converter, logger) -> int:  # TODO: not optimal
-    sync_automaton, glob_automatae_pairs = _get_automatae(assumptions,
-                                                          guarantees,
-                                                          optimization,
-                                                          weak_assume_guarantee,
-                                                          sys.maxsize,
-                                                          ltl2ucw_converter,
-                                                          logger)
+def _get_max_cutoff(assumptions, guarantees, optimization, weak_assume_guarantee, ltl2ucw_converter,
+                    logger) -> int:  # TODO: not optimal
+    sync_automaton, glob_automatae_pairs, _, _ = _get_automatae(assumptions,
+                                                                guarantees,
+                                                                optimization,
+                                                                weak_assume_guarantee,
+                                                                sys.maxsize,
+                                                                ltl2ucw_converter,
+                                                                logger)
     if glob_automatae_pairs:
         max_cutoff = max([e[1] for e in glob_automatae_pairs])
     else:
@@ -301,7 +351,8 @@ def main(spec_text,
     #TODO: check which optimizations are used
 
     anon_inputs, anon_outputs, assumptions, guarantees = _get_spec(spec_text, logger)
-    max_cutoff = _get_max_cutoff(assumptions, guarantees, optimization, weak_assume_guarantee, ltl2ucw_converter, logger)
+    max_cutoff = _get_max_cutoff(assumptions, guarantees, optimization, weak_assume_guarantee, ltl2ucw_converter,
+                                 logger)
 
     if max_cutoff is None:
         # no global automata
@@ -310,13 +361,13 @@ def main(spec_text,
     models = None
     cutoffs_to_try = range(2, max_cutoff + 1) if incr_cutoffs else [cutoff]
     for c in cutoffs_to_try:
-        sync_automaton, glob_automatae_pairs = _get_automatae(assumptions,
-                                                              guarantees,
-                                                              optimization,
-                                                              weak_assume_guarantee,
-                                                              c,
-                                                              ltl2ucw_converter,
-                                                              logger)
+        sync_automaton, glob_automatae_pairs, env_ass_func, sys_gua_func = _get_automatae(assumptions,
+                                                                                          guarantees,
+                                                                                          optimization,
+                                                                                          weak_assume_guarantee,
+                                                                                          c,
+                                                                                          ltl2ucw_converter,
+                                                                                          logger)
         logger.info('current cutoff = {cutoff}'.format(cutoff=c))
 
         models = _run(models,
@@ -326,7 +377,9 @@ def main(spec_text,
                       bounds,
                       underlying_solver_factory,
                       logic,
-                      logger)
+                      logger,
+                      env_ass_func,
+                      sys_gua_func)
 
     is_realizable = models is not None
 

@@ -90,6 +90,8 @@ class Expr:
 
 class Bool(Expr):
     def __init__(self, value):
+        assert isinstance(value, bool)
+
         super().__init__(str(value))
 
     def __repr__(self):
@@ -148,7 +150,7 @@ def and_expressions(conjuncts):
     return res
 
 
-def is_quantified_property(property) -> Bool: #TODO: does not allow embedded forall quantifiers
+def is_quantified_property(property) -> Bool:  # TODO: does not allow embedded forall quantifiers
     """ Return True iff the property has quantified indices.
         Numbers cannot be used as quantification indices.
     """
