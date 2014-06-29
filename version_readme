@@ -4,6 +4,6 @@ PARTY has the modifications:
 - accepts previous models -- with --previous <smt2 model file>
   (needs format: nof_states\n then function models with _old postfix)
 - direct encoding of gr1 semantics on smt level (parsed the ltl and identifies it)
-- probably nothing else but p_bosy with --sync_hub --weakag works.
+- probably nothing else but p_bosy with --opt sync_hub --weakag works.
 
 

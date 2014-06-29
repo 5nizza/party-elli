@@ -273,8 +273,8 @@ class ExprToSmtFormulaVisitor(Visitor):
 def build_func_desc_from_formula(bool_expr:Expr, func_name:str, forbid_next:bool) -> FuncDescription:
     """
     # >>> build_func_desc_from_formula(BinOp('*', BinOp('=', QuantifiedSignal('a', 0), Number(0)), \
-    #                                             UnaryOp('X', BinOp('=', QuantifiedSignal('b', 0), Number(1)))), \
-    #                                  'func_name', False)
+    #                                              UnaryOp('X', BinOp('=', QuantifiedSignal('b', 0), Number(1)))), \
+    #                                   'func_name', False)
     # >>> build_func_desc_from_formula(BinOp('*', BinOp('=', QuantifiedSignal('a', 0), Number(0)), \
     #                                             BinOp('=', QuantifiedSignal('b', 0), Number(1))), \
     #                                  'func_name', True)
@@ -321,30 +321,30 @@ def optimize_assume_guarantee(init_ass, init_gua,
         init_part = SpecProperty(init_ass, init_gua)
         properties.append(init_part)
 
-    fin_sa_ass, inf_sa_ass = separate(_is_ag2, saf_ass)  # TODO: if ass = Ga & Gb then fails..
-    fin_sa_gua, inf_sa_gua = separate(_is_ag, saf_gua)
+    gr1_sa_ass, inf_sa_ass = separate(_is_ag2, saf_ass)  # TODO: if ass = Ga & Gb then fails..
+    gr1_sa_gua, inf_sa_gua = separate(_is_ag, saf_gua)
 
     if inf_sa_ass:
         logger.debug('Not all safety assumptions are of form G(bool_formula). We will treat them with "->".')
         pass
     if inf_sa_gua:
         logger.debug('Not all safety guarantees are of form G(bool_formulaOneNext). We will treat them with "->". \n %s', str(inf_sa_gua))
-        properties.append(SpecProperty(init_ass + saf_ass, inf_sa_gua))
+        properties.append(SpecProperty(init_ass + inf_sa_ass, inf_sa_gua))  # gr1_sa_ass are encoded on SMT level!
 
     env_ass_formula = Bool(True)
-    if fin_sa_ass:
-        stripped = set(e.arg for e in fin_sa_ass)   # since G(arg)
+    if gr1_sa_ass:
+        stripped = set(e.arg for e in gr1_sa_ass)   # since G(arg)
         env_ass_formula = and_expressions(stripped)
     sys_gua_formula = Bool(True)
-    if fin_sa_gua:
-        stripped = set(e.arg for e in fin_sa_gua)   # since forall() ( G(arg) )
+    if gr1_sa_gua:
+        stripped = set(e.arg for e in gr1_sa_gua)   # since forall() ( G(arg) )
         sys_gua_formula = and_expressions(stripped)
 
     logger.info('saf_part\n %s', properties)
 
     #
     if liv_gua:
-        liv_property = SpecProperty(init_ass + saf_ass + liv_ass, liv_gua)
+        liv_property = SpecProperty(init_ass + inf_sa_ass + liv_ass, liv_gua)  # gr1_sa_ass are encoded on SMT level
         properties.append(liv_property)
         logger.info('liv_part\n %s', liv_property)
     #

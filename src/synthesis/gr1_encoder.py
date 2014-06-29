@@ -55,6 +55,12 @@ def encode_gr1_transitions(env_ass_func:FuncDescription, sys_gua_func:FuncDescri
 
     forall_vars = ['?{0}'.format(str(s)) for s in (input_signals + lmap(_next, input_signals))]
 
+    tok_func = None
+    for sig,func in outvar_desc_by_process[0].items():
+        if sig.name == 'tok':
+            tok_func = func
+            break
+
     expressions = []
     for s in states:
         args_for_ass = dict((sig, '?{0}'.format(str(sig))) for sig in input_signals)
@@ -62,8 +68,14 @@ def encode_gr1_transitions(env_ass_func:FuncDescription, sys_gua_func:FuncDescri
                                  for sig in input_signals)
         args_for_gua = _build_args_for_gua(s, input_signals, outvar_desc_by_process[0], tau_func_desc, solver)
 
+        # TODO: hack for token rings
+        ass_not_prev_if_tok = solver.op_implies(solver.call_func(tok_func, {'state':s}), solver.op_not('?prev_0'))
+
         ass_expr = solver.op_and([solver.call_func(env_ass_func, args_for_ass),
-                                  solver.call_func(env_ass_func, args_for_ass_next)])
+                                  solver.call_func(env_ass_func, args_for_ass_next),
+                                 ass_not_prev_if_tok])
+        # ass_expr = solver.op_and([solver.call_func(env_ass_func, args_for_ass),
+        #                           solver.call_func(env_ass_func, args_for_ass_next)])
         gua_expr = solver.call_func(sys_gua_func, args_for_gua)
         quantified_expr = solver.op_implies(ass_expr, gua_expr)
         expr = solver.forall_bool(forall_vars, quantified_expr)

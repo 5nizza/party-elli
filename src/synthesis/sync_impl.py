@@ -80,7 +80,12 @@ class SyncImpl(BlankImpl):  # TODO: This class was never tested separately from 
             if self.is_mealy and s not in archi_outputs:
                 type_by_signal.update((s, 'Bool') for s in all_model_inputs)
 
-            desc_by_signal[s] = FuncDescription(s.name, type_by_signal, 'Bool', None)
+            #acid hardcode
+            if s == self._has_tok_signal:
+                desc_by_signal[s] = FuncDescription(s.name, type_by_signal, 'Bool', '(not (= state t0))')
+            else:
+                desc_by_signal[s] = FuncDescription(s.name, type_by_signal, 'Bool', None)
+
 
         return desc_by_signal
 

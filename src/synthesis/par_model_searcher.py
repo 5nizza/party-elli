@@ -1,17 +1,30 @@
 from itertools import product
 import logging
+from hardcoded import encode_equality_for_tau, encode_equality_for_output, ASS_LOCKED_BURSTS, ASS_ANY_BURSTS, \
+    ASS_ANY_BURSTS_OR_LOCKED_INCR, ASS_TRUE, ASS_BURST_OR_INCR, \
+    ZERO_LOCKED_BURSTS_BUSREQ_READY, ZERO_LOCKED_BURSTS_READY, ZERO_LOCKED_BURSTS, ZERO_LOCKED_BURSTS_NOSILENCE, \
+    ZERO_ANY_BURSTS_NOSILENCE, ZERO_ANY_BURSTS_ANY_INCR_NOSILENCE, ZERO_ANY_BURSTS
+from helpers.console_helpers import print_green
 
 from helpers.logging_helper import log_entrance
+from helpers.python_ext import stripped_tokens
 from interfaces.automata import Automaton
 from interfaces.lts import LTS
 from interfaces.parser_expr import QuantifiedSignal
 from interfaces.solver_interface import SolverInterface
 from parsing.visitor import get_log_bits
+from synthesis.func_description import FuncDescription
 from synthesis.gr1_encoder import encode_gr1_transitions
 from synthesis.blank_impl import BlankImpl
 from synthesis.generic_smt_encoder import GenericEncoder
 from synthesis.sync_impl import SyncImpl
 from synthesis.par_impl import ParImpl, get_signals_definition
+
+
+model_file = None
+_nof_states = None
+saved_model_lines = None
+already_asked = False
 
 
 class BaseNames:
@@ -26,6 +39,69 @@ class BaseNames:
         self.sends_signal = sends_signal_base_name
         self.sends_prev_signal = sends_prev_signal_base_name
         self.has_tok_signal = has_tok_signals_base_name
+
+
+def _encode_prev_funcs(solver:SolverInterface):
+    global _nof_states
+    global model_file
+    global saved_model_lines
+
+    assert model_file
+
+    if not _nof_states:
+        saved_model_lines = stripped_tokens(model_file.readlines())
+        _nof_states = int(saved_model_lines[0])    # the first line should start with the number of states in the model
+
+    lines = saved_model_lines[1:]
+
+    tau_old_is_present = False
+    for l in lines:
+        tau_old_is_present = ('tau_old' in l) or tau_old_is_present
+    assert tau_old_is_present, 'tau_old is not found in the model file'
+
+    solver.add_raw_smt('\n'.join(lines))
+
+
+def _get_prev_tau(crt_tau_inputs):
+    inputs = dict(
+        (sig_typ[0].name if isinstance(sig_typ[0], QuantifiedSignal) else sig_typ[0], sig_typ[1]) for sig_typ in
+        crt_tau_inputs)
+    return FuncDescription('tau_old', inputs, 'T',
+                           None)  # we use body pragmatically, although it is present in the query
+
+
+def _get_prev_ass():
+    global already_asked
+    if not already_asked:
+        input("I AM USING ZERO_ANY_BURSTS. OK?")
+        already_asked = True
+
+    # return ASS_ANY_BURSTS
+    # return ZERO_ANY_BURSTS_ANY_INCR_NOSILENCE
+    # return ZERO_LOCKED_BURSTS_NOSILENCE
+    return ZERO_ANY_BURSTS
+    # return ZERO_LOCKED_BURSTS
+    # return ZERO_ANY_BURSTS_NOSILENCE
+    # return ZERO_LOCKED_BURSTS_BUSREQ_READY
+    # return ZERO_LOCKED_BURSTS_NOTNOREQ_BUSREQ_READY
+    # return ASS_ANY_BURSTS_OR_LOCKED_INCR
+    # return ASS_ANY_BURSTS
+    # return ASS_TRUE
+    # return ASS_LOCKED_BURSTS
+
+
+def _get_prev_states():
+    return ['t' + str(i) for i in range(_nof_states)]
+
+
+def _get_prev_out(sig, crt_out:FuncDescription):
+    return FuncDescription(crt_out.name + '_old', dict(
+        (sig_typ[0].name if isinstance(sig_typ[0], QuantifiedSignal) else sig_typ[0], sig_typ[1]) for sig_typ in
+        crt_out.inputs), 'Bool', None)  # we use body pragmatically, although it is present in the query
+
+
+def _encode_prev_ass(prev_ass_func:FuncDescription, solver:SolverInterface):
+    solver.define_fun(prev_ass_func)
 
 
 class ParModelSearcher:
@@ -86,7 +162,7 @@ class ParModelSearcher:
 
         encoding_solver.push()
 
-        # encoding_solver.encode_model_bound(all_states, impl)
+        #ZERO_ANY_BURSTS_NOSILENCe encoding_solver.encode_model_bound(all_states, impl)
         encoding_solver.encode_model_solution(model, impl)
 
         found_model = encoding_solver.solve(impl)
@@ -147,6 +223,38 @@ class ParModelSearcher:
                base_name_of:BaseNames,
                env_ass_func,
                sys_gua_func):
+        for size in process_model_bounds:
+            solver.push()
+            single_size_process_model_bounds = [size]
+            model = self._search_without_push_pop(
+                logic,
+                is_moore,
+                global_automaton_cutoff_pairs,
+                sync_automaton,
+                anon_input_names, anon_output_names,
+                single_size_process_model_bounds,
+                solver,
+                base_name_of,
+                env_ass_func,
+                sys_gua_func)
+            if model:
+                return model
+            solver.pop()
+        return None
+
+    def _search_without_push_pop(self,  # TODO: careful with incrementality: nof_states >= 2
+                                 logic,
+                                 is_moore,
+                                 global_automaton_cutoff_pairs,
+                                 sync_automaton:Automaton,
+
+                                 anon_input_names, anon_output_names,
+
+                                 process_model_bounds,
+                                 solver:SolverInterface,
+                                 base_name_of:BaseNames,
+                                 env_ass_func,
+                                 sys_gua_func):
         """
         env_ass_funcs is the list: process_index -> env_function (each process has a single environment function)
         """
@@ -166,6 +274,7 @@ class ParModelSearcher:
         init_process_states = self._get_init_process_states(global_automaton_cutoff_pairs, max_size)
 
         last_size = 0
+        first_time = True
         for size in process_model_bounds:
             # TODO: that is a hack!
             cur_all_states = [BlankImpl(False, self._underlying_solver).get_state_name(self._SYS_STATE_TYPE, s)
@@ -191,15 +300,44 @@ class ParModelSearcher:
                                    new_states,
                                    self._underlying_solver)
 
-            encoding_solver.push()
+            if first_time:
+                if model_file:
+                    # assert size >= len(_get_prev_states())-1, str(size) + ' vs ' + str(len(_get_prev_states())-1)
+                    self._logger.info('encoding equalities with the previous model')
+                    # Encoding equalities with the previous model
+                    _encode_prev_funcs(solver)
+                    _encode_prev_ass(_get_prev_ass(), solver)
 
-            encoding_solver.encode_model_bound(cur_all_states, impl)
+                    encode_equality_for_tau(_get_prev_tau(impl.taus_descs[0].inputs),
+                                            impl.taus_descs[0],
+                                            _get_prev_ass(),
+                                            _get_prev_states(),
+                                            solver)
 
+                    for sig, out_func in impl.outvar_desc_by_process[0].items():
+                        encode_equality_for_output(_get_prev_out(sig, out_func),
+                                                   out_func,
+                                                   _get_prev_states(),
+                                                   solver)
+                    #
+                    first_time = False
+
+            # encoding_solver.push()
+
+            # encoding_solver.encode_model_bound(cur_all_states, impl)
+
+            # if size > 3:
+            #     for i in range(1, size):
+            #         solver.add_raw_smt('(assert (tok {0}))'.format('t'+str(i)))
+            # if size > 5:
+            #     for i in range(int(size/2), min(size, int(size/2 + 3))):
+            #         solver.add_raw_smt('(assert (tok {0}))'.format('t'+str(i)))
             model = encoding_solver.solve(impl)
+
             if model:
                 return model
 
-            encoding_solver.pop()
+                # encoding_solver.pop()
 
         return None
 

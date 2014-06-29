@@ -9,14 +9,13 @@ from logging import Logger
 
 from architecture.scheduler import InterleavingScheduler, SCHED_ID_PREFIX, ACTIVE_NAME
 from architecture.tok_ring import TokRingArchitecture, SENDS_NAME, HAS_TOK_NAME, SENDS_PREV_NAME
+
 # from hardcoded_ass_gua import ENV_ASS_FORMULA, SYS_GUA_FORMULA
 from helpers import automata_helper
-import helpers.automata_helper
 from helpers.console_helpers import print_green, print_red
 from helpers.main_helper import setup_logging, create_spec_converter_z3, remove_files_prefixed, Z3SolverFactory
-from helpers.python_ext import lmap
 from interfaces.automata import Automaton
-from interfaces.parser_expr import Bool, Expr, and_expressions, ForallExpr
+from interfaces.parser_expr import Bool, Expr, ForallExpr
 from interfaces.spec import SpecProperty, and_properties, expr_from_property
 from module_generation.dot import moore_to_dot, to_dot
 from spec_optimizer.optimizations import localize, inst_property, apply_log_bit_scheduler_optimization, \
@@ -431,8 +430,12 @@ if __name__ == '__main__':
 
     parser.add_argument('-w', '--weakag', action='store_true', required=False, default=False,
                         help='treat assume guarantee with weak until')
+    parser.add_argument('-p', '--previous', type=FileType(), required=False,
+                        default=None,
+                        help='encode previous model whatever from that file (should be suffixed with "_old"')
 
     args = parser.parse_args(sys.argv[1:])
+    par_model_searcher.model_file = args.previous
 
     logger = setup_logging(args.verbose)
 
@@ -455,7 +458,10 @@ if __name__ == '__main__':
 
     logger.info('temp file prefix used is %s', smt_files_prefix)
 
-    is_realizable = main(args.ltl.read(),
+    spec_text = args.ltl.read()
+    logger.debug('the spec read is: \n%s', spec_text)
+
+    is_realizable = main(spec_text,
                          args.opt,
                          args.weakag,
                          args.moore,

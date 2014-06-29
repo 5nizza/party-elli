@@ -125,6 +125,9 @@ class SmtSolverWithQueryStorageAbstract(SolverInterface):
     def comment(self, comment):
         self._query_storage += smt_helper.comment(comment)
 
+    def add_raw_smt(self, raw_smt_string):
+        self._query_storage += raw_smt_string
+
 
 class Z3_Smt_NonInteractive_ViaFiles(SmtSolverWithQueryStorageAbstract):
     def __init__(self, files_prefix:str,

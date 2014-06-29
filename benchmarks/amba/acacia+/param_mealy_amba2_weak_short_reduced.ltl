@@ -68,14 +68,13 @@ G ((hmastlock_i=1 * hburst0_i=0 * hburst1_i=1 * start_i=1 * active_i=1)
 
 
 # G3: burst4 lasts until we have seen 3/4 hready signals
-# for easy realizability, REDUCED to 2/3 hready signals
+# for easy realizability, REDUCED to 1/2 hready signals
 Forall (i) 
 G ((hmastlock_i=1 * hburst0_i=1 * hburst1_i=1 * start_i=1 * hready_i=1 * active_i=1) 
   ->
   X(
     (start_i=0) W 
-            (start_i=0 * hready_i=1 * active_i=1 * X((start_i=0) W 
-                                                (start_i=0 * active_i=1 * hready_i=1)))
+            (start_i=0 * hready_i=1 * active_i=1)
    )
   );
 
@@ -85,8 +84,7 @@ G ((hmastlock_i=1 * hburst0_i=1 * hburst1_i=1 * start_i=1 * hready_i=0 * active_
   X(
     (start_i=0) W 
             (start_i=0 * hready_i=1 * active_i=1 * X((start_i=0) W 
-                                                (start_i=0 * hready_i=1 * active_i=1 * X((start_i=0) W 
-                                                (start_i=0 * active_i=1 * hready_i=1)))))
+                                                (start_i=0 * hready_i=1 * active_i=1))) 
    )
   );
 
@@ -102,8 +100,7 @@ Forall (i) G (X(start_i=0) -> ((hmastlock_i=1) <-> X(hmastlock_i=1)));
 
 # G7: if we give a new hgrant, need to update locked with input hlock 
 # we need active_i here, otherwise -- hlock can arrive when not scheduled and hence at the next moment there will be no way to recall what was hlock atm before
-# modified -- added hgrant_i=0
-Forall (i) G ((decide_i=1 * active_i=1 * X(hgrant_i=1) * hgrant_i=0) -> ((hlock_i=1) <-> X(locked_i=1)));
+Forall (i) G ((decide_i=1 * active_i=1 * X(hgrant_i=1)) -> ((hlock_i=1) <-> X(locked_i=1)));
 
 # G8: set decide if we change hgrant or locked   # not sure if need active_i here 
 Forall (i) G ((decide_i=0 * active_i=1) -> (hgrant_i=1 <-> X(hgrant_i=1))); 

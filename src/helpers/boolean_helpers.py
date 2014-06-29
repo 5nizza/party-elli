@@ -40,6 +40,11 @@ def _get_label_from_set(s:set) -> Label:
 
 
 def _resolve_consensus(lbl1:Label, lbl2:Label)->Label:
+    """
+    A & s, A &-s
+    ------------ 'my consensus'
+        A
+    """
     lits1 = _get_set_from_label(lbl1)
     lits2 = _get_set_from_label(lbl2)
 
@@ -86,13 +91,13 @@ def _check_subsumption(cur_set):
     return cur_set
 
 
-def minimize_dnf_set(set_of_labels) -> set:  # TODO: can be optimized -- numerous requests to get_set_from_label
+def minimize_dnf_set(set_of_labels) -> set:  # TODO: highly inefficient -- numerous requests to get_set_from_label
     if not set_of_labels:
         return set_of_labels
 
     _populate_the_dicts(set_of_labels)
 
-    # consensus rules till fix-point
+    # consensus and subsumption rules till fix-point
     cur_set = set(set_of_labels)
     while True:
         cur_set = _check_subsumption(cur_set)

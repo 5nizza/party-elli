@@ -100,6 +100,10 @@ class SolverInterface:
     def comment(self, comment):
         raise NotImplementedError()
 
+    @abstractmethod
+    def add_raw_smt(self, raw_smt_string):
+        raise NotImplementedError()
+
 
 class EncodingSolver:
     __metaclass__ = ABCMeta
