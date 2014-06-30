@@ -24,6 +24,7 @@ from spec_optimizer.optimizations import localize, inst_property, apply_log_bit_
 from parsing import par_parser
 from parsing.par_lexer_desc import PAR_INPUT_VARIABLES, PAR_OUTPUT_VARIABLES, PAR_ASSUMPTIONS, PAR_GUARANTEES
 from synthesis import par_model_searcher
+from synthesis.func_description import FuncDescription
 from synthesis.par_model_searcher import BaseNames
 from synthesis.smt_logic import UFLIA
 from translation2uct.ltl2automaton import Ltl2UCW
@@ -156,6 +157,45 @@ def _replace_active_by_true(spec_property:SpecProperty, scheduler) -> SpecProper
     return SpecProperty(new_assumptions, new_guarantees)
 
 
+def _get_env_sys_functions(logger, ltl2ucw_converter, properties, scheduler):
+    new_properties = []
+    env_ass_expressions = set()
+    sys_gua_expressions = set()
+    for p in properties:
+        assert p.assumptions == [Bool(
+            True)] or not p.assumptions, 'this means either i) bug or ii) or you run the tool without strengthening optimization'
+        for g in p.guarantees:
+            # For now we just ignore ass and gua at all and take them from hardcoded file
+            new_p, env_ass_expr, sys_gua_expr = param_optimize_assume_guarantee(g, ltl2ucw_converter, True)
+
+            if env_ass_expr != Bool(True) and env_ass_expr != ForallExpr((), Bool(True)):
+                env_ass_expressions.add(env_ass_expr)
+            if sys_gua_expr != Bool(True) and sys_gua_expr != ForallExpr((), Bool(True)):
+                sys_gua_expressions.add(sys_gua_expr)
+
+            new_properties += new_p
+
+    # print_green('env ass expr', '\n'.join(lmap(str, env_ass_expressions)))
+    # print_green('sys gua expr', '\n'.join(lmap(str, sys_gua_expressions)))
+    # print()
+    # print_red('non GR1 properties are', '\n'.join(lmap(str, new_properties)))
+    env_ass_expr = normalize_conjuncts(env_ass_expressions)
+    sys_gua_expr = normalize_conjuncts(sys_gua_expressions)
+    inst_env_ass = _instantiate_expr(_replace_sched_or_active_in_expr_by_true(env_ass_expr, scheduler),
+                                     1, False)
+    inst_sys_gua = _instantiate_expr(_replace_sched_or_active_in_expr_by_true(sys_gua_expr, scheduler),
+                                     1, False)
+    env_ass_func = build_func_desc_from_formula(inst_env_ass, 'env_ass',
+                                                True)  # generic encoder cannot handle assumptions with neXt
+    sys_gua_func = build_func_desc_from_formula(inst_sys_gua, 'sys_gua', False)
+    print_green(env_ass_func)
+    print_red(sys_gua_func)
+    properties = new_properties
+    logger.info('properties after weak-until optimization \n %s \n', properties)
+
+    return env_ass_func, sys_gua_func, properties
+
+
 def _get_automatae(assumptions, guarantees,
                    optimization,
                    weak_assume_guarantee,
@@ -207,44 +247,12 @@ def _get_automatae(assumptions, guarantees,
     assert optimization == SYNC_HUB, 'we instantiate sys env transition formulae with cutoff=1, probably other parts were also affected by these changes'
 
     if weak_assume_guarantee:
-        new_properties = []
-        env_ass_expressions = set()
-        sys_gua_expressions = set()
-        for p in properties:
-            assert p.assumptions == [Bool(
-                True)] or not p.assumptions, 'this means either i) bug or ii) or you run the tool without strengthening optimization'
-            for g in p.guarantees:
-                # For now we just ignore ass and gua at all and take them from hardcoded file
-                new_p, env_ass_expr, sys_gua_expr = param_optimize_assume_guarantee(g, ltl2ucw_converter, True)
-
-                if env_ass_expr != Bool(True) and env_ass_expr != ForallExpr((), Bool(True)):
-                    env_ass_expressions.add(env_ass_expr)
-                if sys_gua_expr != Bool(True) and sys_gua_expr != ForallExpr((), Bool(True)):
-                    sys_gua_expressions.add(sys_gua_expr)
-
-                new_properties += new_p
-
-        # print_green('env ass expr', '\n'.join(lmap(str, env_ass_expressions)))
-        # print_green('sys gua expr', '\n'.join(lmap(str, sys_gua_expressions)))
-        # print()
-        # print_red('non GR1 properties are', '\n'.join(lmap(str, new_properties)))
-
-        env_ass_expr = normalize_conjuncts(env_ass_expressions)
-        sys_gua_expr = normalize_conjuncts(sys_gua_expressions)
-
-        inst_env_ass = _instantiate_expr(_replace_sched_or_active_in_expr_by_true(env_ass_expr, scheduler),
-                                         1, False)
-        inst_sys_gua = _instantiate_expr(_replace_sched_or_active_in_expr_by_true(sys_gua_expr, scheduler),
-                                         1, False)
-
-        env_ass_func = build_func_desc_from_formula(inst_env_ass, 'env_ass', True)   # generic encoder cannot handle assumptions with neXt
-        sys_gua_func = build_func_desc_from_formula(inst_sys_gua, 'sys_gua', False)
-
-        print_green(env_ass_func)
-        print_red(sys_gua_func)
-
-        properties = new_properties
-        logger.info('properties after weak-until optimization \n %s \n', properties)
+        env_ass_func, sys_gua_func, properties = _get_env_sys_functions(logger, ltl2ucw_converter, properties, scheduler)
+    else:
+        env_ass_func, sys_gua_func, _ = _get_env_sys_functions(logger, ltl2ucw_converter, properties, scheduler)
+        # hack to get default true, true
+        env_ass_func = FuncDescription(env_ass_func.name, dict(env_ass_func.inputs), env_ass_func.output, 'true')
+        sys_gua_func = FuncDescription(sys_gua_func.name, dict(sys_gua_func.inputs), sys_gua_func.output, 'true')
 
     #
     prop_real_cutoff_pairs = [(p, archi.get_cutoff(p)) for p in properties]
@@ -313,6 +321,7 @@ def _get_automatae(assumptions, guarantees,
 
     #
     assert not glob_automatae_pairs, 'probably other parts are affected by env and sys formula (All guarantees stay? all assumptions stay? Are they instantiated correctly?'
+
     return sync_automaton, glob_automatae_pairs, env_ass_func, sys_gua_func
 
 

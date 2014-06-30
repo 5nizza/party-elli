@@ -73,13 +73,14 @@ def _get_prev_tau(crt_tau_inputs):
 def _get_prev_ass():
     global already_asked
     if not already_asked:
-        input("I AM USING ZERO_ANY_BURSTS. OK?")
+        input("I AM USING ASS_ANY_BURSTS. OK?")
         already_asked = True
 
-    # return ASS_ANY_BURSTS
+    return ASS_ANY_BURSTS
     # return ZERO_ANY_BURSTS_ANY_INCR_NOSILENCE
     # return ZERO_LOCKED_BURSTS_NOSILENCE
-    return ZERO_ANY_BURSTS
+
+    # return ZERO_ANY_BURSTS
     # return ZERO_LOCKED_BURSTS
     # return ZERO_ANY_BURSTS_NOSILENCE
     # return ZERO_LOCKED_BURSTS_BUSREQ_READY
