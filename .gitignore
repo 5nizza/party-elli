@@ -10,3 +10,6 @@ benchmarks/non_parameterized/others/*.dot
 benchmarks/non_parameterized/others/callgrind*
 *.smt2
 profiling_z3/*
+
+!src/ith-process/*
+!src/zero-process/*
