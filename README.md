@@ -3,7 +3,8 @@
 Parameterized Synthesis of Token Rings: a branch for SYNT paper 'Parameterized Synthesis Case Study: AMBA AHB'.
 Note that this version is not user friendly, neither bug free.
 
-But it contains specification files, logs, and models found in folders 
+But it contains specification files, logs, and models found. 
+In folders 
 `./src/zero-process/bench` and `./src/ith-process/bench/`
 
 
