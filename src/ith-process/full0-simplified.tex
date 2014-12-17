@@ -1,0 +1,267 @@
+\documentclass{article}
+\usepackage[x11names, rgb]{xcolor}
+\usepackage[utf8]{inputenc}
+\usepackage{tikz}
+\usetikzlibrary{snakes,arrows,shapes}
+\usepackage{amsmath}
+%
+%
+
+%
+
+%
+
+\begin{document}
+\pagestyle{empty}
+%
+%
+%
+
+\enlargethispage{100cm}
+% Start of code
+\begin{tikzpicture}[>=latex',line join=bevel,]
+%%
+\node (t8) at (50.389bp,215bp) [draw,rectangle,rounded] {locked$\backslash$nhgrant$\backslash$nhmaster$\backslash$nhmastlock$\backslash$n(t8)};
+  \node (t9) at (228.39bp,274bp) [draw,rectangle,rounded] {locked$\backslash$nhgrant$\backslash$nhmaster$\backslash$nhmastlock$\backslash$n(t9)};
+  \node (t6) at (1262.4bp,692bp) [draw,rectangle,rounded] {sends$\backslash$n(t6)};
+  \node (t7) at (1434.4bp,734bp) [draw,rectangle,rounded] {locked$\backslash$nhgrant$\backslash$nhmaster$\backslash$nstart$\backslash$nhmastlock$\backslash$n(t7)};
+  \node (t4) at (1262.4bp,801bp) [draw,rectangle,rounded] {locked$\backslash$nhgrant$\backslash$n(t4)};
+  \node (t5) at (592.39bp,433bp) [draw,rectangle,rounded] {hmaster$\backslash$nhmastlock$\backslash$n(t5)};
+  \node (t2) at (1800.4bp,438bp) [draw,rectangle,rounded] {locked$\backslash$nhgrant$\backslash$nhmaster$\backslash$nhmastlock$\backslash$n(t2)};
+  \node (t3) at (408.39bp,333bp) [draw,rectangle,rounded] {locked$\backslash$nhgrant$\backslash$nhmaster$\backslash$ndecide$\backslash$nhmastlock$\backslash$n(t3)};
+  \node (t0) at (922.39bp,661bp) [draw,fill=green,circle] {decide$\backslash$n(t0)};
+  \node (t1) at (751.39bp,481bp) [draw,rectangle,filled,rounded] {sends$\backslash$nstart$\backslash$n(t1)};
+  \node (t10) at (1434.4bp,379bp) [draw,rectangle,rounded] {hmaster$\backslash$ndecide$\backslash$n(t10)};
+  \node (t11) at (1095.4bp,451bp) [draw,rectangle,rounded] {hgrant$\backslash$ndecide$\backslash$n(t11)};
+  \node (t12) at (1262.4bp,425bp) [draw,rectangle,rounded] {hmaster$\backslash$nstart$\backslash$n(t12)};
+  \node (t13) at (1616.4bp,300bp) [draw,rectangle,rounded] {locked$\backslash$nhgrant$\backslash$nhmaster$\backslash$nhmastlock$\backslash$n(t13)};
+  \draw [->] (t0) ..controls (936.99bp,741.01bp) and (952.96bp,797.64bp)  .. (983.39bp,838bp) .. controls (1009.5bp,872.66bp) and (1022bp,880.95bp)  .. (1063.4bp,894bp) .. controls (1128.1bp,914.41bp) and (1151.7bp,881.89bp)  .. (1207.4bp,843bp) .. controls (1212.3bp,839.56bp) and (1217.4bp,835.87bp)  .. (t4);
+  \definecolor{strokecol}{rgb}{0.0,0.0,0.0};
+  \pgfsetstrokecolor{strokecol}
+  \draw (1095bp,940bp) node {prev};
+  \draw (1095bp,922bp) node {hbusreq};
+  \draw (1095bp,904bp) node {hlock};
+  \draw [->] (t3) ..controls (394.57bp,401.73bp) and (399.86bp,409bp)  .. (408.39bp,409bp) .. controls (413.98bp,409bp) and (418.19bp,405.87bp)  .. (t3);
+  \draw (408bp,485bp) node {hlock};
+  \draw (408bp,467bp) node {-hready};
+  \draw (408bp,449bp) node {hbusreq};
+  \draw (408bp,431bp) node {hburst0};
+  \draw (408bp,413bp) node {-hburst1};
+  \draw [->] (t11) ..controls (1088bp,492.09bp) and (1090.5bp,500bp)  .. (1095.4bp,500bp) .. controls (1098.5bp,500bp) and (1100.6bp,496.91bp)  .. (t11);
+  \draw (1095bp,540bp) node {-hready};
+  \draw (1095bp,522bp) node {-hlock};
+  \draw (1095bp,504bp) node {-hburst1};
+  \draw [->] (t11) ..controls (1027.8bp,500.49bp) and (1038.4bp,554bp)  .. (1095.4bp,554bp) .. controls (1148.2bp,554bp) and (1161.2bp,508.14bp)  .. (t11);
+  \draw (1095bp,594bp) node {-hready};
+  \draw (1095bp,576bp) node {hbusreq};
+  \draw (1095bp,558bp) node {-hlock};
+  \draw [->] (t10) ..controls (1426.2bp,420.09bp) and (1429bp,428bp)  .. (1434.4bp,428bp) .. controls (1437.8bp,428bp) and (1440.1bp,424.91bp)  .. (t10);
+  \draw (1434bp,450bp) node {-hready};
+  \draw (1434bp,432bp) node {hbusreq};
+  \draw [->] (t10) ..controls (1371.4bp,428.38bp) and (1383.9bp,464bp)  .. (1434.4bp,464bp) .. controls (1480bp,464bp) and (1494.5bp,435bp)  .. (t10);
+  \draw (1434bp,486bp) node {-hready};
+  \draw (1434bp,468bp) node {-hlock};
+  \draw [->] (t12) ..controls (1219.4bp,413.81bp) and (1213.2bp,412.72bp)  .. (1207.4bp,412bp) .. controls (1172.1bp,407.66bp) and (1162.9bp,411.22bp)  .. (1127.4bp,411bp) .. controls (1098.9bp,410.82bp) and (1091.7bp,408.08bp)  .. (1063.4bp,411bp) .. controls (944.17bp,423.29bp) and (915.39bp,435.87bp)  .. (799.39bp,466bp) .. controls (796.03bp,466.87bp) and (792.56bp,467.83bp)  .. (t1);
+  \draw (1014.4bp,430bp) node {hready};
+  \draw [->] (t0) ..controls (854.04bp,647.27bp) and (821.01bp,635.14bp)  .. (799.39bp,613bp) .. controls (775.41bp,588.46bp) and (763.29bp,551.01bp)  .. (t1);
+  \draw (830bp,706bp) node {prev};
+  \draw (830bp,688bp) node {hready};
+  \draw (830bp,670bp) node {-hbusreq};
+  \draw (830bp,652bp) node {-hburst1};
+  \draw [->] (t0) ..controls (900.4bp,594.19bp) and (884.55bp,560.32bp)  .. (861.39bp,537bp) .. controls (839.67bp,515.15bp) and (826.83bp,520.01bp)  .. (799.39bp,506bp) .. controls (795.86bp,504.2bp) and (792.2bp,502.32bp)  .. (t1);
+  \draw (830bp,595bp) node {prev};
+  \draw (830bp,577bp) node {hready};
+  \draw (830bp,559bp) node {-hbusreq};
+  \draw (830bp,541bp) node {-hburst0};
+  \draw [->] (t1) ..controls (803.59bp,468.98bp) and (837.98bp,466.82bp)  .. (861.39bp,484bp) .. controls (882.08bp,499.18bp) and (900.45bp,562.98bp)  .. (t0);
+  \draw (830.39bp,493bp) node {-prev};
+  \draw [->] (t5) ..controls (584.41bp,474.09bp) and (587.1bp,482bp)  .. (592.39bp,482bp) .. controls (595.7bp,482bp) and (597.99bp,478.91bp)  .. (t5);
+  \draw (592bp,504bp) node {-hready};
+  \draw (592bp,486bp) node {hbusreq};
+  \draw [->] (t5) ..controls (532.16bp,488.38bp) and (546.5bp,518bp)  .. (592.39bp,518bp) .. controls (632.9bp,518bp) and (648.83bp,494.92bp)  .. (t5);
+  \draw (592bp,540bp) node {-hready};
+  \draw (592bp,522bp) node {-hlock};
+  \draw [->] (t6) ..controls (1242.8bp,727.72bp) and (1233.4bp,745.27bp)  .. (1225.4bp,761bp) .. controls (1217.1bp,777.28bp) and (1218.7bp,783.63bp)  .. (1207.4bp,798bp) .. controls (1163.8bp,853.32bp) and (1128.4bp,890.94bp)  .. (1063.4bp,864bp) .. controls (998.58bp,837.16bp) and (959.05bp,761.83bp)  .. (t0);
+  \draw (1095.4bp,881bp) node {-prev};
+  \draw [->] (t9) ..controls (277.28bp,305.82bp) and (283.37bp,308.71bp)  .. (289.39bp,311bp) .. controls (310.23bp,318.94bp) and (334.24bp,324.08bp)  .. (t3);
+  \draw (317bp,347bp) node {hready};
+  \draw (317bp,329bp) node {hbusreq};
+  \draw [->] (t9) ..controls (294.35bp,261.85bp) and (322.26bp,261.53bp)  .. (345.39bp,271bp) .. controls (349.3bp,272.6bp) and (353.1bp,274.58bp)  .. (t3);
+  \draw (317bp,293bp) node {hready};
+  \draw (317bp,275bp) node {-hlock};
+  \draw [->] (t2) ..controls (1789.9bp,288.74bp) and (1756.5bp,72bp)  .. (1616.4bp,72bp) .. controls (228.39bp,72bp) and (228.39bp,72bp)  .. (228.39bp,72bp) .. controls (170.79bp,72bp) and (121.23bp,118.07bp)  .. (t8);
+  \draw (922bp,94bp) node {hready};
+  \draw (922bp,76bp) node {hbusreq};
+  \draw [->] (t2) ..controls (1788.9bp,304.6bp) and (1770.4bp,137.35bp)  .. (1739.4bp,88bp) .. controls (1703.6bp,31.092bp) and (1683.6bp,0bp)  .. (1616.4bp,0bp) .. controls (228.39bp,0bp) and (228.39bp,0bp)  .. (228.39bp,0bp) .. controls (146.92bp,0bp) and (95.688bp,92.725bp)  .. (t8);
+  \draw (922bp,22bp) node {hready};
+  \draw (922bp,4bp) node {-hlock};
+  \draw [->] (t7) ..controls (1457.7bp,634.55bp) and (1469.8bp,577.63bp)  .. (1477.4bp,527bp) .. controls (1483.7bp,484.84bp) and (1468.3bp,368.94bp)  .. (1495.4bp,336bp) .. controls (1500.1bp,330.31bp) and (1533.2bp,320.67bp)  .. (t13);
+  \draw (1525bp,376bp) node {-hlock};
+  \draw (1525bp,358bp) node {-hburst0};
+  \draw (1525bp,340bp) node {hburst1};
+  \draw [->] (t7) ..controls (1456.2bp,634.3bp) and (1468.2bp,577.36bp)  .. (1477.4bp,527bp) .. controls (1486.6bp,476.98bp) and (1463.6bp,453.73bp)  .. (1495.4bp,414bp) .. controls (1513.3bp,391.56bp) and (1533bp,408.01bp)  .. (1555.4bp,390bp) .. controls (1566.5bp,381.05bp) and (1576.4bp,369.53bp)  .. (t13);
+  \draw (1525bp,454bp) node {hbusreq};
+  \draw (1525bp,436bp) node {-hburst0};
+  \draw (1525bp,418bp) node {hburst1};
+  \draw [->] (t12) ..controls (1300.6bp,388.18bp) and (1308.8bp,383.11bp)  .. (1317.4bp,380bp) .. controls (1339.4bp,372.04bp) and (1365.3bp,371.04bp)  .. (t10);
+  \draw (1345bp,402bp) node {-hready};
+  \draw (1345bp,384bp) node {hbusreq};
+  \draw [->] (t12) ..controls (1321.4bp,425.92bp) and (1349.6bp,423.71bp)  .. (1373.4bp,416bp) .. controls (1378.3bp,414.4bp) and (1383.3bp,412.32bp)  .. (t10);
+  \draw (1345bp,447bp) node {-hready};
+  \draw (1345bp,429bp) node {-hlock};
+  \draw [->] (t11) ..controls (1104.6bp,522.72bp) and (1117.8bp,595.63bp)  .. (1145.4bp,652bp) .. controls (1165.5bp,693.19bp) and (1198.4bp,733.7bp)  .. (t4);
+  \draw (1176bp,780bp) node {-hready};
+  \draw (1176bp,762bp) node {hbusreq};
+  \draw (1176bp,744bp) node {hlock};
+  \draw [->] (t10) ..controls (1389.3bp,369.03bp) and (1381.1bp,367.75bp)  .. (1373.4bp,367bp) .. controls (1348.6bp,364.59bp) and (1342.3bp,366.02bp)  .. (1317.4bp,367bp) .. controls (1121.5bp,374.7bp) and (1069.8bp,373.36bp)  .. (879.39bp,420bp) .. controls (843.21bp,428.86bp) and (832.55bp,428.02bp)  .. (799.39bp,445bp) .. controls (795.58bp,446.95bp) and (791.76bp,449.2bp)  .. (t1);
+  \draw (1095.4bp,391bp) node {hready};
+  \draw [->] (t13) ..controls (1538.3bp,235.9bp) and (1486.4bp,205bp)  .. (1434.4bp,205bp) .. controls (1095.4bp,205bp) and (1095.4bp,205bp)  .. (1095.4bp,205bp) .. controls (1045.6bp,205bp) and (1026.2bp,180.68bp)  .. (983.39bp,206bp) .. controls (969.34bp,214.3bp) and (978.7bp,228.56bp)  .. (965.39bp,238bp) .. controls (915.69bp,273.27bp) and (891.33bp,262bp)  .. (830.39bp,262bp) .. controls (592.39bp,262bp) and (592.39bp,262bp)  .. (592.39bp,262bp) .. controls (537.56bp,262bp) and (521.49bp,263.73bp)  .. (471.39bp,286bp) .. controls (467.6bp,287.68bp) and (463.83bp,289.63bp)  .. (t3);
+  \draw (1014bp,264bp) node {hready};
+  \draw (1014bp,246bp) node {-hbusreq};
+  \draw (1014bp,228bp) node {-hlock};
+  \draw (1014bp,210bp) node {-hburst1};
+  \draw [->] (t13) ..controls (1536.5bp,300bp) and (1481.9bp,300bp)  .. (1434.4bp,300bp) .. controls (592.39bp,300bp) and (592.39bp,300bp)  .. (592.39bp,300bp) .. controls (538.25bp,300bp) and (524.4bp,303.03bp)  .. (471.39bp,314bp) .. controls (468.04bp,314.69bp) and (464.62bp,315.48bp)  .. (t3);
+  \draw (1014bp,358bp) node {-hbusreq};
+  \draw (1014bp,340bp) node {-hlock};
+  \draw (1014bp,322bp) node {-hburst0};
+  \draw (1014bp,304bp) node {-hburst1};
+  \draw [->] (t0) ..controls (1006.3bp,666.17bp) and (1071.3bp,670.62bp)  .. (1127.4bp,676bp) .. controls (1160.1bp,679.13bp) and (1197.1bp,683.58bp)  .. (t6);
+  \draw (1095bp,734bp) node {prev};
+  \draw (1095bp,716bp) node {-hready};
+  \draw (1095bp,698bp) node {-hbusreq};
+  \draw (1095bp,680bp) node {-hlock};
+  \draw [->] (t0) ..controls (981.98bp,709.3bp) and (1022.6bp,736.42bp)  .. (1063.4bp,748bp) .. controls (1119.9bp,764.04bp) and (1185.6bp,736.65bp)  .. (t6);
+  \draw (1095bp,828bp) node {prev};
+  \draw (1095bp,810bp) node {-hbusreq};
+  \draw (1095bp,792bp) node {-hlock};
+  \draw (1095bp,774bp) node {hburst0};
+  \draw (1095bp,756bp) node {hburst1};
+  \draw [->] (t4) ..controls (1316.7bp,792.19bp) and (1347.7bp,785.13bp)  .. (1373.4bp,774bp) .. controls (1376.4bp,772.71bp) and (1379.3bp,771.29bp)  .. (t7);
+  \draw (1345bp,812bp) node {hready};
+  \draw (1345bp,794bp) node {hbusreq};
+  \draw [->] (t4) ..controls (1288.6bp,756.17bp) and (1301.5bp,741.53bp)  .. (1317.4bp,734bp) .. controls (1337bp,724.75bp) and (1360.5bp,723.2bp)  .. (t7);
+  \draw (1345bp,756bp) node {hready};
+  \draw (1345bp,738bp) node {-hlock};
+  \draw [->] (t3) ..controls (454.45bp,398.79bp) and (462.56bp,405.76bp)  .. (471.39bp,411bp) .. controls (491.69bp,423.05bp) and (517.03bp,428.79bp)  .. (t5);
+  \draw (501bp,452bp) node {hready};
+  \draw (501bp,434bp) node {hbusreq};
+  \draw [->] (t3) ..controls (486.27bp,356.62bp) and (529.57bp,369.89bp)  .. (531.39bp,371bp) .. controls (541.77bp,377.32bp) and (551.65bp,385.79bp)  .. (t5);
+  \draw (501bp,393bp) node {hbusreq};
+  \draw (501bp,375bp) node {-hburst0};
+  \draw [->] (t3) ..controls (476.4bp,317.22bp) and (507.45bp,316.36bp)  .. (531.39bp,330bp) .. controls (554.77bp,343.33bp) and (570.11bp,369.53bp)  .. (t5);
+  \draw (501.39bp,339bp) node {-hlock};
+  \draw [->] (t3) ..controls (428.55bp,420.06bp) and (444.17bp,452.56bp)  .. (471.39bp,470bp) .. controls (492.11bp,483.28bp) and (517.88bp,477.85bp)  .. (t5);
+  \draw (501bp,499bp) node {hbusreq};
+  \draw (501bp,481bp) node {hburst1};
+  \draw [->] (t2) ..controls (1792.9bp,497.49bp) and (1795.7bp,505bp)  .. (1800.4bp,505bp) .. controls (1803.4bp,505bp) and (1805.6bp,501.92bp)  .. (t2);
+  \draw (1800bp,527bp) node {-hready};
+  \draw (1800bp,509bp) node {hbusreq};
+  \draw [->] (t2) ..controls (1739.2bp,505.1bp) and (1753.6bp,541bp)  .. (1800.4bp,541bp) .. controls (1842.6bp,541bp) and (1858.4bp,511.77bp)  .. (t2);
+  \draw (1800bp,563bp) node {-hready};
+  \draw (1800bp,545bp) node {-hlock};
+  \draw [->] (t8) ..controls (43.216bp,274.49bp) and (45.877bp,282bp)  .. (50.389bp,282bp) .. controls (53.279bp,282bp) and (55.41bp,278.92bp)  .. (t8);
+  \draw (50bp,304bp) node {-hready};
+  \draw (50bp,286bp) node {hbusreq};
+  \draw [->] (t8) ..controls (-10.15bp,282.51bp) and (4.1953bp,318bp)  .. (50.389bp,318bp) .. controls (92.071bp,318bp) and (107.82bp,289.1bp)  .. (t8);
+  \draw (50bp,340bp) node {-hready};
+  \draw (50bp,322bp) node {-hlock};
+  \draw [->] (t9) ..controls (221.22bp,333.49bp) and (223.88bp,341bp)  .. (228.39bp,341bp) .. controls (231.28bp,341bp) and (233.41bp,337.92bp)  .. (t9);
+  \draw (228bp,363bp) node {-hready};
+  \draw (228bp,345bp) node {hbusreq};
+  \draw [->] (t9) ..controls (167.85bp,341.51bp) and (182.2bp,377bp)  .. (228.39bp,377bp) .. controls (270.07bp,377bp) and (285.82bp,348.1bp)  .. (t9);
+  \draw (228bp,399bp) node {-hready};
+  \draw (228bp,381bp) node {-hlock};
+  \draw [->] (t13) ..controls (1659.1bp,357.85bp) and (1667.9bp,366.33bp)  .. (1677.4bp,373bp) .. controls (1701.4bp,389.96bp) and (1713.3bp,382.45bp)  .. (1739.4bp,396bp) .. controls (1742.4bp,397.59bp) and (1745.5bp,399.31bp)  .. (t2);
+  \draw (1708bp,454bp) node {-hready};
+  \draw (1708bp,436bp) node {-hbusreq};
+  \draw (1708bp,418bp) node {-hlock};
+  \draw (1708bp,400bp) node {hburst1};
+  \draw [->] (t13) ..controls (1684.8bp,282.77bp) and (1716.2bp,281.75bp)  .. (1739.4bp,297bp) .. controls (1767.1bp,315.22bp) and (1782.3bp,349.04bp)  .. (t2);
+  \draw (1708bp,355bp) node {-hready};
+  \draw (1708bp,337bp) node {-hbusreq};
+  \draw (1708bp,319bp) node {hburst0};
+  \draw (1708bp,301bp) node {-hlock};
+  \draw [->] (t13) ..controls (1646.7bp,234.05bp) and (1660bp,217.34bp)  .. (1677.4bp,208bp) .. controls (1701.7bp,194.97bp) and (1717.5bp,191.2bp)  .. (1739.4bp,208bp) .. controls (1766.3bp,228.73bp) and (1783.8bp,317.87bp)  .. (t2);
+  \draw (1708bp,266bp) node {-hbusreq};
+  \draw (1708bp,248bp) node {-hlock};
+  \draw (1708bp,230bp) node {hburst0};
+  \draw (1708bp,212bp) node {hburst1};
+  \draw [->] (t7) ..controls (1422bp,848.36bp) and (1406.5bp,934.42bp)  .. (1373.4bp,1002bp) .. controls (1339.2bp,1071.7bp) and (1340.1bp,1137bp)  .. (1262.4bp,1137bp) .. controls (228.39bp,1137bp) and (228.39bp,1137bp)  .. (228.39bp,1137bp) .. controls (140.21bp,1137bp) and (73.935bp,478.41bp)  .. (t8);
+  \draw (751bp,1213bp) node {hlock};
+  \draw (751bp,1195bp) node {-hready};
+  \draw (751bp,1177bp) node {hbusreq};
+  \draw (751bp,1159bp) node {-hburst0};
+  \draw (751bp,1141bp) node {-hburst1};
+  \draw [->] (t13) ..controls (1555.4bp,204.94bp) and (1501bp,144bp)  .. (1434.4bp,144bp) .. controls (408.39bp,144bp) and (408.39bp,144bp)  .. (408.39bp,144bp) .. controls (354.77bp,144bp) and (306.27bp,182.38bp)  .. (t9);
+  \draw (922bp,220bp) node {-hlock};
+  \draw (922bp,202bp) node {hready};
+  \draw (922bp,184bp) node {-hbusreq};
+  \draw (922bp,166bp) node {-hburst0};
+  \draw (922bp,148bp) node {hburst1};
+  \draw [->] (t8) ..controls (116.31bp,206.03bp) and (144.23bp,206.63bp)  .. (167.39bp,216bp) .. controls (170.5bp,217.26bp) and (173.55bp,218.76bp)  .. (t9);
+  \draw (139bp,238bp) node {hready};
+  \draw (139bp,220bp) node {hbusreq};
+  \draw [->] (t8) ..controls (99.285bp,246.8bp) and (105.37bp,249.7bp)  .. (111.39bp,252bp) .. controls (131.53bp,259.71bp) and (154.7bp,264.79bp)  .. (t9);
+  \draw (139bp,288bp) node {hready};
+  \draw (139bp,270bp) node {-hlock};
+  \draw [->] (t4) ..controls (1254.8bp,842.09bp) and (1257.3bp,850bp)  .. (1262.4bp,850bp) .. controls (1265.5bp,850bp) and (1267.7bp,846.91bp)  .. (t4);
+  \draw (1262bp,872bp) node {-hready};
+  \draw (1262bp,854bp) node {hbusreq};
+  \draw [->] (t4) ..controls (1198.8bp,845.81bp) and (1209.3bp,886bp)  .. (1262.4bp,886bp) .. controls (1310.9bp,886bp) and (1323.9bp,852.42bp)  .. (t4);
+  \draw (1262bp,908bp) node {-hready};
+  \draw (1262bp,890bp) node {-hlock};
+  \draw [->] (t11) ..controls (1149.7bp,465.88bp) and (1181bp,470.04bp)  .. (1207.4bp,462bp) .. controls (1210.3bp,461.11bp) and (1213.2bp,460bp)  .. (t12);
+  \draw (1176bp,488bp) node {hready};
+  \draw (1176bp,470bp) node {hbusreq};
+  \draw [->] (t11) ..controls (1133bp,426.32bp) and (1139.2bp,423.67bp)  .. (1145.4bp,422bp) .. controls (1167.8bp,415.97bp) and (1193.5bp,415.92bp)  .. (t12);
+  \draw (1176bp,444bp) node {hready};
+  \draw (1176bp,426bp) node {-hlock};
+  \draw [->] (t13) ..controls (1601.7bp,359.49bp) and (1607.2bp,367bp)  .. (1616.4bp,367bp) .. controls (1622.3bp,367bp) and (1626.7bp,363.92bp)  .. (t13);
+  \draw (1616.4bp,376bp) node {hbusreq};
+  \draw [->] (t11) ..controls (1155.7bp,517.41bp) and (1204bp,570.84bp)  .. (1207.4bp,576bp) .. controls (1225.2bp,602.75bp) and (1240.4bp,636.16bp)  .. (t6);
+  \draw (1176bp,634bp) node {-hready};
+  \draw (1176bp,616bp) node {-hbusreq};
+  \draw (1176bp,598bp) node {-hlock};
+  \draw (1176bp,580bp) node {hburst1};
+  \draw [->] (t0) ..controls (980.18bp,590.85bp) and (1030.4bp,529.9bp)  .. (t11);
+  \draw (1014bp,620bp) node {prev};
+  \draw (1014bp,602bp) node {hbusreq};
+  \draw (1014bp,584bp) node {-hlock};
+  \draw [->] (t0) ..controls (905.5bp,711.62bp) and (911.25bp,721bp)  .. (922.39bp,721bp) .. controls (930.05bp,721bp) and (935.16bp,716.56bp)  .. (t0);
+  \draw (922.39bp,730bp) node {-prev};
+  \draw [->] (t5) ..controls (659.88bp,453.37bp) and (690.23bp,462.54bp)  .. (t1);
+  \draw (678.39bp,474bp) node {hready};
+  \draw [->] (t7) ..controls (1412.8bp,878.89bp) and (1372bp,1032bp)  .. (1262.4bp,1032bp) .. controls (408.39bp,1032bp) and (408.39bp,1032bp)  .. (408.39bp,1032bp) .. controls (264.93bp,1032bp) and (235.63bp,511.52bp)  .. (t9);
+  \draw (830bp,1108bp) node {hlock};
+  \draw (830bp,1090bp) node {-hready};
+  \draw (830bp,1072bp) node {hbusreq};
+  \draw (830bp,1054bp) node {hburst0};
+  \draw (830bp,1036bp) node {-hburst1};
+  \draw [->] (t7) ..controls (1505bp,695.23bp) and (1541.2bp,675.4bp)  .. (1573.4bp,658bp) .. controls (1647.2bp,618.08bp) and (1682bp,629.21bp)  .. (1739.4bp,568bp) .. controls (1758.3bp,547.85bp) and (1772.2bp,520.8bp)  .. (t2);
+  \draw (1616bp,698bp) node {hbusreq};
+  \draw (1616bp,680bp) node {hburst0};
+  \draw (1616bp,662bp) node {hburst1};
+  \draw [->] (t7) ..controls (1496.2bp,639.54bp) and (1532.3bp,594.39bp)  .. (1573.4bp,564bp) .. controls (1637.5bp,516.57bp) and (1672.5bp,539.32bp)  .. (1739.4bp,496bp) .. controls (1742.7bp,493.83bp) and (1746.1bp,491.46bp)  .. (t2);
+  \draw (1616bp,604bp) node {hready};
+  \draw (1616bp,586bp) node {hbusreq};
+  \draw (1616bp,568bp) node {-hburst1};
+  \draw [->] (t7) ..controls (1465bp,615.28bp) and (1501.9bp,524.45bp)  .. (1573.4bp,487bp) .. controls (1639.2bp,452.54bp) and (1668.1bp,488.92bp)  .. (1739.4bp,468bp) .. controls (1742.1bp,467.19bp) and (1744.9bp,466.26bp)  .. (t2);
+  \draw (1616bp,509bp) node {hburst0};
+  \draw (1616bp,491bp) node {-hlock};
+  \draw [->] (t7) ..controls (1504.2bp,770.24bp) and (1539.8bp,785.27bp)  .. (1573.4bp,792bp) .. controls (1648.2bp,806.99bp) and (1694.4bp,809.62bp)  .. (1739.4bp,748bp) .. controls (1768bp,708.85bp) and (1786.2bp,575.9bp)  .. (t2);
+  \draw (1616bp,822bp) node {-hlock};
+  \draw (1616bp,804bp) node {-hburst1};
+  \draw [->] (t7) ..controls (1534.2bp,733bp) and (1629.3bp,728.96bp)  .. (1659.4bp,712bp) .. controls (1737.7bp,667.85bp) and (1774bp,563.52bp)  .. (t2);
+  \draw (1616bp,769bp) node {hready};
+  \draw (1616bp,751bp) node {hbusreq};
+  \draw (1616bp,733bp) node {hburst0};
+%
+\end{tikzpicture}
+% End of code
+
+%
+\end{document}
+%
+
+
+

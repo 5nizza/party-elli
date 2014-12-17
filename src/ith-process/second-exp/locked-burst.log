@@ -1,0 +1,692 @@
+rt_haali@t420kh:~/projects/party/src$ ./p_bosy.py ./ith-process/bench/locked-bursts.ltl --moore --opt sync_hub --weakag --tmp 
+01:16:25  Namespace(bound=128, cincr=False, cutoff=9223372036854775807, dot=None, incr=False, ltl=<_io.TextIOWrapper name='./ith-process/bench/locked-bursts.ltl' mode='r' encoding='UTF-8'>, mealy=True, moore=True, opt='sync_hub', previous=None, size=0, startsize=0, tmp=True, verbose=0, weakag=True)
+01:16:25  temp file prefix used is /home/art_haali/projects/party/src/tmp_eai6f
+01:16:25  parsing input spec..
+01:16:25  strengthening properties..
+01:16:25  Ltl2UCW: converting..(non-negated version)
+(G((((((hmastlock_i=1) * (hburst0_i=0)) * (hburst1_i=1)) * (hmaster_i=1)) -> (X((F(((hbusreq_i=0) * (active_i=1)))))))))
+01:16:25  Ltl2UCW: converting..(non-negated version)
+(G((F(((hready_i=1) * (active_i=1))))))
+01:16:25  Ltl2UCW: converting..(non-negated version)
+(G(((hlock_i=1) -> (hbusreq_i=1))))
+01:16:25  Ltl2UCW: converting..(non-negated version)
+(hbusreq_i=0)
+01:16:25  Ltl2UCW: converting..(non-negated version)
+(hlock_i=0)
+01:16:25  Ltl2UCW: converting..(non-negated version)
+(hready_i=0)
+01:16:25  Ltl2UCW: converting..(non-negated version)
+(G((((hburst0_i=1) * (hburst1_i=1)) * ((hbusreq_i=1) -> (hlock_i=1)))))
+01:16:25  Ltl2UCW: converting..(non-negated version)
+(G((F((fair_scheduling_i=1)))))
+01:16:25  Ltl2UCW: converting..(non-negated version)
+(G((F((tok_i=1)))))
+01:16:25  Ltl2UCW: converting..(non-negated version)
+(G((((hready_i=0) * (active_i=1)) -> (X((start_i=0))))))
+01:16:25  Ltl2UCW: converting..(non-negated version)
+(G(((((((hmastlock_i=1) * (hburst0_i=0)) * (hburst1_i=1)) * (start_i=1)) * (active_i=1)) -> (X((((start_i=0) U (((start_i=0) * (hbusreq_i=0)) * (active_i=1))) + (G((start_i=0)))))))))
+01:16:25  Ltl2UCW: converting..(non-negated version)
+(G((((((((hmastlock_i=1) * (hburst0_i=1)) * (hburst1_i=1)) * (start_i=1)) * (hready_i=1)) * (active_i=1)) -> (X((((start_i=0) U ((((start_i=0) * (hready_i=1)) * (active_i=1)) * (X((((start_i=0) U ((((start_i=0) * (hready_i=1)) * (active_i=1)) * (X((((start_i=0) U (((start_i=0) * (hready_i=1)) * (active_i=1))) + (G((start_i=0)))))))) + (G((start_i=0)))))))) + (G((start_i=0)))))))))
+01:16:25  Ltl2UCW: converting..(non-negated version)
+(G((((((((hmastlock_i=1) * (hburst0_i=1)) * (hburst1_i=1)) * (start_i=1)) * (hready_i=0)) * (active_i=1)) -> (X((((start_i=0) U ((((start_i=0) * (hready_i=1)) * (active_i=1)) * (X((((start_i=0) U ((((start_i=0) * (hready_i=1)) * (active_i=1)) * (X((((start_i=0) U ((((start_i=0) * (hready_i=1)) * (active_i=1)) * (X((((start_i=0) U (((start_i=0) * (hready_i=1)) * (active_i=1))) + (G((start_i=0)))))))) + (G((start_i=0)))))))) + (G((start_i=0)))))))) + (G((start_i=0)))))))))
+01:16:25  Ltl2UCW: converting..(non-negated version)
+(G((((hready_i=1) * (active_i=1)) -> ((hgrant_i=1) <-> (X((hmaster_i=1)))))))
+01:16:25  Ltl2UCW: converting..(non-negated version)
+(G((((hready_i=1) * (active_i=1)) -> ((locked_i=1) <-> (X((hmastlock_i=1)))))))
+01:16:25  Ltl2UCW: converting..(non-negated version)
+(G(((X((start_i=0))) -> ((hmaster_i=1) <-> (X((hmaster_i=1)))))))
+01:16:25  Ltl2UCW: converting..(non-negated version)
+(G(((X((start_i=0))) -> ((hmastlock_i=1) <-> (X((hmastlock_i=1)))))))
+01:16:25  Ltl2UCW: converting..(non-negated version)
+(G(((((decide_i=1) * (active_i=1)) * (X((hgrant_i=1)))) -> ((hlock_i=1) <-> (X((locked_i=1)))))))
+01:16:25  Ltl2UCW: converting..(non-negated version)
+(G((((decide_i=0) * (active_i=1)) -> ((hgrant_i=1) <-> (X((hgrant_i=1)))))))
+01:16:25  Ltl2UCW: converting..(non-negated version)
+(G((((decide_i=0) * (active_i=1)) -> ((locked_i=1) <-> (X((locked_i=1)))))))
+01:16:25  Ltl2UCW: converting..(non-negated version)
+(G(((hbusreq_i=1) -> (F(((hbusreq_i=0) + (hmaster_i=1)))))))
+01:16:25  Ltl2UCW: converting..(non-negated version)
+(G(((hgrant_i=0) -> (((hgrant_i=0) U ((active_i=1) * (hbusreq_i=1))) + (G((hgrant_i=0)))))))
+01:16:25  Ltl2UCW: converting..(non-negated version)
+(hgrant_i=0)
+01:16:25  Ltl2UCW: converting..(non-negated version)
+(hmaster_i=0)
+01:16:25  Ltl2UCW: converting..(non-negated version)
+(hmastlock_i=0)
+01:16:25  Ltl2UCW: converting..(non-negated version)
+(G(((hmaster_i=1) -> (tok_i=1))))
+01:16:25  Ltl2UCW: converting..(non-negated version)
+(G(((tok_i=1) -> (F((sends_i=1))))))
+01:16:25  strengthening resulted in safety part (a_s -> g_s):
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) G(hready_i=0 * active_i=1 -> X(start_i=0))])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) G(hmastlock_i=1 * hburst0_i=0 * hburst1_i=1 * start_i=1 * active_i=1 -> X(start_i=0 W start_i=0 * hbusreq_i=0 * active_i=1))])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) G(hmastlock_i=1 * hburst0_i=1 * hburst1_i=1 * start_i=1 * hready_i=1 * active_i=1 -> X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1))))])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) G(hmastlock_i=1 * hburst0_i=1 * hburst1_i=1 * start_i=1 * hready_i=0 * active_i=1 -> X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1)))))])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) G(hready_i=1 * active_i=1 -> hgrant_i=1 <-> X(hmaster_i=1))])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) G(hready_i=1 * active_i=1 -> locked_i=1 <-> X(hmastlock_i=1))])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) G(X(start_i=0) -> hmaster_i=1 <-> X(hmaster_i=1))])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) G(X(start_i=0) -> hmastlock_i=1 <-> X(hmastlock_i=1))])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) G(decide_i=1 * active_i=1 * X(hgrant_i=1) -> hlock_i=1 <-> X(locked_i=1))])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) G(decide_i=0 * active_i=1 -> hgrant_i=1 <-> X(hgrant_i=1))])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) G(decide_i=0 * active_i=1 -> locked_i=1 <-> X(locked_i=1))])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) G(hgrant_i=0 -> hgrant_i=0 W active_i=1 * hbusreq_i=1)])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) hgrant_i=0])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) hmaster_i=0])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) hmastlock_i=0])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) G(hmaster_i=1 -> tok_i=1)])  
+
+01:16:25  ..and in liveness part (a_s&a_l -> g_l):
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hmastlock_i=1 * hburst0_i=0 * hburst1_i=1 * hmaster_i=1 -> X(F(hbusreq_i=0 * active_i=1))) * G(F(hready_i=1 * active_i=1)) * G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) * G(F(fair_scheduling_i=1)) * G(F(tok_i=1))], 
+      guarantees=[Forall(i) G(hbusreq_i=1 -> F(hbusreq_i=0 + hmaster_i=1))])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hmastlock_i=1 * hburst0_i=0 * hburst1_i=1 * hmaster_i=1 -> X(F(hbusreq_i=0 * active_i=1))) * G(F(hready_i=1 * active_i=1)) * G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) * G(F(fair_scheduling_i=1))], 
+      guarantees=[Forall(i) G(tok_i=1 -> F(sends_i=1))])  
+
+01:16:25  properties after localizing:
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> G(hready_i=0 * active_i=1 -> X(start_i=0))])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> G(hmastlock_i=1 * hburst0_i=0 * hburst1_i=1 * start_i=1 * active_i=1 -> X(start_i=0 W start_i=0 * hbusreq_i=0 * active_i=1))])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> G(hmastlock_i=1 * hburst0_i=1 * hburst1_i=1 * start_i=1 * hready_i=1 * active_i=1 -> X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1))))])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> G(hmastlock_i=1 * hburst0_i=1 * hburst1_i=1 * start_i=1 * hready_i=0 * active_i=1 -> X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1)))))])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> G(hready_i=1 * active_i=1 -> hgrant_i=1 <-> X(hmaster_i=1))])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> G(hready_i=1 * active_i=1 -> locked_i=1 <-> X(hmastlock_i=1))])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> G(X(start_i=0) -> hmaster_i=1 <-> X(hmaster_i=1))])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> G(X(start_i=0) -> hmastlock_i=1 <-> X(hmastlock_i=1))])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> G(decide_i=1 * active_i=1 * X(hgrant_i=1) -> hlock_i=1 <-> X(locked_i=1))])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> G(decide_i=0 * active_i=1 -> hgrant_i=1 <-> X(hgrant_i=1))])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> G(decide_i=0 * active_i=1 -> locked_i=1 <-> X(locked_i=1))])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> G(hgrant_i=0 -> hgrant_i=0 W active_i=1 * hbusreq_i=1)])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> hgrant_i=0])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> hmaster_i=0])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> hmastlock_i=0])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> G(hmaster_i=1 -> tok_i=1)])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hmastlock_i=1 * hburst0_i=0 * hburst1_i=1 * hmaster_i=1 -> X(F(hbusreq_i=0 * active_i=1))) * G(F(hready_i=1 * active_i=1)) * G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) * G(F(fair_scheduling_i=1)) * G(F(tok_i=1)) -> G(hbusreq_i=1 -> F(hbusreq_i=0 + hmaster_i=1))])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hmastlock_i=1 * hburst0_i=0 * hburst1_i=1 * hmaster_i=1 -> X(F(hbusreq_i=0 * active_i=1))) * G(F(hready_i=1 * active_i=1)) * G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) * G(F(fair_scheduling_i=1)) -> G(tok_i=1 -> F(sends_i=1))])  
+
+01:16:25  Ltl2UCW: converting..(non-negated version)
+(G(((hlock_i=1) -> (hbusreq_i=1))))
+01:16:26  Ltl2UCW: converting..(non-negated version)
+(hbusreq_i=0)
+01:16:26  Ltl2UCW: converting..(non-negated version)
+(hlock_i=0)
+01:16:26  Ltl2UCW: converting..(non-negated version)
+(hready_i=0)
+01:16:26  Ltl2UCW: converting..(non-negated version)
+(G((((hburst0_i=1) * (hburst1_i=1)) * ((hbusreq_i=1) -> (hlock_i=1)))))
+01:16:26  Ltl2UCW: converting..(non-negated version)
+(G((((hready_i=0) * (active_i=1)) -> (X((start_i=0))))))
+01:16:26  saf_part
+ []
+01:16:26  Ltl2UCW: converting..(non-negated version)
+(G(((((((hmastlock_i=1) * (hburst0_i=0)) * (hburst1_i=1)) * (start_i=1)) * (active_i=1)) -> (X((((start_i=0) U (((start_i=0) * (hbusreq_i=0)) * (active_i=1))) + (G((start_i=0)))))))))
+01:16:26  saf_part
+ [  (SpecProperty: 
+    assumptions=[hbusreq_i=0, hlock_i=0, hready_i=0], 
+      guarantees=[G(hmastlock_i=1 * hburst0_i=0 * hburst1_i=1 * start_i=1 * active_i=1 -> X(start_i=0 W start_i=0 * hbusreq_i=0 * active_i=1))])  ]
+01:16:26  Ltl2UCW: converting..(non-negated version)
+(G((((((((hmastlock_i=1) * (hburst0_i=1)) * (hburst1_i=1)) * (start_i=1)) * (hready_i=1)) * (active_i=1)) -> (X((((start_i=0) U ((((start_i=0) * (hready_i=1)) * (active_i=1)) * (X((((start_i=0) U ((((start_i=0) * (hready_i=1)) * (active_i=1)) * (X((((start_i=0) U (((start_i=0) * (hready_i=1)) * (active_i=1))) + (G((start_i=0)))))))) + (G((start_i=0)))))))) + (G((start_i=0)))))))))
+01:16:26  saf_part
+ [  (SpecProperty: 
+    assumptions=[hbusreq_i=0, hlock_i=0, hready_i=0], 
+      guarantees=[G(hmastlock_i=1 * hburst0_i=1 * hburst1_i=1 * start_i=1 * hready_i=1 * active_i=1 -> X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1))))])  ]
+01:16:26  Ltl2UCW: converting..(non-negated version)
+(G((((((((hmastlock_i=1) * (hburst0_i=1)) * (hburst1_i=1)) * (start_i=1)) * (hready_i=0)) * (active_i=1)) -> (X((((start_i=0) U ((((start_i=0) * (hready_i=1)) * (active_i=1)) * (X((((start_i=0) U ((((start_i=0) * (hready_i=1)) * (active_i=1)) * (X((((start_i=0) U ((((start_i=0) * (hready_i=1)) * (active_i=1)) * (X((((start_i=0) U (((start_i=0) * (hready_i=1)) * (active_i=1))) + (G((start_i=0)))))))) + (G((start_i=0)))))))) + (G((start_i=0)))))))) + (G((start_i=0)))))))))
+01:16:26  saf_part
+ [  (SpecProperty: 
+    assumptions=[hbusreq_i=0, hlock_i=0, hready_i=0], 
+      guarantees=[G(hmastlock_i=1 * hburst0_i=1 * hburst1_i=1 * start_i=1 * hready_i=0 * active_i=1 -> X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1)))))])  ]
+01:16:26  Ltl2UCW: converting..(non-negated version)
+(G((((hready_i=1) * (active_i=1)) -> ((hgrant_i=1) <-> (X((hmaster_i=1)))))))
+01:16:26  saf_part
+ []
+01:16:26  Ltl2UCW: converting..(non-negated version)
+(G((((hready_i=1) * (active_i=1)) -> ((locked_i=1) <-> (X((hmastlock_i=1)))))))
+01:16:26  saf_part
+ []
+01:16:26  Ltl2UCW: converting..(non-negated version)
+(G(((X((start_i=0))) -> ((hmaster_i=1) <-> (X((hmaster_i=1)))))))
+01:16:26  saf_part
+ []
+01:16:26  Ltl2UCW: converting..(non-negated version)
+(G(((X((start_i=0))) -> ((hmastlock_i=1) <-> (X((hmastlock_i=1)))))))
+01:16:26  saf_part
+ []
+01:16:26  Ltl2UCW: converting..(non-negated version)
+(G(((((decide_i=1) * (active_i=1)) * (X((hgrant_i=1)))) -> ((hlock_i=1) <-> (X((locked_i=1)))))))
+01:16:26  saf_part
+ []
+01:16:26  Ltl2UCW: converting..(non-negated version)
+(G((((decide_i=0) * (active_i=1)) -> ((hgrant_i=1) <-> (X((hgrant_i=1)))))))
+01:16:26  saf_part
+ []
+01:16:26  Ltl2UCW: converting..(non-negated version)
+(G((((decide_i=0) * (active_i=1)) -> ((locked_i=1) <-> (X((locked_i=1)))))))
+01:16:26  saf_part
+ []
+01:16:26  Ltl2UCW: converting..(non-negated version)
+(G(((hgrant_i=0) -> (((hgrant_i=0) U ((active_i=1) * (hbusreq_i=1))) + (G((hgrant_i=0)))))))
+01:16:26  saf_part
+ [  (SpecProperty: 
+    assumptions=[hbusreq_i=0, hlock_i=0, hready_i=0], 
+      guarantees=[G(hgrant_i=0 -> hgrant_i=0 W active_i=1 * hbusreq_i=1)])  ]
+01:16:26  Ltl2UCW: converting..(non-negated version)
+(hgrant_i=0)
+01:16:26  saf_part
+ [  (SpecProperty: 
+    assumptions=[hbusreq_i=0, hlock_i=0, hready_i=0], 
+      guarantees=[hgrant_i=0])  ]
+01:16:26  Ltl2UCW: converting..(non-negated version)
+(hmaster_i=0)
+01:16:26  saf_part
+ [  (SpecProperty: 
+    assumptions=[hbusreq_i=0, hlock_i=0, hready_i=0], 
+      guarantees=[hmaster_i=0])  ]
+01:16:26  Ltl2UCW: converting..(non-negated version)
+(hmastlock_i=0)
+01:16:26  saf_part
+ [  (SpecProperty: 
+    assumptions=[hbusreq_i=0, hlock_i=0, hready_i=0], 
+      guarantees=[hmastlock_i=0])  ]
+01:16:26  Ltl2UCW: converting..(non-negated version)
+(G(((hmaster_i=1) -> (tok_i=1))))
+01:16:26  saf_part
+ []
+01:16:26  Ltl2UCW: converting..(non-negated version)
+(G((((((hmastlock_i=1) * (hburst0_i=0)) * (hburst1_i=1)) * (hmaster_i=1)) -> (X((F(((hbusreq_i=0) * (active_i=1)))))))))
+01:16:26  Ltl2UCW: converting..(non-negated version)
+(G((F(((hready_i=1) * (active_i=1))))))
+01:16:26  Ltl2UCW: converting..(non-negated version)
+(G((F((fair_scheduling_i=1)))))
+01:16:26  Ltl2UCW: converting..(non-negated version)
+(G((F((tok_i=1)))))
+01:16:26  Ltl2UCW: converting..(non-negated version)
+(G(((hbusreq_i=1) -> (F(((hbusreq_i=0) + (hmaster_i=1)))))))
+01:16:26  saf_part
+ []
+01:16:26  liv_part
+   (SpecProperty: 
+    assumptions=[hbusreq_i=0, hlock_i=0, hready_i=0, G(hmastlock_i=1 * hburst0_i=0 * hburst1_i=1 * hmaster_i=1 -> X(F(hbusreq_i=0 * active_i=1))), G(F(hready_i=1 * active_i=1)), G(F(fair_scheduling_i=1)), G(F(tok_i=1))], 
+      guarantees=[G(hbusreq_i=1 -> F(hbusreq_i=0 + hmaster_i=1))])  
+01:16:26  Ltl2UCW: converting..(non-negated version)
+(G(((tok_i=1) -> (F((sends_i=1))))))
+01:16:26  saf_part
+ []
+01:16:26  liv_part
+   (SpecProperty: 
+    assumptions=[hbusreq_i=0, hlock_i=0, hready_i=0, G(hmastlock_i=1 * hburst0_i=0 * hburst1_i=1 * hmaster_i=1 -> X(F(hbusreq_i=0 * active_i=1))), G(F(hready_i=1 * active_i=1)), G(F(fair_scheduling_i=1))], 
+      guarantees=[G(tok_i=1 -> F(sends_i=1))])  
+<name: env_ass, inputs: [(hburst0_0, 'Bool'), (hburst1_0, 'Bool'), (hbusreq_0, 'Bool'), (hlock_0, 'Bool')], output: Bool, definition: 
+(define-fun env_ass ((hburst0_0 Bool) (hburst1_0 Bool) (hbusreq_0 Bool) (hlock_0 Bool)) Bool 
+(and (and (and hburst0_0 hburst1_0) (=> hbusreq_0 hlock_0)) (=> hlock_0 hbusreq_0))
+)>
+<name: sys_gua, inputs: [(decideNext_0, 'Bool'), (decide_0, 'Bool'), (hgrantNext_0, 'Bool'), (hgrant_0, 'Bool'), (hlockNext_0, 'Bool'), (hlock_0, 'Bool'), (hmasterNext_0, 'Bool'), (hmaster_0, 'Bool'), (hmastlockNext_0, 'Bool'), (hmastlock_0, 'Bool'), (hreadyNext_0, 'Bool'), (hready_0, 'Bool'), (lockedNext_0, 'Bool'), (locked_0, 'Bool'), (startNext_0, 'Bool'), (start_0, 'Bool'), (tokNext_0, 'Bool'), (tok_0, 'Bool')], output: Bool, definition: 
+(define-fun sys_gua ((decideNext_0 Bool) (decide_0 Bool) (hgrantNext_0 Bool) (hgrant_0 Bool) (hlockNext_0 Bool) (hlock_0 Bool) (hmasterNext_0 Bool) (hmaster_0 Bool) (hmastlockNext_0 Bool) (hmastlock_0 Bool) (hreadyNext_0 Bool) (hready_0 Bool) (lockedNext_0 Bool) (locked_0 Bool) (startNext_0 Bool) (start_0 Bool) (tokNext_0 Bool) (tok_0 Bool)) Bool 
+(and (and (and (and (and (and (and (and (=> (and (not decide_0)  true ) (= locked_0 lockedNext_0)) (=> (and hready_0  true ) (= locked_0 hmastlockNext_0))) (=> (and hready_0  true ) (= hgrant_0 hmasterNext_0))) (=> (not startNext_0) (= hmaster_0 hmasterNext_0))) (=> hmaster_0 tok_0)) (=> (and (not hready_0)  true ) (not startNext_0))) (=> (and (and decide_0  true ) hgrantNext_0) (= hlock_0 lockedNext_0))) (=> (not startNext_0) (= hmastlock_0 hmastlockNext_0))) (=> (and (not decide_0)  true ) (= hgrant_0 hgrantNext_0)))
+)>
+01:16:26  properties after weak-until optimization 
+ [  (SpecProperty: 
+    assumptions=[], 
+      guarantees=[Forall(i) hbusreq_i=0 * hlock_i=0 * hready_i=0 -> G(hmastlock_i=1 * hburst0_i=0 * hburst1_i=1 * start_i=1 * active_i=1 -> X(start_i=0 W start_i=0 * hbusreq_i=0 * active_i=1))])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[Forall(i) hbusreq_i=0 * hlock_i=0 * hready_i=0 -> G(hmastlock_i=1 * hburst0_i=1 * hburst1_i=1 * start_i=1 * hready_i=1 * active_i=1 -> X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1))))])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[Forall(i) hbusreq_i=0 * hlock_i=0 * hready_i=0 -> G(hmastlock_i=1 * hburst0_i=1 * hburst1_i=1 * start_i=1 * hready_i=0 * active_i=1 -> X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1)))))])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[Forall(i) hbusreq_i=0 * hlock_i=0 * hready_i=0 -> G(hgrant_i=0 -> hgrant_i=0 W active_i=1 * hbusreq_i=1)])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[Forall(i) hbusreq_i=0 * hlock_i=0 * hready_i=0 -> hgrant_i=0])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[Forall(i) hbusreq_i=0 * hlock_i=0 * hready_i=0 -> hmaster_i=0])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[Forall(i) hbusreq_i=0 * hlock_i=0 * hready_i=0 -> hmastlock_i=0])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[Forall(i) hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hmastlock_i=1 * hburst0_i=0 * hburst1_i=1 * hmaster_i=1 -> X(F(hbusreq_i=0 * active_i=1))) * G(F(hready_i=1 * active_i=1)) * G(F(fair_scheduling_i=1)) * G(F(tok_i=1)) -> G(hbusreq_i=1 -> F(hbusreq_i=0 + hmaster_i=1))])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[Forall(i) hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hmastlock_i=1 * hburst0_i=0 * hburst1_i=1 * hmaster_i=1 -> X(F(hbusreq_i=0 * active_i=1))) * G(F(hready_i=1 * active_i=1)) * G(F(fair_scheduling_i=1)) -> G(tok_i=1 -> F(sends_i=1))])  ] 
+
+01:16:26  instantiated local properties:
+[  (SpecProperty: 
+    assumptions=[], 
+      guarantees=[hbusreq_0=0 * hlock_0=0 * hready_0=0 -> G(hmastlock_0=1 * hburst0_0=0 * hburst1_0=1 * start_0=1 * True -> X(start_0=0 W start_0=0 * hbusreq_0=0 * True))])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[hbusreq_0=0 * hlock_0=0 * hready_0=0 -> G(hmastlock_0=1 * hburst0_0=1 * hburst1_0=1 * start_0=1 * hready_0=1 * True -> X(start_0=0 W start_0=0 * hready_0=1 * True * X(start_0=0 W start_0=0 * hready_0=1 * True * X(start_0=0 W start_0=0 * hready_0=1 * True))))])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[hbusreq_0=0 * hlock_0=0 * hready_0=0 -> G(hmastlock_0=1 * hburst0_0=1 * hburst1_0=1 * start_0=1 * hready_0=0 * True -> X(start_0=0 W start_0=0 * hready_0=1 * True * X(start_0=0 W start_0=0 * hready_0=1 * True * X(start_0=0 W start_0=0 * hready_0=1 * True * X(start_0=0 W start_0=0 * hready_0=1 * True)))))])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[hbusreq_0=0 * hlock_0=0 * hready_0=0 -> G(hgrant_0=0 -> hgrant_0=0 W True * hbusreq_0=1)])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[hbusreq_0=0 * hlock_0=0 * hready_0=0 -> hgrant_0=0])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[hbusreq_0=0 * hlock_0=0 * hready_0=0 -> hmaster_0=0])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[hbusreq_0=0 * hlock_0=0 * hready_0=0 -> hmastlock_0=0])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[hbusreq_0=0 * hlock_0=0 * hready_0=0 * G(hmastlock_0=1 * hburst0_0=0 * hburst1_0=1 * hmaster_0=1 -> X(F(hbusreq_0=0 * True))) * G(F(hready_0=1 * True)) * G(F(True)) * G(F(tok_0=1)) -> G(hbusreq_0=1 -> F(hbusreq_0=0 + hmaster_0=1))])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[hbusreq_0=0 * hlock_0=0 * hready_0=0 * G(hmastlock_0=1 * hburst0_0=0 * hburst1_0=1 * hmaster_0=1 -> X(F(hbusreq_0=0 * True))) * G(F(hready_0=1 * True)) * G(F(True)) -> G(tok_0=1 -> F(sends_0=1))])  ]
+
+01:16:26  instantiated global properties:
+[]
+
+01:16:26  Ltl2UCW: converting..(non-negated version)
+(TRUE -> (((((((((TRUE -> ((((hbusreq_0=0) * (hlock_0=0)) * (hready_0=0)) -> (G(((((((hmastlock_0=1) * (hburst0_0=0)) * (hburst1_0=1)) * (start_0=1)) * TRUE) -> (X((((start_0=0) U (((start_0=0) * (hbusreq_0=0)) * TRUE)) + (G((start_0=0))))))))))) * (TRUE -> ((((hbusreq_0=0) * (hlock_0=0)) * (hready_0=0)) -> (G((((((((hmastlock_0=1) * (hburst0_0=1)) * (hburst1_0=1)) * (start_0=1)) * (hready_0=1)) * TRUE) -> (X((((start_0=0) U ((((start_0=0) * (hready_0=1)) * TRUE) * (X((((start_0=0) U ((((start_0=0) * (hready_0=1)) * TRUE) * (X((((start_0=0) U (((start_0=0) * (hready_0=1)) * TRUE)) + (G((start_0=0)))))))) + (G((start_0=0)))))))) + (G((start_0=0)))))))))))) * (TRUE -> ((((hbusreq_0=0) * (hlock_0=0)) * (hready_0=0)) -> (G((((((((hmastlock_0=1) * (hburst0_0=1)) * (hburst1_0=1)) * (start_0=1)) * (hready_0=0)) * TRUE) -> (X((((start_0=0) U ((((start_0=0) * (hready_0=1)) * TRUE) * (X((((start_0=0) U ((((start_0=0) * (hready_0=1)) * TRUE) * (X((((start_0=0) U ((((start_0=0) * (hready_0=1)) * TRUE) * (X((((start_0=0) U (((start_0=0) * (hready_0=1)) * TRUE)) + (G((start_0=0)))))))) + (G((start_0=0)))))))) + (G((start_0=0)))))))) + (G((start_0=0)))))))))))) * (TRUE -> ((((hbusreq_0=0) * (hlock_0=0)) * (hready_0=0)) -> (G(((hgrant_0=0) -> (((hgrant_0=0) U (TRUE * (hbusreq_0=1))) + (G((hgrant_0=0)))))))))) * (TRUE -> ((((hbusreq_0=0) * (hlock_0=0)) * (hready_0=0)) -> (hgrant_0=0)))) * (TRUE -> ((((hbusreq_0=0) * (hlock_0=0)) * (hready_0=0)) -> (hmaster_0=0)))) * (TRUE -> ((((hbusreq_0=0) * (hlock_0=0)) * (hready_0=0)) -> (hmastlock_0=0)))) * (TRUE -> ((((((((hbusreq_0=0) * (hlock_0=0)) * (hready_0=0)) * (G((((((hmastlock_0=1) * (hburst0_0=0)) * (hburst1_0=1)) * (hmaster_0=1)) -> (X((F(((hbusreq_0=0) * TRUE))))))))) * (G((F(((hready_0=1) * TRUE)))))) * (G((F(TRUE))))) * (G((F((tok_0=1)))))) -> (G(((hbusreq_0=1) -> (F(((hbusreq_0=0) + (hmaster_0=1)))))))))) * (TRUE -> (((((((hbusreq_0=0) * (hlock_0=0)) * (hready_0=0)) * (G((((((hmastlock_0=1) * (hburst0_0=0)) * (hburst1_0=1)) * (hmaster_0=1)) -> (X((F(((hbusreq_0=0) * TRUE))))))))) * (G((F(((hready_0=1) * TRUE)))))) * (G((F(TRUE))))) -> (G(((tok_0=1) -> (F((sends_0=1))))))))))
+01:16:26  strengthening properties..
+01:16:26  strengthening resulted in safety part (a_s -> g_s):
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) G(hready_i=0 * active_i=1 -> X(start_i=0))])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) G(hmastlock_i=1 * hburst0_i=0 * hburst1_i=1 * start_i=1 * active_i=1 -> X(start_i=0 W start_i=0 * hbusreq_i=0 * active_i=1))])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) G(hmastlock_i=1 * hburst0_i=1 * hburst1_i=1 * start_i=1 * hready_i=1 * active_i=1 -> X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1))))])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) G(hmastlock_i=1 * hburst0_i=1 * hburst1_i=1 * start_i=1 * hready_i=0 * active_i=1 -> X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1)))))])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) G(hready_i=1 * active_i=1 -> hgrant_i=1 <-> X(hmaster_i=1))])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) G(hready_i=1 * active_i=1 -> locked_i=1 <-> X(hmastlock_i=1))])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) G(X(start_i=0) -> hmaster_i=1 <-> X(hmaster_i=1))])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) G(X(start_i=0) -> hmastlock_i=1 <-> X(hmastlock_i=1))])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) G(decide_i=1 * active_i=1 * X(hgrant_i=1) -> hlock_i=1 <-> X(locked_i=1))])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) G(decide_i=0 * active_i=1 -> hgrant_i=1 <-> X(hgrant_i=1))])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) G(decide_i=0 * active_i=1 -> locked_i=1 <-> X(locked_i=1))])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) G(hgrant_i=0 -> hgrant_i=0 W active_i=1 * hbusreq_i=1)])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) hgrant_i=0])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) hmaster_i=0])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) hmastlock_i=0])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1)], 
+      guarantees=[Forall(i) G(hmaster_i=1 -> tok_i=1)])  
+
+01:16:26  ..and in liveness part (a_s&a_l -> g_l):
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hmastlock_i=1 * hburst0_i=0 * hburst1_i=1 * hmaster_i=1 -> X(F(hbusreq_i=0 * active_i=1))) * G(F(hready_i=1 * active_i=1)) * G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) * G(F(fair_scheduling_i=1)) * G(F(tok_i=1))], 
+      guarantees=[Forall(i) G(hbusreq_i=1 -> F(hbusreq_i=0 + hmaster_i=1))])  
+  (SpecProperty: 
+    assumptions=[Forall(i) G(hmastlock_i=1 * hburst0_i=0 * hburst1_i=1 * hmaster_i=1 -> X(F(hbusreq_i=0 * active_i=1))) * G(F(hready_i=1 * active_i=1)) * G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) * G(F(fair_scheduling_i=1))], 
+      guarantees=[Forall(i) G(tok_i=1 -> F(sends_i=1))])  
+
+01:16:26  properties after localizing:
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> G(hready_i=0 * active_i=1 -> X(start_i=0))])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> G(hmastlock_i=1 * hburst0_i=0 * hburst1_i=1 * start_i=1 * active_i=1 -> X(start_i=0 W start_i=0 * hbusreq_i=0 * active_i=1))])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> G(hmastlock_i=1 * hburst0_i=1 * hburst1_i=1 * start_i=1 * hready_i=1 * active_i=1 -> X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1))))])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> G(hmastlock_i=1 * hburst0_i=1 * hburst1_i=1 * start_i=1 * hready_i=0 * active_i=1 -> X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1)))))])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> G(hready_i=1 * active_i=1 -> hgrant_i=1 <-> X(hmaster_i=1))])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> G(hready_i=1 * active_i=1 -> locked_i=1 <-> X(hmastlock_i=1))])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> G(X(start_i=0) -> hmaster_i=1 <-> X(hmaster_i=1))])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> G(X(start_i=0) -> hmastlock_i=1 <-> X(hmastlock_i=1))])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> G(decide_i=1 * active_i=1 * X(hgrant_i=1) -> hlock_i=1 <-> X(locked_i=1))])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> G(decide_i=0 * active_i=1 -> hgrant_i=1 <-> X(hgrant_i=1))])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> G(decide_i=0 * active_i=1 -> locked_i=1 <-> X(locked_i=1))])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> G(hgrant_i=0 -> hgrant_i=0 W active_i=1 * hbusreq_i=1)])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> hgrant_i=0])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> hmaster_i=0])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> hmastlock_i=0])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) -> G(hmaster_i=1 -> tok_i=1)])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hmastlock_i=1 * hburst0_i=0 * hburst1_i=1 * hmaster_i=1 -> X(F(hbusreq_i=0 * active_i=1))) * G(F(hready_i=1 * active_i=1)) * G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) * G(F(fair_scheduling_i=1)) * G(F(tok_i=1)) -> G(hbusreq_i=1 -> F(hbusreq_i=0 + hmaster_i=1))])  
+  (SpecProperty: 
+    assumptions=[True], 
+      guarantees=[Forall(i) G(hmastlock_i=1 * hburst0_i=0 * hburst1_i=1 * hmaster_i=1 -> X(F(hbusreq_i=0 * active_i=1))) * G(F(hready_i=1 * active_i=1)) * G(hlock_i=1 -> hbusreq_i=1) * hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hburst0_i=1 * hburst1_i=1 * hbusreq_i=1 -> hlock_i=1) * G(F(fair_scheduling_i=1)) -> G(tok_i=1 -> F(sends_i=1))])  
+
+01:16:26  saf_part
+ []
+01:16:26  saf_part
+ [  (SpecProperty: 
+    assumptions=[hbusreq_i=0, hlock_i=0, hready_i=0], 
+      guarantees=[G(hmastlock_i=1 * hburst0_i=0 * hburst1_i=1 * start_i=1 * active_i=1 -> X(start_i=0 W start_i=0 * hbusreq_i=0 * active_i=1))])  ]
+01:16:26  saf_part
+ [  (SpecProperty: 
+    assumptions=[hbusreq_i=0, hlock_i=0, hready_i=0], 
+      guarantees=[G(hmastlock_i=1 * hburst0_i=1 * hburst1_i=1 * start_i=1 * hready_i=1 * active_i=1 -> X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1))))])  ]
+01:16:26  saf_part
+ [  (SpecProperty: 
+    assumptions=[hbusreq_i=0, hlock_i=0, hready_i=0], 
+      guarantees=[G(hmastlock_i=1 * hburst0_i=1 * hburst1_i=1 * start_i=1 * hready_i=0 * active_i=1 -> X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1)))))])  ]
+01:16:26  saf_part
+ []
+01:16:26  saf_part
+ []
+01:16:26  saf_part
+ []
+01:16:26  saf_part
+ []
+01:16:26  saf_part
+ []
+01:16:26  saf_part
+ []
+01:16:26  saf_part
+ []
+01:16:26  saf_part
+ [  (SpecProperty: 
+    assumptions=[hbusreq_i=0, hlock_i=0, hready_i=0], 
+      guarantees=[G(hgrant_i=0 -> hgrant_i=0 W active_i=1 * hbusreq_i=1)])  ]
+01:16:26  saf_part
+ [  (SpecProperty: 
+    assumptions=[hbusreq_i=0, hlock_i=0, hready_i=0], 
+      guarantees=[hgrant_i=0])  ]
+01:16:26  saf_part
+ [  (SpecProperty: 
+    assumptions=[hbusreq_i=0, hlock_i=0, hready_i=0], 
+      guarantees=[hmaster_i=0])  ]
+01:16:26  saf_part
+ [  (SpecProperty: 
+    assumptions=[hbusreq_i=0, hlock_i=0, hready_i=0], 
+      guarantees=[hmastlock_i=0])  ]
+01:16:26  saf_part
+ []
+01:16:26  saf_part
+ []
+01:16:26  liv_part
+   (SpecProperty: 
+    assumptions=[hbusreq_i=0, hlock_i=0, hready_i=0, G(hmastlock_i=1 * hburst0_i=0 * hburst1_i=1 * hmaster_i=1 -> X(F(hbusreq_i=0 * active_i=1))), G(F(hready_i=1 * active_i=1)), G(F(fair_scheduling_i=1)), G(F(tok_i=1))], 
+      guarantees=[G(hbusreq_i=1 -> F(hbusreq_i=0 + hmaster_i=1))])  
+01:16:26  saf_part
+ []
+01:16:26  liv_part
+   (SpecProperty: 
+    assumptions=[hbusreq_i=0, hlock_i=0, hready_i=0, G(hmastlock_i=1 * hburst0_i=0 * hburst1_i=1 * hmaster_i=1 -> X(F(hbusreq_i=0 * active_i=1))), G(F(hready_i=1 * active_i=1)), G(F(fair_scheduling_i=1))], 
+      guarantees=[G(tok_i=1 -> F(sends_i=1))])  
+<name: env_ass, inputs: [(hburst0_0, 'Bool'), (hburst1_0, 'Bool'), (hbusreq_0, 'Bool'), (hlock_0, 'Bool')], output: Bool, definition: 
+(define-fun env_ass ((hburst0_0 Bool) (hburst1_0 Bool) (hbusreq_0 Bool) (hlock_0 Bool)) Bool 
+(and (and (and hburst0_0 hburst1_0) (=> hbusreq_0 hlock_0)) (=> hlock_0 hbusreq_0))
+)>
+<name: sys_gua, inputs: [(decideNext_0, 'Bool'), (decide_0, 'Bool'), (hgrantNext_0, 'Bool'), (hgrant_0, 'Bool'), (hlockNext_0, 'Bool'), (hlock_0, 'Bool'), (hmasterNext_0, 'Bool'), (hmaster_0, 'Bool'), (hmastlockNext_0, 'Bool'), (hmastlock_0, 'Bool'), (hreadyNext_0, 'Bool'), (hready_0, 'Bool'), (lockedNext_0, 'Bool'), (locked_0, 'Bool'), (startNext_0, 'Bool'), (start_0, 'Bool'), (tokNext_0, 'Bool'), (tok_0, 'Bool')], output: Bool, definition: 
+(define-fun sys_gua ((decideNext_0 Bool) (decide_0 Bool) (hgrantNext_0 Bool) (hgrant_0 Bool) (hlockNext_0 Bool) (hlock_0 Bool) (hmasterNext_0 Bool) (hmaster_0 Bool) (hmastlockNext_0 Bool) (hmastlock_0 Bool) (hreadyNext_0 Bool) (hready_0 Bool) (lockedNext_0 Bool) (locked_0 Bool) (startNext_0 Bool) (start_0 Bool) (tokNext_0 Bool) (tok_0 Bool)) Bool 
+(and (and (and (and (and (and (and (and (=> (and (not decide_0)  true ) (= locked_0 lockedNext_0)) (=> (and hready_0  true ) (= locked_0 hmastlockNext_0))) (=> (and hready_0  true ) (= hgrant_0 hmasterNext_0))) (=> (not startNext_0) (= hmaster_0 hmasterNext_0))) (=> hmaster_0 tok_0)) (=> (and (not hready_0)  true ) (not startNext_0))) (=> (and (and decide_0  true ) hgrantNext_0) (= hlock_0 lockedNext_0))) (=> (not startNext_0) (= hmastlock_0 hmastlockNext_0))) (=> (and (not decide_0)  true ) (= hgrant_0 hgrantNext_0)))
+)>
+01:16:26  properties after weak-until optimization 
+ [  (SpecProperty: 
+    assumptions=[], 
+      guarantees=[Forall(i) hbusreq_i=0 * hlock_i=0 * hready_i=0 -> G(hmastlock_i=1 * hburst0_i=0 * hburst1_i=1 * start_i=1 * active_i=1 -> X(start_i=0 W start_i=0 * hbusreq_i=0 * active_i=1))])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[Forall(i) hbusreq_i=0 * hlock_i=0 * hready_i=0 -> G(hmastlock_i=1 * hburst0_i=1 * hburst1_i=1 * start_i=1 * hready_i=1 * active_i=1 -> X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1))))])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[Forall(i) hbusreq_i=0 * hlock_i=0 * hready_i=0 -> G(hmastlock_i=1 * hburst0_i=1 * hburst1_i=1 * start_i=1 * hready_i=0 * active_i=1 -> X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1 * X(start_i=0 W start_i=0 * hready_i=1 * active_i=1)))))])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[Forall(i) hbusreq_i=0 * hlock_i=0 * hready_i=0 -> G(hgrant_i=0 -> hgrant_i=0 W active_i=1 * hbusreq_i=1)])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[Forall(i) hbusreq_i=0 * hlock_i=0 * hready_i=0 -> hgrant_i=0])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[Forall(i) hbusreq_i=0 * hlock_i=0 * hready_i=0 -> hmaster_i=0])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[Forall(i) hbusreq_i=0 * hlock_i=0 * hready_i=0 -> hmastlock_i=0])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[Forall(i) hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hmastlock_i=1 * hburst0_i=0 * hburst1_i=1 * hmaster_i=1 -> X(F(hbusreq_i=0 * active_i=1))) * G(F(hready_i=1 * active_i=1)) * G(F(fair_scheduling_i=1)) * G(F(tok_i=1)) -> G(hbusreq_i=1 -> F(hbusreq_i=0 + hmaster_i=1))])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[Forall(i) hbusreq_i=0 * hlock_i=0 * hready_i=0 * G(hmastlock_i=1 * hburst0_i=0 * hburst1_i=1 * hmaster_i=1 -> X(F(hbusreq_i=0 * active_i=1))) * G(F(hready_i=1 * active_i=1)) * G(F(fair_scheduling_i=1)) -> G(tok_i=1 -> F(sends_i=1))])  ] 
+
+01:16:26  instantiated local properties:
+[  (SpecProperty: 
+    assumptions=[], 
+      guarantees=[hbusreq_0=0 * hlock_0=0 * hready_0=0 -> G(hmastlock_0=1 * hburst0_0=0 * hburst1_0=1 * start_0=1 * True -> X(start_0=0 W start_0=0 * hbusreq_0=0 * True))])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[hbusreq_0=0 * hlock_0=0 * hready_0=0 -> G(hmastlock_0=1 * hburst0_0=1 * hburst1_0=1 * start_0=1 * hready_0=1 * True -> X(start_0=0 W start_0=0 * hready_0=1 * True * X(start_0=0 W start_0=0 * hready_0=1 * True * X(start_0=0 W start_0=0 * hready_0=1 * True))))])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[hbusreq_0=0 * hlock_0=0 * hready_0=0 -> G(hmastlock_0=1 * hburst0_0=1 * hburst1_0=1 * start_0=1 * hready_0=0 * True -> X(start_0=0 W start_0=0 * hready_0=1 * True * X(start_0=0 W start_0=0 * hready_0=1 * True * X(start_0=0 W start_0=0 * hready_0=1 * True * X(start_0=0 W start_0=0 * hready_0=1 * True)))))])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[hbusreq_0=0 * hlock_0=0 * hready_0=0 -> G(hgrant_0=0 -> hgrant_0=0 W True * hbusreq_0=1)])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[hbusreq_0=0 * hlock_0=0 * hready_0=0 -> hgrant_0=0])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[hbusreq_0=0 * hlock_0=0 * hready_0=0 -> hmaster_0=0])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[hbusreq_0=0 * hlock_0=0 * hready_0=0 -> hmastlock_0=0])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[hbusreq_0=0 * hlock_0=0 * hready_0=0 * G(hmastlock_0=1 * hburst0_0=0 * hburst1_0=1 * hmaster_0=1 -> X(F(hbusreq_0=0 * True))) * G(F(hready_0=1 * True)) * G(F(True)) * G(F(tok_0=1)) -> G(hbusreq_0=1 -> F(hbusreq_0=0 + hmaster_0=1))])  ,   (SpecProperty: 
+    assumptions=[], 
+      guarantees=[hbusreq_0=0 * hlock_0=0 * hready_0=0 * G(hmastlock_0=1 * hburst0_0=0 * hburst1_0=1 * hmaster_0=1 -> X(F(hbusreq_0=0 * True))) * G(F(hready_0=1 * True)) * G(F(True)) -> G(tok_0=1 -> F(sends_0=1))])  ]
+
+01:16:26  instantiated global properties:
+[]
+
+01:16:26  current cutoff = 9223372036854775807
+01:16:26  # of global automatae 0
+01:16:26  local automaton !((true) -> ((((((((((true) -> ((((!hbusreq_0) && (!hlock_0)) && (!hready_0)) -> (G((((((hmastlock_0) && (!hburst0_0)) && (hburst1_0)) && (start_0)) && (true)) -> (X(((!start_0) U (((!start_0) && (!hbusreq_0)) && (true))) || (G(!start_0)))))))) && ((true) -> ((((!hbusreq_0) && (!hlock_0)) && (!hready_0)) -> (G(((((((hmastlock_0) && (hburst0_0)) && (hburst1_0)) && (start_0)) && (hready_0)) && (true)) -> (X(((!start_0) U ((((!start_0) && (hready_0)) && (true)) && (X(((!start_0) U ((((!start_0) && (hready_0)) && (true)) && (X(((!start_0) U (((!start_0) && (hready_0)) && (true))) || (G(!start_0)))))) || (G(!start_0)))))) || (G(!start_0))))))))) && ((true) -> ((((!hbusreq_0) && (!hlock_0)) && (!hready_0)) -> (G(((((((hmastlock_0) && (hburst0_0)) && (hburst1_0)) && (start_0)) && (!hready_0)) && (true)) -> (X(((!start_0) U ((((!start_0) && (hready_0)) && (true)) && (X(((!start_0) U ((((!start_0) && (hready_0)) && (true)) && (X(((!start_0) U ((((!start_0) && (hready_0)) && (true)) && (X(((!start_0) U (((!start_0) && (hready_0)) && (true))) || (G(!start_0)))))) || (G(!start_0)))))) || (G(!start_0)))))) || (G(!start_0))))))))) && ((true) -> ((((!hbusreq_0) && (!hlock_0)) && (!hready_0)) -> (G((!hgrant_0) -> (((!hgrant_0) U ((true) && (hbusreq_0))) || (G(!hgrant_0)))))))) && ((true) -> ((((!hbusreq_0) && (!hlock_0)) && (!hready_0)) -> (!hgrant_0)))) && ((true) -> ((((!hbusreq_0) && (!hlock_0)) && (!hready_0)) -> (!hmaster_0)))) && ((true) -> ((((!hbusreq_0) && (!hlock_0)) && (!hready_0)) -> (!hmastlock_0)))) && ((true) -> ((((((((!hbusreq_0) && (!hlock_0)) && (!hready_0)) && (G(((((hmastlock_0) && (!hburst0_0)) && (hburst1_0)) && (hmaster_0)) -> (X(F((!hbusreq_0) && (true))))))) && (G(F((hready_0) && (true))))) && (G(F(true)))) && (G(F(tok_0)))) -> (G((hbusreq_0) -> (F((!hbusreq_0) || (hmaster_0)))))))) && ((true) -> (((((((!hbusreq_0) && (!hlock_0)) && (!hready_0)) && (G(((((hmastlock_0) && (!hburst0_0)) && (hburst1_0)) && (hmaster_0)) -> (X(F((!hbusreq_0) && (true))))))) && (G(F((hready_0) && (true))))) && (G(F(true)))) -> (G((tok_0) -> (F(sends_0))))))))
+01:16:26  nof_nodes=24
+01:16:26  search
+01:16:26  trying size 2
+01:16:26  solving /home/art_haali/projects/party/src/tmp_eai6f.smt2
+01:16:26  trying size 3
+01:16:26  solving /home/art_haali/projects/party/src/tmp_eai6f.smt2
+01:16:27  trying size 4
+01:16:27  solving /home/art_haali/projects/party/src/tmp_eai6f.smt2
+01:16:27  trying size 5
+01:16:27  solving /home/art_haali/projects/party/src/tmp_eai6f.smt2
+01:16:28  trying size 6
+01:16:28  solving /home/art_haali/projects/party/src/tmp_eai6f.smt2
+01:16:30  trying size 7
+01:16:30  solving /home/art_haali/projects/party/src/tmp_eai6f.smt2
+01:16:35  trying size 8
+01:16:35  solving /home/art_haali/projects/party/src/tmp_eai6f.smt2
+01:17:16  trying size 9
+01:17:16  solving /home/art_haali/projects/party/src/tmp_eai6f.smt2
+01:23:33  trying size 10
+01:23:33  solving /home/art_haali/projects/party/src/tmp_eai6f.smt2
+01:34:18  realizable
+
+
+01:34:26  digraph module {
+ rankdir=LR;
+
+"t8" []
+"t9" []
+"t6" []
+"t7" []
+"t4" []
+"t5" []
+"t2" []
+"t3" []
+"t0" [fillcolor="green",style=filled]
+"t1" [fillcolor="green",style=filled]
+
+
+"t8"[label="locked\ntok\n-sends\nhgrant\nhmaster\n-start\n-decide\nhmastlock\n(t8)"]
+"t9"[label="locked\ntok\n-sends\nhgrant\nhmaster\n-start\n-decide\nhmastlock\n(t9)"]
+"t6"[label="-locked\ntok\nsends\n-hgrant\n-hmaster\n-start\n-decide\n-hmastlock\n(t6)"]
+"t7"[label="locked\ntok\n-sends\nhgrant\n-hmaster\n-start\n-decide\n-hmastlock\n(t7)"]
+"t4"[label="locked\ntok\n-sends\nhgrant\nhmaster\nstart\n-decide\nhmastlock\n(t4)"]
+"t5"[label="locked\ntok\n-sends\nhgrant\nhmaster\n-start\ndecide\nhmastlock\n(t5)"]
+"t2"[label="locked\ntok\n-sends\nhgrant\nhmaster\n-start\n-decide\nhmastlock\n(t2)"]
+"t3"[label="-locked\ntok\n-sends\n-hgrant\nhmaster\n-start\n-decide\nhmastlock\n(t3)"]
+"t0"[label="-locked\n-tok\n-sends\n-hgrant\n-hmaster\n-start\ndecide\n-hmastlock\n(t0)"]
+"t1"[label="-locked\ntok\nsends\n-hgrant\n-hmaster\nstart\n-decide\n-hmastlock\n(t1)"]
+"t3" -> "t3" [label="hlock\n-hready\nhbusreq\n-prev\nhburst0\nhburst1"]
+"t3" -> "t3" [label="-hlock\n-hready\n-hbusreq\n-prev\nhburst0\nhburst1"]
+"t2" -> "t2" [label="hlock\n-hready\nhbusreq\n-prev\nhburst0\nhburst1"]
+"t2" -> "t2" [label="-hlock\n-hready\n-hbusreq\n-prev\nhburst0\nhburst1"]
+"t4" -> "t2" [label="-hlock\n-hready\n-hbusreq\n-prev\nhburst0\nhburst1"]
+"t4" -> "t2" [label="hlock\n-hready\nhbusreq\n-prev\nhburst0\nhburst1"]
+"t4" -> "t1" [label="-hburst1"]
+"t4" -> "t1" [label="-hburst0"]
+"t4" -> "t1" [label="-hbusreq\nhlock"]
+"t4" -> "t1" [label="hbusreq\n-hlock"]
+"t4" -> "t1" [label="prev"]
+"t0" -> "t1" [label="prev\nhready\n-hlock"]
+"t0" -> "t1" [label="prev\n-hbusreq\nhlock"]
+"t0" -> "t1" [label="prev\nhbusreq\n-hlock"]
+"t0" -> "t1" [label="prev\n-hburst1"]
+"t0" -> "t1" [label="prev\nhready\n-hbusreq"]
+"t0" -> "t1" [label="prev\n-hburst0"]
+"t1" -> "t0" [label="-prev"]
+"t6" -> "t0" [label="-prev"]
+"t7" -> "t1" [label="-hburst1"]
+"t7" -> "t1" [label="-hburst0"]
+"t7" -> "t1" [label="-hbusreq\nhlock"]
+"t7" -> "t1" [label="hbusreq\n-hlock"]
+"t7" -> "t1" [label="prev"]
+"t2" -> "t8" [label="-hlock\nhready\n-hbusreq\n-prev\nhburst0\nhburst1"]
+"t2" -> "t8" [label="hlock\nhready\nhbusreq\n-prev\nhburst0\nhburst1"]
+"t0" -> "t6" [label="-hlock\n-hready\n-hbusreq\nprev\nhburst0\nhburst1"]
+"t6" -> "t1" [label="prev"]
+"t5" -> "t3" [label="-prev\nhbusreq\nhlock\nhburst0\nhburst1"]
+"t5" -> "t3" [label="-prev\n-hbusreq\n-hlock\nhburst0\nhburst1"]
+"t4" -> "t8" [label="hlock\nhready\nhbusreq\n-prev\nhburst0\nhburst1"]
+"t4" -> "t8" [label="-hlock\nhready\n-hbusreq\n-prev\nhburst0\nhburst1"]
+"t8" -> "t8" [label="hlock\n-hready\nhbusreq\n-prev\nhburst0\nhburst1"]
+"t8" -> "t8" [label="-hlock\n-hready\n-hbusreq\n-prev\nhburst0\nhburst1"]
+"t3" -> "t1" [label="prev"]
+"t3" -> "t1" [label="-hbusreq\nhlock"]
+"t3" -> "t1" [label="hbusreq\n-hlock"]
+"t3" -> "t1" [label="-hburst1"]
+"t3" -> "t1" [label="-hburst0"]
+"t3" -> "t1" [label="hready"]
+"t9" -> "t9" [label="hlock\n-hready\nhbusreq\n-prev\nhburst0\nhburst1"]
+"t9" -> "t9" [label="-hlock\n-hready\n-hbusreq\n-prev\nhburst0\nhburst1"]
+"t7" -> "t4" [label="hlock\nhready\nhbusreq\n-prev\nhburst0\nhburst1"]
+"t7" -> "t4" [label="-hlock\nhready\n-hbusreq\n-prev\nhburst0\nhburst1"]
+"t9" -> "t5" [label="-hlock\nhready\n-hbusreq\n-prev\nhburst0\nhburst1"]
+"t9" -> "t5" [label="hlock\nhready\nhbusreq\n-prev\nhburst0\nhburst1"]
+"t0" -> "t7" [label="prev\nhbusreq\nhlock\nhburst0\nhburst1"]
+"t2" -> "t1" [label="-hburst1"]
+"t2" -> "t1" [label="-hburst0"]
+"t2" -> "t1" [label="-hbusreq\nhlock"]
+"t2" -> "t1" [label="hbusreq\n-hlock"]
+"t2" -> "t1" [label="prev"]
+"t8" -> "t9" [label="-hlock\nhready\n-hbusreq\n-prev\nhburst0\nhburst1"]
+"t8" -> "t9" [label="hlock\nhready\nhbusreq\n-prev\nhburst0\nhburst1"]
+"t9" -> "t1" [label="-hburst1"]
+"t9" -> "t1" [label="-hburst0"]
+"t9" -> "t1" [label="-hbusreq\nhlock"]
+"t9" -> "t1" [label="hbusreq\n-hlock"]
+"t9" -> "t1" [label="prev"]
+"t7" -> "t7" [label="-hlock\n-hready\n-hbusreq\n-prev\nhburst0\nhburst1"]
+"t7" -> "t7" [label="hlock\n-hready\nhbusreq\n-prev\nhburst0\nhburst1"]
+"t0" -> "t0" [label="-prev"]
+"t5" -> "t1" [label="-hburst1"]
+"t5" -> "t1" [label="-hburst0"]
+"t5" -> "t1" [label="-hbusreq\nhlock"]
+"t5" -> "t1" [label="hbusreq\n-hlock"]
+"t5" -> "t1" [label="prev"]
+"t8" -> "t1" [label="-hburst1"]
+"t8" -> "t1" [label="-hburst0"]
+"t8" -> "t1" [label="-hbusreq\nhlock"]
+"t8" -> "t1" [label="hbusreq\n-hlock"]
+"t8" -> "t1" [label="prev"]
+"t1" -> "t1" [label="prev"]
+}
+
