@@ -1,0 +1,1 @@
+Forall (i) (G(F(a_i=1)) * G(F(b_i=1)) * G(F(c_i=1))) -> (G(F(x_i=1)) * G(F(y_i=1)) * G(F(z_i=1)));

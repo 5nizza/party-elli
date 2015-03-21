@@ -837,7 +837,6 @@ def parse_expr(expr_as_text:str) -> Expr:
     [GUARANTEES]
     {0};
     '''.format(expr_as_text)
-
     return dict(par_parser.parse(whole_text))[PAR_GUARANTEES][0]
 
 

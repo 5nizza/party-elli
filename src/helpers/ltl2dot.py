@@ -9,7 +9,7 @@ from synthesis.smt_logic import UFLIA
 from translation2uct.ltl2automaton import Ltl2UCW
 
 
-def main(lines, ltl2ucw:Ltl2UCW):
+def main(line, ltl2ucw:Ltl2UCW):
     expr = parse_expr(line)
     automaton = ltl2ucw.convert(expr)
 
@@ -38,8 +38,10 @@ if __name__ == "__main__":
     if not args.file:
         line = args.Formula
     else:
-        with open(args.file) as infile:
-            line = ' '.join(l.strip() for l in infile.readlines() if l.strip())
+        lines = list(filter(lambda l: not l.strip().startswith("#") and l.strip(), args.file.readlines()))
+        if len(lines) > 1:
+            logger.critical("the file contains more than one line, suspicious!")
+        line = lines[0].strip().strip(';')
     if not line:
         logger.critical('nothing to convert. exit.')
         exit(-1)
