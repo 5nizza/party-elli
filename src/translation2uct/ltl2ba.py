@@ -198,6 +198,15 @@ def parse_ltl2ba_ba(text:str, signal_by_name:dict):
     Parse ltl2ba output
     Return (initial_nodes, rejecting nodes, nodes of Node class)
     """
+    # TODO: account for the following special case (accept_init and s0_init) (returned by GOAL):
+    # (sending email to GOAL guys to check if that is correct)
+#    never {
+#    accept_init:
+#    s0_init:
+#        if
+#        :: !(g) -> goto s0_init
+#        fi;
+#    }
     initial_nodes, rejecting_nodes, nodes, vars = _get_hacked_ucw(text, signal_by_name)
 
     ucw_init_nodes, ucw_rej_nodes, ucw_nodes = _conform2acw(initial_nodes, rejecting_nodes, nodes, vars)
