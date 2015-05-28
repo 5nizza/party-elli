@@ -1,4 +1,0 @@
-# naive arbiter (always grant)
-
-G(F(req=1))->G(F(grant=1));
-

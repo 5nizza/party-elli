@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 import argparse
+import imp
+import importlib
 import logging
+import os
 import sys
 import tempfile
 
@@ -15,7 +18,7 @@ from parsing.anzu_lexer_desc import ANZU_OUTPUT_VARIABLES, ANZU_INPUT_VARIABLES,
 from spec_optimizer.optimizations import strengthen_many, extract_spec_components, optimize_assume_guarantee, \
     build_func_desc_from_formula
 from synthesis import generic_smt_encoder
-from synthesis.solitary_model_searcher import search
+from synthesis.gr1_model_searcher import search
 from synthesis.smt_logic import UFLIA
 from translation2uct.ltl2automaton import Ltl2UCW
 
@@ -91,7 +94,7 @@ def _empty_quantify(spec_property:SpecProperty):
     return SpecProperty(quantified_assumptions, quantified_quantifiers)
 
 
-def _analyze_props(name:str, class_name:str, props, ltl2ucw):
+def _log_props(name:str, class_name:str, props, ltl2ucw):
     logger.info('analyzing %s', name)
 
     for p in props:
@@ -129,12 +132,12 @@ def _analyze_props(name:str, class_name:str, props, ltl2ucw):
         logger.info('\n' * 5)
 
 
-def analyze_properties(pseudo_safety_props, pseudo_liveness_props, ltl2ucw:Ltl2UCW):
+def log_properties(pseudo_safety_props, pseudo_liveness_props, ltl2ucw:Ltl2UCW):
     logger.info('\n' * 40)
 
-    _analyze_props('pseudo safety properties', 'safety', pseudo_safety_props, ltl2ucw)
+    _log_props('pseudo safety properties', 'safety', pseudo_safety_props, ltl2ucw)
     logger.info('\n' * 10)
-    _analyze_props('pseudo liveness properties', 'liveness', pseudo_liveness_props, ltl2ucw)
+    _log_props('pseudo liveness properties', 'liveness', pseudo_liveness_props, ltl2ucw)
 
 
 def _get_anzu_spec(ltl_text:str, use_weak_until:bool, logger) -> (list, list, list):
@@ -181,54 +184,53 @@ def _get_anzu_spec(ltl_text:str, use_weak_until:bool, logger) -> (list, list, li
     return input_signals, output_signals, properties
 
 
-def main(spec_type,
-         ltl_text:str, part_text:str, is_moore, dot_file_name, nusmv_file_name, bounds,
+def _parse_spec(spec_file_name:str):
+    code_dir = os.path.dirname(spec_file_name)
+    code_file = os.path.basename(spec_file_name.strip('.py'))
+
+    sys.path.append(code_dir)
+
+    saved_path = sys.path  # to ensure we import the right file
+                           # (imagine you want /tmp/spec.py but there is also ./spec.py,
+                           # then python prioritizes to ./spec.py)
+                           # To ensure the right version we change sys.path
+    sys.path = [code_dir]
+    spec = importlib.import_module(code_file)
+    sys.path = saved_path
+
+    return spec.inputs, spec.outputs, spec.safety_properties, spec.liveness_assumptions, spec.liveness_guarantees
+
+
+def main(spec_file_name:str,
+         is_moore,
+         dot_file_name, nusmv_file_name,
+         bounds,
          use_weak_until,
-         ltl2ucw_converter, underlying_solver,
-         optimization,
-         logger):
+         ltl2ucw_converter,
+         underlying_solver):
     """:return: is realizable? """
+
     global converter
     converter = ltl2ucw_converter
 
-    if spec_type == 'acacia':
-        input_signals, output_signals, spec_properties = _get_acacia_spec(ltl_text, part_text, use_weak_until, logger,
-                                                                          ltl2ucw_converter)
-    else:
-        input_signals, output_signals, spec_properties = _get_anzu_spec(ltl_text, use_weak_until, logger)
+    input_signals, output_signals, safety_properties, l_assumptions, l_guarantees = \
+        _parse_spec(spec_file_name)
 
-    if not spec_properties:
-        logger.info('No properties are given in the input file. Return unrealizable status.')
-        return False
+    assert input_signals or output_signals
+    assert l_assumptions and l_guarantees   # TODO: account for empty l_assumptions
 
-    if spec_type == ACACIA and OPTS[optimization] >= OPTS[STRENGTH]:
-        logger.info('strengthening..')
+    safety_automaton = ltl2ucw_converter.convert(to_expr(and_properties(safety_properties)))
+    logger.info('safety automaton has {0} states'.format(len(safety_automaton.nodes)))
 
-        spec_properties = [_empty_quantify(p) for p in spec_properties]
-        pseudo_safety_props, pseudo_liveness_props = strengthen_many(spec_properties, ltl2ucw_converter)
+    models = search(safety_automaton,
+                    l_assumptions, l_guarantees,
+                    not is_moore,
+                    input_signals, output_signals,
+                    bounds,
+                    underlying_solver, UFLIA(None),
+                    env_ass_funcs, sys_gua_funcs)
 
-        analyze_properties(pseudo_safety_props, pseudo_liveness_props, ltl2ucw_converter)
-
-        logger.info('-' * 80)
-        logger.info('pseudo_safety_props %s\n', str(pseudo_safety_props))
-        logger.info('-' * 40)
-        logger.info('pseudo_liveness_props %s\n', str(pseudo_liveness_props))
-        logger.info('-' * 80)
-
-        spec_properties = pseudo_safety_props + pseudo_liveness_props
-        #
-
-    spec_property = and_properties(spec_properties)
-    if not input_signals or not output_signals or not spec_property:
-        return None
-
-    automaton = ltl2ucw_converter.convert(to_expr(spec_property))
-    logger.info('spec automaton has {0} states'.format(len(automaton.nodes)))
-
-    models = search(automaton, not is_moore, input_signals, output_signals, bounds, underlying_solver, UFLIA(None),
-                    env_ass_funcs)
-
-    assert models is None or len(models) == 1
+    assert models is None or len(models) == 1   # TODO: change interface
 
     model = models[0] if models else None
     is_realizable = model is not None
@@ -244,18 +246,17 @@ def main(spec_type,
             _write_out(dot_model, is_moore, 'dot', dot_file_name, logger)
 
         if nusmv_file_name:
-            nusmv_model = to_boolean_nusmv(model, spec_property)
-            _write_out(nusmv_model, is_moore, 'smv', nusmv_file_name, logger)
+            assert 0  # TODO: support in the release
+            # nusmv_model = to_boolean_nusmv(model, spec_property)
+            # _write_out(nusmv_model, is_moore, 'smv', nusmv_file_name, logger)
 
     return is_realizable
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Bounded Synthesis Tool')
-    parser.add_argument('ltl', metavar='ltl', type=argparse.FileType(),
-                        help='loads the LTL formula from the given input file, '
-                             'assumes the existence of file with .part extension'
-                             ' (see acacia_parser_desc.py:precedence for priorities of operators)')
+    parser.add_argument('ltl', metavar='ltl', type=str,
+                        help='the specification file')
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--moore', action='store_true', required=False,
@@ -288,11 +289,7 @@ if __name__ == "__main__":
                         default=NO,
                         help='apply an optimization (choose one) (default: %(default)s)')
 
-    parser.add_argument('--spec', choices=SPEC_TYPES, required=False,
-                        default=ACACIA,
-                        help='type of spec language')
-
-    args = parser.parse_args(sys.argv[1:])
+    args = parser.parse_args()
 
     logger = setup_logging(args.verbose)
 
@@ -306,25 +303,16 @@ if __name__ == "__main__":
     if not ltl2ucw_converter or not solver_factory:
         exit(1)
 
-    bounds = list(range(1, args.bound + 1) if args.size == 0 else range(args.size, args.size + 1))
-
-    ltl_text = args.ltl.read()
-
-    part_text = 'none'
-    if args.spec == ACACIA:
-        part_file_name = '.'.join(args.ltl.name.split('.')[:-1]) + '.part'
-        with open(part_file_name) as part_file:
-            part_text = part_file.read()
+    bounds = list(range(1, args.bound + 1) if args.size == 0
+                  else range(args.size, args.size + 1))
 
     generic_smt_encoder.ENCODE_INCREMENTALLY = args.incr
 
-    is_realizable = main(args.spec,
-                         ltl_text, part_text, args.moore, args.dot, args.nusmv, bounds,
+    is_realizable = main(args.ltl,
+                         args.moore, args.dot, args.nusmv, bounds,
                          args.weakag,
                          ltl2ucw_converter,
-                         solver_factory.create(),
-                         args.opt,
-                         logger)
+                         solver_factory.create())
 
     args.ltl.close()
 

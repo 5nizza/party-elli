@@ -154,7 +154,7 @@ class TestStrengthen(unittest.TestCase):
 
     def test_strengthen_extreme0(self):
         """
-        An extreme case: empty quantifiers. Empty quantifiers are used in bosy.py.
+        An extreme case: empty quantifiers. Empty quantifiers are used in eli.py.
 
         Forall([]) Ga -> Gb
 
