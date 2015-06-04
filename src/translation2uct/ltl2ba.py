@@ -34,7 +34,7 @@ def parse_label_tok(label_tok, signal_by_name:dict):
         for l in literals:
             signal_name = l.strip('!')
             signal = signal_by_name[signal_name]
-            label[signal] = bool('!' not in l) # we don't use numbers as they used in the original spec
+            label[signal] = bool('!' not in l)  # we don't use numbers as they used in the original spec
 
         labels.append(label)
 
@@ -83,7 +83,7 @@ def _get_create_new_nodes(new_name_to_node, flagged_nodes_set):
     return new_nodes
 
 
-def _conform2acw(initial_nodes, rejecting_nodes, nodes, vars):
+def _conform2acw(initial_nodes, rejecting_nodes, nodes):
     """ Modify 'incorrect' transitions:
         label->[set1,set2] modified to label->[set3], where set3=set1+set2
     """
@@ -128,7 +128,7 @@ def _parse_trans_tok(trans:str,
     return dst, labels
 
 
-def _get_hacked_ucw(text:str, signal_by_name:dict): #TODO: bad smell - it is left for testing purposes only
+def _get_hacked_ucw(text:str, signal_by_name:dict):  # TODO: bad smell - it is left for testing purposes only
     """
         Return: initial_nodes:set, rejecting_nodes:set, nodes:set, label variables:set
         It is hacked since it doesn't conform to description of Node transitions:
@@ -196,7 +196,7 @@ def _get_hacked_ucw(text:str, signal_by_name:dict): #TODO: bad smell - it is lef
 def parse_ltl2ba_ba(text:str, signal_by_name:dict):
     """
     Parse ltl2ba output
-    Return (initial_nodes, rejecting nodes, nodes of Node class)
+    Return (initial_nodes, rejecting_nodes, nodes of Node class)
     """
     # TODO: account for the following special case (accept_init and s0_init) (returned by GOAL):
     # (sending email to GOAL guys to check if that is correct)
@@ -209,9 +209,9 @@ def parse_ltl2ba_ba(text:str, signal_by_name:dict):
 #    }
     initial_nodes, rejecting_nodes, nodes, vars = _get_hacked_ucw(text, signal_by_name)
 
-    ucw_init_nodes, ucw_rej_nodes, ucw_nodes = _conform2acw(initial_nodes, rejecting_nodes, nodes, vars)
+    ucw_init_nodes, ucw_rej_nodes, ucw_nodes = _conform2acw(initial_nodes, rejecting_nodes, nodes)
 
-    return [set(ucw_init_nodes)], ucw_rej_nodes, ucw_nodes
+    return ucw_init_nodes, ucw_rej_nodes, ucw_nodes
 
 
 #_tmp = """

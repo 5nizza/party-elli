@@ -1,6 +1,6 @@
 import unittest
 from interfaces.automata import Node, Label
-from helpers.automata_helper import get_next_states, is_absorbing
+from helpers.automata_helper import _get_next_states, is_absorbing
 
 
 class Test(unittest.TestCase):
@@ -17,17 +17,17 @@ class Test(unittest.TestCase):
         state.add_transition({'r':False, 'g':True}, dst_set_not_r_g)
 
 
-        list_of_state_sets = get_next_states(state,
+        list_of_state_sets = _get_next_states(state,
                                              {'r':False, 'g':False})
         assert len(list_of_state_sets) == 0
 
-        list_of_state_sets = get_next_states(state,
+        list_of_state_sets = _get_next_states(state,
                                              {'r':False, 'g':True})
         assert len(list_of_state_sets) == 1
         assert set([x[0] for x in dst_set_not_r_g]) in list_of_state_sets, \
                                                     str(list_of_state_sets)
 
-        list_of_state_sets = get_next_states(state,
+        list_of_state_sets = _get_next_states(state,
                                              {'r':True, 'g':True})
         assert len(list_of_state_sets) == 2
         assert set([x[0] for x in dst_set_rg]) in list_of_state_sets

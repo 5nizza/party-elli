@@ -72,7 +72,7 @@ if __name__ == '__main__':
 
     all_passed = True
     for benchmark in realizable + unrealizable:
-        result = run_benchmark('src/eli.py', benchmark, benchmark in realizable)
+        result = run_benchmark('src/elli.py', benchmark, benchmark in realizable)
         all_passed &= result
 
         if not args.nonstop and result is False:

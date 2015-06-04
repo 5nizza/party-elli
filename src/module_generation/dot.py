@@ -8,7 +8,8 @@ from helpers.labels_map import LabelsMap
 from helpers.python_ext import StrAwareList, add_dicts, lmap
 from interfaces.automata import Label
 from interfaces.lts import LTS
-from interfaces.parser_expr import QuantifiedSignal
+from interfaces.parser_expr import QuantifiedSignal, Signal
+from synthesis.funcs_args_types_names import ARG_MODEL_STATE
 from third_party import boolean
 
 
@@ -29,7 +30,7 @@ def _convert_to_dot(value_by_signal:dict) -> str:
     values_str = '\\n'.join(
         ['{value}{var}'.format(
             value=['-', ''][value],
-            var=signal.name if isinstance(signal, QuantifiedSignal) else signal)
+            var=signal.name if isinstance(signal, QuantifiedSignal) or isinstance(signal, Signal) else signal)
          for (signal, value) in value_by_signal.items()])
 
     return values_str
@@ -37,7 +38,7 @@ def _convert_to_dot(value_by_signal:dict) -> str:
 
 def _get_inputvals(label:dict) -> dict:
     inputvals = dict(label)
-    del inputvals['state']  # TODO: hack -- hardcoded 'state'
+    del inputvals[ARG_MODEL_STATE]
     return inputvals
 
 
@@ -90,7 +91,7 @@ def _to_label(cube:boolean.Expression) -> Label:
 def _build_srcdst_to_io_labels(lts:LTS, outvars_treated_as_moore) -> dict:
     srcdst_to_io_labels = dict()
     for label, next_state in lts.tau_model.items():
-        crt_state = label['state']
+        crt_state = label[ARG_MODEL_STATE]
 
         i_label = _get_inputvals(label)
         o_label = _get_outputvals(label, lts, outvars_treated_as_moore)
@@ -128,7 +129,7 @@ def _simplify_srcdst_to_io_labels(srcdst_to_io_labels:dict) -> dict:
     return simplified_srcdst_to_io_labels
 
 
-def to_dot(lts:LTS, outvars_treated_as_moore=()):
+def _lts_to_dot(lts:LTS, outvars_treated_as_moore):
     logger = logging.getLogger(__file__)
 
     dot_lines = StrAwareList()
@@ -143,12 +144,13 @@ def to_dot(lts:LTS, outvars_treated_as_moore=()):
 
     # the bug is somewhere there: TRY MY OWN IMPLEMENTATION
     # simplified_srcdst_to_io_labels = _simplify_srcdst_to_io_labels(srcdst_to_io_labels)
-    simplified_srcdst_to_io_labels = dict()
-    for (src,dst),io_labels in srcdst_to_io_labels.items():
-        simplified_srcdst_to_io_labels[(src,dst)] = minimize_dnf_set(io_labels)
+    # simplified_srcdst_to_io_labels = dict()
+    # for (src,dst),io_labels in srcdst_to_io_labels.items():
+    #     simplified_srcdst_to_io_labels[(src,dst)] = minimize_dnf_set(io_labels)
 
     # simplified_srcdst_to_io_labels = minimize_dnf_set()
-    # simplified_srcdst_to_io_labels = srcdst_to_io_labels
+
+    simplified_srcdst_to_io_labels = srcdst_to_io_labels
     # logger.debug('the model after edge simplifications: \n' + str(simplified_srcdst_to_io_labels))
 
     for (src, dst), io_labels in simplified_srcdst_to_io_labels.items():
@@ -178,11 +180,16 @@ def to_dot(lts:LTS, outvars_treated_as_moore=()):
     return '\n'.join(dot_lines)
 
 
-def moore_to_dot(moore:LTS):
-    outvars = [var for (var, vals) in moore.model_by_name.items()]
-    return to_dot(moore, tuple(outvars))
+def lts_to_dot(lts:LTS, is_mealy):
+    if is_mealy:
+        return _lts_to_dot(lts, tuple())
+
+    outvars = [var for (var, vals) in lts.model_by_name.items()]
+    return lts_to_dot(lts, tuple(outvars))
 
 
+##############################################################################
+##############################################################################
 class Test(TestCase):
     def test_simplify_srcdst_to_io_labels___basic1(self):
         srcdst_io_labels = dict()

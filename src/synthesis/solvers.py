@@ -60,6 +60,7 @@ class SmtSolverWithQueryStorageAbstract(SolverInterface):
         self._query_storage = query_storage
         self._query_storage += smt_helper.make_headers()
         self._query_storage += smt_helper.make_set_logic(logic)
+        self._logic = logic
 
     def declare_enum(self, enum_name:str, values):
         self._query_storage += smt_helper.declare_enum(enum_name, values)
@@ -92,14 +93,17 @@ class SmtSolverWithQueryStorageAbstract(SolverInterface):
     def op_eq(self, first_arg, second_arg):
         return smt_helper.op_eq(first_arg, second_arg)
 
-    def op_ge(self, left, right, logic):
-        return smt_helper.op_ge(left, right, logic)
+    def op_ge(self, left, right):
+        return smt_helper.op_ge(left, right, self._logic)
 
-    def op_gt(self, left, right, logic):
-        return smt_helper.op_gt(left, right, logic)
+    def op_gt(self, left, right):
+        return smt_helper.op_gt(left, right, self._logic)
 
     def forall_bool(self, ground_args, formula):
         return smt_helper.forall_bool(ground_args, formula)
+
+    def forall(self, ground_arg_type_pairs, formula):
+        return smt_helper.forall(ground_arg_type_pairs, formula)
 
     #
     def call_func(self, func_desc:FuncDescription, vals_by_vars:dict):

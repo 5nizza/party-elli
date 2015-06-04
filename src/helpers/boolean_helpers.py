@@ -31,7 +31,11 @@ def _get_set_from_label(lbl:Label) -> set:
         # print('lbl[l]=', lbl[l])
     global signal_to_str
 
-    return set(('~', '')[lbl[l]]+signal_to_str[l] for l in lbl)
+    print_green(signal_to_str)
+    print_green([lbl[l] for l in lbl])
+
+    return set(('~', '')[lbl[l]]+signal_to_str[l]
+               for l in lbl)
 
 
 def _get_label_from_set(s:set) -> Label:

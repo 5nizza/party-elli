@@ -8,7 +8,7 @@ from spec_optimizer.optimizations import strengthen, localize, _reduce_quantifie
     parse_expr, param_optimize_assume_guarantee
 from interfaces.parser_expr import QuantifiedSignal, ForallExpr, UnaryOp, BinOp, Signal, Expr, Number, Bool, \
     and_expressions
-from translation2uct.ltl2automaton import Ltl2UCW
+from translation2uct.ltl2automaton import LTL3BA
 
 
 def _get_is_value(signal_name:str, value:Number, *binding_indices):
@@ -30,7 +30,7 @@ def _get_is_false(signal_name:str, *binding_indices):
 def _get_converter():
     from config import ltl3ba_path
 
-    return Ltl2UCW(ltl3ba_path)
+    return LTL3BA(ltl3ba_path)
 
 
 class TestStrengthen(unittest.TestCase):
@@ -154,7 +154,7 @@ class TestStrengthen(unittest.TestCase):
 
     def test_strengthen_extreme0(self):
         """
-        An extreme case: empty quantifiers. Empty quantifiers are used in eli.py.
+        An extreme case: empty quantifiers. Empty quantifiers are used in elli.py.
 
         Forall([]) Ga -> Gb
 

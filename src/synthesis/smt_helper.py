@@ -1,27 +1,5 @@
-from helpers.console_helpers import print_green
 from helpers.python_ext import lmap
-from interfaces.parser_expr import QuantifiedSignal
 from synthesis.func_description import FuncDescription
-
-
-def build_signals_values(signals, label) -> (dict, list):
-    signals = list(signals)
-
-    for s in signals:
-        assert isinstance(s, QuantifiedSignal)
-
-    value_by_signal = dict()
-    free_values = []
-
-    for s in signals:
-        if s in label:
-            value_by_signal[s] = str(label[s]).lower()
-        else:
-            value = '?{0}'.format(str(s)).lower()  # TODO: hack: we str(signal)
-            value_by_signal[s] = value
-            free_values.append(value)
-
-    return value_by_signal, free_values
 
 
 def get_bits_definition(arg_prefix, nof_bits):
@@ -31,8 +9,8 @@ def get_bits_definition(arg_prefix, nof_bits):
 
 
 def make_check_sat():
-    # return "(check-sat)"
-    return "(check-sat-using (then qe smt))"
+    return "(check-sat)"
+    # return "(check-sat-using (then qe smt))"
 
 
 def make_push(level=1):

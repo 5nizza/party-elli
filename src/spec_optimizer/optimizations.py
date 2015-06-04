@@ -19,7 +19,6 @@ from parsing.par_parser_desc import par_parser
 # TODO: split into several files
 from synthesis import smt_helper
 from synthesis.func_description import FuncDescription
-from synthesis.gr1_encoder import _next
 
 
 def is_quantified_expr(expr:Expr):

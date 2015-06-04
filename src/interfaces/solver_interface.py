@@ -51,15 +51,19 @@ class SolverInterface:
         raise NotImplementedError()
 
     @abstractmethod
-    def op_ge(self, left, right, logic):
+    def op_ge(self, left, right):
         raise NotImplementedError()
 
     @abstractmethod
-    def op_gt(self, left, right, logic):
+    def op_gt(self, left, right):
         raise NotImplementedError()
 
     @abstractmethod
     def forall_bool(self, ground_args, formula):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def forall(self, ground_arg_type_pairs, formula):
         raise NotImplementedError()
 
     #
@@ -105,7 +109,7 @@ class SolverInterface:
         raise NotImplementedError()
 
 
-class EncodingSolver:
+class EncodingSolver:  # TODO: bad smell: the only implementation
     __metaclass__ = ABCMeta
 
     @abstractmethod

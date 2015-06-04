@@ -5,7 +5,7 @@ from synthesis.smt_logic import Logic
 
 from synthesis.solvers import Z3_Smt_NonInteractive_ViaFiles, Z3_Smt_Interactive
 from third_party.ansistrm import ColorizingStreamHandler
-from translation2uct.ltl2automaton import Ltl2UCW
+from translation2uct.ltl2automaton import LTL3BA
 
 
 def get_root_dir() -> str:
@@ -65,7 +65,7 @@ def create_spec_converter_z3(logger:logging.Logger,
 
     from config import z3_path, ltl3ba_path
 
-    converter = Ltl2UCW(ltl3ba_path)
+    converter = LTL3BA(ltl3ba_path)
     solver_factory = Z3SolverFactory(smt_tmp_files_prefix, z3_path, logic, logger, is_incremental)
 
     return converter, solver_factory
