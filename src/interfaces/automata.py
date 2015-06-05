@@ -90,13 +90,13 @@ class Node:
 
             labels_strings.append('[{0}: {1}]'.format(str(l), ', '.join(dst_strings)))
 
-        return "'{0}', transitions: {1}".format(self.name, ' '.join(labels_strings))
+        return "{0}, transitions: {1}".format(self.name, ' '.join(labels_strings))
 
     def __lt__(self, other):
         return id(self) < id(other)
 
     def __repr__(self):
-        return "'{0}'".format(self.name)
+        return "{0}".format(self.name)
 
 # ------------------------------CONSTANTS---------------------------------
 DEAD_END = Node('dead')
@@ -127,17 +127,17 @@ def all_stimuli_that_satisfy(label:Label, alphabet) -> set:
 
     bound_signals_dict = dict((k, label[k]) for k in bound_signals)
 
-    stimulus = set()
+    stimuli = set()
     for free_signals_value in product([True, False], repeat=len(free_signals)):
-        stimuli = dict(bound_signals_dict)  # copy
+        stimulus = dict(bound_signals_dict)  # copy
 
         free_sig_val_pairs = zip(free_signals, free_signals_value)
         free_signals_dict = dict(free_sig_val_pairs)
-        stimuli.update(free_signals_dict)
+        stimulus.update(free_signals_dict)
 
-        stimulus.add(Label(stimuli))
+        stimuli.add(Label(stimulus))
 
-    return stimulus
+    return stimuli
 
 
 def get_next_states(n:Node, i_o:Label) -> set:

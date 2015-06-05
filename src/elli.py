@@ -1,15 +1,24 @@
 #!/usr/bin/env python3
 import argparse
 import importlib
+from itertools import product
 import os
 import sys
 import tempfile
 from helpers import automata_helper
+from helpers.console_helpers import print_green, print_red
+from helpers.labels_map import LabelsMap
 
 from helpers.main_helper import setup_logging, create_spec_converter_z3, remove_files_prefixed
+from interfaces.automata import Automaton, all_stimuli_that_satisfy, LABEL_TRUE, get_next_states, Label, is_satisfied
+from interfaces.lts import LTS
 from interfaces.parser_expr import Signal
-from module_generation.dot import moore_to_dot, lts_to_dot
+from module_generation.dot import lts_to_dot
+from synthesis.assume_guarantee_encoder import assert_deterministic
 from synthesis.assume_guarantee_model_searcher import search
+from synthesis.funcs_args_types_names import smt_name_spec, TYPE_S_a_STATE, TYPE_S_g_STATE, TYPE_L_a_STATE, \
+    TYPE_L_g_STATE, smt_name_m, smt_arg_name_signal, ARG_S_a_STATE, ARG_S_g_STATE, ARG_L_a_STATE, ARG_L_g_STATE, \
+    ARG_MODEL_STATE
 from synthesis.smt_logic import UFLIA
 from translation2uct.ltl2automaton import LTL3BA
 
@@ -58,6 +67,75 @@ def _log_automata(S_a, S_g, L_a, L_g):
     logger.debug(L_g)
 
 
+def _get_tau_transition_label(s_a, s_g, l_a, l_g, m, i:Label):
+    lbl = Label({ARG_S_a_STATE:s_a,
+                 ARG_S_g_STATE:s_g,
+                 ARG_L_a_STATE:l_a,
+                 ARG_L_g_STATE:l_g,
+                 ARG_MODEL_STATE:m})
+    lbl.update(i)
+
+    return lbl
+
+
+def combine_model(S_a:Automaton, S_g:Automaton, L_a:Automaton, L_g:Automaton,
+                  lts:LTS,
+                  inputs) -> LTS:
+    """
+    Combines model LTS, automata into one LTS. State of the LTS is (s_a,...,l_g,m).
+    As a side, the new LTS contains reachable states only.
+    The outputs are copied literally from the original LTS.
+    """
+
+    processed_states = set()
+    init_states = set(product(S_a.initial_nodes,
+                              S_g.initial_nodes,
+                              L_a.initial_nodes,
+                              L_g.initial_nodes,
+                              lts.init_states))
+    new_states = set(init_states)
+
+    # the difference with the original table is that
+    # this new table as output contains (s_a,s_g,l_a,l_g,m)
+    # while the original one contained only m
+    tau_new_table = dict()  # inputs,states (excl outputs) -> new state
+
+    while len(new_states):
+        s_a,s_g,l_a,l_g,m = new_states.pop()
+        processed_states.add((s_a,s_g,l_a,l_g,m))
+
+        for i_lbl in all_stimuli_that_satisfy(LABEL_TRUE, inputs):
+            val_by_out = lts.get_outputs(_get_tau_transition_label(s_a,s_g,l_a,l_g,m,i_lbl))
+            word_lbl = Label(i_lbl)  # copy
+            word_lbl.update(val_by_out)
+
+            for label, dst_set_list in s_a.transitions.items():
+                if not is_satisfied(label, word_lbl):
+                    continue
+
+                # assumes determinism
+                assert_deterministic(s_a,s_g,l_a,l_g,word_lbl)
+
+                s_a_n = set(map(lambda node_flag: node_flag[0], dst_set_list[0])).pop()
+                s_g_n = get_next_states(s_g, word_lbl).pop()
+                l_a_n = get_next_states(l_a, word_lbl).pop()
+                l_g_n = get_next_states(l_g, word_lbl).pop()
+
+                tau_trans_label = _get_tau_transition_label(s_a,s_g,l_a,l_g,m,i_lbl)
+                m_next = lts.tau_model[tau_trans_label]
+
+                next_state = (s_a_n, s_g_n, l_a_n, l_g_n, m_next)
+
+                tau_new_table[tau_trans_label] = next_state
+
+                if next_state not in processed_states:
+                    new_states.add(next_state)
+
+    return LTS(init_states, lts.model_by_name, LabelsMap(tau_new_table),
+               None,    # TODO: remove all together?
+               lts.input_signals, lts.output_signals)
+
+
 def main(spec_file_name:str,
          is_moore,
          dot_file_name, nusmv_file_name,
@@ -74,11 +152,11 @@ def main(spec_file_name:str,
     assert input_signals or output_signals
 
     signal_by_name = dict((s.name,s) for s in input_signals + output_signals)
-    S_a, S_g, L_a, L_g = [ltl2ucw_converter.convert_raw(p, signal_by_name)
-                          for p in (S_a_property,
-                                    '!(%s)' % S_g_property,  # S_g should be in the negated form
-                                    L_a_property,
-                                    L_g_property)]
+
+    S_a = ltl2ucw_converter.convert_raw(S_a_property, signal_by_name, 'sa_')
+    S_g = ltl2ucw_converter.convert_raw('!(%s)' % S_g_property, signal_by_name, 'sg_')
+    L_a = ltl2ucw_converter.convert_raw(L_a_property, signal_by_name, 'la_')
+    L_g = ltl2ucw_converter.convert_raw(L_g_property, signal_by_name, 'lg_')
 
     _log_automata(S_a, S_g, L_a, L_g)
 
@@ -93,12 +171,14 @@ def main(spec_file_name:str,
     logger.info(['unrealizable', 'realizable'][is_realizable])
 
     if is_realizable:
-        dot_model = lts_to_dot(model, not is_moore)
+        combined_model = combine_model(S_a, S_g, L_a, L_g, model, input_signals)
+
+        dot_combined_model = lts_to_dot(combined_model, not is_moore)
 
         if not dot_file_name:
-            logger.info(dot_model)
+            logger.info(dot_combined_model)
         else:
-            _write_out(dot_model, is_moore, 'dot', dot_file_name)
+            _write_out(dot_combined_model, is_moore, 'dot', dot_file_name)
 
         if nusmv_file_name:
             assert 0  # TODO: support in the release
@@ -155,8 +235,6 @@ if __name__ == "__main__":
                          args.moore, args.dot, args.nusmv, bounds,
                          ltl2ucw_converter,
                          solver_factory.create())
-
-    args.ltl.close()
 
     if not args.tmp:
         remove_files_prefixed(smt_files_prefix.split('/')[-1])

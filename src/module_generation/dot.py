@@ -9,7 +9,7 @@ from helpers.python_ext import StrAwareList, add_dicts, lmap
 from interfaces.automata import Label
 from interfaces.lts import LTS
 from interfaces.parser_expr import QuantifiedSignal, Signal
-from synthesis.funcs_args_types_names import ARG_MODEL_STATE
+from synthesis.funcs_args_types_names import ARG_MODEL_STATE, ARG_S_a_STATE, ARG_S_g_STATE, ARG_L_a_STATE, ARG_L_g_STATE
 from third_party import boolean
 
 
@@ -17,9 +17,11 @@ def _colorize_nodes(lts):
     dot_lines = StrAwareList()
 
     for state in lts.states:
-        dot_lines += '"{state}" [{color}]'.format_map({'state': state,
-                                                       'color': ['', 'fillcolor="green",style=filled'][
-                                                           state in lts.init_states]})
+        color = ''
+        if state in lts.init_states:
+            color = 'fillcolor="green",style=filled'
+
+        dot_lines += '"{state}" [{color}]'.format(state=str(state), color=color)
 
     return dot_lines
 
@@ -27,17 +29,29 @@ def _colorize_nodes(lts):
 def _convert_to_dot(value_by_signal:dict) -> str:
     #TODO: create FuncDescription with name as QuantifiedSignal_i in Impl?
 
-    values_str = '\\n'.join(
-        ['{value}{var}'.format(
-            value=['-', ''][value],
-            var=signal.name if isinstance(signal, QuantifiedSignal) or isinstance(signal, Signal) else signal)
-         for (signal, value) in value_by_signal.items()])
+    values_str_list = []
+    for (var,value) in value_by_signal.items():
+        if isinstance(var, Signal):
+            display_str = ['-',''][value] + var.name
+        else:
+            display_str = str(value.name)
+        values_str_list.append(display_str)
 
-    return values_str
+    res = '\\n'.join(values_str_list)
+
+    return res
+
+    # values_str = '\\n'.join(['{value}{var}'.format(value=['-', ''][value],
+    #                                                var=signal.name if isinstance(signal, Signal) else signal)
+    #                          for (signal, value) in value_by_signal.items()])
 
 
 def _get_inputvals(label:dict) -> dict:
     inputvals = dict(label)
+    del inputvals[ARG_S_a_STATE]
+    del inputvals[ARG_S_g_STATE]
+    del inputvals[ARG_L_a_STATE]
+    del inputvals[ARG_L_g_STATE]
     del inputvals[ARG_MODEL_STATE]
     return inputvals
 
@@ -52,16 +66,31 @@ def _get_outputvals(label:dict, lts:LTS, outvars_treated_as_moore) -> dict:
 
 def _label_states_with_outvalues(lts:LTS, filter='all'):
     dot_lines = StrAwareList()
+    print_red(filter)
 
     for state in lts.states:
-        signal_vals_pairs = [(var, vals) for (var, vals) in lts.model_by_name.items()
-                             if var in filter or filter == 'all']
-        outvals = dict([(var, vals[Label({'state': state})])  # TODO: hack
-                        for (var, vals) in signal_vals_pairs])
+        signal_model_pairs = [(signal, model)
+                              for (signal, model) in lts.model_by_name.items()
+                              if signal in filter or filter == 'all']
 
-        outvals_str = _convert_to_dot(outvals)
+        value_by_signal = dict()
+        for signal,model in signal_model_pairs:
+            # TODO: fragile -- i assume an ordering
+            state_label = Label(zip([ARG_S_a_STATE, ARG_S_g_STATE, ARG_L_a_STATE, ARG_L_g_STATE, ARG_MODEL_STATE],
+                                    state))
+            value = model[state_label]
+            value_by_signal[signal] = value
+
+        outvals_str = _convert_to_dot(value_by_signal)
+
+        color = ''
+        if state in lts.init_states:
+            color = 'fillcolor="green", style=filled, '
+
         if outvals_str != '':
-            dot_lines += '"{state}"[label="{out}\\n({state})"]'.format(state=state, out=outvals_str)
+            dot_lines += '"{state}"[{color} label="{out}\\n{state}"]'.format(color=color, state=state, out=outvals_str)
+        else:
+            dot_lines += '"{state}"[{color} label="{state}"]'.format(color=color, state=state)
 
     return dot_lines
 
@@ -91,7 +120,11 @@ def _to_label(cube:boolean.Expression) -> Label:
 def _build_srcdst_to_io_labels(lts:LTS, outvars_treated_as_moore) -> dict:
     srcdst_to_io_labels = dict()
     for label, next_state in lts.tau_model.items():
-        crt_state = label[ARG_MODEL_STATE]
+        crt_state = label[ARG_S_a_STATE],\
+                    label[ARG_S_g_STATE],\
+                    label[ARG_L_a_STATE],\
+                    label[ARG_L_g_STATE],\
+                    label[ARG_MODEL_STATE]
 
         i_label = _get_inputvals(label)
         o_label = _get_outputvals(label, lts, outvars_treated_as_moore)
@@ -100,6 +133,7 @@ def _build_srcdst_to_io_labels(lts:LTS, outvars_treated_as_moore) -> dict:
 
         srcdst_to_io_labels[(crt_state, next_state)] = srcdst_to_io_labels.get((crt_state, next_state), list())
         srcdst_to_io_labels[(crt_state, next_state)].append(io_label)
+
     return srcdst_to_io_labels
 
 
@@ -135,7 +169,7 @@ def _lts_to_dot(lts:LTS, outvars_treated_as_moore):
     dot_lines = StrAwareList()
     dot_lines += 'digraph module {\n rankdir=LR;\n'
 
-    dot_lines += _colorize_nodes(lts) + '\n'
+    # dot_lines += _colorize_nodes(lts) + '\n'
 
     dot_lines += _label_states_with_outvalues(lts, outvars_treated_as_moore)
 
@@ -185,7 +219,7 @@ def lts_to_dot(lts:LTS, is_mealy):
         return _lts_to_dot(lts, tuple())
 
     outvars = [var for (var, vals) in lts.model_by_name.items()]
-    return lts_to_dot(lts, tuple(outvars))
+    return _lts_to_dot(lts, outvars)
 
 
 ##############################################################################

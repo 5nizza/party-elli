@@ -37,7 +37,10 @@ class LTS:
 
     @property
     def states(self):
-        states = set(k[self._state_name] for k in self._tau_model)
+        # states = set(k[self._state_name] for k in self._tau_model)
+        # return the range of tau \cup init_states
+        states = set(map(lambda l_v: l_v[1], self._tau_model.items()))
+        states.update(self.init_states)
 
         return states
 
@@ -54,7 +57,8 @@ class LTS:
         return self._output_models
 
     def get_outputs(self, label:Label):
-        return dict((outvar, transitions[label]) for (outvar, transitions) in self._output_models.items())
+        return dict((outvar, transitions[label])
+                    for (outvar, transitions) in self._output_models.items())
 
     def __str__(self):
         return 'LTS:\n' \

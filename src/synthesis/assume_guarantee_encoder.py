@@ -1,7 +1,7 @@
 import logging
 from itertools import product
 import sys
-from helpers.console_helpers import print_green
+from helpers.console_helpers import print_green, print_red
 
 from helpers.labels_map import LabelsMap
 from helpers.logging_helper import log_entrance
@@ -14,7 +14,7 @@ from interfaces.solver_interface import SolverInterface
 from synthesis.func_description import FuncDescription
 from synthesis.funcs_args_types_names import TYPE_MODEL_STATE, ARG_MODEL_STATE, ARG_S_a_STATE, ARG_S_g_STATE, \
     ARG_L_a_STATE, ARG_L_g_STATE, TYPE_S_a_STATE, TYPE_S_g_STATE, TYPE_L_a_STATE, TYPE_L_g_STATE, FUNC_REACH, FUNC_R, \
-    smt_name_spec, smt_name_m, smt_name_free_arg, smt_arg_name_signal
+    smt_name_spec, smt_name_m, smt_name_free_arg, smt_arg_name_signal, smt_unname_if_signal, smt_unname_m
 
 
 def _build_signals_values(signals, label) -> (dict, list):
@@ -33,6 +33,13 @@ def _build_signals_values(signals, label) -> (dict, list):
             free_values.append(value)
 
     return value_by_signal, free_values
+
+
+def assert_deterministic(s_a, s_g, l_a, l_g, lbl):
+    assert len(get_next_states(s_a, lbl)) == 1, '\n' + str(get_next_states(s_a, lbl)) + '\n' + str(s_a) + '\n' + str(lbl)
+    assert len(get_next_states(s_g, lbl)) == 1, '\n' + str(get_next_states(s_g, lbl)) + '\n' + str(s_g) + '\n' + str(lbl)
+    assert len(get_next_states(l_a, lbl)) == 1, '\n' + str(get_next_states(l_a, lbl)) + '\n' + str(l_a) + '\n' + str(lbl)
+    assert len(get_next_states(l_g, lbl)) == 1, '\n' + str(get_next_states(l_g, lbl)) + '\n' + str(l_g) + '\n' + str(lbl)
 
 
 class AssumeGuaranteeEncoder:
@@ -204,24 +211,28 @@ class AssumeGuaranteeEncoder:
 
             for label, dst_set_list in s_a.transitions.items():
                 s_a_nexts = set(map(lambda node_flag: node_flag[0], dst_set_list[0]))
+                assert len(s_a_nexts) == 1
+                s_a_n = s_a_nexts.pop()
 
                 for i_o in all_stimuli_that_satisfy(label, automata_alphabet):
                     s_g_nexts = get_next_states(s_g, i_o)
                     l_a_nexts = get_next_states(l_a, i_o)
                     l_g_nexts = get_next_states(l_g, i_o)
 
+                    assert_deterministic(s_a, s_g, l_a, l_g, i_o)
+
+                    s_g_n, l_a_n, l_g_n = s_g_nexts.pop(), l_a_nexts.pop(), l_g_nexts.pop()
+
                     self._encode_transitions(s_a, s_g, l_a, l_g, m,
                                              i_o,
-                                             s_a_nexts, s_g_nexts, l_a_nexts, l_g_nexts)
+                                             s_a_n, s_g_n, l_a_n, l_g_n)
 
             self.solver.comment('encoded the state!')
 
     def _encode_transitions(self,
                             s_a, s_g, l_a, l_g, m:int,
                             i_o:Label,
-                            s_a_nexts, s_g_nexts, l_a_nexts, l_g_nexts):
-
-        assert len(l_a_nexts) == 1 and len(l_g_nexts) == 1, 'L_a and L_g must be deterministic'
+                            s_a_n, s_g_n, l_a_n, l_g_n):
 
         # syntax sugar
         smt_r = lambda args: self.solver.call_func(self.r_func_desc, args)
@@ -237,7 +248,7 @@ class AssumeGuaranteeEncoder:
         smt_pre = self.solver.op_and([smt_reach(args_dict), smt_out])
 
         # the case of next safety state is bad
-        if not self.S_g.acc_nodes.isdisjoint(s_g_nexts):
+        if not s_g_n not in self.S_g.acc_nodes:
             # aka reach(...) -> reach(..bad..) == \neg reach(...)
             self.solver.assert_(
                 self.solver.forall_bool(free_input_args,
@@ -248,18 +259,18 @@ class AssumeGuaranteeEncoder:
         smt_m_next = self.solver.call_func(self.tau_desc, args_dict)
 
         smt_post_conjuncts = []
-        for s_a_n, s_g_n, l_a_n, l_g_n in product(s_a_nexts, s_g_nexts, l_a_nexts, l_g_nexts):
-            args_dict_next = self._build_args_dict(smt_m_next, None, s_a_n, s_g_n, l_a_n, l_g_n)
-            smt_post_conjuncts.append(smt_reach(args_dict_next))
 
-            if l_g_n not in self.L_g.acc_nodes:
-                if l_a_n in self.L_a.acc_nodes:
-                    op = self.solver.op_gt
-                else:
-                    op = self.solver.op_ge
+        args_dict_next = self._build_args_dict(smt_m_next, None, s_a_n, s_g_n, l_a_n, l_g_n)
+        smt_post_conjuncts.append(smt_reach(args_dict_next))
 
-                smt_post_conjuncts.append(op(smt_r(args_dict_next),
-                                             smt_r(args_dict)))
+        if l_g_n not in self.L_g.acc_nodes:
+            if l_a_n in self.L_a.acc_nodes:
+                op = self.solver.op_gt
+            else:
+                op = self.solver.op_ge
+
+            smt_post_conjuncts.append(op(smt_r(args_dict_next),
+                                         smt_r(args_dict)))
 
         smt_post = self.solver.op_and(smt_post_conjuncts)
         pre_implies_post = self.solver.op_implies(smt_pre, smt_post)
@@ -325,7 +336,7 @@ class AssumeGuaranteeEncoder:
         if not smt_lines:
             return None
 
-        model = self.parse_sys_model(smt_lines)
+        model = self._parse_sys_model(smt_lines)
         return model
 
     def _encode_get_values(self):
@@ -360,22 +371,16 @@ class AssumeGuaranteeEncoder:
         return dicts
 
     @log_entrance(logging.getLogger(), logging.INFO)
-    def parse_sys_model(self, smt_get_value_lines):  # TODO: depends on SMT format
+    def _parse_sys_model(self, smt_get_value_lines):  # TODO: depends on SMT format
         output_models = dict()
-        for output_desc in self.descr_by_output.values():
+        for output_sig, output_desc in self.descr_by_output.items():
             output_func_model = self._build_func_model_from_smt(smt_get_value_lines, output_desc)
-            output_models[output_desc.name] = LabelsMap(output_func_model)
-
-        init_states = list(product([self.model_init_state],
-                                   self.S_a.initial_nodes,
-                                   self.S_g.initial_nodes,
-                                   self.L_a.initial_nodes,
-                                   self.L_g.initial_nodes))
+            output_models[output_sig] = LabelsMap(output_func_model)
 
         tau_model = LabelsMap(self._build_func_model_from_smt(smt_get_value_lines, self.tau_desc))
         # tau_model = self._simplify_tau(tau_model, tau_func_desc, impl.states_by_process[0])
 
-        lts = LTS(init_states,
+        lts = LTS([self.model_init_state],
                   output_models, tau_model,
                   ARG_MODEL_STATE,
                   self.inputs, list(self.descr_by_output.keys()))
@@ -383,8 +388,15 @@ class AssumeGuaranteeEncoder:
         return lts
 
     def _build_func_model_from_smt(self, func_smt_lines, func_desc:FuncDescription) -> dict:
-        """ Return transition(output) graph {label:output} """
+        """
+        Return graph for the transition (or output) function: {label:output}.
+        For label's keys are used:
+        - for inputs/outputs: original signals
+        - for states of automata and LTS: ARG_MODEL_STATE/ARG_S_a_STATE/etc.
+        """
         func_model = {}
+        signals = set(list(self.inputs) + list(self.descr_by_output.keys()))
+
         for l in func_smt_lines:
             #            (get-value ((tau t0 true true)))
             l = l.replace('get-value', '').replace('(', '').replace(')', '')
@@ -392,14 +404,34 @@ class AssumeGuaranteeEncoder:
             if tokens[0] != func_desc.name:
                 continue
 
-            values = self._parse_values(tokens[1:])  # the very first - func_name
-            args = Label(func_desc.get_args_dict(values[:-1]))
-            func_model[args] = values[-1]
+            values = [self._parse_value(str_v)
+                      for str_v in tokens[1:]]  # the very first - func_name
+            smt_args = func_desc.get_args_dict(values[:-1])
+
+            args = dict((smt_unname_if_signal(var,signals),val)
+                        for var,val in smt_args.items())
+
+            func_model[Label(args)] = values[-1]
         return func_model
 
-    def _parse_values(self, values):
-        return [v == 'true' if v == 'true' or v == 'false'
-                else v for v in values]
+    def _parse_value(self, str_v):
+        if not hasattr(self, 'node_by_smt_value'):  # aka static method of the field
+            self.node_by_smt_value = dict()
+            self.node_by_smt_value.update((smt_name_spec(s, TYPE_S_a_STATE), s)
+                                         for s in self.S_a.nodes)
+            self.node_by_smt_value.update((smt_name_spec(s, TYPE_S_g_STATE), s)
+                                         for s in self.S_g.nodes)
+            self.node_by_smt_value.update((smt_name_spec(s, TYPE_L_a_STATE), s)
+                                         for s in self.L_a.nodes)
+            self.node_by_smt_value.update((smt_name_spec(s, TYPE_L_g_STATE), s)
+                                         for s in self.L_g.nodes)
+
+        if str_v in self.node_by_smt_value:
+            return self.node_by_smt_value[str_v]
+        if str_v in ['false', 'true']:
+            return str_v == 'true'
+        return smt_unname_m(str_v)
+
     #
     #
 

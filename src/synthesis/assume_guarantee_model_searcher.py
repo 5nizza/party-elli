@@ -3,6 +3,7 @@ from helpers.console_helpers import print_red, print_green
 
 from helpers.logging_helper import log_entrance
 from interfaces.automata import Automaton
+from interfaces.lts import LTS
 from interfaces.parser_expr import Signal
 from interfaces.solver_interface import SolverInterface
 from synthesis.assume_guarantee_encoder import AssumeGuaranteeEncoder
@@ -51,7 +52,7 @@ def search(S_a:Automaton,
            is_mealy,
            input_signals, output_signals,
            sizes,
-           underlying_solver:SolverInterface, logic):
+           underlying_solver:SolverInterface, logic) -> LTS:
     logger = logging.getLogger()
 
     outputs_descs = dict((o,_get_output_desc(o, is_mealy, input_signals))

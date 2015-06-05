@@ -42,7 +42,7 @@ class LTL3BA:
 
         return self.convert_raw(property_in_ltl2ba_format, format_converter.signal_by_name)
 
-    def convert_raw(self, property:str, signal_by_name:dict) -> Automaton:
+    def convert_raw(self, property:str, signal_by_name:dict, states_prefix) -> Automaton:
         """
         :param property: in the LTL2BA format (we do NOT negate it!)
         """
@@ -52,9 +52,11 @@ class LTL3BA:
         assert (err == '') or err is None, err
         self._logger.debug(ba)
 
-        initial_nodes, rejecting_nodes, nodes = parse_ltl2ba_ba(ba, signal_by_name)
+        initial_nodes, rejecting_nodes, nodes = parse_ltl2ba_ba(ba, signal_by_name, states_prefix)
 
-        _assert_are_signals_in_labels(list(initial_nodes) + list(rejecting_nodes) + list(nodes))
+        assert set(rejecting_nodes).issubset(set(nodes)) and set(initial_nodes).issubset(set(nodes))  # rm after debug
+
+        _assert_are_signals_in_labels(nodes)
 
         automaton = Automaton(initial_nodes, rejecting_nodes, nodes, name=str(property))
 

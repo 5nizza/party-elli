@@ -41,8 +41,8 @@ def parse_label_tok(label_tok, signal_by_name:dict):
     return labels
 
 
-def _get_create(node_tok, name_to_node, initial_nodes, rejecting_nodes):
-    node = name_to_node[node_tok] = name_to_node.get(node_tok, Node(node_tok))
+def _get_create(node_tok, name_to_node, initial_nodes, rejecting_nodes, states_prefix):
+    node = name_to_node[node_tok] = name_to_node.get(node_tok, Node(states_prefix + node_tok))
 
     if 'init' in node_tok:
         initial_nodes.add(node)
@@ -114,7 +114,8 @@ def _parse_trans_tok(trans:str,
                      name_to_node,
                      initial_nodes,
                      rejecting_nodes,
-                     signal_by_name:dict) -> (Node, list):
+                     signal_by_name:dict,
+                     states_prefix) -> (Node, list):
 
     if trans == 'false;':
         # falling out of the automaton?
@@ -122,13 +123,13 @@ def _parse_trans_tok(trans:str,
         labels = [{}]  # empty label means 'true'
     else:
         label_tok, dst_tok = [x.strip() for x in trans.split('-> goto')]
-        dst = _get_create(dst_tok, name_to_node, initial_nodes, rejecting_nodes)
+        dst = _get_create(dst_tok, name_to_node, initial_nodes, rejecting_nodes, states_prefix)
         labels = parse_label_tok(label_tok, signal_by_name)
 
     return dst, labels
 
 
-def _get_hacked_ucw(text:str, signal_by_name:dict):  # TODO: bad smell - it is left for testing purposes only
+def _get_hacked_ucw(text:str, signal_by_name:dict, states_prefix):  # TODO: bad smell - it is left for testing purposes only
     """
         Return: initial_nodes:set, rejecting_nodes:set, nodes:set, label variables:set
         It is hacked since it doesn't conform to description of Node transitions:
@@ -162,7 +163,7 @@ def _get_hacked_ucw(text:str, signal_by_name:dict):  # TODO: bad smell - it is l
         lines = b.strip().split('\n')
 
         src_tok = lines[0].split(':')[0].strip()
-        src = _get_create(src_tok, name_to_node, initial_nodes, rejecting_nodes)
+        src = _get_create(src_tok, name_to_node, initial_nodes, rejecting_nodes, states_prefix)
 
         trans_block = lines[1:]
         # if
@@ -182,7 +183,12 @@ def _get_hacked_ucw(text:str, signal_by_name:dict):  # TODO: bad smell - it is l
             continue
 
         for trans in trans_toks:
-            dst, labels = _parse_trans_tok(trans, src, name_to_node, initial_nodes, rejecting_nodes, signal_by_name)
+            dst, labels = _parse_trans_tok(trans,
+                                           src,
+                                           name_to_node,
+                                           initial_nodes, rejecting_nodes,
+                                           signal_by_name,
+                                           states_prefix)
             vars.update(itertools.chain(*[l.keys() for l in labels]))
 
             for l in labels:
@@ -193,13 +199,12 @@ def _get_hacked_ucw(text:str, signal_by_name:dict):  # TODO: bad smell - it is l
 
 
 @log_entrance(logging.getLogger(), logging.DEBUG)
-def parse_ltl2ba_ba(text:str, signal_by_name:dict):
+def parse_ltl2ba_ba(text:str, signal_by_name:dict, states_prefix):
     """
     Parse ltl2ba output
     Return (initial_nodes, rejecting_nodes, nodes of Node class)
     """
-    # TODO: account for the following special case (accept_init and s0_init) (returned by GOAL):
-    # (sending email to GOAL guys to check if that is correct)
+    # TODO: account for the following special case (accept_init and s0_init) (GOAL returns this, that is alright):
 #    never {
 #    accept_init:
 #    s0_init:
@@ -207,7 +212,7 @@ def parse_ltl2ba_ba(text:str, signal_by_name:dict):
 #        :: !(g) -> goto s0_init
 #        fi;
 #    }
-    initial_nodes, rejecting_nodes, nodes, vars = _get_hacked_ucw(text, signal_by_name)
+    initial_nodes, rejecting_nodes, nodes, vars = _get_hacked_ucw(text, signal_by_name, states_prefix)
 
     ucw_init_nodes, ucw_rej_nodes, ucw_nodes = _conform2acw(initial_nodes, rejecting_nodes, nodes)
 
