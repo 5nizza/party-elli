@@ -8,7 +8,7 @@ from spec_optimizer.optimizations import strengthen, localize, _reduce_quantifie
     parse_expr, param_optimize_assume_guarantee
 from interfaces.parser_expr import QuantifiedSignal, ForallExpr, UnaryOp, BinOp, Signal, Expr, Number, Bool, \
     and_expressions
-from translation2uct.ltl2automaton import LTL3BA
+from automata_translations.ltl2automaton import LTL3BA
 
 
 def _get_is_value(signal_name:str, value:Number, *binding_indices):

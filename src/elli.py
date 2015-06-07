@@ -20,7 +20,7 @@ from synthesis.funcs_args_types_names import smt_name_spec, TYPE_S_a_STATE, TYPE
     TYPE_L_g_STATE, smt_name_m, smt_arg_name_signal, ARG_S_a_STATE, ARG_S_g_STATE, ARG_L_a_STATE, ARG_L_g_STATE, \
     ARG_MODEL_STATE
 from synthesis.smt_logic import UFLIA
-from translation2uct.ltl2automaton import LTL3BA
+from automata_translations.ltl2automaton import LTL3BA
 
 
 def _write_out(model, is_moore, file_type, file_name):

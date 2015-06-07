@@ -1,6 +1,6 @@
 import unittest
 from interfaces.parser_expr import QuantifiedSignal
-from translation2uct.ltl2ba import _get_hacked_ucw, _unwind_label
+from automata_translations.ltl2ba import _get_hacked_ucw, _unwind_label
 
 
 def _assert_equal_list_dict(first_list_of_dict, second_list_of_dict):

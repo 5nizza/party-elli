@@ -1,6 +1,7 @@
 import logging
 from itertools import product
 import sys
+from nose.tools import assert_equal
 from helpers.console_helpers import print_green, print_red
 
 from helpers.labels_map import LabelsMap
@@ -36,10 +37,10 @@ def _build_signals_values(signals, label) -> (dict, list):
 
 
 def assert_deterministic(s_a, s_g, l_a, l_g, lbl):
-    assert len(get_next_states(s_a, lbl)) == 1, '\n' + str(get_next_states(s_a, lbl)) + '\n' + str(s_a) + '\n' + str(lbl)
-    assert len(get_next_states(s_g, lbl)) == 1, '\n' + str(get_next_states(s_g, lbl)) + '\n' + str(s_g) + '\n' + str(lbl)
-    assert len(get_next_states(l_a, lbl)) == 1, '\n' + str(get_next_states(l_a, lbl)) + '\n' + str(l_a) + '\n' + str(lbl)
-    assert len(get_next_states(l_g, lbl)) == 1, '\n' + str(get_next_states(l_g, lbl)) + '\n' + str(l_g) + '\n' + str(lbl)
+    assert_equal(len(get_next_states(s_a, lbl)), 1,  '\n' + str(get_next_states(s_a, lbl)) + '\n' + str(s_a) + '\n' + str(lbl))
+    assert_equal(len(get_next_states(s_g, lbl)), 1,  '\n' + str(get_next_states(s_g, lbl)) + '\n' + str(s_g) + '\n' + str(lbl))
+    assert_equal(len(get_next_states(l_a, lbl)), 1,  '\n' + str(get_next_states(l_a, lbl)) + '\n' + str(l_a) + '\n' + str(lbl))
+    assert_equal(len(get_next_states(l_g, lbl)), 1,  '\n' + str(get_next_states(l_g, lbl)) + '\n' + str(l_g) + '\n' + str(lbl))
 
 
 class AssumeGuaranteeEncoder:

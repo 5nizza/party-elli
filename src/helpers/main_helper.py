@@ -5,7 +5,7 @@ from synthesis.smt_logic import Logic
 
 from synthesis.solvers import Z3_Smt_NonInteractive_ViaFiles, Z3_Smt_Interactive
 from third_party.ansistrm import ColorizingStreamHandler
-from translation2uct.ltl2automaton import LTL3BA
+from automata_translations.ltl2automaton import LTL3BA
 
 
 def get_root_dir() -> str:

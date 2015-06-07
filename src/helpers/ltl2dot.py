@@ -6,7 +6,7 @@ from helpers.automata_helper import to_dot
 from helpers.main_helper import setup_logging, create_spec_converter_z3
 from spec_optimizer.optimizations import parse_expr
 from synthesis.smt_logic import UFLIA
-from translation2uct.ltl2automaton import LTL3BA
+from automata_translations.ltl2automaton import LTL3BA
 
 
 def main(line, ltl2ucw:LTL3BA):

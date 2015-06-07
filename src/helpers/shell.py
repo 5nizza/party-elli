@@ -11,12 +11,13 @@ def execute_shell(cmd, input=''):
     proc_stdin = subprocess.PIPE if input != '' and input is not None else None
     proc_input = input if input != '' and input is not None else None
 
-    args = shlex.split(cmd)
+    # args = shlex.split(cmd)
 
-    p = subprocess.Popen(args,
+    p = subprocess.Popen(cmd,  # args,
                          stdin=proc_stdin,
                          stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE)
+                         stderr=subprocess.PIPE,
+                         shell=True)  # makes prefixed things like `LD_LIBRARY_PATH=.. ./command` work
 
     out, err = p.communicate(proc_input)
 
