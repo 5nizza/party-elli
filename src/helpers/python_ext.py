@@ -2,6 +2,11 @@ from collections import Iterable
 import math
 
 
+def readfile(file_name):
+    with open(file_name) as f:
+        return f.read()
+
+
 def stripped_tokens(list_of_tokens) -> list:
     return [t.strip() for t in list_of_tokens if t.strip()]
 

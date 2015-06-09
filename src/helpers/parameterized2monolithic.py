@@ -13,6 +13,10 @@ from parsing.par_parser import parse_ltl
 
 def _instantiate(spec_text):
     section_by_name = parse_ltl(spec_text, logging.getLogger())
+    CURRENT:
+    1. adapt to my needs?
+    2. use acacia parser and benchmarks instead?
+
     input_signals = [QuantifiedSignal('r', i) for i in range(nof_processes)]
     output_signals = [QuantifiedSignal('g', i) for i in range(nof_processes)]
 

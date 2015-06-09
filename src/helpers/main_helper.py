@@ -1,4 +1,5 @@
 import logging
+from logging import FileHandler
 import os
 import sys
 from synthesis.smt_logic import Logic
@@ -31,6 +32,7 @@ def setup_logging(verbose_level:int):
 
     root = logging.getLogger()
     root.addHandler(handler)
+    root.addHandler(FileHandler(filename='last.log', mode='w'))
     root.setLevel(level)
 
     return logging.getLogger(__name__)

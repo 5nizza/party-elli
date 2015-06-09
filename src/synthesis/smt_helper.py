@@ -36,7 +36,9 @@ def make_set_logic(logic):
 def make_headers():
     #TODO: ask stackoverflow about other speed-ups
     #ematching slows down if forall quantifier is present
-    return '(set-option :produce-models true)\n(set-option :smt.ematching false)\n'
+    # return '(set-option :produce-models true)\n(set-option :smt.ematching false)\n'
+    # currently i don't have forall
+    return '(set-option :produce-models true)\n'
 
 
 #TODO: no need of constraints for input values

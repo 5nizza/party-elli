@@ -7,6 +7,8 @@ TYPE_S_g_STATE = 'S_g'
 TYPE_L_a_STATE = 'L_a'
 TYPE_L_g_STATE = 'L_g'
 
+TYPE_A_STATE = 'A'
+
 FUNC_MODEL_TRANS = '_tau_'
 FUNC_REACH = '_reach_'
 FUNC_R = '_r_'
@@ -20,6 +22,8 @@ ARG_S_a_STATE = '_s_a_'
 ARG_S_g_STATE = '_s_g_'
 ARG_L_a_STATE = '_l_a_'
 ARG_L_g_STATE = '_l_g_'
+
+ARG_A_STATE = '_a_'
 
 
 def smt_arg_name_signal(s:Signal):

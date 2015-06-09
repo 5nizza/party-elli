@@ -8,14 +8,16 @@ from helpers.labels_map import LabelsMap
 from helpers.logging_helper import log_entrance
 from helpers.python_ext import lmap
 from interfaces.automata import Label, Automaton, LIVE_END, all_stimuli_that_satisfy, \
-    get_next_states
+    get_next_states, Node, DEAD_END
 from interfaces.lts import LTS
 from interfaces.parser_expr import Signal
 from interfaces.solver_interface import SolverInterface
 from synthesis.func_description import FuncDescription
 from synthesis.funcs_args_types_names import TYPE_MODEL_STATE, ARG_MODEL_STATE, ARG_S_a_STATE, ARG_S_g_STATE, \
     ARG_L_a_STATE, ARG_L_g_STATE, TYPE_S_a_STATE, TYPE_S_g_STATE, TYPE_L_a_STATE, TYPE_L_g_STATE, FUNC_REACH, FUNC_R, \
-    smt_name_spec, smt_name_m, smt_name_free_arg, smt_arg_name_signal, smt_unname_if_signal, smt_unname_m
+    smt_name_spec, smt_name_m, smt_name_free_arg, smt_arg_name_signal, smt_unname_if_signal, smt_unname_m, ARG_A_STATE, \
+    TYPE_A_STATE
+from synthesis.rejecting_states_finder import build_state_to_rejecting_scc
 
 
 def _build_signals_values(signals, label) -> (dict, list):
@@ -43,13 +45,10 @@ def assert_deterministic(s_a, s_g, l_a, l_g, lbl):
     assert_equal(len(get_next_states(l_g, lbl)), 1,  '\n' + str(get_next_states(l_g, lbl)) + '\n' + str(l_g) + '\n' + str(lbl))
 
 
-class AssumeGuaranteeEncoder:
+class OriginalEncoder:
     def __init__(self,
                  logic,
-                 S_a:Automaton,
-                 S_g:Automaton,
-                 L_a:Automaton,
-                 L_g:Automaton,
+                 automaton:Automaton,
                  underlying_solver:SolverInterface,
                  tau_desc:FuncDescription,
                  inputs,
@@ -60,19 +59,13 @@ class AssumeGuaranteeEncoder:
         self.solver = underlying_solver
         self.logic = logic
 
-        self.S_a = S_a
-        self.S_g = S_g
-        self.L_a = L_a
-        self.L_g = L_g
+        self.automaton = automaton
 
         self.inputs = inputs
         self.descr_by_output = descr_by_output
         self.tau_desc = tau_desc
 
-        reach_args = {ARG_S_a_STATE: TYPE_S_a_STATE,
-                      ARG_S_g_STATE: TYPE_S_g_STATE,
-                      ARG_L_a_STATE: TYPE_L_a_STATE,
-                      ARG_L_g_STATE: TYPE_L_g_STATE,
+        reach_args = {ARG_A_STATE: TYPE_A_STATE,
                       ARG_MODEL_STATE: TYPE_MODEL_STATE}
 
         r_args = reach_args
@@ -87,10 +80,10 @@ class AssumeGuaranteeEncoder:
 
         self.last_allowed_states = None
 
-    def _smt_out(self, label:Label, smt_m:str, s_a, s_g, l_a, l_g) -> str:
+    def _smt_out(self, label:Label, smt_m:str, q:Node) -> str:
         conjuncts = []
 
-        args_dict = self._build_args_dict(smt_m, label, s_a, s_g, l_a, l_g)
+        args_dict = self._build_args_dict(smt_m, label, q)
 
         for sig, val in label.items():
             if sig not in self.descr_by_output:
@@ -112,14 +105,11 @@ class AssumeGuaranteeEncoder:
         _, free_args = _build_signals_values(self.inputs, i_o)
         return free_args
 
-    def _build_args_dict(self, smt_m:str, i_o, s_a, s_g, l_a, l_g) -> dict:
+    def _build_args_dict(self, smt_m:str, i_o, q:Node) -> dict:
         args_dict = dict()
         args_dict[ARG_MODEL_STATE] = smt_m
 
-        args_dict[ARG_S_a_STATE] = smt_name_spec(s_a, TYPE_S_a_STATE)
-        args_dict[ARG_S_g_STATE] = smt_name_spec(s_g, TYPE_S_g_STATE)
-        args_dict[ARG_L_a_STATE] = smt_name_spec(l_a, TYPE_L_a_STATE)
-        args_dict[ARG_L_g_STATE] = smt_name_spec(l_g, TYPE_L_g_STATE)
+        args_dict[ARG_A_STATE] = smt_name_spec(q, TYPE_A_STATE)
 
         if i_o is None:
             return args_dict
@@ -142,12 +132,8 @@ class AssumeGuaranteeEncoder:
         self._define_declare_functions(self.descr_by_output.values())
 
     def _encode_automata_functions(self):
-        for (a, t) in [(self.S_a, TYPE_S_a_STATE),
-                       (self.S_g, TYPE_S_g_STATE),
-                       (self.L_a, TYPE_L_a_STATE),
-                       (self.L_g, TYPE_L_g_STATE)]:
-            self.solver.declare_enum(t,
-                                     map(lambda n: smt_name_spec(n, t), a.nodes))
+        self.solver.declare_enum(TYPE_A_STATE,
+                                 map(lambda n: smt_name_spec(n, TYPE_A_STATE), self.automaton.nodes))
 
     def _encode_counters(self):
         self.solver.declare_fun(self.reach_func_desc)
@@ -157,24 +143,14 @@ class AssumeGuaranteeEncoder:
 
     ## encoding rules
     def encode_initialization(self):
-        for s_a, s_g, l_a, l_g, m in product(self.S_a.initial_nodes or [None],
-                                             self.S_g.initial_nodes or [None],
-                                             self.L_a.initial_nodes or [None],
-                                             self.L_g.initial_nodes or [None],
-                                             [self.model_init_state]):
-            vals_by_vars = self._build_args_dict(smt_name_m(m), None, s_a, s_g, l_a, l_g)
+        for q, m in product(self.automaton.initial_nodes, [self.model_init_state]):
+            vals_by_vars = self._build_args_dict(smt_name_m(m), None, q)
 
             self.solver.assert_(
                 self.solver.call_func(
                     self.reach_func_desc, vals_by_vars))
 
     def encode_run_graph(self, states_to_encode):
-        """
-        pre:
-        - S_a, S_g, L_a, L_g are deterministic (<1 transition for each io)
-        - all states of S_a are accepting
-        - S_g, L_a, L_g are total (=1 transition for each io)
-        """
         # state_to_rejecting_scc = build_state_to_rejecting_scc(impl.automaton)  # TODO: Does it help?
 
         # One option is to encode automata directly into SMT and have a query like:
@@ -206,80 +182,74 @@ class AssumeGuaranteeEncoder:
         # and compute s_g', l_a', l_g' depending on i_o.
         # We will handle the special case when s_g' is the rejecting state.
 
-        automata_alphabet = tuple(self.inputs) + tuple(self.descr_by_output.keys())
+        state_to_rejecting_scc = build_state_to_rejecting_scc(self.automaton)
 
-        for s_a, s_g, l_a, l_g, m in product(self.S_a.nodes or [LIVE_END],
-                                             self.S_g.nodes or [LIVE_END],
-                                             self.L_a.nodes or [LIVE_END],
-                                             self.L_g.nodes or [LIVE_END],
-                                             states_to_encode):
+        for q in self.automaton.nodes:
+            for m in states_to_encode:
+                for label, dst_set_list in q.transitions.items():
+                    self._encode_transitions(q, m, label,
+                                             state_to_rejecting_scc)
 
-            self.solver.comment('encoding state: ' + str((s_a, s_g, l_a, l_g, m)) + '...')
+            self.solver.comment('encoded spec state ' + smt_name_spec(q, TYPE_A_STATE))
 
-            for label, dst_set_list in s_a.transitions.items():
-                s_a_nexts = tuple(map(lambda node_flag: node_flag[0], dst_set_list[0]))
-                assert len(s_a_nexts) == 1
-                s_a_n = s_a_nexts[0]
+    def _get_greater_op(self, q, is_rejecting,
+                        q_next,
+                        state_to_rejecting_scc):
+        crt_rejecting_scc = state_to_rejecting_scc.get(q, None)
+        next_rejecting_scc = state_to_rejecting_scc.get(q_next, None)
 
-                assert s_a_n in self.S_a.acc_nodes
+        if crt_rejecting_scc is not next_rejecting_scc:
+            return None
+        if crt_rejecting_scc is None:
+            return None
+        if next_rejecting_scc is None:
+            return None
 
-                for i_o in all_stimuli_that_satisfy(label, automata_alphabet):
-                    s_g_nexts = tuple(get_next_states(s_g, i_o))
-                    l_a_nexts = tuple(get_next_states(l_a, i_o))
-                    l_g_nexts = tuple(get_next_states(l_g, i_o))
-
-                    assert_deterministic(s_a, s_g, l_a, l_g, i_o)
-
-                    s_g_n, l_a_n, l_g_n = s_g_nexts[0], l_a_nexts[0], l_g_nexts[0]
-
-                    self._encode_transitions(s_a, s_g, l_a, l_g, m,
-                                             i_o,
-                                             s_a_n, s_g_n, l_a_n, l_g_n)
-
-            self.solver.comment('encoded the state!')
+        return [self.solver.op_ge, self.solver.op_gt][is_rejecting]
 
     def _encode_transitions(self,
-                            s_a, s_g, l_a, l_g, m:int,
+                            q:Node,
+                            m,
                             i_o:Label,
-                            s_a_n, s_g_n, l_a_n, l_g_n):
-
+                            state_to_rejecting_scc:dict):
         # syntax sugar
         smt_r = lambda args: self.solver.call_func(self.r_func_desc, args)
         smt_reach = lambda args: self.solver.call_func(self.reach_func_desc, args)
         #
 
         smt_m = smt_name_m(m)
-        smt_out = self._smt_out(i_o, smt_m, s_a, s_g, l_a, l_g)
 
-        args_dict = self._build_args_dict(smt_m, i_o, s_a, s_g, l_a, l_g)
+        args_dict = self._build_args_dict(smt_m, i_o, q)
         free_input_args = self._get_free_input_args(i_o)
 
+        smt_out = self._smt_out(i_o, smt_m, q)
         smt_pre = self.solver.op_and([smt_reach(args_dict), smt_out])
 
-        # the case of next safety state is bad
-        if not s_g_n not in self.S_g.acc_nodes:
-            # aka reach(...) -> reach(..bad..) == \neg reach(...)
-            self.solver.assert_(
-                self.solver.forall_bool(free_input_args,
-                                        self.solver.op_not(smt_pre)))
-            return
+        #
+        dst_set_list = q.transitions[i_o]
+        assert len(dst_set_list) == 1, 'nondetermenistic transitions are not supported' + \
+                                       str(dst_set_list) + '\n from ' + str(q) + \
+                                       '\nwith io:' + str(i_o)
+        dst_set = dst_set_list[0]
 
-        # the case of next safety state is 'normal'
+        #
         smt_m_next = self.solver.call_func(self.tau_desc, args_dict)
 
         smt_post_conjuncts = []
+        for q_next, is_rejecting in dst_set:
+            if q_next is DEAD_END or 'accept_all' in q_next.name:  # TODO: hack
+                smt_post_conjuncts = [self.solver.false()]
+                break
 
-        args_dict_next = self._build_args_dict(smt_m_next, None, s_a_n, s_g_n, l_a_n, l_g_n)
-        smt_post_conjuncts.append(smt_reach(args_dict_next))
+            args_dict_next = self._build_args_dict(smt_m_next, None, q_next)
 
-        if l_g_n not in self.L_g.acc_nodes:
-            if l_a_n in self.L_a.acc_nodes:
-                op = self.solver.op_gt
-            else:
-                op = self.solver.op_ge
+            smt_post_conjuncts.append(smt_reach(args_dict_next))
 
-            smt_post_conjuncts.append(op(smt_r(args_dict_next),
-                                         smt_r(args_dict)))
+            greater_op = self._get_greater_op(q, is_rejecting, q_next, state_to_rejecting_scc)
+
+            if greater_op is not None:
+                smt_post_conjuncts.append(greater_op(smt_r(args_dict_next),
+                                                     smt_r(args_dict)))
 
         smt_post = self.solver.op_and(smt_post_conjuncts)
         pre_implies_post = self.solver.op_implies(smt_pre, smt_post)
@@ -361,10 +331,7 @@ class AssumeGuaranteeEncoder:
         def get_values(t):
             return {          'Bool': ('true', 'false'),
                     TYPE_MODEL_STATE: [smt_name_m(m) for m in self.last_allowed_states],
-                      TYPE_S_a_STATE: [smt_name_spec(s, TYPE_S_a_STATE) for s in self.S_a.nodes],
-                      TYPE_S_g_STATE: [smt_name_spec(s, TYPE_S_g_STATE) for s in self.S_g.nodes],
-                      TYPE_L_a_STATE: [smt_name_spec(s, TYPE_L_a_STATE) for s in self.L_a.nodes],
-                      TYPE_L_g_STATE: [smt_name_spec(s, TYPE_L_g_STATE) for s in self.L_g.nodes]
+                        TYPE_A_STATE: [smt_name_spec(s, TYPE_A_STATE) for s in self.automaton.nodes]
                    }[t]
         records = product(*[get_values(t) for (_,t) in arg_type_pairs])
 
@@ -426,14 +393,8 @@ class AssumeGuaranteeEncoder:
     def _parse_value(self, str_v):
         if not hasattr(self, 'node_by_smt_value'):  # aka static method of the field
             self.node_by_smt_value = dict()
-            self.node_by_smt_value.update((smt_name_spec(s, TYPE_S_a_STATE), s)
-                                         for s in self.S_a.nodes)
-            self.node_by_smt_value.update((smt_name_spec(s, TYPE_S_g_STATE), s)
-                                         for s in self.S_g.nodes)
-            self.node_by_smt_value.update((smt_name_spec(s, TYPE_L_a_STATE), s)
-                                         for s in self.L_a.nodes)
-            self.node_by_smt_value.update((smt_name_spec(s, TYPE_L_g_STATE), s)
-                                         for s in self.L_g.nodes)
+            self.node_by_smt_value.update((smt_name_spec(s, TYPE_A_STATE), s)
+                                         for s in self.automaton.nodes)
 
         if str_v in self.node_by_smt_value:
             return self.node_by_smt_value[str_v]

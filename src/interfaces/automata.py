@@ -1,3 +1,4 @@
+from functools import lru_cache
 from itertools import product
 from helpers.console_helpers import print_green
 from helpers.hashable import HashableDict
@@ -107,6 +108,7 @@ LIVE_END.add_transition(Label({}), {(LIVE_END, False)})
 
 
 # ------------------------------ HELPER FUNCTIONS -------------------------
+@lru_cache()
 def is_satisfied(label, signal_values):
     """ Do signal values satisfy the label? """
 
@@ -117,7 +119,7 @@ def is_satisfied(label, signal_values):
             return False
     return True
 
-
+@lru_cache()
 def all_stimuli_that_satisfy(label:Label, alphabet) -> set:
     bound_signals = set(filter(lambda sig: sig in label, alphabet))
     free_signals = set(alphabet).difference(bound_signals)
@@ -140,6 +142,7 @@ def all_stimuli_that_satisfy(label:Label, alphabet) -> set:
     return stimuli
 
 
+@lru_cache()
 def get_next_states(n:Node, i_o:Label) -> set:
     dst_nodes = set()
     for lbl, dst_set_list in n.transitions.items():

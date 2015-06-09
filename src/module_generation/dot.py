@@ -1,3 +1,4 @@
+from _collections_abc import Iterable
 import unittest
 import logging
 from unittest import TestCase
@@ -46,13 +47,10 @@ def _convert_to_dot(value_by_signal:dict) -> str:
     #                          for (signal, value) in value_by_signal.items()])
 
 
-def _get_inputvals(label:dict) -> dict:
+def _get_inputvals(label:dict, state_args) -> dict:
     inputvals = dict(label)
-    del inputvals[ARG_S_a_STATE]
-    del inputvals[ARG_S_g_STATE]
-    del inputvals[ARG_L_a_STATE]
-    del inputvals[ARG_L_g_STATE]
-    del inputvals[ARG_MODEL_STATE]
+    for k in state_args:
+        del inputvals[k]
     return inputvals
 
 
@@ -64,7 +62,10 @@ def _get_outputvals(label:dict, lts:LTS, outvars_treated_as_moore) -> dict:
     return outvals
 
 
-def _label_states_with_outvalues(lts:LTS, filter='all'):
+def _label_states_with_outvalues(lts:LTS, state_args, filter='all'):
+    # state_args = [ARG_S_a_STATE, ARG_S_g_STATE, ARG_L_a_STATE, ARG_L_g_STATE, ARG_MODEL_STATE]
+    print_green(state_args)
+
     dot_lines = StrAwareList()
     print_red(filter)
 
@@ -75,9 +76,10 @@ def _label_states_with_outvalues(lts:LTS, filter='all'):
 
         value_by_signal = dict()
         for signal,model in signal_model_pairs:
-            # TODO: fragile -- i assume an ordering
-            state_label = Label(zip([ARG_S_a_STATE, ARG_S_g_STATE, ARG_L_a_STATE, ARG_L_g_STATE, ARG_MODEL_STATE],
-                                    state))
+            print_red(state)
+            # TODO: fragile
+            state_label = Label(zip(state_args, state if isinstance(state, Iterable)
+                                                else [state]))
             value = model[state_label]
             value_by_signal[signal] = value
 
@@ -117,16 +119,15 @@ def _to_label(cube:boolean.Expression) -> Label:
     return label
 
 
-def _build_srcdst_to_io_labels(lts:LTS, outvars_treated_as_moore) -> dict:
+def _build_srcdst_to_io_labels(lts:LTS, state_args, outvars_treated_as_moore) -> dict:
     srcdst_to_io_labels = dict()
     for label, next_state in lts.tau_model.items():
-        crt_state = label[ARG_S_a_STATE],\
-                    label[ARG_S_g_STATE],\
-                    label[ARG_L_a_STATE],\
-                    label[ARG_L_g_STATE],\
-                    label[ARG_MODEL_STATE]
+        if len(state_args) > 1:
+            crt_state = tuple(map(lambda k: label[k], state_args))
+        else:
+            crt_state = label[state_args[0]]
 
-        i_label = _get_inputvals(label)
+        i_label = _get_inputvals(label, state_args)
         o_label = _get_outputvals(label, lts, outvars_treated_as_moore)
 
         io_label = Label(add_dicts(i_label, o_label))
@@ -163,7 +164,7 @@ def _simplify_srcdst_to_io_labels(srcdst_to_io_labels:dict) -> dict:
     return simplified_srcdst_to_io_labels
 
 
-def _lts_to_dot(lts:LTS, outvars_treated_as_moore):
+def _lts_to_dot(lts:LTS, state_args, outvars_treated_as_moore):
     logger = logging.getLogger(__file__)
 
     dot_lines = StrAwareList()
@@ -171,9 +172,9 @@ def _lts_to_dot(lts:LTS, outvars_treated_as_moore):
 
     # dot_lines += _colorize_nodes(lts) + '\n'
 
-    dot_lines += _label_states_with_outvalues(lts, outvars_treated_as_moore)
+    dot_lines += _label_states_with_outvalues(lts, state_args, outvars_treated_as_moore)
 
-    srcdst_to_io_labels = _build_srcdst_to_io_labels(lts, outvars_treated_as_moore)
+    srcdst_to_io_labels = _build_srcdst_to_io_labels(lts, state_args, outvars_treated_as_moore)
     logger.debug('non-simplified model: \n' + str(srcdst_to_io_labels))
 
     # the bug is somewhere there: TRY MY OWN IMPLEMENTATION
@@ -214,12 +215,12 @@ def _lts_to_dot(lts:LTS, outvars_treated_as_moore):
     return '\n'.join(dot_lines)
 
 
-def lts_to_dot(lts:LTS, is_mealy):
+def lts_to_dot(lts:LTS, state_args, is_mealy):
     if is_mealy:
-        return _lts_to_dot(lts, tuple())
+        return _lts_to_dot(lts, state_args, tuple())
 
     outvars = [var for (var, vals) in lts.model_by_name.items()]
-    return _lts_to_dot(lts, outvars)
+    return _lts_to_dot(lts, state_args, outvars)
 
 
 ##############################################################################
