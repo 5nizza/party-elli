@@ -141,7 +141,7 @@ def _build_srcdst_to_io_labels(lts:LTS, state_args, outvars_treated_as_moore) ->
 def _simplify_srcdst_to_io_labels(srcdst_to_io_labels:dict) -> dict:
     """ Careful -- side effect is that every signal becomes string in the returned result.
     """
-    assert 0, 'there is a bug somewhere here, do not comment me!'
+    assert 0, 'there is a bug somewhere here, do not comment me! -- try to update that third-party package'
 
     simplified_srcdst_to_io_labels = dict()
     for (src, dst), io_labels in srcdst_to_io_labels.items():

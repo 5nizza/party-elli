@@ -36,11 +36,15 @@ def _build_signals_values(signals, label) -> (dict, list):
     return value_by_signal, free_values
 
 
-def assert_deterministic(s_a, s_g, l_a, l_g, lbl):
-    assert_equal(len(get_next_states(s_a, lbl)), 1,  '\n' + str(get_next_states(s_a, lbl)) + '\n' + str(s_a) + '\n' + str(lbl))
-    assert_equal(len(get_next_states(s_g, lbl)), 1,  '\n' + str(get_next_states(s_g, lbl)) + '\n' + str(s_g) + '\n' + str(lbl))
-    assert_equal(len(get_next_states(l_a, lbl)), 1,  '\n' + str(get_next_states(l_a, lbl)) + '\n' + str(l_a) + '\n' + str(lbl))
-    assert_equal(len(get_next_states(l_g, lbl)), 1,  '\n' + str(get_next_states(l_g, lbl)) + '\n' + str(l_g) + '\n' + str(lbl))
+def assert_deterministic_transition(s_a, s_g, l_a, l_g, lbl):
+    if s_a:
+        assert_equal(len(get_next_states(s_a, lbl)), 1,  '\n' + str(get_next_states(s_a, lbl)) + '\n' + str(s_a) + '\n' + str(lbl))
+    if s_g:
+        assert_equal(len(get_next_states(s_g, lbl)), 1,  '\n' + str(get_next_states(s_g, lbl)) + '\n' + str(s_g) + '\n' + str(lbl))
+    if l_a:
+        assert_equal(len(get_next_states(l_a, lbl)), 1,  '\n' + str(get_next_states(l_a, lbl)) + '\n' + str(l_a) + '\n' + str(lbl))
+    if l_g:
+        assert_equal(len(get_next_states(l_g, lbl)), 1,  '\n' + str(get_next_states(l_g, lbl)) + '\n' + str(l_g) + '\n' + str(lbl))
 
 
 class AssumeGuaranteeEncoder:
@@ -228,7 +232,7 @@ class AssumeGuaranteeEncoder:
                     l_a_nexts = tuple(get_next_states(l_a, i_o))
                     l_g_nexts = tuple(get_next_states(l_g, i_o))
 
-                    assert_deterministic(s_a, s_g, l_a, l_g, i_o)
+                    assert_deterministic_transition(s_a, s_g, l_a, l_g, i_o)
 
                     s_g_n, l_a_n, l_g_n = s_g_nexts[0], l_a_nexts[0], l_g_nexts[0]
 

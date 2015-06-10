@@ -131,7 +131,6 @@ class Test(unittest.TestCase):
         for letter in ['a', 'b', 'c', 'd', 'e', 'f']:
             str_to_signal[letter] = signal_to_str[letter] = letter
 
-
     def test__resolve_consensus(self):
         lbl1 = Label({'a':True, 'c':True, 'b':True})
         lbl2 = Label({'a':True, 'c':True, 'b':False})

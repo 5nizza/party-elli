@@ -88,6 +88,9 @@ class StrAwareList(Iterable):
         else:
             return str(self._output)
 
+    def to_str(self):
+        return str(self)
+
     __repr__ = __str__
 
     def __len__(self):

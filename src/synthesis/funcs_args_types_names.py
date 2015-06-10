@@ -8,22 +8,24 @@ TYPE_L_a_STATE = 'L_a'
 TYPE_L_g_STATE = 'L_g'
 
 TYPE_A_STATE = 'A'
+TYPE_S_STATE = 'S'
 
 FUNC_MODEL_TRANS = '_tau_'
 FUNC_REACH = '_reach_'
 FUNC_R = '_r_'
-# FUNC_S_a_TRANS = 'tauSa'
-# FUNC_S_g_TRANS = 'tauSg'
-# FUNC_L_a_TRANS = 'tauLa'
-# FUNC_L_g_TRANS = 'tauLg'
+
+FUNC_L_a_TRANS = 'tau_L_a'
+FUNC_L_a_ACC = 'tau_L_a_acc'
+FUNC_L_g_TRANS = 'tau_L_g'
+FUNC_L_g_ACC = 'tau_L_g_acc'
 
 ARG_MODEL_STATE = '_m_'
 ARG_S_a_STATE = '_s_a_'
 ARG_S_g_STATE = '_s_g_'
 ARG_L_a_STATE = '_l_a_'
 ARG_L_g_STATE = '_l_g_'
-
-ARG_A_STATE = '_a_'
+ARG_A_STATE = '_a_'   # intended to be used for the whole specification (safety and liveness)
+ARG_S_STATE = '_s_'   # for the safety automaton
 
 
 def smt_arg_name_signal(s:Signal):

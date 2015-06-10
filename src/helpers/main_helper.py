@@ -26,13 +26,19 @@ def setup_logging(verbose_level:int):
     elif verbose_level >= 1:
         level = logging.DEBUG
 
-    handler = ColorizingStreamHandler()
-    handler.setFormatter(logging.Formatter(fmt="%(asctime)-10s%(message)s", datefmt="%H:%M:%S"))
-    handler.stream = sys.stdout
+    formatter = logging.Formatter(fmt="%(asctime)-10s%(message)s", datefmt="%H:%M:%S")
+
+    stdout_handler = ColorizingStreamHandler()
+    stdout_handler.setFormatter(formatter)
+    stdout_handler.stream = sys.stdout
+
+    file_handler = FileHandler(filename='last.log', mode='w')
+    file_handler.setFormatter(formatter)
 
     root = logging.getLogger()
-    root.addHandler(handler)
-    root.addHandler(FileHandler(filename='last.log', mode='w'))
+    root.addHandler(stdout_handler)
+    root.addHandler(file_handler)
+
     root.setLevel(level)
 
     return logging.getLogger(__name__)

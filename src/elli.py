@@ -5,23 +5,22 @@ from itertools import product
 import os
 import sys
 import tempfile
+
 from nose.tools import assert_equal
+
 from automata_translations.goal_converter import GoalConverter
 import config
 from helpers import automata_helper
-from helpers.console_helpers import print_green, print_red
 from helpers.labels_map import LabelsMap
-
 from helpers.main_helper import setup_logging, create_spec_converter_z3, remove_files_prefixed
 from interfaces.automata import Automaton, all_stimuli_that_satisfy, LABEL_TRUE, get_next_states, Label, is_satisfied
 from interfaces.lts import LTS
 from interfaces.parser_expr import Signal
 from module_generation.dot import lts_to_dot
-from synthesis import original_model_searcher
-from synthesis.assume_guarantee_encoder import assert_deterministic
+from synthesis import original_model_searcher, bfsj_model_searcher, symbolic_bfsj_model_searcher
+from synthesis.assume_guarantee_encoder import assert_deterministic_transition
 from synthesis.assume_guarantee_model_searcher import search
-from synthesis.funcs_args_types_names import smt_name_spec, TYPE_S_a_STATE, TYPE_S_g_STATE, TYPE_L_a_STATE, \
-    TYPE_L_g_STATE, smt_name_m, smt_arg_name_signal, ARG_S_a_STATE, ARG_S_g_STATE, ARG_L_a_STATE, ARG_L_g_STATE, \
+from synthesis.funcs_args_types_names import ARG_S_a_STATE, ARG_S_g_STATE, ARG_L_a_STATE, ARG_L_g_STATE, \
     ARG_MODEL_STATE
 from synthesis.smt_logic import UFLIA
 from automata_translations.ltl2automaton import LTL3BA
@@ -125,7 +124,7 @@ def combine_model(S_a:Automaton, S_g:Automaton, L_a:Automaton, L_g:Automaton,
                     continue
 
                 # assumes determinism
-                assert_deterministic(s_a,s_g,l_a,l_g,word_lbl)
+                assert_deterministic_transition(s_a,s_g,l_a,l_g,word_lbl)
 
                 s_a_n = tuple(map(lambda node_flag: node_flag[0], dst_set_list[0]))[0]
                 s_g_n = tuple(get_next_states(s_g, word_lbl))[0]
@@ -169,6 +168,9 @@ def main_sa_sg_la_lg(spec_file_name:str,
     # L_a = ltl2ucw_converter.convert_raw(L_a_property, signal_by_name, 'la_')
     # L_g = ltl2ucw_converter.convert_raw(L_g_property, signal_by_name, 'lg_')
 
+    # TODO: GOAL does not look to produce efficient automata representations
+    # in particularly it does not squash transitions (?)
+    assert 0, 'account that G in specs disappeared!'
     goal_converter = GoalConverter(config.GOAL)
     S_a = goal_converter.convert_to_deterministic_maxacc(S_a_property, signal_by_name, 'sa_')
     S_g = goal_converter.convert_to_deterministic_total_minacc('!(%s)' % S_g_property, signal_by_name, 'sg_')
@@ -221,6 +223,146 @@ def convert_into_formula(S_a_init, S_g_init,
     return template.format(S_a_init=S_a_init or 'true', S_g_init=S_g_init or 'true',
                            S_a_trans=S_a_trans or 'true', S_g_trans=S_g_trans or 'true',
                            L_a_property=L_a_property or 'true', L_g_property=L_g_property or 'true')
+
+
+def assert_deterministic(L_a:Automaton):
+    for n in L_a.nodes:
+        for label, dst_set_list in n.transitions.items():
+            assert_equal(len(dst_set_list), 1)
+            dst_set = set(map(lambda node_flag: node_flag[0], dst_set_list[0]))
+            assert_equal(len(dst_set), 1, str(n) + '\n' + str(label) + '\n' + str(dst_set))
+
+
+def main_bfsj(spec_file_name:str,
+              is_moore,
+              dot_file_name,
+              bounds,
+              ltl2ucw_converter:LTL3BA,
+              underlying_solver):
+    """ :return: is realizable? """
+
+    input_signals, \
+    output_signals, \
+    S_a_init, S_a_trans, L_a_property, \
+    S_g_init, S_g_trans, L_g_property, \
+        = _parse_spec(spec_file_name)
+
+    assert input_signals or output_signals
+
+    signal_by_name = dict((s.name,s) for s in input_signals + output_signals)
+
+    template = '( ({S_a_init}) -> ({S_g_init}) )  &&  ' + \
+               weak_until(S_g_trans, '!(%s)' % S_a_trans)
+    safety_spec = template.format(S_a_init=S_a_init, S_g_init=S_g_init)
+
+    logger.info('the safety spec is:\n' + safety_spec)
+
+    safety_automaton = ltl2ucw_converter.convert_raw('!(%s)' % safety_spec, signal_by_name, 's_')
+    L_a = ltl2ucw_converter.convert_raw(L_a_property, signal_by_name, 'la_')
+    L_g = ltl2ucw_converter.convert_raw(L_g_property, signal_by_name, 'lg_')
+
+    assert_deterministic(L_a)
+    assert_deterministic(L_g)
+
+    # goal_converter = GoalConverter(config.GOAL)
+    # automaton = goal_converter.convert_to_nondeterministic('!(%s)' % spec, signal_by_name, 'spec_')
+
+    _log_automata1(safety_automaton)
+    _log_automata1(L_a)
+    _log_automata1(L_g)
+
+    # TODO: check others satisfy the pre of the encoder
+
+    model = bfsj_model_searcher.search(safety_automaton,
+                                       L_a, L_g,
+                                       not is_moore,
+                                       input_signals, output_signals,
+                                       bounds,
+                                       underlying_solver,
+                                       UFLIA(None))
+
+    is_realizable = model is not None
+
+    logger.info(['unrealizable', 'realizable'][is_realizable])
+
+    if is_realizable:
+        assert 0, 'implement outputting the result'
+        combined_model = combine_model(S_a, S_g, L_a, L_g, model, input_signals)
+
+        dot_model = lts_to_dot(model, [ARG_L_a_STATE, ARG_L_g_STATE, ARG_MODEL_STATE], not is_moore)
+
+        if not dot_file_name:
+            logger.info(dot_model)
+        else:
+            _write_out(dot_model, is_moore, 'dot', dot_file_name)
+
+    return is_realizable
+
+
+def main_symbolic_bfsj(spec_file_name:str,
+                       is_moore,
+                       dot_file_name,
+                       bounds,
+                       ltl2ucw_converter:LTL3BA,
+                       underlying_solver):
+    """ :return: is realizable? """
+
+    input_signals, \
+    output_signals, \
+    S_a_init, S_a_trans, L_a_property, \
+    S_g_init, S_g_trans, L_g_property, \
+        = _parse_spec(spec_file_name)
+
+    assert input_signals or output_signals
+
+    signal_by_name = dict((s.name,s) for s in input_signals + output_signals)
+
+    template = '( ({S_a_init}) -> ({S_g_init}) )  &&  ' + \
+               weak_until(S_g_trans, '!(%s)' % S_a_trans)
+    safety_spec = template.format(S_a_init=S_a_init, S_g_init=S_g_init)
+
+    logger.info('the safety spec is:\n' + safety_spec)
+
+    safety_automaton = ltl2ucw_converter.convert_raw('!(%s)' % safety_spec, signal_by_name, 's_')
+    L_a = ltl2ucw_converter.convert_raw(L_a_property, signal_by_name, 'la_')
+    L_g = ltl2ucw_converter.convert_raw(L_g_property, signal_by_name, 'lg_')
+
+    assert_deterministic(L_a)
+    assert_deterministic(L_g)
+
+    # goal_converter = GoalConverter(config.GOAL)
+    # automaton = goal_converter.convert_to_nondeterministic('!(%s)' % spec, signal_by_name, 'spec_')
+
+    _log_automata1(safety_automaton)
+    _log_automata1(L_a)
+    _log_automata1(L_g)
+
+    # TODO: check others satisfy the pre of the encoder
+
+    model = symbolic_bfsj_model_searcher.search(safety_automaton,
+                                                L_a, L_g,
+                                                not is_moore,
+                                                input_signals, output_signals,
+                                                bounds,
+                                                underlying_solver,
+                                                UFLIA(None))
+
+    is_realizable = model is not None
+
+    logger.info(['unrealizable', 'realizable'][is_realizable])
+
+    if is_realizable:
+        assert 0, 'implement outputting the result'
+        combined_model = combine_model(S_a, S_g, L_a, L_g, model, input_signals)
+
+        dot_model = lts_to_dot(model, [ARG_L_a_STATE, ARG_L_g_STATE, ARG_MODEL_STATE], not is_moore)
+
+        if not dot_file_name:
+            logger.info(dot_model)
+        else:
+            _write_out(dot_model, is_moore, 'dot', dot_file_name)
+
+    return is_realizable
 
 
 def main_original(spec_file_name:str,
@@ -304,7 +446,7 @@ if __name__ == "__main__":
                         help='keep temporary smt2 files')
     parser.add_argument('-v', '--verbose', action='count', default=0)
 
-    parser.add_argument('-e', '--encoding', choices=['original', 'all'],
+    parser.add_argument('-e', '--encoding', choices=['original', 'all', 'bfsj', 'symbolic_bfsj'],
                         default='original',
                         help='chose the encoding')
 
@@ -325,7 +467,11 @@ if __name__ == "__main__":
     bounds = list(range(1, args.bound + 1) if args.size == 0
                   else range(args.size, args.size + 1))
 
-    main_func = {'original':main_original, 'all':main_sa_sg_la_lg}[args.encoding]
+    main_func = {'original':main_original,
+                 'all':main_sa_sg_la_lg,
+                 'bfsj':main_bfsj,
+                 'symbolic_bfsj':main_symbolic_bfsj
+                 }[args.encoding]
 
     is_realizable = main_func(args.ltl,
                               args.moore, args.dot, bounds,

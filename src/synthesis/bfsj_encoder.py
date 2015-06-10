@@ -1,3 +1,4 @@
+from functools import lru_cache
 import logging
 from itertools import product
 import sys
@@ -8,15 +9,16 @@ from helpers.labels_map import LabelsMap
 from helpers.logging_helper import log_entrance
 from helpers.python_ext import lmap
 from interfaces.automata import Label, Automaton, LIVE_END, all_stimuli_that_satisfy, \
-    get_next_states, Node, DEAD_END
+    get_next_states, Node, DEAD_END, is_satisfied
 from interfaces.lts import LTS
 from interfaces.parser_expr import Signal
 from interfaces.solver_interface import SolverInterface
+from synthesis.assume_guarantee_encoder import assert_deterministic_transition
 from synthesis.func_description import FuncDescription
 from synthesis.funcs_args_types_names import TYPE_MODEL_STATE, ARG_MODEL_STATE, ARG_S_a_STATE, ARG_S_g_STATE, \
     ARG_L_a_STATE, ARG_L_g_STATE, TYPE_S_a_STATE, TYPE_S_g_STATE, TYPE_L_a_STATE, TYPE_L_g_STATE, FUNC_REACH, FUNC_R, \
-    smt_name_spec, smt_name_m, smt_name_free_arg, smt_arg_name_signal, smt_unname_if_signal, smt_unname_m, ARG_A_STATE, \
-    TYPE_A_STATE
+    smt_name_spec, smt_name_m, smt_name_free_arg, smt_arg_name_signal, smt_unname_if_signal, smt_unname_m, \
+    TYPE_A_STATE, TYPE_S_STATE, ARG_S_STATE
 from synthesis.rejecting_states_finder import build_state_to_rejecting_scc
 
 
@@ -37,31 +39,75 @@ def _build_signals_values(signals, label) -> (dict, list):
 
     return value_by_signal, free_values
 
+@lru_cache()
+def intersection2(label1, label2):
+    for var1, val1 in label1.items():
+        if var1 in label2 and val1 != label2[var1]:
+            return None
+    intersection_dict = dict(label1)
+    intersection_dict.update(label2)
+    return Label(intersection_dict)
 
-class OriginalEncoder:
+@lru_cache()
+def intersection3(label1, label2, label3):
+    l2_and_l3 = intersection2(label2, label3)
+    if l2_and_l3 is None:
+        return None
+
+    l1_and_l2_and_l3 = intersection2(label1, l2_and_l3)
+    return l1_and_l2_and_l3
+
+def generate_combinations(s_label, s:Node, l_a:Node, l_g:Node):
+    # for other nodes we cannot do the same, so check all possible combinations of next states
+
+    l_a_labels = tuple(filter(lambda l: intersection2(s_label, l) is not None, l_a.transitions.keys()))
+    l_g_labels = tuple(filter(lambda l: intersection2(s_label, l) is not None, l_g.transitions.keys()))
+
+    edges = list()  # (label, s_nexts, l_a_nexts, l_g_nexts)
+    for l_a_label, l_g_label in product(l_a_labels, l_g_labels):
+        s_la_lg_label = intersection3(s_label, l_a_label, l_g_label)
+
+        if s_la_lg_label is not None:
+            s_nexts = get_next_states(s, s_la_lg_label)
+            l_a_nexts = get_next_states(l_a, s_la_lg_label)
+            l_g_nexts = get_next_states(l_g, s_la_lg_label)
+            edges.append((s_la_lg_label, s_nexts, l_a_nexts, l_g_nexts))
+
+    return edges
+
+
+class BFSJEncoder:
     def __init__(self,
                  logic,
-                 automaton:Automaton,
-                 underlying_solver:SolverInterface,
+                 safety_automaton:Automaton,
+                 L_a:Automaton,
+                 L_g:Automaton,
+                 solver:SolverInterface,
                  tau_desc:FuncDescription,
                  inputs,
                  descr_by_output,
                  model_init_state:int):  # the automata alphabet is inputs+outputs
         self.logger = logging.getLogger(__name__)
 
-        self.solver = underlying_solver
+        self.solver = solver
         self.logic = logic
 
-        self.automaton = automaton
+        self.safety_automaton = safety_automaton
+        self.L_a = L_a
+        self.L_g = L_g
 
         self.inputs = inputs
         self.descr_by_output = descr_by_output
         self.tau_desc = tau_desc
 
-        reach_args = {ARG_A_STATE: TYPE_A_STATE,
+        reach_args = {ARG_S_STATE: TYPE_S_STATE,
+                      ARG_L_a_STATE: TYPE_L_a_STATE,
+                      ARG_L_g_STATE: TYPE_L_g_STATE,
                       ARG_MODEL_STATE: TYPE_MODEL_STATE}
 
-        r_args = reach_args
+        r_args = {ARG_L_a_STATE: TYPE_L_a_STATE,
+                  ARG_L_g_STATE: TYPE_L_g_STATE,
+                  ARG_MODEL_STATE: TYPE_MODEL_STATE}
 
         self.reach_func_desc = FuncDescription(FUNC_REACH, reach_args, 'Bool', None)
         self.r_func_desc = FuncDescription(FUNC_R, r_args,
@@ -73,10 +119,10 @@ class OriginalEncoder:
 
         self.last_allowed_states = None
 
-    def _smt_out(self, label:Label, smt_m:str, q:Node) -> str:
+    def _smt_out(self, label:Label, smt_m:str, l_a, l_g) -> str:
         conjuncts = []
 
-        args_dict = self._build_args_dict(smt_m, label, q)
+        args_dict = self._build_args_dict(smt_m, label, None, l_a, l_g)
 
         for sig, val in label.items():
             if sig not in self.descr_by_output:
@@ -98,11 +144,17 @@ class OriginalEncoder:
         _, free_args = _build_signals_values(self.inputs, i_o)
         return free_args
 
-    def _build_args_dict(self, smt_m:str, i_o, q:Node) -> dict:
+    @lru_cache()
+    def _build_args_dict(self, smt_m:str, i_o:Label or None, s:Node or None, l_a, l_g) -> dict:
         args_dict = dict()
         args_dict[ARG_MODEL_STATE] = smt_m
 
-        args_dict[ARG_A_STATE] = smt_name_spec(q, TYPE_A_STATE)
+        if s:
+            args_dict[ARG_S_STATE] = smt_name_spec(s, TYPE_S_STATE)
+        if l_a:
+            args_dict[ARG_L_a_STATE] = smt_name_spec(l_a, TYPE_L_a_STATE)
+        if l_g:
+            args_dict[ARG_L_g_STATE] = smt_name_spec(l_g, TYPE_L_g_STATE)
 
         if i_o is None:
             return args_dict
@@ -125,8 +177,12 @@ class OriginalEncoder:
         self._define_declare_functions(self.descr_by_output.values())
 
     def _encode_automata_functions(self):
-        self.solver.declare_enum(TYPE_A_STATE,
-                                 map(lambda n: smt_name_spec(n, TYPE_A_STATE), self.automaton.nodes))
+        self.solver.declare_enum(TYPE_S_STATE,
+                                 map(lambda n: smt_name_spec(n, TYPE_S_STATE), self.safety_automaton.nodes))
+        self.solver.declare_enum(TYPE_L_a_STATE,
+                                 map(lambda n: smt_name_spec(n, TYPE_L_a_STATE), self.L_a.nodes))
+        self.solver.declare_enum(TYPE_L_g_STATE,
+                                 map(lambda n: smt_name_spec(n, TYPE_L_g_STATE), self.L_g.nodes))
 
     def _encode_counters(self):
         self.solver.declare_fun(self.reach_func_desc)
@@ -136,113 +192,104 @@ class OriginalEncoder:
 
     ## encoding rules
     def encode_initialization(self):
-        for q, m in product(self.automaton.initial_nodes, [self.model_init_state]):
-            vals_by_vars = self._build_args_dict(smt_name_m(m), None, q)
+        for s, l_a, l_g, m in product(self.safety_automaton.initial_nodes,
+                            self.L_a.initial_nodes,
+                            self.L_g.initial_nodes,
+                            [self.model_init_state]):
+            vals_by_vars = self._build_args_dict(smt_name_m(m), None, s, l_a, l_g)
 
             self.solver.assert_(
                 self.solver.call_func(
                     self.reach_func_desc, vals_by_vars))
 
-    def encode_run_graph(self, states_to_encode):
-        # state_to_rejecting_scc = build_state_to_rejecting_scc(impl.automaton)  # TODO: Does it help?
+    # def encode_run_graph(self, states_to_encode):
+    #     # state_to_rejecting_scc = build_state_to_rejecting_scc(self.automaton)
+    #
+    #     for q in self.safety_automaton.nodes:
+    #         for m in states_to_encode:
+    #             for label, dst_set_list in q.transitions.items():
+    #                 self._encode_transitions(q, m, label)
+    #
+    #         self.solver.comment('encoded spec state ' + smt_name_spec(q, TYPE_A_STATE))
 
+    def encode_run_graph(self, states_to_encode):
+        """
+        pre:
+        - L_a, L_g are deterministic and total (=1 transition for each io)
+        """
         # One option is to encode automata directly into SMT and have a query like:
+        # (assuming the automata are deterministic)
         #
-        # forall (s_a, s_a'), (s_g, s_g'), (l_a, l_a'), (l_g, l_g'), (m, m'), i_o:
-        # (s_a, i_o, s_a') \in edge(S_a) &
-        # (s_g, i_o, s_g') \in edge(S_g) &
-        # (l_a, i_o, l_a') \in edge(L_a) &
-        # (l_g, i_o, l_g') \in edge(L_g) &
-        # (tau(m,i) = m') & out(m,i,other_args) = o &
+        # forall s_a, s_g, l_a, l_g, m, i:
+        # s_a'(out(m,i,other_args),..) is accepting &
         # reach(s_a,s_g,l_a,l_g,m)
         # ->
-        # reach(s_a',s_g',l_a',l_g',m') & r(...) >< r(...)
+        # reach(s_a'(..), s_g'(..), l_a'(..), l_g'(..), m'(..)) & r(...) >< r(...)
         #
-        # This requires Z3 to optimize a lot
-        # (e.g., to understand that only valid automata transitions should be considered)
+        # It seems that this requires Z3 to optimize a lot ????
         # But the plus is that the query is _very_ compact.
-        # I don't know if Z3 capable of doing such optimization.
-        #
-        # Thus, instead we will construct a query like:
-        #
-        # forall s_a, s_g, l_a, l_g, m, (i_o,s_a') in edges(s_a):
-        # out(..) = o &
-        # reach(s_a,..,m)
-        # ->
-        # reach(..) & r(..) >< r(..)
-        #
-        # We will explicitly enumerate all i_o for a given label (of the edge),
-        # and compute s_g', l_a', l_g' depending on i_o.
-        # We will handle the special case when s_g' is the rejecting state.
 
-        state_to_rejecting_scc = build_state_to_rejecting_scc(self.automaton)
+        for s, l_a, l_g, m in product(self.safety_automaton.nodes,
+                                      self.L_a.nodes,
+                                      self.L_g.nodes,
+                                      states_to_encode):
 
-        for q in self.automaton.nodes:
-            for m in states_to_encode:
-                for label, dst_set_list in q.transitions.items():
-                    self._encode_transitions(q, m, label,
-                                             state_to_rejecting_scc)
+            self.solver.comment('encoding state: ' + str((s, l_a, l_g, m)) + '...')
 
-            self.solver.comment('encoded spec state ' + smt_name_spec(q, TYPE_A_STATE))
+            for label, _ in s.transitions.items():
+                for i_o, s_nexts, l_a_nexts, l_g_nexts in generate_combinations(label, s, l_a, l_g):
+                    assert_deterministic_transition(None, None, l_a, l_g, i_o)
 
-    def _get_greater_op(self, q, is_rejecting,
-                        q_next,
-                        state_to_rejecting_scc):
-        crt_rejecting_scc = state_to_rejecting_scc.get(q, None)
-        next_rejecting_scc = state_to_rejecting_scc.get(q_next, None)
+                    for s_n, l_a_n, l_g_n in product(s_nexts, l_a_nexts, l_g_nexts):
+                        self._encode_transitions(s, l_a, l_g, m,
+                                                 i_o,
+                                                 s_n, l_a_n, l_g_n)
 
-        if crt_rejecting_scc is not next_rejecting_scc:
-            return None
-        if crt_rejecting_scc is None:
-            return None
-        if next_rejecting_scc is None:
-            return None
+            self.logger.debug('encoded:' + str(s.name) + '\n' + str(l_a.name) + '\n' + str(l_g.name))
 
-        return [self.solver.op_ge, self.solver.op_gt][is_rejecting]
+            self.solver.comment('encoded the state!')
 
     def _encode_transitions(self,
-                            q:Node,
-                            m,
+                            s, l_a, l_g, m:int,
                             i_o:Label,
-                            state_to_rejecting_scc:dict):
+                            s_n, l_a_n, l_g_n):
+
         # syntax sugar
         smt_r = lambda args: self.solver.call_func(self.r_func_desc, args)
         smt_reach = lambda args: self.solver.call_func(self.reach_func_desc, args)
         #
 
         smt_m = smt_name_m(m)
+        smt_out = self._smt_out(i_o, smt_m, l_a, l_g)
 
-        args_dict = self._build_args_dict(smt_m, i_o, q)
+        args_dict = self._build_args_dict(smt_m, i_o, s, l_a, l_g)
         free_input_args = self._get_free_input_args(i_o)
 
-        smt_out = self._smt_out(i_o, smt_m, q)
         smt_pre = self.solver.op_and([smt_reach(args_dict), smt_out])
 
-        #
-        dst_set_list = q.transitions[i_o]
-        assert len(dst_set_list) == 1, 'nondetermenistic transitions are not supported' + \
-                                       str(dst_set_list) + '\n from ' + str(q) + \
-                                       '\nwith io:' + str(i_o)
-        dst_set = dst_set_list[0]
+        # the case of next safety state is bad
+        if s_n is DEAD_END or 'accept_all' in s_n.name or s_n in self.safety_automaton.acc_nodes:  # TODO: hm, weird hack
+            self.solver.assert_(
+                self.solver.forall_bool(free_input_args,
+                                        self.solver.op_not(smt_pre)))
+            return
 
-        #
+        # the case of next safety state is 'normal'
         smt_m_next = self.solver.call_func(self.tau_desc, args_dict)
 
         smt_post_conjuncts = []
-        for q_next, is_rejecting in dst_set:
-            if q_next is DEAD_END or 'accept_all' in q_next.name:  # TODO: hack
-                smt_post_conjuncts = [self.solver.false()]
-                break
 
-            args_dict_next = self._build_args_dict(smt_m_next, None, q_next)
+        args_dict_next = self._build_args_dict(smt_m_next, None, s_n, l_a_n, l_g_n)
+        smt_post_conjuncts.append(smt_reach(args_dict_next))
 
-            smt_post_conjuncts.append(smt_reach(args_dict_next))
+        if l_g_n not in self.L_g.acc_nodes:
+            if l_a_n in self.L_a.acc_nodes:
+                op = self.solver.op_gt
+            else:
+                op = self.solver.op_ge
 
-            greater_op = self._get_greater_op(q, is_rejecting, q_next, state_to_rejecting_scc)
-
-            if greater_op is not None:
-                smt_post_conjuncts.append(greater_op(smt_r(args_dict_next),
-                                                     smt_r(args_dict)))
+            smt_post_conjuncts.append(op(smt_r(args_dict_next),
+                                         smt_r(args_dict)))
 
         smt_post = self.solver.op_and(smt_post_conjuncts)
         pre_implies_post = self.solver.op_implies(smt_pre, smt_post)
@@ -323,8 +370,10 @@ class OriginalEncoder:
 
         def get_values(t):
             return {          'Bool': ('true', 'false'),
-                    TYPE_MODEL_STATE: [smt_name_m(m) for m in self.last_allowed_states],
-                        TYPE_A_STATE: [smt_name_spec(s, TYPE_A_STATE) for s in self.automaton.nodes]
+                        TYPE_S_STATE: [smt_name_spec(s, TYPE_S_STATE) for s in self.safety_automaton.nodes],
+                        TYPE_L_a_STATE: [smt_name_spec(s, TYPE_L_a_STATE) for s in self.L_a.nodes],
+                        TYPE_L_g_STATE: [smt_name_spec(s, TYPE_L_g_STATE) for s in self.L_g.nodes],
+                              TYPE_MODEL_STATE: [smt_name_m(m) for m in self.last_allowed_states]
                    }[t]
         records = product(*[get_values(t) for (_,t) in arg_type_pairs])
 
@@ -386,8 +435,12 @@ class OriginalEncoder:
     def _parse_value(self, str_v):
         if not hasattr(self, 'node_by_smt_value'):  # aka static method of the field
             self.node_by_smt_value = dict()
-            self.node_by_smt_value.update((smt_name_spec(s, TYPE_A_STATE), s)
-                                         for s in self.automaton.nodes)
+            self.node_by_smt_value.update((smt_name_spec(s, TYPE_S_STATE), s)
+                                          for s in self.safety_automaton.nodes)
+            self.node_by_smt_value.update((smt_name_spec(s, TYPE_L_a_STATE), s)
+                                          for s in self.L_a.nodes)
+            self.node_by_smt_value.update((smt_name_spec(s, TYPE_L_g_STATE), s)
+                                          for s in self.L_g.nodes)
 
         if str_v in self.node_by_smt_value:
             return self.node_by_smt_value[str_v]

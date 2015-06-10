@@ -108,9 +108,25 @@ LIVE_END.add_transition(Label({}), {(LIVE_END, False)})
 
 
 # ------------------------------ HELPER FUNCTIONS -------------------------
-@lru_cache()
 def is_satisfied(label, signal_values):
-    """ Do signal values satisfy the label? """
+    """
+    Do signal values satisfy the label?
+
+    >>> is_satisfied({'r':True}, dict())
+    True
+
+    >>> is_satisfied(dict(), {'r':True})
+    True
+
+    >>> is_satisfied({'r':True}, {'r':True, 'g':False})
+    True
+
+    >>> is_satisfied({'r':True, 'g':False}, {'g':False})
+    True
+
+    >>> is_satisfied({'g':False}, {'r':True})
+    True
+    """
 
     for var, val in signal_values.items():
         if var not in label:
