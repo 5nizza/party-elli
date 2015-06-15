@@ -52,12 +52,12 @@ class GoalConverter:
         goal_script = """
 $res = "{ltl_formula}";
 $res = translate -sf -m ltl2ba $res;
-$res = simplify $res;
+$res = simplify -m fair -dse -ds -rse -rs -ru -rd $res;
 $res = determinization -m bk09 $res;
 acc -min $res;
 save $res {output_file_name};
 """.format(ltl_formula=ltl_formula, output_file_name=output_file_name)
-        # TODOopt: simplify -m fair -dse -ds -rse -rs -ru -rd $res;
+        # $res = simplify $res;
 
         self._execute_goal_script(goal_script)
         gff_xml = readfile(output_file_name)
@@ -77,13 +77,13 @@ save $res {output_file_name};
         goal_script = """
 $res = "{ltl_formula}";
 $res = translate -sf -m ltl2ba $res;
-$res = simplify $res;
+$res = simplify -m fair -dse -ds -rse -rs -ru -rd $res;
 $res = determinization -m bk09 $res;
 $res = simplify -rd $res;
 acc -max $res;
 save $res {output_file_name};
 """.format(ltl_formula=ltl_formula, output_file_name=output_file_name)
-        # TODOopt: simplify -m fair -dse -ds -rse -rs -ru -rd $res;
+        # $res = simplify $res;
 
         self._execute_goal_script(goal_script)
         gff_xml = readfile(output_file_name)
@@ -103,10 +103,10 @@ save $res {output_file_name};
         goal_script = """
 $res = "{ltl_formula}";
 $res = translate -sf -m ltl2ba $res;
-$res = simplify -rd $res;
+$res = simplify -m fair -dse -ds -rse -rs -ru -rd $res;
 save $res {output_file_name};
 """.format(ltl_formula=ltl_formula, output_file_name=output_file_name)
-        # TODOopt: simplify -m fair -dse -ds -rse -rs -ru -rd $res;
+        # $res = simplify -rd $res;
 
         self._execute_goal_script(goal_script)
         gff_xml = readfile(output_file_name)

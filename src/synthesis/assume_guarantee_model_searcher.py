@@ -52,7 +52,8 @@ def search(S_a:Automaton,
            is_mealy,
            input_signals, output_signals,
            sizes,
-           underlying_solver:SolverInterface, logic) -> LTS:
+           underlying_solver:SolverInterface,
+           logic) -> LTS:
     logger = logging.getLogger()
 
     outputs_descs = dict((o,_get_output_desc(o, is_mealy, input_signals))
@@ -67,24 +68,17 @@ def search(S_a:Automaton,
                                              outputs_descs,
                                              0)
 
-    max_model_states = list(range(sizes[-1]))
-    encoding_solver.encode_headers(max_model_states)
-
-    encoding_solver.encode_initialization()
-
-    last_size = 0
     for size in sizes:
         logger.info('searching a model of size {0}..'.format(size))
 
         cur_all_states = range(size)
-        new_states = cur_all_states[last_size:]
-        last_size = size
-
-        encoding_solver.encode_run_graph(new_states)
 
         encoding_solver.push()
 
-        encoding_solver.encode_model_bound(cur_all_states)
+        encoding_solver.encode_headers(cur_all_states)
+        encoding_solver.encode_initialization()
+        encoding_solver.encode_run_graph(cur_all_states)
+        # encoding_solver.encode_model_bound(cur_all_states)
 
         model = encoding_solver.solve()
         if model:

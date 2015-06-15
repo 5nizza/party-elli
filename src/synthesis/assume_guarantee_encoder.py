@@ -1,6 +1,7 @@
 import logging
 from itertools import product
 import sys
+from math import floor
 from nose.tools import assert_equal
 from helpers.console_helpers import print_green, print_red
 
@@ -172,6 +173,7 @@ class AssumeGuaranteeEncoder:
                 self.solver.call_func(
                     self.reach_func_desc, vals_by_vars))
 
+    @log_entrance(logging.getLogger(), logging.INFO)
     def encode_run_graph(self, states_to_encode):
         """
         pre:
@@ -179,44 +181,19 @@ class AssumeGuaranteeEncoder:
         - all states of S_a are accepting
         - S_g, L_a, L_g are total (=1 transition for each io)
         """
-        # state_to_rejecting_scc = build_state_to_rejecting_scc(impl.automaton)  # TODO: Does it help?
-
-        # One option is to encode automata directly into SMT and have a query like:
-        #
-        # forall (s_a, s_a'), (s_g, s_g'), (l_a, l_a'), (l_g, l_g'), (m, m'), i_o:
-        # (s_a, i_o, s_a') \in edge(S_a) &
-        # (s_g, i_o, s_g') \in edge(S_g) &
-        # (l_a, i_o, l_a') \in edge(L_a) &
-        # (l_g, i_o, l_g') \in edge(L_g) &
-        # (tau(m,i) = m') & out(m,i,other_args) = o &
-        # reach(s_a,s_g,l_a,l_g,m)
-        # ->
-        # reach(s_a',s_g',l_a',l_g',m') & r(...) >< r(...)
-        #
-        # This requires Z3 to optimize a lot
-        # (e.g., to understand that only valid automata transitions should be considered)
-        # But the plus is that the query is _very_ compact.
-        # I don't know if Z3 capable of doing such optimization.
-        #
-        # Thus, instead we will construct a query like:
-        #
-        # forall s_a, s_g, l_a, l_g, m, (i_o,s_a') in edges(s_a):
-        # out(..) = o &
-        # reach(s_a,..,m)
-        # ->
-        # reach(..) & r(..) >< r(..)
-        #
-        # We will explicitly enumerate all i_o for a given label (of the edge),
-        # and compute s_g', l_a', l_g' depending on i_o.
-        # We will handle the special case when s_g' is the rejecting state.
+        self.last_allowed_states = states_to_encode   # TODO: temporal hack
+                                                      # (do not want to introduce the bound on possible model states)
 
         automata_alphabet = tuple(self.inputs) + tuple(self.descr_by_output.keys())
 
+        total = len(self.S_a.nodes) * len(self.S_g.nodes) * len(self.L_a.nodes) * len(self.L_g.nodes) * len(states_to_encode)
+        i = 0
         for s_a, s_g, l_a, l_g, m in product(self.S_a.nodes or [LIVE_END],
                                              self.S_g.nodes or [LIVE_END],
                                              self.L_a.nodes or [LIVE_END],
                                              self.L_g.nodes or [LIVE_END],
                                              states_to_encode):
+            i += 1
 
             self.solver.comment('encoding state: ' + str((s_a, s_g, l_a, l_g, m)) + '...')
 
@@ -239,6 +216,8 @@ class AssumeGuaranteeEncoder:
                     self._encode_transitions(s_a, s_g, l_a, l_g, m,
                                              i_o,
                                              s_a_n, s_g_n, l_a_n, l_g_n)
+            if i % 100 == 0:
+                self.logger.debug('encoded ' + str(floor(i*100/total)) + "%")
 
             self.solver.comment('encoded the state!')
 

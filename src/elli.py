@@ -11,6 +11,7 @@ from nose.tools import assert_equal
 from automata_translations.goal_converter import GoalConverter
 import config
 from helpers import automata_helper
+from helpers.automata_helper import to_dot
 from helpers.labels_map import LabelsMap
 from helpers.main_helper import setup_logging, create_spec_converter_z3, remove_files_prefixed
 from interfaces.automata import Automaton, all_stimuli_that_satisfy, LABEL_TRUE, get_next_states, Label, is_satisfied
@@ -159,35 +160,45 @@ def main_sa_sg_la_lg(spec_file_name:str,
                      dot_file_name,
                      bounds,
                      ltl2ucw_converter:LTL3BA,
-                     underlying_solver):
+                     underlying_solver,
+                     encoding):
     """ :return: is realizable? """
 
     input_signals, \
     output_signals, \
-    S_a_property, S_g_property, L_a_property, L_g_property \
+    S_a_init, S_a_trans, L_a_property, \
+    S_g_init, S_g_trans, L_g_property, \
         = _parse_spec(spec_file_name)
 
     assert input_signals or output_signals
 
     signal_by_name = dict((s.name,s) for s in input_signals + output_signals)
 
-    # S_a = ltl2ucw_converter.convert_raw(S_a_property, signal_by_name, 'sa_')
     # S_g = ltl2ucw_converter.convert_raw('!(%s)' % S_g_property, signal_by_name, 'sg_')
     # L_a = ltl2ucw_converter.convert_raw(L_a_property, signal_by_name, 'la_')
     # L_g = ltl2ucw_converter.convert_raw(L_g_property, signal_by_name, 'lg_')
 
     # TODO: GOAL does not look to produce efficient automata representations
-    # in particularly it does not squash transitions (?)
-    assert 0, 'account that G in specs disappeared!'
+    #       in particularly it does not squash transitions (?)
+
+    S_a_spec = '(%s) && (G (%s))' % (S_a_init, S_a_trans)
+    S_g_spec = '(%s) && (G (%s))' % (S_g_init, S_g_trans)
+
     goal_converter = GoalConverter(config.GOAL)
-    S_a = goal_converter.convert_to_deterministic_maxacc(S_a_property, signal_by_name, 'sa_')
-    S_g = goal_converter.convert_to_deterministic_total_minacc('!(%s)' % S_g_property, signal_by_name, 'sg_')
+    S_a = goal_converter.convert_to_deterministic_maxacc(S_a_spec, signal_by_name, 'sa_')
+    assert_equal(S_a.acc_nodes, S_a.nodes, 'all states must be accepting')
+
+    # S_a = ltl2ucw_converter.convert_raw(S_a_spec, signal_by_name, 'sa_')
+    # the ltl3ba seems to produce the same automaton
+    # TODOopt: optimization: both tools produce several edges with the same (src,dst):
+    #          hence, try to optimize several edges into into with a boolean expression over the label
+
+    S_g = goal_converter.convert_to_deterministic_total_minacc('!(%s)' % S_g_spec, signal_by_name, 'sg_')
     L_a = goal_converter.convert_to_deterministic_total_minacc(L_a_property, signal_by_name, 'la_')
     L_g = goal_converter.convert_to_deterministic_total_minacc(L_g_property, signal_by_name, 'lg_')
 
     _log_automata4(S_a, S_g, L_a, L_g)
 
-    assert_equal(S_a.acc_nodes, S_a.nodes, 'all states must be accepting')
     # TODO: check others satisfy the pre of the encoder
 
     _log_automata4(S_a, S_g, L_a, L_g)
