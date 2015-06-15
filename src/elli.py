@@ -17,13 +17,21 @@ from interfaces.automata import Automaton, all_stimuli_that_satisfy, LABEL_TRUE,
 from interfaces.lts import LTS
 from interfaces.parser_expr import Signal
 from module_generation.dot import lts_to_dot
-from synthesis import original_model_searcher, bfsj_model_searcher, symbolic_bfsj_model_searcher
+from synthesis import original_model_searcher, bfsj_model_searcher
 from synthesis.assume_guarantee_encoder import assert_deterministic_transition
 from synthesis.assume_guarantee_model_searcher import search
+from synthesis.bfsj_encoder import BFSJEncoder
+from synthesis.bfsj_symbolic_encoder import BFSJSymbolicEncoder
+from synthesis.bfsj_symbolic_forall_encoder import BFSJSymbolicForallEncoder
 from synthesis.funcs_args_types_names import ARG_S_a_STATE, ARG_S_g_STATE, ARG_L_a_STATE, ARG_L_g_STATE, \
     ARG_MODEL_STATE
 from synthesis.smt_logic import UFLIA
 from automata_translations.ltl2automaton import LTL3BA
+
+
+BFSJ = 'bfsj'
+BFSJ_SYMBOLIC = 'bfsj_symbolic'
+BFSJ_SYMBOLIC_FORALL = 'bfsj_symbolic_forall'
 
 
 def _write_out(model, is_moore, file_type, file_name):
@@ -238,7 +246,8 @@ def main_bfsj(spec_file_name:str,
               dot_file_name,
               bounds,
               ltl2ucw_converter:LTL3BA,
-              underlying_solver):
+              underlying_solver,
+              encoding:str):
     """ :return: is realizable? """
 
     input_signals, \
@@ -272,6 +281,11 @@ def main_bfsj(spec_file_name:str,
     _log_automata1(L_g)
 
     # TODO: check others satisfy the pre of the encoder
+
+    encoder_class = {BFSJ:BFSJEncoder,
+                     BFSJ_SYMBOLIC:BFSJSymbolicEncoder,
+                     BFSJ_SYMBOLIC_FORALL:BFSJSymbolicForallEncoder} \
+                    [encoding]
 
     model = bfsj_model_searcher.search(safety_automaton,
                                        L_a, L_g,
@@ -279,88 +293,15 @@ def main_bfsj(spec_file_name:str,
                                        input_signals, output_signals,
                                        bounds,
                                        underlying_solver,
-                                       UFLIA(None))
+                                       UFLIA(None),
+                                       encoder_class)
 
     is_realizable = model is not None
 
     logger.info(['unrealizable', 'realizable'][is_realizable])
 
     if is_realizable:
-        assert 0, 'implement outputting the result'
-        combined_model = combine_model(S_a, S_g, L_a, L_g, model, input_signals)
-
-        dot_model = lts_to_dot(model, [ARG_L_a_STATE, ARG_L_g_STATE, ARG_MODEL_STATE], not is_moore)
-
-        if not dot_file_name:
-            logger.info(dot_model)
-        else:
-            _write_out(dot_model, is_moore, 'dot', dot_file_name)
-
-    return is_realizable
-
-
-def main_symbolic_bfsj(spec_file_name:str,
-                       is_moore,
-                       dot_file_name,
-                       bounds,
-                       ltl2ucw_converter:LTL3BA,
-                       underlying_solver):
-    """ :return: is realizable? """
-
-    input_signals, \
-    output_signals, \
-    S_a_init, S_a_trans, L_a_property, \
-    S_g_init, S_g_trans, L_g_property, \
-        = _parse_spec(spec_file_name)
-
-    assert input_signals or output_signals
-
-    signal_by_name = dict((s.name,s) for s in input_signals + output_signals)
-
-    template = '( ({S_a_init}) -> ({S_g_init}) )  &&  ' + \
-               weak_until(S_g_trans, '!(%s)' % S_a_trans)
-    safety_spec = template.format(S_a_init=S_a_init, S_g_init=S_g_init)
-
-    logger.info('the safety spec is:\n' + safety_spec)
-
-    safety_automaton = ltl2ucw_converter.convert_raw('!(%s)' % safety_spec, signal_by_name, 's_')
-    L_a = ltl2ucw_converter.convert_raw(L_a_property, signal_by_name, 'la_')
-    L_g = ltl2ucw_converter.convert_raw(L_g_property, signal_by_name, 'lg_')
-
-    assert_deterministic(L_a)
-    assert_deterministic(L_g)
-
-    # goal_converter = GoalConverter(config.GOAL)
-    # automaton = goal_converter.convert_to_nondeterministic('!(%s)' % spec, signal_by_name, 'spec_')
-
-    _log_automata1(safety_automaton)
-    _log_automata1(L_a)
-    _log_automata1(L_g)
-
-    # TODO: check others satisfy the pre of the encoder
-
-    model = symbolic_bfsj_model_searcher.search(safety_automaton,
-                                                L_a, L_g,
-                                                not is_moore,
-                                                input_signals, output_signals,
-                                                bounds,
-                                                underlying_solver,
-                                                UFLIA(None))
-
-    is_realizable = model is not None
-
-    logger.info(['unrealizable', 'realizable'][is_realizable])
-
-    if is_realizable:
-        assert 0, 'implement outputting the result'
-        combined_model = combine_model(S_a, S_g, L_a, L_g, model, input_signals)
-
-        dot_model = lts_to_dot(model, [ARG_L_a_STATE, ARG_L_g_STATE, ARG_MODEL_STATE], not is_moore)
-
-        if not dot_file_name:
-            logger.info(dot_model)
-        else:
-            _write_out(dot_model, is_moore, 'dot', dot_file_name)
+        logger.warn('implement outputting the result')
 
     return is_realizable
 
@@ -370,7 +311,8 @@ def main_original(spec_file_name:str,
                   dot_file_name,
                   bounds,
                   ltl2ucw_converter:LTL3BA,
-                  underlying_solver):
+                  underlying_solver,
+                  encoding):
     """ :return: is realizable? """
 
     input_signals, \
@@ -446,7 +388,12 @@ if __name__ == "__main__":
                         help='keep temporary smt2 files')
     parser.add_argument('-v', '--verbose', action='count', default=0)
 
-    parser.add_argument('-e', '--encoding', choices=['original', 'all', 'bfsj', 'symbolic_bfsj'],
+    parser.add_argument('-e', '--encoding', choices=['original',
+                                                     'all',
+                                                     BFSJ,
+                                                     BFSJ_SYMBOLIC,
+                                                     BFSJ_SYMBOLIC_FORALL,
+                                                     ],
                         default='original',
                         help='chose the encoding')
 
@@ -469,14 +416,16 @@ if __name__ == "__main__":
 
     main_func = {'original':main_original,
                  'all':main_sa_sg_la_lg,
-                 'bfsj':main_bfsj,
-                 'symbolic_bfsj':main_symbolic_bfsj
+                 BFSJ:main_bfsj,
+                 BFSJ_SYMBOLIC:main_bfsj,
+                 BFSJ_SYMBOLIC_FORALL:main_bfsj,
                  }[args.encoding]
 
     is_realizable = main_func(args.ltl,
                               args.moore, args.dot, bounds,
                               ltl2ucw_converter,
-                              solver_factory.create())
+                              solver_factory.create(),
+                              args.encoding)
 
     if not args.tmp:
         remove_files_prefixed(smt_files_prefix.split('/')[-1])

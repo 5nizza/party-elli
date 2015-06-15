@@ -5,11 +5,9 @@ from interfaces.automata import Automaton
 from interfaces.lts import LTS
 from interfaces.parser_expr import Signal
 from interfaces.solver_interface import SolverInterface
-from synthesis.bfsj_encoder import BFSJEncoder
 from synthesis.func_description import FuncDescription
 from synthesis.funcs_args_types_names import FUNC_MODEL_TRANS, \
     TYPE_MODEL_STATE, ARG_MODEL_STATE, smt_arg_name_signal, ARG_L_a_STATE, ARG_L_g_STATE, TYPE_L_a_STATE, TYPE_L_g_STATE
-from synthesis.original_encoder import OriginalEncoder
 
 
 def _get_output_desc(output:Signal, is_mealy, inputs):
@@ -44,41 +42,38 @@ def search(safety_automaton:Automaton,
            is_mealy,
            input_signals, output_signals,
            sizes,
-           underlying_solver:SolverInterface, logic) -> LTS:
+           underlying_solver:SolverInterface,
+           logic,
+           encoder_class) -> LTS:
     logger = logging.getLogger()
+
+    logger.info('using encoder: ' + str(encoder_class))
 
     outputs_descs = dict((o,_get_output_desc(o, is_mealy, input_signals))
                          for o in output_signals)
     tau_desc = _get_tau_desc(input_signals)
 
-    encoding_solver = BFSJEncoder(logic,
-                                  safety_automaton,
-                                  L_a,
-                                  L_g,
-                                  underlying_solver,
-                                  tau_desc,
-                                  input_signals,
-                                  outputs_descs,
-                                  0)
+    encoding_solver = encoder_class(logic,
+                                    safety_automaton,
+                                    L_a,
+                                    L_g,
+                                    underlying_solver,
+                                    tau_desc,
+                                    input_signals,
+                                    outputs_descs,
+                                    0)
 
-    max_model_states = list(range(sizes[-1]))
-    encoding_solver.encode_headers(max_model_states)
-
-    encoding_solver.encode_initialization()
-
-    last_size = 0
     for size in sizes:
         logger.info('searching a model of size {0}..'.format(size))
 
-        cur_all_states = range(size)
-        new_states = cur_all_states[last_size:]
-        last_size = size
-
-        encoding_solver.encode_run_graph(new_states)
+        cur_all_states = list(range(size))
 
         encoding_solver.push()
 
-        encoding_solver.encode_model_bound(cur_all_states)
+        encoding_solver.encode_headers(cur_all_states)
+        encoding_solver.encode_initialization()
+        encoding_solver.encode_run_graph(cur_all_states)
+        # encoding_solver.encode_model_bound(cur_all_states)
 
         model = encoding_solver.solve()
         if model:

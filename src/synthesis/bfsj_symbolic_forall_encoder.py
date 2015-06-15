@@ -162,7 +162,7 @@ def build_smt_for_automaton_trans(automaton:Automaton, alphabet,
     return automaton_func
 
 
-class SymbolicAutomataEncoder:
+class BFSJSymbolicForallEncoder:
     def __init__(self,
                  logic,
                  safety_automaton:Automaton,
@@ -321,56 +321,53 @@ class SymbolicAutomataEncoder:
     #
     #         self.solver.comment('encoded spec state ' + smt_name_spec(q, TYPE_A_STATE))
 
+    @log_entrance(logging.getLogger(), logging.INFO)
     def encode_run_graph(self, states_to_encode):
         """
         pre:
         - L_a, L_g are deterministic and total (=1 transition for each io)
         """
-        # One option is to encode automata directly into SMT and have a query like:
-        # (assuming the automata are deterministic)
-        #
-        # forall s_a, s_g, l_a, l_g, m, i:
-        # s_a'(out(m,i,other_args),..) is accepting &
-        # reach(s_a,s_g,l_a,l_g,m)
-        # ->
-        # reach(s_a'(..), s_g'(..), l_a'(..), l_g'(..), m'(..)) & r(...) >< r(...)
-        #
-        # It seems that this requires Z3 to optimize a lot ????
-        # But the plus is that the query is _very_ compact.
+        self.last_allowed_states = states_to_encode  # TODO: quick hack
 
-        # TODO: also try `forall l_a,l_g` version
-        for s, l_a, l_g, m in product(self.safety_automaton.nodes,
-                                      self.L_a.nodes,
-                                      self.L_g.nodes,
-                                      states_to_encode):
+        smt_l_a = smt_name_free_arg(ARG_L_a_STATE)
+        smt_l_g = smt_name_free_arg(ARG_L_g_STATE)
+        smt_m = smt_name_free_arg(ARG_MODEL_STATE)
+        free_arg_type_pairs = ((smt_l_a, TYPE_L_a_STATE),
+                               (smt_l_g, TYPE_L_g_STATE),
+                               (smt_m, TYPE_MODEL_STATE))
 
-            self.solver.comment('encoding state: ' + str((s, l_a, l_g, m)) + '...')
+        for s, m in product(self.safety_automaton.nodes,
+                            states_to_encode):
+
+            self.solver.comment('encoding state: ' + str((s, smt_l_a, smt_l_g, m)) + '...')
 
             for label, dst_set_list in s.transitions.items():
                 assert len(dst_set_list) == 1
                 s_nexts = tuple(map(lambda node_flag: node_flag[0], dst_set_list[0]))
 
                 for s_n in s_nexts:
-                    self._encode_transitions(s, l_a, l_g, m,
+                    self._encode_transitions(s, smt_l_a, smt_l_g,
+                                             smt_m,
                                              label,
-                                             s_n)
+                                             s_n,
+                                             free_arg_type_pairs)
 
             self.solver.comment('encoded the state!')
 
     def _encode_transitions(self,
-                            s:Node, l_a:Node, l_g:Node, m:int,
+                            s:Node, smt_l_a:str, smt_l_g:str,
+                            smt_m:str,
                             label:Label,
-                            s_n:Node):
+                            s_n:Node,
+                            free_state_type_pairs):
 
         # syntax sugar
         smt_r = lambda args: self.solver.call_func(self.r_func_desc, args)
         smt_reach = lambda args: self.solver.call_func(self.reach_func_desc, args)
         #
 
-        smt_m = smt_name_m(m)
+        # smt_m = smt_name_m(m)
         smt_s = smt_name_spec(s, TYPE_S_STATE)
-        smt_l_a = smt_name_spec(l_a, TYPE_L_a_STATE)
-        smt_l_g = smt_name_spec(l_g, TYPE_L_g_STATE)
         smt_out = self._smt_out(label, smt_m, smt_l_a, smt_l_g)
 
         args_dict = self._build_args_dict(smt_m,
@@ -379,6 +376,7 @@ class SymbolicAutomataEncoder:
                                           smt_l_a,
                                           smt_l_g)
         free_input_args = self._get_free_input_args(label)
+        free_input_type_pairs = tuple((arg, 'Bool') for arg in free_input_args)
 
         # we update args_dict to include the current output values
         for out_sig, desc in self.descr_by_output.items():
@@ -391,8 +389,10 @@ class SymbolicAutomataEncoder:
         # the case of next safety state is bad
         if s_n is DEAD_END or 'accept_all' in s_n.name or s_n in self.safety_automaton.acc_nodes:  # TODO: hm, weird hack
             self.solver.assert_(
-                self.solver.forall_bool(free_input_args,
-                                        self.solver.op_not(smt_pre)))
+                # self.solver.forall_bool(free_input_args,
+                #                         self.solver.op_not(smt_pre)))
+                self.solver.forall(free_input_type_pairs + free_state_type_pairs,
+                                   self.solver.op_not(smt_pre)))
             return
 
         # the case of next safety state is 'normal'
@@ -448,29 +448,31 @@ class SymbolicAutomataEncoder:
         smt_post = self.solver.op_and(smt_post_conjuncts)
         pre_implies_post = self.solver.op_implies(smt_pre, smt_post)
         self.solver.assert_(
-            self.solver.forall_bool(free_input_args,
-                                    pre_implies_post))
+            self.solver.forall(free_input_type_pairs + free_state_type_pairs,
+                               pre_implies_post))
+            # self.solver.forall_bool(free_input_args,
+            #                         pre_implies_post))
 
     def encode_model_bound(self, allowed_model_states):
-        self.solver.comment('encoding model bound: ' + str(allowed_model_states))
-
-        # all args of tau function are quantified
-        args_dict = dict((a, smt_name_free_arg(a))
-                         for (a,ty) in self.tau_desc.inputs)
-
-        free_vars = [(args_dict[a],ty)
-                     for (a,ty) in self.tau_desc.inputs]
-
-        smt_m_next = self.solver.call_func(self.tau_desc, args_dict)
-
-        disjuncts = []
-        for allowed_m in allowed_model_states:
-            disjuncts.append(self.solver.op_eq(smt_m_next,
-                                               smt_name_m(allowed_m)))
-
-        condition = self.solver.forall(free_vars,
-                                       self.solver.op_or(disjuncts))
-        self.solver.assert_(condition)
+        # self.solver.comment('encoding model bound: ' + str(allowed_model_states))
+        #
+        # # all args of tau function are quantified
+        # args_dict = dict((a, smt_name_free_arg(a))
+        #                  for (a,ty) in self.tau_desc.inputs)
+        #
+        # free_vars = [(args_dict[a],ty)
+        #              for (a,ty) in self.tau_desc.inputs]
+        #
+        # smt_m_next = self.solver.call_func(self.tau_desc, args_dict)
+        #
+        # disjuncts = []
+        # for allowed_m in allowed_model_states:
+        #     disjuncts.append(self.solver.op_eq(smt_m_next,
+        #                                        smt_name_m(allowed_m)))
+        #
+        # condition = self.solver.forall(free_vars,
+        #                                self.solver.op_or(disjuncts))
+        # self.solver.assert_(condition)
 
         self.last_allowed_states = allowed_model_states
     ##
