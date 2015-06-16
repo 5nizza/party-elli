@@ -11,19 +11,20 @@ from nose.tools import assert_equal
 from automata_translations.goal_converter import GoalConverter
 import config
 from helpers import automata_helper
-from helpers.automata_helper import to_dot
 from helpers.labels_map import LabelsMap
 from helpers.main_helper import setup_logging, create_spec_converter_z3, remove_files_prefixed
 from interfaces.automata import Automaton, all_stimuli_that_satisfy, LABEL_TRUE, get_next_states, Label, is_satisfied
 from interfaces.lts import LTS
 from interfaces.parser_expr import Signal
 from module_generation.dot import lts_to_dot
-from synthesis import original_model_searcher, bfsj_model_searcher
-from synthesis.assume_guarantee_encoder import assert_deterministic_transition
-from synthesis.assume_guarantee_model_searcher import search
+from synthesis import original_model_searcher
+from synthesis.full_info_encoder import assert_deterministic_transition, FullInfoEncoder
+from synthesis.full_info_symbolic_forall_encoder import FullInfoSymbolicForallEncoder
+from synthesis.model_searcher import search
 from synthesis.bfsj_encoder import BFSJEncoder
 from synthesis.bfsj_symbolic_encoder import BFSJSymbolicEncoder
 from synthesis.bfsj_symbolic_forall_encoder import BFSJSymbolicForallEncoder
+from synthesis.full_info_symbolic_encoder import FullInfoSymbolicEncoder
 from synthesis.funcs_args_types_names import ARG_S_a_STATE, ARG_S_g_STATE, ARG_L_a_STATE, ARG_L_g_STATE, \
     ARG_MODEL_STATE
 from synthesis.smt_logic import UFLIA
@@ -34,6 +35,9 @@ BFSJ = 'bfsj'
 BFSJ_SYMBOLIC = 'bfsj_symbolic'
 BFSJ_SYMBOLIC_FORALL = 'bfsj_symbolic_forall'
 
+ALL = 'all'
+ALL_SYMBOLIC = 'all_symbolic'
+ALL_SYMBOLIC_FORALL = 'all_symbolic_forall'
 
 def _write_out(model, is_moore, file_type, file_name):
     with open(file_name + '.' + file_type, 'w') as out:
@@ -203,11 +207,21 @@ def main_sa_sg_la_lg(spec_file_name:str,
 
     _log_automata4(S_a, S_g, L_a, L_g)
 
-    model = search(S_a, S_g, L_a, L_g,
-                   not is_moore,
-                   input_signals, output_signals,
-                   bounds,
-                   underlying_solver, UFLIA(None))
+    encoder_class = {ALL:FullInfoEncoder,
+                     ALL_SYMBOLIC:FullInfoSymbolicEncoder,
+                     ALL_SYMBOLIC_FORALL:FullInfoSymbolicForallEncoder}\
+                    [encoding]
+
+    encoder = encoder_class(logic,
+                            S_a, S_g,
+                            L_a, L_g,
+                            underlying_solver,
+                            not is_moore,
+                            input_signals,
+                            output_signals,
+                            0)
+
+    model = search(bounds, encoder)
 
     is_realizable = model is not None
 
@@ -298,14 +312,16 @@ def main_bfsj(spec_file_name:str,
                      BFSJ_SYMBOLIC_FORALL:BFSJSymbolicForallEncoder} \
                     [encoding]
 
-    model = bfsj_model_searcher.search(safety_automaton,
-                                       L_a, L_g,
-                                       not is_moore,
-                                       input_signals, output_signals,
-                                       bounds,
-                                       underlying_solver,
-                                       UFLIA(None),
-                                       encoder_class)
+    encoder = encoder_class(logic,
+                            safety_automaton,
+                            L_a, L_g,
+                            underlying_solver,
+                            not is_moore,
+                            input_signals,
+                            output_signals,
+                            0)
+
+    model = search(bounds, encoder)
 
     is_realizable = model is not None
 
@@ -400,7 +416,9 @@ if __name__ == "__main__":
     parser.add_argument('-v', '--verbose', action='count', default=0)
 
     parser.add_argument('-e', '--encoding', choices=['original',
-                                                     'all',
+                                                     ALL,
+                                                     ALL_SYMBOLIC,
+                                                     ALL_SYMBOLIC_FORALL,
                                                      BFSJ,
                                                      BFSJ_SYMBOLIC,
                                                      BFSJ_SYMBOLIC_FORALL,
@@ -426,7 +444,9 @@ if __name__ == "__main__":
                   else range(args.size, args.size + 1))
 
     main_func = {'original':main_original,
-                 'all':main_sa_sg_la_lg,
+                 ALL:main_sa_sg_la_lg,
+                 ALL_SYMBOLIC:main_sa_sg_la_lg,
+                 ALL_SYMBOLIC_FORALL:main_sa_sg_la_lg,
                  BFSJ:main_bfsj,
                  BFSJ_SYMBOLIC:main_bfsj,
                  BFSJ_SYMBOLIC_FORALL:main_bfsj,

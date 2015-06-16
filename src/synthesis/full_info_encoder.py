@@ -3,7 +3,6 @@ from itertools import product
 import sys
 from math import floor
 from nose.tools import assert_equal
-from helpers.console_helpers import print_green, print_red
 
 from helpers.labels_map import LabelsMap
 from helpers.logging_helper import log_entrance
@@ -16,7 +15,40 @@ from interfaces.solver_interface import SolverInterface
 from synthesis.func_description import FuncDescription
 from synthesis.funcs_args_types_names import TYPE_MODEL_STATE, ARG_MODEL_STATE, ARG_S_a_STATE, ARG_S_g_STATE, \
     ARG_L_a_STATE, ARG_L_g_STATE, TYPE_S_a_STATE, TYPE_S_g_STATE, TYPE_L_a_STATE, TYPE_L_g_STATE, FUNC_REACH, FUNC_R, \
-    smt_name_spec, smt_name_m, smt_name_free_arg, smt_arg_name_signal, smt_unname_if_signal, smt_unname_m
+    smt_name_spec, smt_name_m, smt_name_free_arg, smt_arg_name_signal, smt_unname_if_signal, smt_unname_m, \
+    FUNC_MODEL_TRANS
+
+
+def _get_output_desc(output:Signal, is_mealy, inputs):
+    arg_types_dict = dict()
+    arg_types_dict[ARG_MODEL_STATE] = TYPE_MODEL_STATE
+
+    arg_types_dict[ARG_S_a_STATE] = TYPE_S_a_STATE
+    arg_types_dict[ARG_S_g_STATE] = TYPE_S_g_STATE
+    arg_types_dict[ARG_L_a_STATE] = TYPE_L_a_STATE
+    arg_types_dict[ARG_L_g_STATE] = TYPE_L_g_STATE
+
+    if is_mealy:
+        for s in inputs:
+            arg_types_dict[smt_arg_name_signal(s)] = 'Bool'
+
+    return FuncDescription(output.name, arg_types_dict, 'Bool', None)
+
+
+def _get_tau_desc(inputs):
+    arg_types_dict = dict()
+    arg_types_dict[ARG_MODEL_STATE] = TYPE_MODEL_STATE
+
+    arg_types_dict[ARG_S_a_STATE] = TYPE_S_a_STATE
+    arg_types_dict[ARG_S_g_STATE] = TYPE_S_g_STATE
+    arg_types_dict[ARG_L_a_STATE] = TYPE_L_a_STATE
+    arg_types_dict[ARG_L_g_STATE] = TYPE_L_g_STATE
+
+    for s in inputs:
+        arg_types_dict[smt_arg_name_signal(s)] = 'Bool'
+
+    tau_desc = FuncDescription(FUNC_MODEL_TRANS, arg_types_dict, TYPE_MODEL_STATE, None)
+    return tau_desc
 
 
 def _build_signals_values(signals, label) -> (dict, list):
@@ -48,21 +80,21 @@ def assert_deterministic_transition(s_a, s_g, l_a, l_g, lbl):
         assert_equal(len(get_next_states(l_g, lbl)), 1,  '\n' + str(get_next_states(l_g, lbl)) + '\n' + str(l_g) + '\n' + str(lbl))
 
 
-class AssumeGuaranteeEncoder:
+class FullInfoEncoder:
     def __init__(self,
                  logic,
                  S_a:Automaton,
                  S_g:Automaton,
                  L_a:Automaton,
                  L_g:Automaton,
-                 underlying_solver:SolverInterface,
-                 tau_desc:FuncDescription,
+                 solver:SolverInterface,
+                 is_mealy:bool,
                  inputs,
-                 descr_by_output,
+                 outputs,
                  model_init_state:int):  # the automata alphabet is inputs+outputs
         self.logger = logging.getLogger(__name__)
 
-        self.solver = underlying_solver
+        self.solver = solver
         self.logic = logic
 
         self.S_a = S_a
@@ -70,9 +102,10 @@ class AssumeGuaranteeEncoder:
         self.L_a = L_a
         self.L_g = L_g
 
+        self.descr_by_output = dict((o,_get_output_desc(o, is_mealy, inputs))
+                                    for o in outputs)
+        self.tau_desc = _get_tau_desc(inputs)
         self.inputs = inputs
-        self.descr_by_output = descr_by_output
-        self.tau_desc = tau_desc
 
         reach_args = {ARG_S_a_STATE: TYPE_S_a_STATE,
                       ARG_S_g_STATE: TYPE_S_g_STATE,

@@ -1,6 +1,6 @@
 from itertools import chain, combinations
 
-NOF_CLIENTS = 3  # change at your will
+NOF_CLIENTS = 2  # change at your will
 
 ##################################################
 # parameterized

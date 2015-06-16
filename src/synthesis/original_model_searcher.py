@@ -6,7 +6,7 @@ from interfaces.automata import Automaton
 from interfaces.lts import LTS
 from interfaces.parser_expr import Signal
 from interfaces.solver_interface import SolverInterface
-from synthesis.assume_guarantee_encoder import AssumeGuaranteeEncoder
+from synthesis.full_info_encoder import FullInfoEncoder
 from synthesis.func_description import FuncDescription
 from synthesis.funcs_args_types_names import FUNC_MODEL_TRANS, \
     TYPE_MODEL_STATE, ARG_MODEL_STATE, ARG_S_a_STATE, TYPE_S_a_STATE, TYPE_S_g_STATE, TYPE_L_a_STATE, TYPE_L_g_STATE, \

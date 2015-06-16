@@ -14,6 +14,8 @@ FUNC_MODEL_TRANS = '_tau_'
 FUNC_REACH = '_reach_'
 FUNC_R = '_r_'
 
+FUNC_S_g_TRANS = 'tau_S_g'
+FUNC_S_g_ACC = 'tau_S_g_acc'
 FUNC_L_a_TRANS = 'tau_L_a'
 FUNC_L_a_ACC = 'tau_L_a_acc'
 FUNC_L_g_TRANS = 'tau_L_g'

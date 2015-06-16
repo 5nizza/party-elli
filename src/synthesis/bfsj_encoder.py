@@ -3,24 +3,46 @@ import logging
 from itertools import product
 import sys
 from math import floor
-from nose.tools import assert_equal
-from helpers.console_helpers import print_green, print_red
 
 from helpers.labels_map import LabelsMap
 from helpers.logging_helper import log_entrance
 from helpers.python_ext import lmap
-from interfaces.automata import Label, Automaton, LIVE_END, all_stimuli_that_satisfy, \
-    get_next_states, Node, DEAD_END, is_satisfied
+from interfaces.automata import Label, Automaton, get_next_states, Node, DEAD_END
 from interfaces.lts import LTS
 from interfaces.parser_expr import Signal
 from interfaces.solver_interface import SolverInterface
-from synthesis.assume_guarantee_encoder import assert_deterministic_transition
+from synthesis.full_info_encoder import assert_deterministic_transition
 from synthesis.func_description import FuncDescription
-from synthesis.funcs_args_types_names import TYPE_MODEL_STATE, ARG_MODEL_STATE, ARG_S_a_STATE, ARG_S_g_STATE, \
-    ARG_L_a_STATE, ARG_L_g_STATE, TYPE_S_a_STATE, TYPE_S_g_STATE, TYPE_L_a_STATE, TYPE_L_g_STATE, FUNC_REACH, FUNC_R, \
+from synthesis.funcs_args_types_names import TYPE_MODEL_STATE, ARG_MODEL_STATE, ARG_L_a_STATE, ARG_L_g_STATE, \
+    TYPE_L_a_STATE, TYPE_L_g_STATE, FUNC_REACH, FUNC_R, \
     smt_name_spec, smt_name_m, smt_name_free_arg, smt_arg_name_signal, smt_unname_if_signal, smt_unname_m, \
-    TYPE_A_STATE, TYPE_S_STATE, ARG_S_STATE
-from synthesis.rejecting_states_finder import build_state_to_rejecting_scc
+    TYPE_S_STATE, ARG_S_STATE, FUNC_MODEL_TRANS
+
+
+def _get_output_desc(output:Signal, is_mealy, inputs):
+    arg_types_dict = dict()
+    arg_types_dict[ARG_L_a_STATE] = TYPE_L_a_STATE
+    arg_types_dict[ARG_L_g_STATE] = TYPE_L_g_STATE
+    arg_types_dict[ARG_MODEL_STATE] = TYPE_MODEL_STATE
+
+    if is_mealy:
+        for s in inputs:
+            arg_types_dict[smt_arg_name_signal(s)] = 'Bool'
+
+    return FuncDescription(output.name, arg_types_dict, 'Bool', None)
+
+
+def _get_tau_desc(inputs):
+    arg_types_dict = dict()
+    arg_types_dict[ARG_L_a_STATE] = TYPE_L_a_STATE
+    arg_types_dict[ARG_L_g_STATE] = TYPE_L_g_STATE
+    arg_types_dict[ARG_MODEL_STATE] = TYPE_MODEL_STATE
+
+    for s in inputs:
+        arg_types_dict[smt_arg_name_signal(s)] = 'Bool'
+
+    tau_desc = FuncDescription(FUNC_MODEL_TRANS, arg_types_dict, TYPE_MODEL_STATE, None)
+    return tau_desc
 
 
 def _build_signals_values(signals, label) -> (dict, list):
@@ -40,6 +62,7 @@ def _build_signals_values(signals, label) -> (dict, list):
 
     return value_by_signal, free_values
 
+
 @lru_cache()
 def intersection2(label1, label2):
     for var1, val1 in label1.items():
@@ -49,6 +72,7 @@ def intersection2(label1, label2):
     intersection_dict.update(label2)
     return Label(intersection_dict)
 
+
 @lru_cache()
 def intersection3(label1, label2, label3):
     l2_and_l3 = intersection2(label2, label3)
@@ -57,6 +81,7 @@ def intersection3(label1, label2, label3):
 
     l1_and_l2_and_l3 = intersection2(label1, l2_and_l3)
     return l1_and_l2_and_l3
+
 
 def generate_combinations(s_label, s:Node, l_a:Node, l_g:Node):
     # for other nodes we cannot do the same, so check all possible combinations of next states
@@ -84,9 +109,9 @@ class BFSJEncoder:
                  L_a:Automaton,
                  L_g:Automaton,
                  solver:SolverInterface,
-                 tau_desc:FuncDescription,
+                 is_mealy:bool,
                  inputs,
-                 descr_by_output,
+                 outputs,
                  model_init_state:int):  # the automata alphabet is inputs+outputs
         self.logger = logging.getLogger(__name__)
 
@@ -98,8 +123,9 @@ class BFSJEncoder:
         self.L_g = L_g
 
         self.inputs = inputs
-        self.descr_by_output = descr_by_output
-        self.tau_desc = tau_desc
+        self.descr_by_output = dict((o,_get_output_desc(o, is_mealy, inputs))
+                                    for o in outputs)
+        self.tau_desc = _get_tau_desc(inputs)
 
         reach_args = {ARG_S_STATE: TYPE_S_STATE,
                       ARG_L_a_STATE: TYPE_L_a_STATE,

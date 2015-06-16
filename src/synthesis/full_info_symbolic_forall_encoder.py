@@ -1,24 +1,55 @@
 import logging
 from itertools import product
 import sys
-from helpers.console_helpers import print_green
 
+from helpers.console_helpers import print_green, print_red
 from helpers.labels_map import LabelsMap
 from helpers.logging_helper import log_entrance
 from helpers.python_ext import StrAwareList
-from interfaces.automata import Label, Automaton, get_next_states, Node, DEAD_END
+from interfaces.automata import Label, Automaton, get_next_states, Node
 from interfaces.lts import LTS
 from interfaces.parser_expr import Signal
 from interfaces.solver_interface import SolverInterface
 from synthesis import smt_helper
-from synthesis.bfsj_encoder import _get_output_desc, _get_tau_desc
-from synthesis.full_info_encoder import assert_deterministic_transition
 from synthesis.func_description import FuncDescription
 from synthesis.funcs_args_types_names import TYPE_MODEL_STATE, ARG_MODEL_STATE, ARG_L_a_STATE, ARG_L_g_STATE, \
     TYPE_L_a_STATE, TYPE_L_g_STATE, FUNC_REACH, FUNC_R, \
-    smt_name_spec, smt_name_m, smt_name_free_arg, smt_arg_name_signal, smt_unname_if_signal, smt_unname_m, \
+    smt_name_spec, smt_name_m, smt_arg_name_signal, smt_unname_if_signal, smt_unname_m, \
     TYPE_S_STATE, ARG_S_STATE, FUNC_L_a_TRANS, FUNC_L_g_TRANS, \
-    FUNC_L_a_ACC, FUNC_L_g_ACC, FUNC_MODEL_TRANS
+    FUNC_L_a_ACC, FUNC_L_g_ACC, TYPE_S_a_STATE, TYPE_S_g_STATE, ARG_S_a_STATE, ARG_S_g_STATE, FUNC_S_g_TRANS, \
+    FUNC_MODEL_TRANS, FUNC_S_g_ACC, smt_name_free_arg
+
+
+def _get_output_desc(output:Signal, is_mealy, inputs):
+    arg_types_dict = dict()
+    arg_types_dict[ARG_MODEL_STATE] = TYPE_MODEL_STATE
+
+    arg_types_dict[ARG_S_a_STATE] = TYPE_S_a_STATE
+    arg_types_dict[ARG_S_g_STATE] = TYPE_S_g_STATE
+    arg_types_dict[ARG_L_a_STATE] = TYPE_L_a_STATE
+    arg_types_dict[ARG_L_g_STATE] = TYPE_L_g_STATE
+
+    if is_mealy:
+        for s in inputs:
+            arg_types_dict[smt_arg_name_signal(s)] = 'Bool'
+
+    return FuncDescription(output.name, arg_types_dict, 'Bool', None)
+
+
+def _get_tau_desc(inputs):
+    arg_types_dict = dict()
+    arg_types_dict[ARG_MODEL_STATE] = TYPE_MODEL_STATE
+
+    arg_types_dict[ARG_S_a_STATE] = TYPE_S_a_STATE
+    arg_types_dict[ARG_S_g_STATE] = TYPE_S_g_STATE
+    arg_types_dict[ARG_L_a_STATE] = TYPE_L_a_STATE
+    arg_types_dict[ARG_L_g_STATE] = TYPE_L_g_STATE
+
+    for s in inputs:
+        arg_types_dict[smt_arg_name_signal(s)] = 'Bool'
+
+    tau_desc = FuncDescription(FUNC_MODEL_TRANS, arg_types_dict, TYPE_MODEL_STATE, None)
+    return tau_desc
 
 
 def _build_signals_values(signals, label) -> (dict, list):
@@ -163,10 +194,11 @@ def build_smt_for_automaton_trans(automaton:Automaton, alphabet,
     return automaton_func
 
 
-class BFSJSymbolicEncoder:
+class FullInfoSymbolicForallEncoder:
     def __init__(self,
                  logic,
-                 safety_automaton:Automaton,
+                 S_a:Automaton,
+                 S_g:Automaton,
                  L_a:Automaton,
                  L_g:Automaton,
                  solver:SolverInterface,
@@ -179,31 +211,52 @@ class BFSJSymbolicEncoder:
         self.solver = solver
         self.logic = logic
 
-        self.safety_automaton = safety_automaton
-
         alphabet = tuple(inputs) + tuple(outputs)
-        self.L_a_func = build_smt_for_automaton_trans(L_a, alphabet, TYPE_L_a_STATE, ARG_L_a_STATE, FUNC_L_a_TRANS)
-        self.L_a_acc_func = build_smt_for_automaton_acc(L_a, TYPE_L_a_STATE, ARG_L_a_STATE, FUNC_L_a_ACC)
+
+        self.S_a = S_a
+
+        self.S_g = S_g
+        self.S_g_func = build_smt_for_automaton_trans(S_g, alphabet,
+                                                      TYPE_S_g_STATE,
+                                                      ARG_S_g_STATE,
+                                                      FUNC_S_g_TRANS)
+        self.S_g_acc_func = build_smt_for_automaton_acc(S_g,
+                                                        TYPE_S_g_STATE,
+                                                        ARG_S_g_STATE,
+                                                        FUNC_S_g_ACC)
+
         self.L_a = L_a
+        self.L_a_func = build_smt_for_automaton_trans(L_a, alphabet,
+                                                      TYPE_L_a_STATE,
+                                                      ARG_L_a_STATE,
+                                                      FUNC_L_a_TRANS)
+        self.L_a_acc_func = build_smt_for_automaton_acc(L_a,
+                                                        TYPE_L_a_STATE,
+                                                        ARG_L_a_STATE,
+                                                        FUNC_L_a_ACC)
 
-        self.L_g_func = build_smt_for_automaton_trans(L_g, alphabet, TYPE_L_g_STATE, ARG_L_g_STATE, FUNC_L_g_TRANS)
-        self.L_g_acc_func = build_smt_for_automaton_acc(L_g, TYPE_L_g_STATE, ARG_L_g_STATE, FUNC_L_g_ACC)
         self.L_g = L_g
-
-        self.inputs = inputs
+        self.L_g_func = build_smt_for_automaton_trans(L_g, alphabet,
+                                                      TYPE_L_g_STATE,
+                                                      ARG_L_g_STATE,
+                                                      FUNC_L_g_TRANS)
+        self.L_g_acc_func = build_smt_for_automaton_acc(L_g,
+                                                        TYPE_L_g_STATE,
+                                                        ARG_L_g_STATE,
+                                                        FUNC_L_g_ACC)
 
         self.descr_by_output = dict((o,_get_output_desc(o, is_mealy, inputs))
                                     for o in outputs)
         self.tau_desc = _get_tau_desc(inputs)
+        self.inputs = inputs
 
-        reach_args = {ARG_S_STATE: TYPE_S_STATE,
+        reach_args = {ARG_S_a_STATE: TYPE_S_a_STATE,
+                      ARG_S_g_STATE: TYPE_S_g_STATE,
                       ARG_L_a_STATE: TYPE_L_a_STATE,
                       ARG_L_g_STATE: TYPE_L_g_STATE,
                       ARG_MODEL_STATE: TYPE_MODEL_STATE}
 
-        r_args = {ARG_L_a_STATE: TYPE_L_a_STATE,
-                  ARG_L_g_STATE: TYPE_L_g_STATE,
-                  ARG_MODEL_STATE: TYPE_MODEL_STATE}
+        r_args = reach_args
 
         self.reach_func_desc = FuncDescription(FUNC_REACH, reach_args, 'Bool', None)
         self.r_func_desc = FuncDescription(FUNC_R, r_args,
@@ -215,10 +268,14 @@ class BFSJSymbolicEncoder:
 
         self.last_allowed_states = None
 
-    def _smt_out(self, label:Label, smt_m:str, smt_l_a:str, smt_l_g:str) -> str:
+    def _smt_out(self,
+                 label:Label,
+                 smt_m:str,
+                 smt_s_a:str, smt_s_g:str,
+                 smt_l_a:str, smt_l_g:str) -> str:
         conjuncts = []
 
-        args_dict = self._build_args_dict(smt_m, label, None, smt_l_a, smt_l_g)
+        args_dict = self._build_args_dict(smt_m, label, smt_s_a, smt_s_g, smt_l_a, smt_l_g)
 
         for sig, val in label.items():
             if sig not in self.descr_by_output:
@@ -243,14 +300,17 @@ class BFSJSymbolicEncoder:
     def _build_args_dict(self,
                          smt_m:str,
                          i_o:Label or None,
-                         smt_s:str or None,
+                         smt_s_a:str or None,
+                         smt_s_g:str or None,
                          smt_l_a:str or None,
                          smt_l_g:str or None) -> dict:
         args_dict = dict()
         args_dict[ARG_MODEL_STATE] = smt_m
 
-        if smt_s:
-            args_dict[ARG_S_STATE] = smt_s
+        if smt_s_a:
+            args_dict[ARG_S_a_STATE] = smt_s_a
+        if smt_s_g:
+            args_dict[ARG_S_g_STATE] = smt_s_g
         if smt_l_a:
             args_dict[ARG_L_a_STATE] = smt_l_a
         if smt_l_g:
@@ -277,14 +337,20 @@ class BFSJSymbolicEncoder:
         self._define_declare_functions(self.descr_by_output.values())
 
     def _encode_automata_functions(self):
-        self.solver.declare_enum(TYPE_S_STATE,
-                                 map(lambda n: smt_name_spec(n, TYPE_S_STATE), self.safety_automaton.nodes))
+        self.solver.declare_enum(TYPE_S_a_STATE,
+                                 map(lambda n: smt_name_spec(n, TYPE_S_a_STATE), self.S_a.nodes))
+
+        self.solver.declare_enum(TYPE_S_g_STATE,
+                                 map(lambda n: smt_name_spec(n, TYPE_S_g_STATE), self.S_g.nodes))
 
         self.solver.declare_enum(TYPE_L_a_STATE,
                                  map(lambda n: smt_name_spec(n, TYPE_L_a_STATE), self.L_a.nodes))
 
         self.solver.declare_enum(TYPE_L_g_STATE,
                                  map(lambda n: smt_name_spec(n, TYPE_L_g_STATE), self.L_g.nodes))
+
+        self._define_declare_functions([self.S_g_func])
+        self._define_declare_functions([self.S_g_acc_func])
 
         self._define_declare_functions([self.L_a_func])
         self._define_declare_functions([self.L_a_acc_func])
@@ -300,13 +366,15 @@ class BFSJSymbolicEncoder:
 
     ## encoding rules
     def encode_initialization(self):
-        for s, l_a, l_g, m in product(self.safety_automaton.initial_nodes,
-                            self.L_a.initial_nodes,
-                            self.L_g.initial_nodes,
-                            [self.model_init_state]):
+        for s_a, s_g, l_a, l_g, m in product(self.S_a.initial_nodes,
+                                             self.S_g.initial_nodes,
+                                             self.L_a.initial_nodes,
+                                             self.L_g.initial_nodes,
+                                             [self.model_init_state]):
             vals_by_vars = self._build_args_dict(smt_name_m(m),
                                                  None,
-                                                 smt_name_spec(s, TYPE_S_STATE),
+                                                 smt_name_spec(s_a, TYPE_S_a_STATE),
+                                                 smt_name_spec(s_g, TYPE_S_g_STATE),
                                                  smt_name_spec(l_a, TYPE_L_a_STATE),
                                                  smt_name_spec(l_g, TYPE_L_g_STATE))
 
@@ -314,50 +382,42 @@ class BFSJSymbolicEncoder:
                 self.solver.call_func(
                     self.reach_func_desc, vals_by_vars))
 
-    # def encode_run_graph(self, states_to_encode):
-    #     # state_to_rejecting_scc = build_state_to_rejecting_scc(self.automaton)
-    #
-    #     for q in self.safety_automaton.nodes:
-    #         for m in states_to_encode:
-    #             for label, dst_set_list in q.transitions.items():
-    #                 self._encode_transitions(q, m, label)
-    #
-    #         self.solver.comment('encoded spec state ' + smt_name_spec(q, TYPE_A_STATE))
-
     def encode_run_graph(self, states_to_encode):
-        """
-        pre:
-        - L_a, L_g are deterministic and total (=1 transition for each io)
-        """
-
         self.last_allowed_states = states_to_encode  # TODO: quick hack
 
-        for s, l_a, l_g, m in product(self.safety_automaton.nodes,
-                                      self.L_a.nodes,
-                                      self.L_g.nodes,
-                                      states_to_encode):
-            smt_l_a = smt_name_spec(l_a, TYPE_L_a_STATE)
-            smt_l_g = smt_name_spec(l_g, TYPE_L_g_STATE)
-            smt_m = smt_name_m(m)
+        smt_s_g = smt_name_free_arg(ARG_S_g_STATE)
+        smt_l_a = smt_name_free_arg(ARG_L_a_STATE)
+        smt_l_g = smt_name_free_arg(ARG_L_g_STATE)
+        smt_m = smt_name_free_arg(ARG_MODEL_STATE)
+        free_arg_type_pairs = ((smt_s_g, TYPE_S_g_STATE),
+                               (smt_l_a, TYPE_L_a_STATE),
+                               (smt_l_g, TYPE_L_g_STATE),
+                               (smt_m, TYPE_MODEL_STATE))
 
-            for label, dst_set_list in s.transitions.items():
+        for s_a in self.S_a.nodes:
+            smt_s_a = smt_name_spec(s_a, TYPE_S_a_STATE)
+
+            for label, dst_set_list in s_a.transitions.items():
                 assert len(dst_set_list) == 1
-                s_nexts = tuple(map(lambda node_flag: node_flag[0], dst_set_list[0]))
+                s_a_nexts = tuple(map(lambda node_flag: node_flag[0], dst_set_list[0]))
 
-                for s_n in s_nexts:
-                    self._encode_transitions(s, smt_l_a, smt_l_g,
+                for s_a_n in s_a_nexts:
+                    self._encode_transitions(smt_s_a,
+                                             smt_s_g,
+                                             smt_l_a, smt_l_g,
                                              smt_m,
                                              label,
-                                             s_n,
-                                             tuple())
+                                             s_a_n,
+                                             free_arg_type_pairs)
 
             self.solver.comment('encoded the state!')
 
     def _encode_transitions(self,
-                            s:Node, smt_l_a:str, smt_l_g:str,
+                            smt_s_a:str, smt_s_g:str,
+                            smt_l_a:str, smt_l_g:str,
                             smt_m:str,
                             label:Label,
-                            s_n:Node,
+                            s_a_n:Node,
                             free_state_type_pairs):
 
         # syntax sugar
@@ -365,15 +425,13 @@ class BFSJSymbolicEncoder:
         smt_reach = lambda args: self.solver.call_func(self.reach_func_desc, args)
         #
 
-        # smt_m = smt_name_m(m)
-        smt_s = smt_name_spec(s, TYPE_S_STATE)
-        smt_out = self._smt_out(label, smt_m, smt_l_a, smt_l_g)
+        smt_out = self._smt_out(label, smt_m, smt_s_a, smt_s_g, smt_l_a, smt_l_g)
 
         args_dict = self._build_args_dict(smt_m,
                                           label,
-                                          smt_s,
-                                          smt_l_a,
-                                          smt_l_g)
+                                          smt_s_a, smt_s_g,
+                                          smt_l_a, smt_l_g)
+
         free_input_args = self._get_free_input_args(label)
         free_input_type_pairs = tuple((arg, 'Bool') for arg in free_input_args)
 
@@ -385,28 +443,25 @@ class BFSJSymbolicEncoder:
 
         smt_pre = self.solver.op_and([smt_reach(args_dict), smt_out])
 
-        # the case of next safety state is bad
-        if s_n is DEAD_END or 'accept_all' in s_n.name or s_n in self.safety_automaton.acc_nodes:  # TODO: hm, weird hack
-            self.solver.assert_(
-                # self.solver.forall_bool(free_input_args,
-                #                         self.solver.op_not(smt_pre)))
-                self.solver.forall(free_input_type_pairs + free_state_type_pairs,
-                                   self.solver.op_not(smt_pre)))
-            return
-
-        # the case of next safety state is 'normal'
         smt_m_next = self.solver.call_func(self.tau_desc, args_dict)
 
+        #
         smt_post_conjuncts = []
 
+        smt_s_g_n = self.solver.call_func(self.S_g_func, args_dict)
         smt_l_a_n = self.solver.call_func(self.L_a_func, args_dict)
         smt_l_g_n = self.solver.call_func(self.L_g_func, args_dict)
 
         args_dict_next = self._build_args_dict(smt_m_next,
                                                None,
-                                               smt_name_spec(s_n, TYPE_S_STATE),
+                                               smt_name_spec(s_a_n, TYPE_S_a_STATE),
+                                               smt_s_g_n,
                                                smt_l_a_n,
                                                smt_l_g_n)
+        #
+        smt_s_g_n_acc = self.solver.call_func(self.S_g_acc_func, args_dict_next)
+        smt_post_conjuncts.append(self.solver.op_not(smt_s_g_n_acc))
+
         smt_post_conjuncts.append(smt_reach(args_dict_next))
 
         smt_ranks_gt = self.solver.op_gt(smt_r(args_dict_next),
@@ -518,7 +573,8 @@ class BFSJSymbolicEncoder:
 
         def get_values(t):
             return {          'Bool': ('true', 'false'),
-                        TYPE_S_STATE: [smt_name_spec(s, TYPE_S_STATE) for s in self.safety_automaton.nodes],
+                        TYPE_S_a_STATE: [smt_name_spec(s, TYPE_S_a_STATE) for s in self.S_a.nodes],
+                        TYPE_S_g_STATE: [smt_name_spec(s, TYPE_S_g_STATE) for s in self.S_g.nodes],
                         TYPE_L_a_STATE: [smt_name_spec(s, TYPE_L_a_STATE) for s in self.L_a.nodes],
                         TYPE_L_g_STATE: [smt_name_spec(s, TYPE_L_g_STATE) for s in self.L_g.nodes],
                               TYPE_MODEL_STATE: [smt_name_m(m) for m in self.last_allowed_states]
@@ -583,8 +639,10 @@ class BFSJSymbolicEncoder:
     def _parse_value(self, str_v):
         if not hasattr(self, 'node_by_smt_value'):  # aka static method of the field
             self.node_by_smt_value = dict()
-            self.node_by_smt_value.update((smt_name_spec(s, TYPE_S_STATE), s)
-                                          for s in self.safety_automaton.nodes)
+            self.node_by_smt_value.update((smt_name_spec(s, TYPE_S_a_STATE), s)
+                                          for s in self.S_a.nodes)
+            self.node_by_smt_value.update((smt_name_spec(s, TYPE_S_g_STATE), s)
+                                          for s in self.S_g.nodes)
             self.node_by_smt_value.update((smt_name_spec(s, TYPE_L_a_STATE), s)
                                           for s in self.L_a.nodes)
             self.node_by_smt_value.update((smt_name_spec(s, TYPE_L_g_STATE), s)

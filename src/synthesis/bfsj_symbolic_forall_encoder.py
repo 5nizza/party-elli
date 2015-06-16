@@ -11,7 +11,9 @@ from interfaces.lts import LTS
 from interfaces.parser_expr import Signal
 from interfaces.solver_interface import SolverInterface
 from synthesis import smt_helper
-from synthesis.assume_guarantee_encoder import assert_deterministic_transition
+from synthesis.bfsj_encoder import _get_output_desc
+from synthesis.bfsj_encoder import _get_tau_desc
+from synthesis.full_info_encoder import assert_deterministic_transition
 from synthesis.func_description import FuncDescription
 from synthesis.funcs_args_types_names import TYPE_MODEL_STATE, ARG_MODEL_STATE, ARG_L_a_STATE, ARG_L_g_STATE, \
     TYPE_L_a_STATE, TYPE_L_g_STATE, FUNC_REACH, FUNC_R, \
@@ -169,9 +171,9 @@ class BFSJSymbolicForallEncoder:
                  L_a:Automaton,
                  L_g:Automaton,
                  solver:SolverInterface,
-                 tau_desc:FuncDescription,
+                 is_mealy:bool,
                  inputs,
-                 descr_by_output,
+                 outputs,
                  model_init_state:int):  # the automata alphabet is inputs+outputs
         self.logger = logging.getLogger(__name__)
 
@@ -180,7 +182,7 @@ class BFSJSymbolicForallEncoder:
 
         self.safety_automaton = safety_automaton
 
-        alphabet = tuple(inputs) + tuple(descr_by_output.keys())
+        alphabet = tuple(inputs) + tuple(outputs)
         self.L_a_func = build_smt_for_automaton_trans(L_a, alphabet, TYPE_L_a_STATE, ARG_L_a_STATE, FUNC_L_a_TRANS)
         self.L_a_acc_func = build_smt_for_automaton_acc(L_a, TYPE_L_a_STATE, ARG_L_a_STATE, FUNC_L_a_ACC)
         self.L_a = L_a
@@ -190,8 +192,9 @@ class BFSJSymbolicForallEncoder:
         self.L_g = L_g
 
         self.inputs = inputs
-        self.descr_by_output = descr_by_output
-        self.tau_desc = tau_desc
+        self.descr_by_output = dict((o,_get_output_desc(o, is_mealy, inputs))
+                                    for o in outputs)
+        self.tau_desc = _get_tau_desc(inputs)
 
         reach_args = {ARG_S_STATE: TYPE_S_STATE,
                       ARG_L_a_STATE: TYPE_L_a_STATE,
