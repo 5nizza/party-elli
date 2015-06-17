@@ -61,7 +61,7 @@ def _parse_spec(spec_file_name:str):
     saved_path = sys.path  # to ensure we import the right file
                            # (imagine you want /tmp/spec.py but there is also ./spec.py,
                            # then python prioritizes to ./spec.py)
-                           # To ensure the right version we change sys.path temporarily.
+                           # To force the right version we change sys.path temporarily.
     sys.path = [code_dir]
     spec = importlib.import_module(code_file)
     sys.path = saved_path
@@ -408,6 +408,10 @@ if __name__ == "__main__":
     parser.add_argument('--dot', metavar='dot', type=str, required=False,
                         help='writes the output into a dot graph file')
 
+    parser.add_argument('--log', metavar='log', type=str, required=False,
+                        default=None,
+                        help='name of the log file')
+
     group_bound = parser.add_mutually_exclusive_group()
     group_bound.add_argument('--bound', metavar='bound', type=int, default=128, required=False,
                              help='upper bound on the size of local process (default: %(default)i)')
@@ -431,7 +435,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    logger = setup_logging(args.verbose)
+    logger = setup_logging(args.verbose, args.log)
 
     logger.info(args)
 

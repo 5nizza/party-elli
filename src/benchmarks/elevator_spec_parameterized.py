@@ -1,9 +1,5 @@
-#!/usr/bin/env python3
 from itertools import combinations
-import argparse
-from benchmarks.spec_helper import and_, inst_i
-
-NOF_FLOORS = 4
+from benchmarks.spec_helper import and_, inst_i, pollute, print_spec
 
 ####################################################
 def _floor(number):
@@ -51,28 +47,38 @@ def _generate_mutual_exclusion_of_floors(nof_floors):
 
 ####################################################
 
-inputs = [_button(i) for i in range(NOF_FLOORS)]
-outputs = [_floor(i) for i in range(NOF_FLOORS)]
+def generate(cur_globals, nof_floors):
+    inputs = [_button(i) for i in range(nof_floors)]
+    outputs = [_floor(i) for i in range(nof_floors)]
 
-S_a_init_i = '!b{i}'
-S_a_trans_i = and_('b{i} && f{i}  -> X !b{i}',
-                   'b{i} && !f{i} -> X b{i}')
+    S_a_init_i = '!b{i}'
+    S_a_trans_i = and_('b{i} && f{i}  -> X !b{i}',
+                       'b{i} && !f{i} -> X b{i}')
 
-#
-S_a_init = inst_i(S_a_init_i, NOF_FLOORS)
-S_a_trans = inst_i(S_a_trans_i, NOF_FLOORS)
-L_a_property = 'true'
+    #
+    S_a_init = inst_i(S_a_init_i, nof_floors)
+    S_a_trans = inst_i(S_a_trans_i, nof_floors)
+    L_a_property = 'true'
 
-#
-S_g_init = 'f0'
+    #
+    S_g_init = 'f0'
 
-S_g_trans1 = '({up}) -> ({sb})'.format(up=_generate_up_condition(NOF_FLOORS),
-                                       sb=_generate_button_pressed_condition(NOF_FLOORS))
-S_g_trans2 = _generate_mutual_exclusion_of_floors(NOF_FLOORS)
-S_g_trans3 = and_(*[_allowed_move(f, NOF_FLOORS) for f in range(NOF_FLOORS)])
-S_g_trans = and_(S_g_trans1, S_g_trans2, S_g_trans3)
+    S_g_trans1 = '({up}) -> ({sb})'.format(up=_generate_up_condition(nof_floors),
+                                           sb=_generate_button_pressed_condition(nof_floors))
+    S_g_trans2 = _generate_mutual_exclusion_of_floors(nof_floors)
+    S_g_trans3 = and_(*[_allowed_move(f, nof_floors) for f in range(nof_floors)])
+    S_g_trans = and_(S_g_trans1, S_g_trans2, S_g_trans3)
 
-L_g_property1 = 'G F (f0 || ({sb}))'.format(sb=_generate_button_pressed_condition(NOF_FLOORS))
-L_g_property2 = inst_i('G(b{i} -> F f{i})', NOF_FLOORS)
-L_g_property = and_(L_g_property1, L_g_property2)
+    L_g_property1 = 'G F (f0 || ({sb}))'.format(sb=_generate_button_pressed_condition(nof_floors))
+    L_g_property2 = inst_i('G(b{i} -> F f{i})', nof_floors)
+    L_g_property = and_(L_g_property1, L_g_property2)
 
+    pollute(cur_globals,
+            inputs, outputs,
+            S_a_init, S_a_trans, L_a_property,
+            S_g_init, S_g_trans, L_g_property)
+
+
+if __name__ == '__main__':
+    generate(globals(), 2)
+    print_spec(globals())

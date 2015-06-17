@@ -17,7 +17,7 @@ def get_root_dir() -> str:
     return root_dir
 
 
-def setup_logging(verbose_level:int):
+def setup_logging(verbose_level:int, filename:str=None):
     level = None
     if verbose_level == -1:
         level = logging.CRITICAL
@@ -32,7 +32,9 @@ def setup_logging(verbose_level:int):
     stdout_handler.setFormatter(formatter)
     stdout_handler.stream = sys.stdout
 
-    file_handler = FileHandler(filename='last.log', mode='w')
+    if not filename:
+        filename = 'last.log'
+    file_handler = FileHandler(filename=filename, mode='w')
     file_handler.setFormatter(formatter)
 
     root = logging.getLogger()
