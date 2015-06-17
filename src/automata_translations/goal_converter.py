@@ -7,7 +7,7 @@ from helpers.automata_helper import to_dot
 from helpers.console_helpers import print_green
 from helpers.python_ext import readfile
 from helpers.shell import execute_shell
-from interfaces.automata import Automaton, Node, Label
+from interfaces.automata import Automaton, Node, Label, LABEL_TRUE
 from sympy import true, sympify
 from sympy.core.symbol import Symbol
 from sympy.logic.boolalg import simplify_logic, false
@@ -153,8 +153,11 @@ def gff_2_automaton(gff_xml:str, signal_by_name, states_prefix:str) -> Automaton
         src = get_add(src_str)
         dst = get_add(dst_str)
 
-        lbl = Label([(signal_by_name[var.strip('~')], '~' not in var)
-                     for var in lbl_str.split()])
+        if lbl_str == 'True':
+            lbl = LABEL_TRUE
+        else:
+            lbl = Label([(signal_by_name[var.strip('~')], '~' not in var)
+                         for var in lbl_str.split()])
 
         src.add_transition(lbl, [(dst, dst in acc_nodes)])
 

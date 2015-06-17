@@ -12,8 +12,8 @@ def _button(number):
 
 
 def _get_single_assumption(floor_number):
-    return '(!%(button)s) && []((%(button)s && %(floor)s) -> X(!%(button)s)) && ' \
-                          '[]((%(button)s && (!%(floor)s) -> X(%(button)s)) )' % \
+    return '(!%(button)s) && G ((%(button)s && %(floor)s) -> X(!%(button)s)) && ' \
+                          'G ((%(button)s && (!%(floor)s) -> X(%(button)s)) )' % \
         {
             'button': _button(floor_number),
             'floor': _floor(floor_number)
@@ -40,23 +40,23 @@ def _generate_button_pressed_condition(nof_floors):
 
 
 def _request_is_finally_granted(floor_number):
-    return '[]({0} -> <>({1}))'.format(_button(floor_number), _floor(floor_number))
+    return 'G ({0} -> F({1}))'.format(_button(floor_number), _floor(floor_number))
 
 
 def _allowed_move(floor_number, max_number):
     if floor_number == 0:
-        return '[]({0} -> X({0} || {1}))'.format(_floor(0), _floor(1))
+        return 'G ({0} -> X({0} || {1}))'.format(_floor(0), _floor(1))
 
     if floor_number == max_number - 1:
-        return '[]({0} -> X({0} || {1}))'.format(_floor(floor_number), _floor(floor_number-1))
+        return 'G ({0} -> X({0} || {1}))'.format(_floor(floor_number), _floor(floor_number-1))
 
-    return '[]({0} -> X({0} || {1} || {2}))'.format(_floor(floor_number),
+    return 'G ({0} -> X({0} || {1} || {2}))'.format(_floor(floor_number),
                                                    _floor(floor_number+1),
                                                    _floor(floor_number-1))
 
 
 def _single_exclusion(i, j):
-    return '[](! ({0} && {1}) )'.format(_floor(i), _floor(j))
+    return 'G (! ({0} && {1}) )'.format(_floor(i), _floor(j))
 
 
 def _generate_mutual_exclusion_of_floors(nof_floors):
@@ -73,7 +73,7 @@ def _generate_guarantee(nof_floors):
 
     allowed_moves = ' && '.join(map(lambda f: _allowed_move(f, nof_floors), range(nof_floors)))
 
-    return '( (%(initial)s) && []((%(up)s) -> (%(sb)s)) &&  []<>(%(floor0)s || (%(sb)s)) && (%(exclusion)s) && (%(liveness)s) && (%(movements)s) )' % \
+    return '( (%(initial)s) && G ((%(up)s) -> (%(sb)s)) &&  G F(%(floor0)s || (%(sb)s)) && (%(exclusion)s) && (%(liveness)s) && (%(movements)s) )' % \
         {
             'initial': initial_floor,
             'up': up,

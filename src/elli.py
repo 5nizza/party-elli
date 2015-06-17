@@ -5,12 +5,15 @@ from itertools import product
 import os
 import sys
 import tempfile
+import benchmarks   # have to import benchmarks can use other modules in benchmarks package
 
 from nose.tools import assert_equal
 
 from automata_translations.goal_converter import GoalConverter
 import config
 from helpers import automata_helper
+from helpers.console_helpers import print_red
+from helpers.console_helpers import print_green
 from helpers.labels_map import LabelsMap
 from helpers.main_helper import setup_logging, create_spec_converter_z3, remove_files_prefixed
 from interfaces.automata import Automaton, all_stimuli_that_satisfy, LABEL_TRUE, get_next_states, Label, is_satisfied
