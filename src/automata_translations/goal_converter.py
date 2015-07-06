@@ -36,7 +36,7 @@ class GoalConverter:
 
         cmd_to_execute = '%s batch %s' % (config.GOAL, script_tmp_file_name)
         res, out, err = execute_shell(cmd_to_execute)
-        assert res == 0 and err == '', 'Shell call failed:\n' + cmd_to_execute + '\nres=%i\n err=%s' % (res, err)
+        assert res == 0 and err == '', 'Shell call failed:\n' + cmd_to_execute + '\nres=%i\n err=%s\n out=%s' % (res, err, out)
 
         os.remove(script_tmp_file_name)
         return out
