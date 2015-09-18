@@ -207,7 +207,7 @@ class OriginalEncoder:
                             state_to_rejecting_scc:dict):
         # syntax sugar
         def smt_r(args):
-            return self.solver.call_func(self.r_func_desc, args)  # TODO: check what is wrong with using lambdas
+            return self.solver.call_func(self.r_func_desc, args)
 
         def smt_reach(args):
             return self.solver.call_func(self.reach_func_desc, args)
