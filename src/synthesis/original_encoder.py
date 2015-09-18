@@ -113,7 +113,7 @@ class OriginalEncoder:
     ##
     ##
 
-    ## encoding headers
+    # encoding headers
     def encode_headers(self, model_states):
         self._encode_automata_functions()
         self._encode_model_functions(model_states)
@@ -179,7 +179,7 @@ class OriginalEncoder:
 
         for q in self.automaton.nodes:
             for m in states_to_encode:
-                for label, dst_set_list in q.transitions.items():
+                for label in q.transitions:
                     self._encode_transitions(q, m, label,
                                              state_to_rejecting_scc)
 
@@ -206,8 +206,11 @@ class OriginalEncoder:
                             i_o:Label,
                             state_to_rejecting_scc:dict):
         # syntax sugar
-        smt_r = lambda args: self.solver.call_func(self.r_func_desc, args)
-        smt_reach = lambda args: self.solver.call_func(self.reach_func_desc, args)
+        def smt_r(args):
+            return self.solver.call_func(self.r_func_desc, args)  # TODO: check what is wrong with using lambdas
+
+        def smt_reach(args):
+            return self.solver.call_func(self.reach_func_desc, args)
         #
 
         smt_m = smt_name_m(m)
@@ -218,14 +221,7 @@ class OriginalEncoder:
         smt_out = self._smt_out(i_o, smt_m, q)
         smt_pre = self.solver.op_and([smt_reach(args_dict), smt_out])
 
-        #
-        dst_set_list = q.transitions[i_o]
-        assert len(dst_set_list) == 1, 'nondetermenistic transitions are not supported' + \
-                                       str(dst_set_list) + '\n from ' + str(q) + \
-                                       '\nwith io:' + str(i_o)
-        dst_set = dst_set_list[0]
-
-        #
+        dst_set = q.transitions[i_o]
         smt_m_next = self.solver.call_func(self.tau_desc, args_dict)
 
         smt_post_conjuncts = []

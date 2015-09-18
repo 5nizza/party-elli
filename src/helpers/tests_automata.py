@@ -1,65 +1,36 @@
 import unittest
-from interfaces.automata import Node, Label
-from helpers.automata_helper import _get_next_states, is_absorbing
+
+from interfaces.automata import Node, get_next_states, Label
 
 
 class Test(unittest.TestCase):
+    def _are_equal_sequences(self, seq1, seq2):
+        seq1 = set(seq1)
+        seq2 = set(seq2)
+        self.assertSetEqual(seq1, seq2)
+
     def test_get_next_states(self):
         state = Node('init')
+        r = Node('r')
+        rg = Node('rg')
+        nr_g = Node('!rg')
 
         _ = False
-        dst_set_r = {(Node('r'),_)}
-        dst_set_rg = {(Node('rg'),_)}
-        dst_set_not_r_g = {(Node('!rg'),_)}
+        edge_to_r = {(r, _)}
+        edge_to_rg = {(rg, _)}
+        edge_to_not_r_g = {(nr_g, _)}
 
-        state.add_transition({'r':True}, dst_set_r)
-        state.add_transition({'r':True, 'g':True}, dst_set_rg)
-        state.add_transition({'r':False, 'g':True}, dst_set_not_r_g)
+        state.add_transition({'r':True}, edge_to_r)
+        state.add_transition({'r':True, 'g':True}, edge_to_rg)
+        state.add_transition({'r':False, 'g':True}, edge_to_not_r_g)
 
+        next_states = get_next_states(state, Label({'r':False, 'g':False}))
+        assert len(next_states) == 0
 
-        list_of_state_sets = _get_next_states(state,
-                                             {'r':False, 'g':False})
-        assert len(list_of_state_sets) == 0
+        next_states = get_next_states(state, Label({'r':False, 'g':True}))
+        assert len(next_states) == 1
+        self._are_equal_sequences({nr_g}, next_states)
 
-        list_of_state_sets = _get_next_states(state,
-                                             {'r':False, 'g':True})
-        assert len(list_of_state_sets) == 1
-        assert set([x[0] for x in dst_set_not_r_g]) in list_of_state_sets, \
-                                                    str(list_of_state_sets)
-
-        list_of_state_sets = _get_next_states(state,
-                                             {'r':True, 'g':True})
-        assert len(list_of_state_sets) == 2
-        assert set([x[0] for x in dst_set_rg]) in list_of_state_sets
-        assert set([x[0] for x in dst_set_r]) in list_of_state_sets
-
-
-    def test_is_not_absorbing(self):
-        node = Node('node')
-
-        true_label = Label({})
-        node.add_transition(true_label, [('dst1', True)])
-
-        assert not is_absorbing(node)
-
-
-    def test_is_not_absorbing2(self):
-        node = Node('node')
-
-
-        true_label = Label({})
-        node.add_transition(true_label, [('dst1', True)])
-
-        node.add_transition(Label({'r':True}), [(node, True)])
-
-        assert not is_absorbing(node)
-
-
-    def test_is_absorbing(self):
-        node = Node('node')
-
-        true_label = Label({})
-        node.add_transition(true_label, [(node, True)])
-        node.add_transition(Label({'r':True}), [(node, True)])
-
-        assert is_absorbing(node)
+        next_states = get_next_states(state, Label({'r':True, 'g':True}))
+        assert len(next_states) == 2
+        self._are_equal_sequences({r, rg}, next_states)

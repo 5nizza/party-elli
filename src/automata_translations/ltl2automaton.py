@@ -53,7 +53,7 @@ class LTL3BA:
 
         initial_nodes, rejecting_nodes, nodes = parse_ltl2ba_ba(ba, signal_by_name, states_prefix)
 
-        assert set(rejecting_nodes).issubset(set(nodes)) and set(initial_nodes).issubset(set(nodes))  # rm after debug
+        assert set(rejecting_nodes).issubset(set(nodes)) and set(initial_nodes).issubset(set(nodes))
 
         _assert_are_signals_in_labels(nodes)
 

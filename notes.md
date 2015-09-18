@@ -1,4 +1,4 @@
-# 24 May (AK)
+# July 6
 
-started a new branch: `elli`.
-The idea is to clean first (do we need this?).
+started a new branch called `pasadena` for 
+the synthesis of robots.

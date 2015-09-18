@@ -42,6 +42,7 @@ ALL = 'all'
 ALL_SYMBOLIC = 'all_symbolic'
 ALL_SYMBOLIC_FORALL = 'all_symbolic_forall'
 
+
 def _write_out(model, is_moore, file_type, file_name):
     with open(file_name + '.' + file_type, 'w') as out:
         out.write(model)
@@ -75,9 +76,11 @@ def _parse_spec(spec_file_name:str):
            getattr(spec,'S_g_trans', None), \
            getattr(spec,'L_g_property', None)
 
+
 def _log_automata1(a:Automaton):
     logger.debug('automaton (dot) is:\n' + automata_helper.to_dot(a))
     logger.debug(a)
+
 
 def _log_automata4(S_a, S_g, L_a, L_g):
     logger.debug('search: S_a (dot) is:\n' + automata_helper.to_dot(S_a))

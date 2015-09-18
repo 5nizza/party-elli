@@ -1,10 +1,9 @@
 from functools import lru_cache
 from itertools import product
-from helpers.console_helpers import print_green
+
 from helpers.hashable import HashableDict
 
-# TODO: XXX: remove Alternating automata functionality -- make it UCW/NBW
-# TODO: XXX: remove flagged nodes functionality -- use acceptance on nodes
+
 class Automaton:
     def __init__(self, init_nodes, rejecting_nodes, nodes, name=''):
         self._init_nodes = set(init_nodes)
@@ -45,7 +44,8 @@ class Automaton:
 class Label(HashableDict):
     """
     hashable dict: signal -> True/False
-    Label({}) means 'any value'
+    Label({}) means 'True'
+    And there is no need for 'False'
     """
     pass
 
@@ -53,43 +53,44 @@ LABEL_TRUE = Label(dict())
 
 
 class Node:
-    def __init__(self, name):
-        self._transitions = {}  # label->[(set, is_rejecting), (set, is_rejecting), ..]
+    def __init__(self, name, transitions=None):
         self._name = name
-        assert name != "0"
+        assert name != '0'  # TODO: why?
+        if transitions is None:
+            self._transitions = {}  # label -> {node1,...}
 
     @property
     def name(self):
         return self._name
 
     @property
-    def transitions(self):   # TODO: change to dict: {(label:flagged_nodes)}
-        """ Return dict { label->[ Set_of_flagged_nodes, Set_of_flagged_nodes..] } """
+    def transitions(self) -> dict:
+        """
+        :return: dict { label -> {(is_acc,node), ...}, ... }
+        """
         return self._transitions
 
-    def add_transition(self, label, flagged_nodes):
-        """ Add transition:
-            flagged_nodes - set of pairs (node, is_rejecting)
-            Several calls with the same label are allowed - this means that transition is non-deterministic.
+    def add_transition(self, label, dst_node_flag_pairs):
+        """ Add transitions.
+            Several calls with the same label are allowed -
+            this means that transition is non-deterministic.
+            Second call with the same
         """
         label = Label(label)
-        label_transitions = self._transitions[label] = self._transitions.get(label, [])
+        cur_dst_node_flag_pairs = self._transitions[label] = self._transitions.get(label, set())
 
-        flagged_nodes_set = set(flagged_nodes)
-        assert flagged_nodes_set not in label_transitions, \
-            str(label_transitions) + ', ' + str(flagged_nodes_set) + ', ' + str(label) + ', ' + str(self._name)
+        assert not set(dst_node_flag_pairs).issubset(cur_dst_node_flag_pairs), \
+            '\n'.join(map(str, [self._name,
+                                label,
+                                dst_node_flag_pairs,
+                                cur_dst_node_flag_pairs]))
 
-        label_transitions.append(flagged_nodes_set)
+        cur_dst_node_flag_pairs.update(dst_node_flag_pairs)
 
     def __str__(self):
         labels_strings = []
-        for l, dst_list in self.transitions.items():
-            dst_strings = []
-            for flagged_dst_set in dst_list:
-                dst_strings.append('({0})'.format(str(', '.join(['{0}{1}'.format(n.name, ['', ':rej'][is_rejecting])
-                                                                 for n, is_rejecting in flagged_dst_set]))))
-
-            labels_strings.append('[{0}: {1}]'.format(str(l), ', '.join(dst_strings)))
+        for l, node_flag_pairs in self.transitions.items():
+            labels_strings.append('[{0}: {1}]'.format(str(l), str(node_flag_pairs)))
 
         return "{0}, transitions: {1}".format(self.name, ' '.join(labels_strings))
 
@@ -101,10 +102,10 @@ class Node:
 
 # ------------------------------CONSTANTS---------------------------------
 DEAD_END = Node('dead')
-DEAD_END.add_transition(Label({}), {(DEAD_END, True)})
+DEAD_END.add_transition(LABEL_TRUE, {(DEAD_END, True)})
 
 LIVE_END = Node('live')
-LIVE_END.add_transition(Label({}), {(LIVE_END, False)})
+LIVE_END.add_transition(LABEL_TRUE, {(LIVE_END, False)})
 
 
 # ------------------------------ HELPER FUNCTIONS -------------------------
@@ -135,6 +136,7 @@ def is_satisfied(label, signal_values):
             return False
     return True
 
+
 @lru_cache()
 def all_stimuli_that_satisfy(label:Label, alphabet) -> set:
     bound_signals = set(filter(lambda sig: sig in label, alphabet))
@@ -161,10 +163,8 @@ def all_stimuli_that_satisfy(label:Label, alphabet) -> set:
 @lru_cache()
 def get_next_states(n:Node, i_o:Label) -> set:
     dst_nodes = set()
-    for lbl, dst_set_list in n.transitions.items():
-        assert len(dst_set_list) == 1, str(dst_set_list)
-
-        dst = map(lambda node_flag: node_flag[0], dst_set_list[0])
+    for lbl, node_flag_pairs in n.transitions.items():
+        dst = map(lambda node_flag: node_flag[0], node_flag_pairs)
 
         if is_satisfied(lbl, i_o):
             dst_nodes.update(dst)

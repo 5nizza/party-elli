@@ -83,30 +83,31 @@ def _get_create_new_nodes(new_name_to_node, flagged_nodes_set):
     return new_nodes
 
 
-def _conform2acw(initial_nodes, rejecting_nodes, nodes):
-    """ Modify 'incorrect' transitions:
-        label->[set1,set2] modified to label->[set3], where set3=set1+set2
-    """
-    new_name_to_node = {}
-    for n in nodes:
-        new_node = get_add(new_name_to_node, n.name, Node(n.name))
-
-        lbl_to_flagged_nodes = {}
-
-        lbl_dst_set_pairs = [(lbl, _flatten(list_of_sets)) for lbl, list_of_sets in n.transitions.items()]
-        for pattern_lbl, old_dst_nodes in lbl_dst_set_pairs:
-            new_dst_nodes = _get_create_new_nodes(new_name_to_node, old_dst_nodes)
-
-            lbl_nodes = get_add(lbl_to_flagged_nodes, pattern_lbl, set())
-            lbl_nodes.update(new_dst_nodes)  # TODO: determenize, make labels do not intersect
-
-        for lbl, flagged_dst_nodes in lbl_to_flagged_nodes.items():
-            new_node.add_transition(lbl, flagged_dst_nodes)
-
-    new_init_nodes = [new_name_to_node[n.name] for n in initial_nodes]
-    new_rejecting_nodes = [new_name_to_node[n.name] for n in rejecting_nodes]
-
-    return new_init_nodes, new_rejecting_nodes, list(new_name_to_node.values())
+# def _conform2acw(init_nodes, rej_nodes, nodes):
+#     """ Modify `incorrect' transitions:
+#         label->[set1,set2] modified to label->[set3], where set3=set1+set2
+#     """
+#     new_name_to_node = {}
+#     for n in nodes:
+#         new_node = get_add(new_name_to_node, n.name, Node(n.name))
+#
+#         lbl_to_flagged_nodes = {}
+#
+#         lbl_dst_set_pairs = [(lbl, _flatten(list_of_sets))
+#                              for lbl, list_of_sets in n.transitions.items()]
+#         for pattern_lbl, old_dst_nodes in lbl_dst_set_pairs:
+#             new_dst_nodes = _get_create_new_nodes(new_name_to_node, old_dst_nodes)
+#
+#             lbl_nodes = get_add(lbl_to_flagged_nodes, pattern_lbl, set())
+#             lbl_nodes.update(new_dst_nodes)  # TODO: determinize, make labels do not intersect
+#
+#         for lbl, flagged_dst_nodes in lbl_to_flagged_nodes.items():
+#             new_node.add_transition(lbl, flagged_dst_nodes)
+#
+#     new_init_nodes = [new_name_to_node[n.name] for n in init_nodes]
+#     new_rej_nodes = [new_name_to_node[n.name] for n in rej_nodes]
+#
+#     return new_init_nodes, new_rej_nodes, list(new_name_to_node.values())
 
 
 def _parse_trans_tok(trans:str,
@@ -129,13 +130,15 @@ def _parse_trans_tok(trans:str,
     return dst, labels
 
 
-def _get_hacked_ucw(text:str, signal_by_name:dict, states_prefix):  # TODO: bad smell - it is left for testing purposes only
+# TODO: rename
+def _get_hacked_ucw(text:str, signal_by_name:dict, states_prefix):
     """
-        Return: initial_nodes:set, rejecting_nodes:set, nodes:set, label variables:set
-        It is hacked since it doesn't conform to description of Node transitions:
-        label->[set1, set2] here means: with label go to _both set1 and set2
+    :return: initial_nodes:set, rejecting_nodes:set, nodes:set, label variables:set
 
-        @see _conform2acw which corrects this
+    It is `hacked' since it doesn't conform to description of Node transitions:
+    label->[set1, set2] here means: with label go to _both set1 and set2
+
+    @see _conform2acw which corrects this
 
     """
 
@@ -155,15 +158,15 @@ def _get_hacked_ucw(text:str, signal_by_name:dict, states_prefix):  # TODO: bad 
     #    skip
 
     vars = set()
-    initial_nodes = set()
-    rejecting_nodes = set()
+    init_nodes = set()
+    rej_nodes = set()
     name_to_node = {}
 
     for b in blocks:
         lines = b.strip().split('\n')
 
         src_tok = lines[0].split(':')[0].strip()
-        src = _get_create(src_tok, name_to_node, initial_nodes, rejecting_nodes, states_prefix)
+        src = _get_create(src_tok, name_to_node, init_nodes, rej_nodes, states_prefix)
 
         trans_block = lines[1:]
         # if
@@ -179,23 +182,24 @@ def _get_hacked_ucw(text:str, signal_by_name:dict, states_prefix):  # TODO: bad 
             trans_toks = [trans_block[0].strip()]
 
         if trans_toks == ['skip']:
-            src.add_transition({}, {(src, src in rejecting_nodes)})
+            src.add_transition({}, {(src, src in rej_nodes)})
             continue
 
         for trans in trans_toks:
             dst, labels = _parse_trans_tok(trans,
                                            src,
                                            name_to_node,
-                                           initial_nodes, rejecting_nodes,
+                                           init_nodes, rej_nodes,
                                            signal_by_name,
                                            states_prefix)
             vars.update(itertools.chain(*[l.keys() for l in labels]))
 
             for l in labels:
-                #that is not correct - there are no ORs in UCT => this is corrected in _conform2acw
-                src.add_transition(l, {(dst, dst in rejecting_nodes)})
+                # that is not correct - there are no ORs in UCT
+                # => this is corrected in _conform2acw
+                src.add_transition(l, {(dst, dst in rej_nodes)})
 
-    return initial_nodes, rejecting_nodes, name_to_node.values(), vars
+    return init_nodes, rej_nodes, name_to_node.values(), vars
 
 
 @log_entrance(logging.getLogger(), logging.DEBUG)
@@ -204,19 +208,21 @@ def parse_ltl2ba_ba(text:str, signal_by_name:dict, states_prefix):
     Parse ltl2ba output
     Return (initial_nodes, rejecting_nodes, nodes of Node class)
     """
-    # TODO: account for the following special case (accept_init and s0_init) (GOAL returns this, that is alright):
-#    never {
-#    accept_init:
-#    s0_init:
-#        if
-#        :: !(g) -> goto s0_init
-#        fi;
-#    }
-    initial_nodes, rejecting_nodes, nodes, vars = _get_hacked_ucw(text, signal_by_name, states_prefix)
+    # TODO: account for the following special case (accept_init and s0_init)
+    #       (GOAL returns this, that is alright):
+    #    never {
+    #    accept_init:
+    #    s0_init:
+    #        if
+    #        :: !(g) -> goto s0_init
+    #        fi;
+    #    }
+    init_nodes, rej_nodes, nodes, vars = \
+        _get_hacked_ucw(text, signal_by_name, states_prefix)
 
-    ucw_init_nodes, ucw_rej_nodes, ucw_nodes = _conform2acw(initial_nodes, rejecting_nodes, nodes)
+    # ucw_init_nodes, ucw_rej_nodes, ucw_nodes = _conform2acw(init_nodes, rej_nodes, nodes)
 
-    return ucw_init_nodes, ucw_rej_nodes, ucw_nodes
+    return init_nodes, rej_nodes, nodes
 
 
 #_tmp = """

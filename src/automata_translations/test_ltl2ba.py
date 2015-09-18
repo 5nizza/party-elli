@@ -30,7 +30,7 @@ class Test(unittest.TestCase):
         sig_r = QuantifiedSignal('r')
         signal_by_name = {'r': sig_r, 'g': sig_g}
 
-        initial_nodes, rejecting_nodes, nodes, _ = _get_hacked_ucw(text, signal_by_name)
+        initial_nodes, rejecting_nodes, nodes, _ = _get_hacked_ucw(text, signal_by_name, '')
 
         assert len(initial_nodes) == 1, str(len(initial_nodes))
         assert len(rejecting_nodes) == 1, str(len(rejecting_nodes))
@@ -38,27 +38,23 @@ class Test(unittest.TestCase):
 
         for n in nodes:
             if n.name == 'T0_init':
-                assert not n in rejecting_nodes
+                assert n not in rejecting_nodes
                 assert n in initial_nodes
                 assert len(n.transitions) == 2
 
-                for label, dst_set_list in n.transitions.items():
-                    assert len(dst_set_list) == 1, str(dst_set_list)
-                    flagged_dst_set = dst_set_list[0]
-                    for dst, is_rejecting in flagged_dst_set:
+                for label, node_flag_pairs in n.transitions.items():
+                    for dst, is_rejecting in node_flag_pairs:
                         assert (dst.name == 'T0_init' and label == {}) or \
                                (dst.name == 'accept_S2' and label == {sig_g: False, sig_r: True}), \
                             'unknown transition: {0} {1}'.format(label, str(dst))
 
             elif n.name == 'accept_S2':
                 assert n in rejecting_nodes
-                assert not n in initial_nodes
+                assert n not in initial_nodes
                 assert len(n.transitions) == 1
 
-                for label, dst_set_list in n.transitions.items():
-                    assert len(dst_set_list) == 1, str(dst_set_list)
-                    flagged_dst_set = dst_set_list[0]
-                    dst, is_rejecting = flagged_dst_set.pop()
+                for label, node_flag_pairs in n.transitions.items():
+                    dst, is_rejecting = set(node_flag_pairs).pop()
                     assert dst.name == 'accept_S2' and label == {sig_g: False}
             else:
                 assert False, 'unknown node: {0}'.format(str(n))
@@ -77,7 +73,7 @@ class Test(unittest.TestCase):
         sig_g = QuantifiedSignal('g')
         sig_r = QuantifiedSignal('r')
         signal_by_name = {'r': sig_r, 'g': sig_g}
-        initial_nodes, _, nodes, _ = _get_hacked_ucw(text, signal_by_name)
+        initial_nodes, _, nodes, _ = _get_hacked_ucw(text, signal_by_name, '')
 
         assert len(initial_nodes) == 1, str(len(initial_nodes))
         assert len(nodes) == 2, str(nodes)
@@ -98,7 +94,7 @@ class Test(unittest.TestCase):
         sig_g = QuantifiedSignal('g')
         sig_r = QuantifiedSignal('r')
         signal_by_name = {'r': sig_r, 'g': sig_g}
-        initial_nodes, rejecting_nodes, nodes, _ = _get_hacked_ucw(text, signal_by_name)
+        initial_nodes, rejecting_nodes, nodes, _ = _get_hacked_ucw(text, signal_by_name, '')
 
         assert len(initial_nodes) == 1, str(len(initial_nodes))
         assert len(rejecting_nodes) == 1, str(len(rejecting_nodes))
@@ -109,9 +105,8 @@ class Test(unittest.TestCase):
         assert rejecting_nodes == {accept_all_node}
         assert len(accept_all_node.transitions) == 1
 
-        label, dst_set_list = list(accept_all_node.transitions.items())[0]
-        flagged_dst_set = dst_set_list[0]
-        dst, is_rejecting = flagged_dst_set.pop()
+        label, node_flag_pairs = list(accept_all_node.transitions.items())[0]
+        dst, is_rejecting = set(node_flag_pairs).pop()
         assert dst == accept_all_node, str(dst)
         assert label == {}, str(label)
 
@@ -129,7 +124,7 @@ class Test(unittest.TestCase):
         sig_g = QuantifiedSignal('g')
         sig_r = QuantifiedSignal('r')
         signal_by_name = {'r': sig_r, 'g': sig_g}
-        initial_nodes, rejecting_nodes, nodes, _ = _get_hacked_ucw(text, signal_by_name)
+        initial_nodes, rejecting_nodes, nodes, _ = _get_hacked_ucw(text, signal_by_name, '')
 
         assert len(initial_nodes) == 1, str(len(initial_nodes))
         assert len(rejecting_nodes) == 1, str(len(rejecting_nodes))
@@ -139,13 +134,11 @@ class Test(unittest.TestCase):
 
         assert len(init_node.transitions) == 3, len(init_node.transitions)
 
-        for label, dst_set_list in init_node.transitions.items():
-            assert len(dst_set_list) == 1, str(dst_set_list)
-            flagged_dst_set = dst_set_list[0]
-            for dst, is_rejecting in flagged_dst_set:
+        for label, node_flag_pairs in init_node.transitions.items():
+            for dst, is_rejecting in node_flag_pairs:
                 assert (label == {} and dst == init_node) \
                            or (label == {sig_r: True} and dst != init_node) \
-                    or (label == {sig_g: False} and dst != init_node)
+                           or (label == {sig_g: False} and dst != init_node)
 
     def test_unwind_labels__true_lbl(self):
         pattern_lbl = {}
