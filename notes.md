@@ -1,4 +1,4 @@
-# July 6
+# September 2015
 
-started a new branch called `pasadena` for 
-the synthesis of robots.
+Branch mongol is used for monolithic reafactoring of PARTY 
+to create a beautifull implementation of the monolithic bounded synthesis.
