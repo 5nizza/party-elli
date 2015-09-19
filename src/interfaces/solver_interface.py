@@ -92,7 +92,7 @@ class SolverInterface:
         raise NotImplementedError()
 
     @abstractmethod
-    def solve(self) -> list:  # TOOD: currently returns lines, but should return some model witness
+    def solve(self) -> list:  # TODO: currently returns lines, but should return some model witness
         raise NotImplementedError()
 
     @abstractmethod
@@ -102,32 +102,4 @@ class SolverInterface:
     #
     @abstractmethod
     def comment(self, comment):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def add_raw_smt(self, raw_smt_string):
-        raise NotImplementedError()
-
-
-class EncodingSolver:  # TODO: bad smell: the only implementation
-    __metaclass__ = ABCMeta
-
-    @abstractmethod
-    def encode_run_graph(self, impl, model_states_to_encode, env_ass_func):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def push(self):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def pop(self):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def solve(self, impl) -> LTS:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def encode_model_bound(self, only_states, impl):
         raise NotImplementedError()

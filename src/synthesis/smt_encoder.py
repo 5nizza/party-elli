@@ -1,20 +1,16 @@
 import logging
 from itertools import product
 import sys
-from nose.tools import assert_equal
-from helpers.console_helpers import print_green, print_red
 
 from helpers.labels_map import LabelsMap
 from helpers.logging_helper import log_entrance
 from helpers.python_ext import lmap
-from interfaces.automata import Label, Automaton, LIVE_END, all_stimuli_that_satisfy, \
-    get_next_states, Node, DEAD_END
+from interfaces.automata import Label, Automaton, Node, DEAD_END
 from interfaces.lts import LTS
 from interfaces.parser_expr import Signal
 from interfaces.solver_interface import SolverInterface
 from synthesis.func_description import FuncDescription
-from synthesis.funcs_args_types_names import TYPE_MODEL_STATE, ARG_MODEL_STATE, ARG_S_a_STATE, ARG_S_g_STATE, \
-    ARG_L_a_STATE, ARG_L_g_STATE, TYPE_S_a_STATE, TYPE_S_g_STATE, TYPE_L_a_STATE, TYPE_L_g_STATE, FUNC_REACH, FUNC_R, \
+from synthesis.funcs_args_types_names import TYPE_MODEL_STATE, ARG_MODEL_STATE, FUNC_REACH, FUNC_R, \
     smt_name_spec, smt_name_m, smt_name_free_arg, smt_arg_name_signal, smt_unname_if_signal, smt_unname_m, ARG_A_STATE, \
     TYPE_A_STATE
 from synthesis.rejecting_states_finder import build_state_to_rejecting_scc

@@ -7,7 +7,7 @@ from interfaces.automata import Automaton
 from interfaces.parser_expr import UnaryOp, Expr, Signal
 from parsing.visitor import WeakToUntilConverterVisitor
 from automata_translations.ast_to_ltl3ba import ConverterToLtl2BaFormatVisitor
-from automata_translations.ltl2ba import parse_ltl2ba_ba
+from automata_translations.ltl3ba_wrapper import parse_ltl2ba_ba
 
 
 def _negate(expr:Expr) -> Expr:

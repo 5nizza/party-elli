@@ -1,7 +1,11 @@
+# TODO: use this module
+
 import math
+
 from helpers.python_ext import StrAwareList, lmap, bin_fixed_list
 from interfaces.automata import Label
 from interfaces.lts import LTS
+
 
 # MODULE main
 # IVAR
@@ -27,7 +31,7 @@ from interfaces.lts import LTS
 # LTLSPEC G(in_r -> F(out_g))
 
 from interfaces.parser_expr import QuantifiedSignal, BinOp, and_expressions
-from interfaces.spec import SpecProperty, expr_from_property
+from interfaces.spec import SpecProperty
 from module_generation.ast_to_smv_property import AstToSmvProperty
 from parsing.visitor import WeakToUntilConverterVisitor
 

@@ -138,7 +138,7 @@ def is_satisfied(label, signal_values):
 
 
 @lru_cache()
-def all_stimuli_that_satisfy(label:Label, alphabet) -> set:
+def all_stimuli_that_satisfy(label:Label, alphabet) -> set:    # TODO: unused?
     bound_signals = set(filter(lambda sig: sig in label, alphabet))
     free_signals = set(alphabet).difference(bound_signals)
 
@@ -161,7 +161,7 @@ def all_stimuli_that_satisfy(label:Label, alphabet) -> set:
 
 
 @lru_cache()
-def get_next_states(n:Node, i_o:Label) -> set:
+def get_next_states(n:Node, i_o:Label) -> set:   # TODO: use it or remove it
     dst_nodes = set()
     for lbl, node_flag_pairs in n.transitions.items():
         dst = map(lambda node_flag: node_flag[0], node_flag_pairs)

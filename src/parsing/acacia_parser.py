@@ -8,6 +8,8 @@ from parsing.acacia_lexer_desc import acacia_lexer
 from parsing.acacia_parser_desc import acacia_parser
 from parsing.sanity_checker import check_unknown_signals_in_properties
 
+from unittest import TestCase
+
 
 def _parse_signals_from_lines(signal_lines:list) -> list:
     signals_raw = chain(*[l.split()[1:] for l in signal_lines])
@@ -84,9 +86,6 @@ assume (!(F (G ((request0=1) * (!(X(grant0=1)))))));
 
 group_order = (u1 u2);
 """
-
-
-from unittest import TestCase
 
 
 class Test(TestCase):

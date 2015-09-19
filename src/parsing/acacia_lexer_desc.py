@@ -1,4 +1,5 @@
 from interfaces.parser_expr import *
+import third_party.ply.lex as lex
 
 #reserved words: syntactic sugar to help to match exactly reserved word
 reserved_bools = dict((s, s) for s in ('TRUE', 'FALSE'))
@@ -16,10 +17,11 @@ BIN_OPS = ('+','*','->','<->','=','U', 'W')
 
 
 ############################################################
-#http://www.dabeaz.com/ply/ply.html#ply_nn6
+# http://www.dabeaz.com/ply/ply.html#ply_nn6
 # functions first, vars second
-#All tokens defined by functions are added in the same order as they appear in the lexer file.
-#Tokens defined by strings are added next by sorting them in order of decreasing regular expression length (longer expressions are added first).
+# All tokens defined by functions are added in the same order as they appear in the lexer file.
+# Tokens defined by strings are added next by sorting them in order of decreasing regular
+# expression length (longer expressions are added first).
 
 t_OR      = r'\+'
 t_AND     = r'\*'
@@ -105,6 +107,5 @@ def t_error(t):
     assert 0
 
 
-import third_party.ply.lex as lex
-
 acacia_lexer = lex.lex()
+

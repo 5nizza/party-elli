@@ -105,6 +105,7 @@ def main(spec_file_name:str,
 
     # TODO: check others satisfy the pre of the encoder
 
+    # TODO: use model_searcher instead
     model = original_model_searcher.search(automaton,
                                            not is_moore,
                                            input_signals, output_signals,

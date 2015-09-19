@@ -1,6 +1,9 @@
 from interfaces.parser_expr import and_expressions, BinOp, Bool, Expr
 
 
+# TODO: either or remove
+
+
 class Spec:
     def __init__(self, inputs, outputs, properties):
         assert properties

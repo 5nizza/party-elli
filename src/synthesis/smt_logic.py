@@ -19,7 +19,7 @@ class Logic:
         raise NotImplementedError()
 
 
-class UFBV(Logic):
+class UFBV(Logic):  # TODO: 1. proper instantiation 2. use it or remove it
     def __init__(self, width):
         self._width = width
 

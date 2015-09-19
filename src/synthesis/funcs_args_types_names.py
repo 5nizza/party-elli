@@ -1,6 +1,10 @@
 from interfaces.automata import Node, Label
 from interfaces.parser_expr import Signal
 
+
+# TODO: remove non-used
+
+
 TYPE_MODEL_STATE = 'M'
 TYPE_S_a_STATE = 'S_a'
 TYPE_S_g_STATE = 'S_g'

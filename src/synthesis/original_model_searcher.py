@@ -1,17 +1,14 @@
 import logging
-from helpers.console_helpers import print_red, print_green
 
 from helpers.logging_helper import log_entrance
 from interfaces.automata import Automaton
 from interfaces.lts import LTS
 from interfaces.parser_expr import Signal
 from interfaces.solver_interface import SolverInterface
-from synthesis.full_info_encoder import FullInfoEncoder
 from synthesis.func_description import FuncDescription
 from synthesis.funcs_args_types_names import FUNC_MODEL_TRANS, \
-    TYPE_MODEL_STATE, ARG_MODEL_STATE, ARG_S_a_STATE, TYPE_S_a_STATE, TYPE_S_g_STATE, TYPE_L_a_STATE, TYPE_L_g_STATE, \
-    ARG_L_g_STATE, ARG_L_a_STATE, ARG_S_g_STATE, smt_arg_name_signal, TYPE_A_STATE, ARG_A_STATE
-from synthesis.original_encoder import OriginalEncoder
+    TYPE_MODEL_STATE, ARG_MODEL_STATE, smt_arg_name_signal
+from synthesis.smt_encoder import OriginalEncoder
 
 
 def _get_output_desc(output:Signal, is_mealy, inputs):
@@ -34,6 +31,7 @@ def _get_tau_desc(inputs):
 
     tau_desc = FuncDescription(FUNC_MODEL_TRANS, arg_types_dict, TYPE_MODEL_STATE, None)
     return tau_desc
+
 
 @log_entrance(logging.getLogger(), logging.INFO)
 def search(automaton:Automaton,
