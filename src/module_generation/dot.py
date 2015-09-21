@@ -2,15 +2,12 @@ from _collections_abc import Iterable
 import unittest
 import logging
 from unittest import TestCase
-from helpers.boolean_helpers import minimize_dnf_set
-from helpers.console_helpers import print_green, print_red
 
-from helpers.labels_map import LabelsMap
+from helpers.console_helpers import print_green, print_red
 from helpers.python_ext import StrAwareList, add_dicts, lmap
 from interfaces.automata import Label
 from interfaces.lts import LTS
-from interfaces.parser_expr import QuantifiedSignal, Signal
-from synthesis.funcs_args_types_names import ARG_MODEL_STATE, ARG_S_a_STATE, ARG_S_g_STATE, ARG_L_a_STATE, ARG_L_g_STATE
+from interfaces.expr import QuantifiedSignal, Signal
 from third_party import boolean
 
 

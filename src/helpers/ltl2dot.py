@@ -2,7 +2,7 @@
 import argparse
 import sys
 import tempfile
-from helpers.automata_helper import to_dot
+from helpers.automaton2dot import to_dot
 from helpers.main_helper import setup_logging, create_spec_converter_z3
 from spec_optimizer.optimizations import parse_expr
 from synthesis.smt_logic import UFLIA

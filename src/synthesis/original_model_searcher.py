@@ -3,12 +3,12 @@ import logging
 from helpers.logging_helper import log_entrance
 from interfaces.automata import Automaton
 from interfaces.lts import LTS
-from interfaces.parser_expr import Signal
+from interfaces.expr import Signal
 from interfaces.solver_interface import SolverInterface
 from synthesis.func_description import FuncDescription
 from synthesis.funcs_args_types_names import FUNC_MODEL_TRANS, \
     TYPE_MODEL_STATE, ARG_MODEL_STATE, smt_arg_name_signal
-from synthesis.smt_encoder import OriginalEncoder
+from synthesis.smt_encoder import SMTEncoder
 
 
 def _get_output_desc(output:Signal, is_mealy, inputs):
@@ -45,7 +45,7 @@ def search(automaton:Automaton,
                          for o in output_signals)
     tau_desc = _get_tau_desc(input_signals)
 
-    encoding_solver = OriginalEncoder(logic,
+    encoding_solver = SMTEncoder(logic,
                                       automaton,
                                       underlying_solver,
                                       tau_desc,

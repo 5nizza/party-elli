@@ -1,5 +1,5 @@
 import unittest
-from interfaces.parser_expr import QuantifiedSignal
+from interfaces.expr import QuantifiedSignal
 from automata_translations.ltl3ba_wrapper import _get_hacked_ucw, _unwind_label
 
 

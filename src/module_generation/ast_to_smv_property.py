@@ -1,4 +1,4 @@
-from interfaces.parser_expr import Number, QuantifiedSignal, UnaryOp, BinOp, ForallExpr
+from interfaces.expr import Number, QuantifiedSignal, UnaryOp, BinOp, ForallExpr
 from parsing.visitor import Visitor
 
 

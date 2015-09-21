@@ -1,5 +1,5 @@
 from interfaces.automata import Node, Label
-from interfaces.parser_expr import Signal
+from interfaces.expr import Signal
 
 
 # TODO: remove non-used

@@ -4,7 +4,7 @@ import logging
 from helpers.converter_to_wring import ConverterToWringVisitor
 from helpers.shell import execute_shell
 from interfaces.automata import Automaton
-from interfaces.parser_expr import UnaryOp, Expr, Signal
+from interfaces.expr import UnaryOp, Expr, Signal
 from parsing.visitor import WeakToUntilConverterVisitor
 from automata_translations.ast_to_ltl3ba import ConverterToLtl2BaFormatVisitor
 from automata_translations.ltl3ba_wrapper import parse_ltl2ba_ba
@@ -27,14 +27,10 @@ class LTL3BA:
         self._logger = logging.getLogger(__name__)
 
     @lru_cache()
-    def convert(self, expr:Expr, states_prefix) -> Automaton:
-        assert 0, 'make sure you negate the property before passing here!'
-        # self._logger.info('Ltl2UCW: converting..\n' + ConverterToWringVisitor().dispatch(expr))
-
-        # make sure we don't have Weak Until since ltl2ba does not accept it
+    def convert(self, expr:Expr, states_prefix='') -> Automaton:
         expr = WeakToUntilConverterVisitor().dispatch(expr)
 
-        self._logger.info('Ltl2UCW: converting..(non-negated version)\n' + ConverterToWringVisitor().dispatch(expr))
+        self._logger.info('Ltl2UCW: converting:\n' + ConverterToWringVisitor().dispatch(expr))
 
         format_converter = ConverterToLtl2BaFormatVisitor()
         property_in_ltl2ba_format = format_converter.dispatch(expr)

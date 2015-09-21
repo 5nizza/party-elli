@@ -30,8 +30,8 @@ from interfaces.lts import LTS
 #
 # LTLSPEC G(in_r -> F(out_g))
 
-from interfaces.parser_expr import QuantifiedSignal, BinOp, and_expressions
-from interfaces.spec import SpecProperty
+from interfaces.expr import QuantifiedSignal, BinOp, and_expressions
+from interfaces.spec import AssumptionsGuaranteesPair
 from module_generation.ast_to_smv_property import AstToSmvProperty
 from parsing.visitor import WeakToUntilConverterVisitor
 
@@ -78,7 +78,7 @@ def _assert_no_intersection(state_bool_vars, signals):
     assert not intersection, str(intersection)
 
 
-def to_boolean_nusmv(lts:LTS, specification:SpecProperty) -> str:
+def to_boolean_nusmv(lts:LTS, specification:AssumptionsGuaranteesPair) -> str:
     nof_state_bits = int(max(1, math.ceil(math.log(len(lts.states), 2))))
     bits_by_state = dict((state, bin_fixed_list(i, nof_state_bits))
                          for (i,state) in enumerate(sorted(lts.states)))

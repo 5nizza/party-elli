@@ -4,7 +4,7 @@ from helpers.console_helpers import print_red, print_green
 from helpers.logging_helper import log_entrance
 from interfaces.automata import Automaton
 from interfaces.lts import LTS
-from interfaces.parser_expr import Signal
+from interfaces.expr import Signal
 from interfaces.solver_interface import SolverInterface
 from synthesis.full_info_encoder import FullInfoEncoder
 from synthesis.func_description import FuncDescription

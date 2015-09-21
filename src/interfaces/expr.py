@@ -1,7 +1,3 @@
-from functools import total_ordering
-from helpers.python_ext import index_of
-
-
 class Signal:
     def __init__(self, name:str):
         self.name = name
@@ -17,28 +13,6 @@ class Signal:
 
     def __hash__(self):
         return self.__hash_value
-
-
-class QuantifiedSignal(Signal):
-    def __init__(self, base_name:str, *binding_indices):  # TODO: currently there is always a single binding index -- fix
-        super().__init__(base_name)
-        self.binding_indices = tuple(binding_indices)  # binding index: str means parametrization, int - process index
-
-        self.__cached_str = self.name + '_' + '_'.join(map(str, self.binding_indices))
-        self.__hash_value = hash(self.__cached_str)
-
-    def __repr__(self):
-        return self.__cached_str
-
-    def __hash__(self):
-        return self.__hash_value
-
-    def __eq__(self, other):
-        if not isinstance(other, QuantifiedSignal):
-            return False
-        return self.__cached_str == other.__cached_str
-
-    __str__ = __repr__
 
 
 class Number:
@@ -57,7 +31,7 @@ class Number:
         return not self.__eq__(other)
 
 
-class Expr:
+class Expr:   # TODO: override boolean operations
     def __init__(self, name):
         self.name = name
 
@@ -71,6 +45,24 @@ class Expr:
         if not isinstance(other, self.__class__):
             return False
         return str(self) == str(other)
+
+    def __and__(self, other):
+        return BinOp('*', self, other)
+
+    def __iand__(self, other):
+        return self & other
+
+    def __or__(self, other):
+        return BinOp('+', self, other)
+
+    def __ior__(self, other):
+        return self | other
+
+    def __neg__(self):
+        return UnaryOp('!', self)
+
+    def __invert__(self):
+        return UnaryOp('!', self)
 
 
 class Bool(Expr):
@@ -105,15 +97,19 @@ class UnaryOp(Expr):
         return self.name + '({0})'.format(self.arg)
 
 
-class ForallExpr(Expr):
-    def __init__(self, binding_indices:'binding indices', expr:Expr):
-        super().__init__('Forall')
-        self.arg1, self.arg2 = tuple(binding_indices), expr  # TODO: rename fields
+class OpG(UnaryOp):
+    def __init__(self, arg):
+        super().__init__('G', arg)
 
-    def __str__(self):
-        return self.name + str('({0})'.format(','.join(self.arg1))) + ' ' + str(self.arg2)
 
-    __repr__ = __str__
+class OpF(UnaryOp):
+    def __init__(self, arg):
+        super().__init__('F', arg)
+
+
+class OpU(BinOp):
+    def __init__(self, arg1, arg2):
+        super().__init__('U', arg1, arg2)
 
 
 ########################################################################################
@@ -130,21 +126,6 @@ def and_expressions(conjuncts):
 
     res = conjuncts[0]
     for c in conjuncts[1:]:
-        res = BinOp('*', res, c)
+        res &= c
 
     return res
-
-
-def is_quantified_property(property) -> Bool:  # TODO: does not allow embedded forall quantifiers
-    """ Return True iff the property has quantified indices.
-        Numbers cannot be used as quantification indices.
-    """
-    for e in property.assumptions + property.guarantees:
-        if isinstance(e, ForallExpr):
-            binding_indices = e.arg1
-            if index_of(lambda bi: isinstance(bi, str), binding_indices) is not None:
-                return True
-        else:
-            assert e.__class__ in [ForallExpr, BinOp, UnaryOp, Bool], 'unknown class'
-
-    return False

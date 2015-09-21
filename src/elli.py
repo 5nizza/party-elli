@@ -1,22 +1,26 @@
 #!/usr/bin/env python3
 import argparse
-import importlib
-import os
-import sys
+from functools import lru_cache
 import tempfile
 
-from helpers import automata_helper
+from helpers import automaton2dot
+from helpers.automata_classifier import is_safety_automaton
+from helpers.gr1helpers import convert_into_gr1_formula
 from helpers.main_helper import setup_logging, create_spec_converter_z3, remove_files_prefixed
-from interfaces.automata import Automaton
-from interfaces.parser_expr import Signal
+from helpers.python_ext import readfile
+from interfaces.expr import Expr, BinOp, UnaryOp, and_expressions
 from module_generation.dot import lts_to_dot
-from synthesis import original_model_searcher
+from parsing.acacia_parser_desc import acacia_parser
+from parsing.python_spec_parser import parse_python_spec
+from parsing.visitor import Visitor
+from synthesis import original_model_searcher, model_searcher
 from synthesis.funcs_args_types_names import ARG_MODEL_STATE
+from synthesis.smt_encoder import SMTEncoder
 from synthesis.smt_logic import UFLIA
 from automata_translations.ltl2automaton import LTL3BA
 
 
-def _write_out(model, is_moore, file_type, file_name):
+def write_out(model, is_moore, file_type, file_name):
     with open(file_name + '.' + file_type, 'w') as out:
         out.write(model)
 
@@ -25,115 +29,149 @@ def _write_out(model, is_moore, file_type, file_name):
             file=out.name))
 
 
-def _parse_spec(spec_file_name:str):
-    # TODO: do not allow upper letters in the spec
-    code_dir = os.path.dirname(spec_file_name)
-    code_file = os.path.basename(spec_file_name.strip('.py'))
-
-    sys.path.append(code_dir)
-
-    saved_path = sys.path  # to ensure we import the right file
-                           # (imagine you want /tmp/spec.py but there is also ./spec.py,
-                           # then python prioritizes to ./spec.py)
-                           # To force the right version we change sys.path temporarily.
-    sys.path = [code_dir]
-    spec = importlib.import_module(code_file)
-    sys.path = saved_path
-
-    return [Signal(s) for s in spec.inputs], \
-           [Signal(s) for s in spec.outputs], \
-           getattr(spec,'S_a_init', None),\
-           getattr(spec,'S_a_trans', None),\
-           getattr(spec,'L_a_property', None), \
-           getattr(spec,'S_g_init', None), \
-           getattr(spec,'S_g_trans', None), \
-           getattr(spec,'L_g_property', None)
+@lru_cache()
+def is_safety_ltl(expr:Expr, ltl2automaton_converter) -> bool:
+    automaton = ltl2automaton_converter.convert(-expr)  # !(safety ltl) has safety automaton
+    res = is_safety_automaton(automaton)
+    return res
 
 
-def _log_automata1(a:Automaton):
-    logger.debug('automaton (dot) is:\n' + automata_helper.to_dot(a))
-    logger.debug(a)
+@lru_cache()
+def is_boolean_ltl(expr:Expr, ltl2automaton_converter) -> bool:
+    class TemporalOperatorFoundException(Exception):
+        pass
+
+    class TemporalOperatorsFinder(Visitor):
+        def visit_binary_op(self, binary_op:BinOp):
+            if binary_op.name in ['W', 'U']:  # TODO: get rid of magic string constants
+                raise TemporalOperatorFoundException()
+            return super().visit_binary_op(binary_op)
+
+        def visit_unary_op(self, unary_op:UnaryOp):
+            if unary_op in ['G', 'F']:
+                raise TemporalOperatorFoundException()
+            return super().visit_unary_op(unary_op)
+    try:
+        TemporalOperatorsFinder().dispatch(expr)
+        return True
+    except TemporalOperatorFoundException:
+        return False
 
 
-def weak_until(a, b):
-    return '( (({a}) U ({b})) || (G !({b})) )'.format(a=a, b=b)
+def _gr1_classify(formulas):
+    formulas = set(formulas)
+    init = set(filter(is_boolean_ltl, formulas))
+    safety = set(filter(is_safety_ltl, formulas - init))
+    liveness = formulas - safety - init
+    return init, safety, liveness
 
 
-def convert_into_formula(S_a_init, S_g_init,
-                         S_a_trans, S_g_trans,
-                         L_a_property, L_g_property):
-    template = '( ({S_a_init}) -> ({S_g_init}) )  &&  ' + \
-               weak_until(S_g_trans, '!(%s)' % S_a_trans) + '  &&  ' \
-               '( ({S_a_init}) && G ({S_a_trans}) && ({L_a_property})  ->  ({L_g_property}))'
+def _get_acacia_spec(ltl_text:str, part_text:str) -> (list, list, Expr):
+    input_signals, output_signals, data_by_name = acacia_parser.parse(ltl_text, part_text, logger)
 
-    return template.format(S_a_init=S_a_init or 'true', S_g_init=S_g_init or 'true',
-                           S_a_trans=S_a_trans or 'true', S_g_trans=S_g_trans or 'true',
-                           L_a_property=L_a_property or 'true', L_g_property=L_g_property or 'true')
+    if data_by_name is None:
+        return None, None, None
+
+    ltl_properties = []
+    for (unit_name, unit_data) in data_by_name.items():
+        assumptions = unit_data[0]
+        guarantees = unit_data[1]
+        a_init, a_safety, a_liveness = (and_expressions(p) for p in _gr1_classify(assumptions))
+        g_init, g_safety, g_liveness = (and_expressions(p) for p in _gr1_classify(guarantees))
+        ltl_property = convert_into_gr1_formula(a_init, g_init,
+                                                a_safety, g_safety,
+                                                a_liveness, g_liveness)
+        ltl_properties.append(ltl_property)
+
+    return input_signals, output_signals, and_expressions(ltl_properties)
 
 
-def main(spec_file_name:str,
+def parse_anzu_spec(spec_file_name:str):
+    raise NotImplemented('the code is not yet taken from the original parameterized tool')
+
+
+def parse_acacia_spec(spec_file_name:str):
+    """ :return: (inputs_signals, output_signals, expr) """
+
+    assert spec_file_name.endswith('.ltl'), spec_file_name
+    ltl_file_str = readfile(spec_file_name)
+    part_file_str = readfile(spec_file_name.replace('.ltl', '.part'))
+    return _get_acacia_spec(ltl_file_str, part_file_str)
+
+
+def _get_tau_desc(inputs):
+    arg_types_dict = dict()
+    arg_types_dict[ARG_MODEL_STATE] = TYPE_MODEL_STATE
+
+    for s in inputs:
+        arg_types_dict[smt_arg_name_signal(s)] = 'Bool'
+
+    tau_desc = FuncDescription(FUNC_MODEL_TRANS, arg_types_dict, TYPE_MODEL_STATE, None)
+    return tau_desc
+
+
+def _get_output_desc(output:Signal, is_mealy, inputs):
+    arg_types_dict = dict()
+    arg_types_dict[ARG_MODEL_STATE] = TYPE_MODEL_STATE
+
+    if is_mealy:
+        for s in inputs:
+            arg_types_dict[smt_arg_name_signal(s)] = 'Bool'
+
+    return FuncDescription(output.name, arg_types_dict, 'Bool', None)
+
+
+def main(spec_file_name,
          is_moore,
          dot_file_name,
          bounds,
-         ltl2ucw_converter:LTL3BA,
-         underlying_solver,
-         encoding):
-    """ :return: is realizable? """
+         ltl2automaton_converter:LTL3BA,
+         smt_solver):
+    parse_spec = { 'py':parse_python_spec,
+                  'ltl':parse_acacia_spec,
+                  'cfg':parse_anzu_spec
+                 }[spec_file_name.split('.')[-1]]
+    input_signals, output_signals, ltl = parse_spec(spec_file_name)
 
-    input_signals, \
-    output_signals, \
-    S_a_init, S_a_trans, L_a_property, \
-    S_g_init, S_g_trans, L_g_property, \
-        = _parse_spec(spec_file_name)
+    logger.info('LTL is:\n' + str(ltl))
 
-    assert input_signals or output_signals
+    automaton = ltl2automaton_converter.convert(-ltl)
 
-    signal_by_name = dict((s.name,s) for s in input_signals + output_signals)
-
-    spec = convert_into_formula(S_a_init, S_g_init,
-                                S_a_trans, S_g_trans,
-                                L_a_property, L_g_property)
-
-    logger.info('the final spec is:\n' + spec)
-
-    automaton = ltl2ucw_converter.convert_raw('!(%s)' % spec, signal_by_name, '')
-
-    # goal_converter = GoalConverter(config.GOAL)
-    # automaton = goal_converter.convert_to_nondeterministic('!(%s)' % spec, signal_by_name, 'spec_')
-
-    _log_automata1(automaton)
-
-    # TODO: check others satisfy the pre of the encoder
+    logger.debug('automaton (dot) is:\n' + automaton2dot.to_dot(automaton))
+    logger.debug(automaton)
 
     # TODO: use model_searcher instead
-    model = original_model_searcher.search(automaton,
-                                           not is_moore,
-                                           input_signals, output_signals,
-                                           bounds,
-                                           underlying_solver,
-                                           UFLIA(None))
+    tau_desc = _get_tau_desc(input_signals)
+
+    desc_by_output = dict((o, _get_output_desc(o, not is_moore, input_signals))
+                         for o in output_signals)
+
+    encoder = SMTEncoder(UFLIA(None),
+                         automaton,
+                         smt_solver,
+                         tau_desc,
+                         input_signals, desc_by_output)
+    model = model_searcher.search(bounds, encoder)
 
     is_realizable = model is not None
 
     logger.info(['unrealizable', 'realizable'][is_realizable])
 
     if is_realizable:
-        # combined_model = combine_model(S_a, S_g, L_a, L_g, model, input_signals)
-
         dot_model = lts_to_dot(model, [ARG_MODEL_STATE], not is_moore)
 
         if not dot_file_name:
             logger.info(dot_model)
         else:
-            _write_out(dot_model, is_moore, 'dot', dot_file_name)
+            write_out(dot_model, is_moore, 'dot', dot_file_name)
 
     return is_realizable
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Bounded Synthesis Tool')
-    parser.add_argument('ltl', metavar='ltl', type=str,
-                        help='the specification file')
+    parser.add_argument('spec', metavar='spec', type=str,
+                        help='the specification file (anzu, acacia+, or python format)')
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--moore', action='store_true', required=False,
@@ -175,12 +213,9 @@ if __name__ == "__main__":
     bounds = list(range(1, args.bound + 1) if args.size == 0
                   else range(args.size, args.size + 1))
 
-    is_realizable = main(args.ltl,
-                         args.moore, args.dot, bounds,
-                         ltl2ucw_converter,
-                         solver_factory.create())
+    is_realizable = main(args.ltl, args.moore, args.dot, bounds, ltl2ucw_converter, solver_factory.create())
 
     if not args.tmp:
         remove_files_prefixed(smt_files_prefix.split('/')[-1])
 
-    exit(0 if is_realizable else 1)
+    exit(is_realizable)

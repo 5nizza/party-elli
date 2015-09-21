@@ -1,4 +1,4 @@
-from interfaces.parser_expr import *
+from interfaces.expr import *
 import third_party.ply.lex as lex
 
 

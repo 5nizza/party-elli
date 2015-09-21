@@ -1,5 +1,5 @@
 from parsing.visitor import Visitor
-from interfaces.parser_expr import BinOp, UnaryOp, Signal, Number
+from interfaces.expr import BinOp, UnaryOp, Signal, Number
 
 
 class SignalsChecker(Visitor):
@@ -13,18 +13,9 @@ class SignalsChecker(Visitor):
         if not self.unknown_signal:
             self.dispatch(binary_op.arg2)
 
-    def visit_unary_op(self, unary_op:UnaryOp):
-        self.dispatch(unary_op.arg)
-
-    def visit_bool(self, bool_const):
-        return
-
     def visit_signal(self, signal:Signal):
         if signal not in self._known_signals:
             self.unknown_signal = signal
-
-    def visit_number(self, number:Number):
-        return
 
 
 def check_unknown_signals_in_properties(property_asts, known_signals):
@@ -33,8 +24,8 @@ def check_unknown_signals_in_properties(property_asts, known_signals):
         signals_checker.dispatch(a)
         if signals_checker.unknown_signal:
             error_str = 'found unknown signal "{signal}" in property "{ast}"\nknown_signals are {known}'.format(
-                signal = str(signals_checker.unknown_signal),
-                ast = str(a),
-                known = str(known_signals))
+                signal=str(signals_checker.unknown_signal),
+                ast=str(a),
+                known=str(known_signals))
 
             return error_str

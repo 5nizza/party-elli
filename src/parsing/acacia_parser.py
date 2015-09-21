@@ -3,7 +3,7 @@ import logging
 from itertools import chain
 from logging import Logger
 from helpers.python_ext import lfilter
-from interfaces.parser_expr import QuantifiedSignal
+from interfaces.expr import QuantifiedSignal
 from parsing.acacia_lexer_desc import acacia_lexer
 from parsing.acacia_parser_desc import acacia_parser
 from parsing.sanity_checker import check_unknown_signals_in_properties

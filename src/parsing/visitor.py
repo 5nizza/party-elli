@@ -1,5 +1,4 @@
-import math
-from interfaces.parser_expr import Number, BinOp, UnaryOp, Bool, Signal, ForallExpr
+from interfaces.expr import Number, BinOp, UnaryOp, Bool, Signal, ForallExpr
 
 
 class Visitor:
@@ -52,18 +51,3 @@ class Visitor:
         quantified_expr_visited = self.dispatch(node.arg2)
 
         return ForallExpr(binding_indices_visited, quantified_expr_visited)
-
-
-def get_log_bits(nof_processes:int) -> int:
-    return int(max(1, math.ceil(math.log(nof_processes, 2))))
-
-
-class WeakToUntilConverterVisitor(Visitor):
-    def visit_binary_op(self, binary_op:BinOp):
-        if binary_op.name == 'W':
-            bin_op_expr = BinOp('+',
-                                BinOp('U', binary_op.arg1, binary_op.arg2),
-                                UnaryOp('G', binary_op.arg1))
-            return self.dispatch(bin_op_expr)
-        else:
-            return super().visit_binary_op(binary_op)

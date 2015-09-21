@@ -77,7 +77,7 @@ def p_unit_data(p):
 def p_signal_name(p):
     """ signal_name : NAME
     """
-    p[0] = QuantifiedSignal(p[1], 0)
+    p[0] = Signal(p[1], )
 
 
 def p_unit_data_expressions(p):

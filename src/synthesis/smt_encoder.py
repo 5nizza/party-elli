@@ -2,12 +2,12 @@ import logging
 from itertools import product
 import sys
 
-from helpers.labels_map import LabelsMap
+from interfaces.labels_map import LabelsMap
 from helpers.logging_helper import log_entrance
 from helpers.python_ext import lmap
 from interfaces.automata import Label, Automaton, Node, DEAD_END
 from interfaces.lts import LTS
-from interfaces.parser_expr import Signal
+from interfaces.expr import Signal
 from interfaces.solver_interface import SolverInterface
 from synthesis.func_description import FuncDescription
 from synthesis.funcs_args_types_names import TYPE_MODEL_STATE, ARG_MODEL_STATE, FUNC_REACH, FUNC_R, \
@@ -34,7 +34,7 @@ def _build_signals_values(signals, label) -> (dict, list):
     return value_by_signal, free_values
 
 
-class OriginalEncoder:
+class SMTEncoder:
     def __init__(self,
                  logic,
                  automaton:Automaton,
@@ -42,7 +42,7 @@ class OriginalEncoder:
                  tau_desc:FuncDescription,
                  inputs,
                  descr_by_output,
-                 model_init_state:int):  # the automata alphabet is inputs+outputs
+                 model_init_state:int=0):  # the automata alphabet is inputs+outputs
         self.logger = logging.getLogger(__name__)
 
         self.solver = underlying_solver
