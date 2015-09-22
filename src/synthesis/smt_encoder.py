@@ -290,7 +290,7 @@ class SMTEncoder:
     def pop(self):
         return self.solver.pop()
 
-    @log_entrance(logging.getLogger(), logging.INFO)
+    @log_entrance()
     def solve(self) -> LTS:
         self.solver.add_check_sat()
 
@@ -331,15 +331,15 @@ class SMTEncoder:
 
         return dicts
 
-    @log_entrance(logging.getLogger(), logging.INFO)
-    def _parse_sys_model(self, smt_get_value_lines):  # TODO: depends on SMT format
+    @log_entrance()
+    def _parse_sys_model(self, smt_get_value_lines):
+        # TODO: depends on the SMT format, while all other code here is abstracted from the low-level SMT
         output_models = dict()
         for output_sig, output_desc in self.descr_by_output.items():
             output_func_model = self._build_func_model_from_smt(smt_get_value_lines, output_desc)
             output_models[output_sig] = LabelsMap(output_func_model)
 
         tau_model = LabelsMap(self._build_func_model_from_smt(smt_get_value_lines, self.tau_desc))
-        # tau_model = self._simplify_tau(tau_model, tau_func_desc, impl.states_by_process[0])
 
         lts = LTS([self.model_init_state],
                   output_models, tau_model,
@@ -353,7 +353,7 @@ class SMTEncoder:
         Return graph for the transition (or output) function: {label:output}.
         For label's keys are used:
         - for inputs/outputs: original signals
-        - for states of automata and LTS: ARG_MODEL_STATE/ARG_S_a_STATE/etc.
+        - for LTS states: ARG_MODEL_STATE
         """
         func_model = {}
         signals = set(list(self.inputs) + list(self.descr_by_output.keys()))
@@ -362,17 +362,27 @@ class SMTEncoder:
             #            (get-value ((tau t0 true true)))
             l = l.replace('get-value', '').replace('(', '').replace(')', '')
             tokens = l.split()
-            if tokens[0] != func_desc.name:
+
+            func_name = tokens[0]
+            arg_values_raw = lmap(self._parse_value, tokens[1:-1])
+            return_value_raw = tokens[-1]
+
+            if func_name != func_desc.name:
                 continue
 
-            values = [self._parse_value(str_v)
-                      for str_v in tokens[1:]]  # the very first - func_name
-            smt_args = func_desc.get_args_dict(values[:-1])
+            smt_args = func_desc.get_args_dict(arg_values_raw)
 
-            args = dict((smt_unname_if_signal(var,signals),val)
-                        for var,val in smt_args.items())
+            args_label = Label(dict((smt_unname_if_signal(var, signals), val)
+                                    for var, val in smt_args.items()))
 
-            func_model[Label(args)] = values[-1]
+            if func_desc.output_ty == TYPE_MODEL_STATE:
+                return_value = smt_unname_m(return_value_raw)
+            else:
+                assert func_desc.output_ty == self.solver.TYPE_BOOL(), func_desc.output_ty
+                return_value = (return_value_raw == self.solver.true)
+
+            func_model[args_label] = return_value
+
         return func_model
 
     def _parse_value(self, str_v):
@@ -386,65 +396,3 @@ class SMTEncoder:
         if str_v in ['false', 'true']:
             return str_v == 'true'
         return smt_unname_m(str_v)
-
-    #
-    #
-
-    ############################### PARTIAL MODEL #################################
-    def encode_model_solution(self, model:LTS, impl):  # TODO: no distributed case
-        def to_bool(val:bool):
-            return [self.solver.false(),
-                    self.solver.true()][val]
-
-        tau_model = impl.model_taus_descs[0]
-        out_descs_dict = dict(map(lambda desc: (desc.name, desc), impl.outvar_desc_by_process[0].values()))
-
-        for outvar_signal, labels_map in model.output_models.items():
-            out_desc = out_descs_dict[outvar_signal]
-
-            for args_dict, defined_bool_value in labels_map.items():
-                defined_value = to_bool(defined_bool_value)
-
-                computed_value = self.solver.call_func(out_desc, args_dict)
-
-                condition = self.solver.op_eq(computed_value, defined_value)
-                self.solver.assert_(condition)
-
-        for args_dict, defined_next_state in model.tau_model.items():
-            computed_next_state = self.solver.call_func(tau_model, args_dict)
-
-            condition = self.solver.op_eq(computed_next_state, defined_next_state)
-            self.solver.assert_(condition)
-
-            # def _simplify_tau(self, tau_model:LabelsMap, tau_func_desc:FuncDescription, states) -> LabelsMap:
-            #     tau_dict = dict()  # (t1,t2) -> labels
-            #
-            #     for (t1,t2) in product(states, repeat=2):
-            #         labels = self._get_transitions(t1, t2, tau_model)
-            #
-            #         set_of_labels_wo_state = set()
-            #         for lbl in labels:
-            #             assert lbl['state'] == t2
-            #
-            #             lbl, _ = separate(lambda signal_value: signal_value[0] != 'state', lbl.items())
-            #             set_of_labels_wo_state.add(lbl)
-            #
-            #         simplified_set = minimize_dnf_set(set_of_labels_wo_state)
-            #         # notice that if the empty set then it is True
-            #         tau_dict[(t1,t2)] = simplified_set
-            #
-            #     simplified_tau_model = LabelsMap()
-            #     for ((t1,t2),labels) in tau_dict.items():
-            #         for lbl in labels:
-            #             # restore labels and add 'state'
-            #             lbl['state'] = t1
-            #             simplified_tau_model[lbl] = t2
-            #
-            #     return simplified_tau_model
-
-            # def _get_transitions(self, t1, t2, tau_model:LabelsMap) -> Iterable:
-            #     transitions = set()
-            #     for (label,next_state) in tau_model.items():
-            #         if label['state'] == t1 and next_state == t2:
-            #             transitions.add(label)
-            #     return transitions

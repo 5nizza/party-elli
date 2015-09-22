@@ -5,9 +5,9 @@ from helpers.hashable import HashableDict
 
 
 class Automaton:
-    def __init__(self, init_nodes, rejecting_nodes, nodes, name=''):
+    def __init__(self, init_nodes, acc_nodes, nodes, name=''):
         self._init_nodes = set(init_nodes)
-        self._rejecting_nodes = set(rejecting_nodes)
+        self._acc_nodes = set(acc_nodes)
         self._nodes = set(nodes)
         self._name = name
 
@@ -27,7 +27,7 @@ class Automaton:
     def acc_nodes(self):
         # TODO: attention: will deprecated for rejecting edges automaton
         # TODO: rename to final nodes
-        return self._rejecting_nodes
+        return self._acc_nodes
 
     def __str__(self):
         return self._name + \
@@ -36,7 +36,7 @@ class Automaton:
                "\n initial nodes:\n" + \
                "\n".join([str(x) for x in self._init_nodes]) + \
                "\n acc nodes:\n" + \
-               "\n".join([str(x) for x in self._rejecting_nodes])
+               "\n".join([str(x) for x in self._acc_nodes])
 
     __repr__ = __str__
 

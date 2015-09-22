@@ -16,7 +16,7 @@ class LTS:
         self._init_states = set(init_states)
 
         self._state_name = state_name
-        self._output_signals = output_signals
+        self._output_signals = output_signals  # TODO: duplication with _output_models?
         self._input_signals = input_signals
 
     @property
@@ -49,7 +49,7 @@ class LTS:
         return self._tau_model
 
     @property
-    def model_by_name(self):
+    def model_by_name(self):   # TODO: rename: should be model_by_signal
         return self._output_models
 
     @property

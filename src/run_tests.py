@@ -5,64 +5,56 @@ import sys
 import argparse
 from tests.common import run_benchmark
 
-# to inform python where to look for packages
-sys.path.append(os.path.dirname(os.path.realpath(__file__)) + '/../')
-
 
 _REALIZABLE = [
-    "non_parameterized/others/count1.ltl --moore --size 2",
-    "non_parameterized/others/count2.ltl --moore --size 3",
+    "others/count1.ltl --moore --size 2",
+    "others/count2.ltl --moore --size 3",
 
-    "non_parameterized/others/full_arbiter2.ltl --moore --size 4",
-    "non_parameterized/others/full_arbiter2.ltl --mealy --size 3",
+    "others/full_arbiter2.ltl --moore --size 4",
+    "others/full_arbiter2.ltl --mealy --size 3",
 
-    "non_parameterized/others/pnueli_arbiter2.ltl --moore --size 3",
-    "non_parameterized/others/pnueli_arbiter2.ltl --mealy --size 3",
+    "others/pnueli_arbiter2.ltl --moore --size 3",
+    "others/pnueli_arbiter2.ltl --mealy --size 3",
 
-    "non_parameterized/others/pnueli_arbiter2.ltl --moore --size 3 --weakag",
-    "non_parameterized/others/pnueli_arbiter2.ltl --mealy --size 3 --weakag",
-
-    "non_parameterized/others/elevator2.ltl --moore --size 2",
-    "non_parameterized/others/elevator2.ltl --mealy --size 2",
+    "others/elevator2.ltl --moore --size 2",
+    "others/elevator2.ltl --mealy --size 2",
 
     # some random subset of tests with --incr
-    "non_parameterized/others/count2.ltl --moore --bound 3 --incr",
-    "non_parameterized/others/full_arbiter2.ltl --mealy --bound 3 --incr",
-
-    "non_parameterized/others/pnueli_arbiter2.ltl --moore --bound 3 --incr",
-    "non_parameterized/others/pnueli_arbiter2.ltl --mealy --bound 3 --incr",
-
-    "non_parameterized/others/elevator2.ltl --mealy --bound 2 --incr"
+    # "others/count2.ltl --moore --bound 3 --incr",
+    # "others/full_arbiter2.ltl --mealy --bound 3 --incr",
+    #
+    # "others/pnueli_arbiter2.ltl --moore --bound 3 --incr",
+    # "others/pnueli_arbiter2.ltl --mealy --bound 3 --incr",
+    #
+    # "others/elevator2.ltl --mealy --bound 2 --incr"
 ]
 
 
 _UNREALIZABLE = [
-    "non_parameterized/others/count1.ltl --moore --size 1",
-    "non_parameterized/others/count2.ltl --moore --size 2",
+    "others/count1.ltl --moore --size 1",
+    "others/count2.ltl --moore --size 2",
 
-    "non_parameterized/others/full_arbiter2.ltl --moore --size 3",
-    "non_parameterized/others/full_arbiter2.ltl --mealy --size 2",
+    "others/full_arbiter2.ltl --moore --size 3",
+    "others/full_arbiter2.ltl --mealy --size 2",
 
-    "non_parameterized/others/pnueli_arbiter2.ltl --moore --size 2",
-    "non_parameterized/others/pnueli_arbiter2.ltl --mealy --size 2",
+    "others/pnueli_arbiter2.ltl --moore --size 2",
+    "others/pnueli_arbiter2.ltl --mealy --size 2",
 
-    "non_parameterized/others/pnueli_arbiter2.ltl --moore --size 2 --weakag",
-    "non_parameterized/others/pnueli_arbiter2.ltl --mealy --size 2 --weakag",
-
-    "non_parameterized/others/elevator2.ltl --moore --size 1",
-    "non_parameterized/others/elevator2.ltl --mealy --size 1",
+    "others/elevator2.ltl --moore --size 1",
+    "others/elevator2.ltl --mealy --size 1",
 
     # random subset for --incr
-    "non_parameterized/others/count2.ltl --moore --bound 2 --incr",
-
-    "non_parameterized/others/full_arbiter2.ltl --moore --bound 3 --incr",
-
-    "non_parameterized/others/pnueli_arbiter2.ltl --moore --bound 2 --incr",
+    # "others/count2.ltl --moore --bound 2 --incr",
+    #
+    # "others/full_arbiter2.ltl --moore --bound 3 --incr",
+    #
+    # "others/pnueli_arbiter2.ltl --moore --bound 2 --incr",
 ]
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Parametrized Synthesis Tool for token rings architecture')
+    parser = argparse.ArgumentParser(description='_Functional_ tests runner. '
+                                                 'For _unit_ tests -- run with nosetests')
     parser.add_argument('--nonstop', action='store_true', required=False, default=False,
                         help="don't stop on error")
 

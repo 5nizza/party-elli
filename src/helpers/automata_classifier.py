@@ -1,42 +1,40 @@
-from itertools import chain
 from helpers.python_ext import index_of
-from interfaces.automata import Label
+from interfaces.automata import LABEL_TRUE
 from synthesis.rejecting_states_finder import build_state_to_rejecting_scc  # TODO: bad smell: inter-dependence?
 
 
-def _flatten_nodes_in_transition(node_transitions):
+def _flatten_flagged_nodes_in_transitions(node_transitions):
     states = set()
-    for lbl, nodes_sets_list in node_transitions.items():
-        for flagged_nodes_set in nodes_sets_list:
-            for state, is_rejecting in flagged_nodes_set:
-                states.add((state, is_rejecting))
+    for lbl, flagged_nodes in node_transitions.items():
+        for state, is_acc in flagged_nodes:
+            states.add((state, is_acc))
     return states
 
 
 def _is_self_looped(node):
-    next_nodes = map(lambda node_flag: node_flag[0], _flatten_nodes_in_transition(node.transitions))
+    next_nodes = map(lambda node_flag: node_flag[0], _flatten_flagged_nodes_in_transitions(node.transitions))
     return node in next_nodes
 
 
 def is_absorbing(node):
-    true_label = Label({})
-
-    sets_of_flagged_nodes = node.transitions.get(true_label)
-    if sets_of_flagged_nodes is None:
+    flagged_nodes = node.transitions.get(LABEL_TRUE)
+    if flagged_nodes is None:
         return False
 
-    all_next_flagged_nodes = chain(*sets_of_flagged_nodes)
-    return index_of(lambda node_flag: node_flag[0] == node, all_next_flagged_nodes) is not None
+    return index_of(lambda node_flag: node_flag[0] == node, flagged_nodes) is not None
 
 
 def is_safety_automaton(automaton):
-    """ In safety automata, the only accepting nodes allowed are absorbing nodes (dead ends). """
-    #TODO: are there better ways to identify safety props than checking corresponding UCW?
+    """
+    In safety automata,
+    the only accepting nodes allowed are absorbing nodes (dead ends).
+    """
+    #TODO: are there better ways to identify automata than checking automata?
 
     #ltl3ba creates transitional rejecting nodes, so filter them
     node_to_rej_scc = build_state_to_rejecting_scc(automaton)
 
-    for node in automaton.rejecting_nodes:  # TODO: does not work with rejecting edges automaton
+    for node in automaton.acc_nodes:  # TODO: does not work with rejecting edges automaton
         if node not in node_to_rej_scc:
             continue
 

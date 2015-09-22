@@ -1,4 +1,5 @@
 import sys
+from helpers.console_helpers import print_green
 from helpers.main_helper import get_root_dir
 from helpers.python_ext import is_empty_str
 from helpers.shell import execute_shell
@@ -41,7 +42,7 @@ def run_benchmark(python_script_relative_path, benchmark, is_realizable) -> bool
         return False
 
     else:
-        actual_is_realizable = result is 0
+        actual_is_realizable = result == 1
 
         if is_realizable == actual_is_realizable:
             _ok(cmd_args)

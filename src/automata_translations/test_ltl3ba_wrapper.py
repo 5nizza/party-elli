@@ -1,6 +1,6 @@
 import unittest
-from interfaces.expr import QuantifiedSignal
 from automata_translations.ltl3ba_wrapper import _get_hacked_ucw, _unwind_label
+from interfaces.expr import Signal
 
 
 def _assert_equal_list_dict(first_list_of_dict, second_list_of_dict):
@@ -26,8 +26,8 @@ class Test(unittest.TestCase):
                 fi;
             }"""
 
-        sig_g = QuantifiedSignal('g')
-        sig_r = QuantifiedSignal('r')
+        sig_g = Signal('g')
+        sig_r = Signal('r')
         signal_by_name = {'r': sig_r, 'g': sig_g}
 
         initial_nodes, rejecting_nodes, nodes, _ = _get_hacked_ucw(text, signal_by_name, '')
@@ -70,8 +70,8 @@ class Test(unittest.TestCase):
             accept_if_fi_all :    /* 1 */
                 skip
             }"""
-        sig_g = QuantifiedSignal('g')
-        sig_r = QuantifiedSignal('r')
+        sig_g = Signal('g')
+        sig_r = Signal('r')
         signal_by_name = {'r': sig_r, 'g': sig_g}
         initial_nodes, _, nodes, _ = _get_hacked_ucw(text, signal_by_name, '')
 
@@ -91,8 +91,8 @@ class Test(unittest.TestCase):
             accept_all :    /* 1 */
                 skip
             }"""
-        sig_g = QuantifiedSignal('g')
-        sig_r = QuantifiedSignal('r')
+        sig_g = Signal('g')
+        sig_r = Signal('r')
         signal_by_name = {'r': sig_r, 'g': sig_g}
         initial_nodes, rejecting_nodes, nodes, _ = _get_hacked_ucw(text, signal_by_name, '')
 
@@ -121,8 +121,8 @@ class Test(unittest.TestCase):
             accept_all :    /* 1 */
                 skip
             }"""
-        sig_g = QuantifiedSignal('g')
-        sig_r = QuantifiedSignal('r')
+        sig_g = Signal('g')
+        sig_r = Signal('r')
         signal_by_name = {'r': sig_r, 'g': sig_g}
         initial_nodes, rejecting_nodes, nodes, _ = _get_hacked_ucw(text, signal_by_name, '')
 

@@ -2,6 +2,7 @@ from _collections_abc import Iterable
 import unittest
 import logging
 from unittest import TestCase
+from helpers.console_helpers import print_green
 
 from helpers.python_ext import StrAwareList, add_dicts, lmap
 from interfaces.automata import Label
@@ -9,25 +10,23 @@ from interfaces.lts import LTS
 from interfaces.expr import Signal
 
 
-def _colorize_nodes(lts):
-    dot_lines = StrAwareList()
+# def _colorize_nodes(lts):
+#     dot_lines = StrAwareList()
+#
+#     for state in lts.states:
+#         color = ''
+#         if state in lts.init_states:
+#             color = 'fillcolor="green",style=filled'
+#
+#         dot_lines += '"{state}" [{color}]'.format(state=str(state), color=color)
+#
+#     return dot_lines
 
-    for state in lts.states:
-        color = ''
-        if state in lts.init_states:
-            color = 'fillcolor="green",style=filled'
 
-        dot_lines += '"{state}" [{color}]'.format(state=str(state), color=color)
-
-    return dot_lines
-
-
-def _convert_to_dot(value_by_signal:dict) -> str:
-    #TODO: create FuncDescription with name as QuantifiedSignal_i in Impl?
-
+def _convert_label_to_dot(value_by_variable:dict) -> str:
     values_str_list = []
-    for (var,value) in value_by_signal.items():
-        if isinstance(var, Signal):
+    for (var,value) in value_by_variable.items():
+        if isinstance(value, bool):
             display_str = ['-',''][value] + var.name
         else:
             display_str = str(value.name)
@@ -37,52 +36,28 @@ def _convert_to_dot(value_by_signal:dict) -> str:
 
     return res
 
-    # values_str = '\\n'.join(['{value}{var}'.format(value=['-', ''][value],
-    #                                                var=signal.name if isinstance(signal, Signal) else signal)
-    #                          for (signal, value) in value_by_signal.items()])
 
-
-def _get_inputvals(label:dict, state_args) -> dict:
-    inputvals = dict(label)
-    for k in state_args:
-        del inputvals[k]
-    return inputvals
-
-
-def _get_outputvals(label:dict, lts:LTS, outvars_treated_as_moore) -> dict:
-    outvar_vals = [(var, vals) for (var, vals) in lts.model_by_name.items()
-                   if var not in outvars_treated_as_moore]
-
-    outvals = dict([(var, values[label]) for (var, values) in outvar_vals])
-    return outvals
-
-
-def _label_states_with_outvalues(lts:LTS, state_args, filter='all'):
-    # state_args = [ARG_S_a_STATE, ARG_S_g_STATE, ARG_L_a_STATE, ARG_L_g_STATE, ARG_MODEL_STATE]
-
+def _mark_states_with_moore_signals(lts:LTS, state_variable, moore_signals):
     dot_lines = StrAwareList()
 
     for state in lts.states:
-        signal_model_pairs = [(signal, model)
-                              for (signal, model) in lts.model_by_name.items()
-                              if signal in filter or filter == 'all']
-
+        state_label = Label({state_variable: state})
         value_by_signal = dict()
-        for signal,model in signal_model_pairs:
-            # TODO: fragile
-            state_label = Label(zip(state_args, state if isinstance(state, Iterable)
-                                                else [state]))
-            value = model[state_label]
+        for signal in moore_signals:
+            signal_model = lts.model_by_name[signal]
+            value = signal_model[state_label]
             value_by_signal[signal] = value
 
-        outvals_str = _convert_to_dot(value_by_signal)
+        signals_str = _convert_label_to_dot(value_by_signal)
 
         color = ''
         if state in lts.init_states:
             color = 'fillcolor="green", style=filled, '
 
-        if outvals_str != '':
-            dot_lines += '"{state}"[{color} label="{out}\\n{state}"]'.format(color=color, state=state, out=outvals_str)
+        if signals_str != '':
+            dot_lines += '"{state}"[{color} label="{out}\\n{state}"]'.format(color=color,
+                                                                             state=state,
+                                                                             out=signals_str)
         else:
             dot_lines += '"{state}"[{color} label="{state}"]'.format(color=color, state=state)
 
@@ -111,23 +86,19 @@ def _label_states_with_outvalues(lts:LTS, state_args, filter='all'):
 #     return label
 #
 #
-def _build_srcdst_to_io_labels(lts:LTS, state_args, outvars_treated_as_moore) -> dict:
-    srcdst_to_io_labels = dict()
+def _build_edge_labels(lts:LTS, state_variable, moore_signals) -> dict:
+    edge_labels = dict()
     for label, next_state in lts.tau_model.items():
-        if len(state_args) > 1:
-            crt_state = tuple(map(lambda k: label[k], state_args))
-        else:
-            crt_state = label[state_args[0]]
+        crt_state = label[state_variable]
 
-        i_label = _get_inputvals(label, state_args)
-        o_label = _get_outputvals(label, lts, outvars_treated_as_moore)
+        edge_label = Label((v,label[v]) for v in label
+                           if v != state_variable and
+                              v not in moore_signals)
 
-        io_label = Label(add_dicts(i_label, o_label))
+        edge_labels[(crt_state, next_state)] = edge_labels.get((crt_state, next_state), list())
+        edge_labels[(crt_state, next_state)].append(edge_label)
 
-        srcdst_to_io_labels[(crt_state, next_state)] = srcdst_to_io_labels.get((crt_state, next_state), list())
-        srcdst_to_io_labels[(crt_state, next_state)].append(io_label)
-
-    return srcdst_to_io_labels
+    return edge_labels
 #
 #
 # def _simplify_srcdst_to_io_labels(srcdst_to_io_labels:dict) -> dict:
@@ -156,7 +127,7 @@ def _build_srcdst_to_io_labels(lts:LTS, state_args, outvars_treated_as_moore) ->
 #     return simplified_srcdst_to_io_labels
 
 
-def _lts_to_dot(lts:LTS, state_args, outvars_treated_as_moore):
+def _lts_to_dot(lts:LTS, state_variable, moore_signals):
     logger = logging.getLogger(__file__)
 
     dot_lines = StrAwareList()
@@ -164,10 +135,10 @@ def _lts_to_dot(lts:LTS, state_args, outvars_treated_as_moore):
 
     # dot_lines += _colorize_nodes(lts) + '\n'
 
-    dot_lines += _label_states_with_outvalues(lts, state_args, outvars_treated_as_moore)
+    dot_lines += _mark_states_with_moore_signals(lts, state_variable, moore_signals)
 
-    srcdst_to_io_labels = _build_srcdst_to_io_labels(lts, state_args, outvars_treated_as_moore)
-    logger.debug('non-simplified model: \n' + str(srcdst_to_io_labels))
+    edge_labels = _build_edge_labels(lts, state_variable, moore_signals)
+    logger.debug('non-simplified model: \n' + str(edge_labels))
 
     # the bug is somewhere there: TRY MY OWN IMPLEMENTATION
     # simplified_srcdst_to_io_labels = _simplify_srcdst_to_io_labels(srcdst_to_io_labels)
@@ -175,44 +146,42 @@ def _lts_to_dot(lts:LTS, state_args, outvars_treated_as_moore):
     # for (src,dst),io_labels in srcdst_to_io_labels.items():
     #     simplified_srcdst_to_io_labels[(src,dst)] = minimize_dnf_set(io_labels)
 
-    # simplified_srcdst_to_io_labels = minimize_dnf_set()
+    # simplified_srcdst_to_io_labels = minimize_dnf_set()    # TODO: remove all side-effects of the simplification
 
-    simplified_srcdst_to_io_labels = srcdst_to_io_labels   # TODO: implement simplification using numpy
+    simplified_edge_labels = edge_labels   # TODO: implement simplification using numpy
     # logger.debug('the model after edge simplifications: \n' + str(simplified_srcdst_to_io_labels))
 
-    for (src, dst), io_labels in simplified_srcdst_to_io_labels.items():
-        if not io_labels:
-            dot_lines += '"{state}" -> "{x_state}" [label="1"]'.format(state=src, x_state=dst)
+    for (src, dst), io_labels in simplified_edge_labels.items():
+        if not io_labels:  # possible due to the simplification
+            dot_lines += '"{src}" -> "{dst}" [label="1"]'.format(src=src, dst=dst)
         for io_label in io_labels:
             i_vals = dict()
             o_vals = dict()
             for signal, value in io_label.items():
-                if str(signal) in lmap(str, lts.input_signals):  # TODO: hack -- simplification has side-effects -- it turns every signal into string..
+                if signal in lts.input_signals:
                     i_vals[signal] = value
                 else:
                     o_vals[signal] = value
 
-            i_vals_str = _convert_to_dot(i_vals) or '*'
-            o_vals_str = _convert_to_dot(o_vals)
-            o_vals_str = '/' + '\\n' + o_vals_str if o_vals_str != '' else ''
+            i_vals_str = _convert_label_to_dot(i_vals) or '1'
+            o_vals_str = _convert_label_to_dot(o_vals)
 
-            dot_lines += '"{state}" -> "{x_state}" [label="{in}{mark_out}"]'.format_map(
-                {'state': src,
-                 'x_state': dst,
-                 'in': i_vals_str,
-                 'mark_out': o_vals_str})
+            dot_lines += '"{src}" -> "{dst}" [label="{in_}{out}"]'.format(
+                src=src,
+                dst=dst,
+                in_=i_vals_str,
+                out=('/' + '\\n' + o_vals_str) if o_vals_str != '' else '')
 
     dot_lines += '}'
 
     return '\n'.join(dot_lines)
 
 
-def lts_to_dot(lts:LTS, state_args, is_mealy):
+def lts_to_dot(lts:LTS, state_variable, is_mealy):
     if is_mealy:
-        return _lts_to_dot(lts, state_args, tuple())
+        return _lts_to_dot(lts, state_variable, tuple())
 
-    outvars = [var for (var, vals) in lts.model_by_name.items()]
-    return _lts_to_dot(lts, state_args, outvars)
+    return _lts_to_dot(lts, state_variable, set(lts.model_by_name.keys()))
 
 
 ##############################################################################

@@ -6,6 +6,9 @@ from synthesis.func_description import FuncDescription
 class SolverInterface:
     __metaclass__ = ABCMeta
 
+    def TYPE_BOOL(self):
+        return 'Bool'
+
     @abstractmethod
     def die(self):
         raise NotImplementedError()

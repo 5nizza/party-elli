@@ -139,7 +139,7 @@ def declare_fun(func_desc:FuncDescription) -> str:
     if len(input_types):
         smt_str = smt_str[:-1]
 
-    smt_str += ') ' + str(func_desc.output) + ')\n'
+    smt_str += ') ' + str(func_desc.output_ty) + ')\n'
     return smt_str
 
 
@@ -225,11 +225,11 @@ def forall_bool(free_input_vars, condition):
 
 
 def true():
-    return ' true '
+    return 'true'
 
 
 def false():
-    return ' false '
+    return 'false'
 
 
 def get_value(arg):

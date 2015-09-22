@@ -1,10 +1,10 @@
 class FuncDescription:
     def __init__(self, func_name,
                  type_by_arg:dict,
-                 output,
+                 output_ty,
                  body):
         self._name = func_name
-        self._output = output
+        self._output = output_ty
         self._body = body
 
         #TODO: evil hack
@@ -31,7 +31,7 @@ class FuncDescription:
         return self._ordered_input_type_pairs
 
     @property
-    def output(self):
+    def output_ty(self):
         return self._output
 
     @property

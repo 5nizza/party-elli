@@ -2,17 +2,16 @@
 import argparse
 from functools import lru_cache
 import tempfile
-from parsing import acacia_parser
 
+from parsing import acacia_parser
 from helpers import automaton2dot
 from helpers.automata_classifier import is_safety_automaton
-from helpers.gr1helpers import convert_into_gr1_formula
+from helpers.gr1helpers import build_weak_gr1_formula
 from helpers.main_helper import setup_logging, create_spec_converter_z3, remove_files_prefixed
 from helpers.python_ext import readfile
-from interfaces.expr import Expr, BinOp, UnaryOp, and_expressions
+from interfaces.expr import Expr, and_expressions, Bool
 from module_generation.dot import lts_to_dot
 from parsing.python_spec_parser import parse_python_spec
-from parsing.visitor import Visitor
 from synthesis import model_searcher
 from synthesis.encoder_builder import create_encoder
 from synthesis.funcs_args_types_names import ARG_MODEL_STATE
@@ -36,37 +35,16 @@ def is_safety_ltl(expr:Expr, ltl2automaton_converter) -> bool:
     return res
 
 
-@lru_cache()
-def is_boolean_ltl(expr:Expr) -> bool:
-    class TemporalOperatorFoundException(Exception):
-        pass
-
-    class TemporalOperatorsFinder(Visitor):
-        def visit_binary_op(self, binary_op:BinOp):
-            if binary_op.name in ['W', 'U']:  # TODO: get rid of magic string constants
-                raise TemporalOperatorFoundException()
-            return super().visit_binary_op(binary_op)
-
-        def visit_unary_op(self, unary_op:UnaryOp):
-            if unary_op in ['G', 'F']:
-                raise TemporalOperatorFoundException()
-            return super().visit_unary_op(unary_op)
-    try:
-        TemporalOperatorsFinder().dispatch(expr)
-        return True
-    except TemporalOperatorFoundException:
-        return False
-
-
-def _gr1_classify(formulas):
+def _split_safety_liveness(formulas, ltl2automaton_converter):
     formulas = set(formulas)
-    init = set(filter(is_boolean_ltl, formulas))
-    safety = set(filter(is_safety_ltl, formulas - init))
-    liveness = formulas - safety - init
-    return init, safety, liveness
+
+    safety = set(filter(lambda f: is_safety_ltl(f, ltl2automaton_converter), formulas))
+    liveness = formulas - safety
+
+    return safety, liveness
 
 
-def _get_acacia_spec(ltl_text:str, part_text:str) -> (list, list, Expr):
+def _get_acacia_spec(ltl_text:str, part_text:str, ltl2automaton_converter) -> (list, list, Expr):
     input_signals, output_signals, data_by_name = acacia_parser.parse(ltl_text, part_text, logger)
 
     if data_by_name is None:
@@ -76,11 +54,15 @@ def _get_acacia_spec(ltl_text:str, part_text:str) -> (list, list, Expr):
     for (unit_name, unit_data) in data_by_name.items():
         assumptions = unit_data[0]
         guarantees = unit_data[1]
-        a_init, a_safety, a_liveness = (and_expressions(p) for p in _gr1_classify(assumptions))
-        g_init, g_safety, g_liveness = (and_expressions(p) for p in _gr1_classify(guarantees))
-        ltl_property = convert_into_gr1_formula(a_init, g_init,
-                                                a_safety, g_safety,
-                                                a_liveness, g_liveness)
+
+        a_safety, a_liveness = (and_expressions(p)
+                                for p in _split_safety_liveness(assumptions, ltl2automaton_converter))
+        g_safety, g_liveness = (and_expressions(p)
+                                for p in _split_safety_liveness(guarantees, ltl2automaton_converter))
+
+        ltl_property = build_weak_gr1_formula(Bool(True), Bool(True),
+                                              a_safety, g_safety,
+                                              a_liveness, g_liveness)
         ltl_properties.append(ltl_property)
 
     return input_signals, output_signals, and_expressions(ltl_properties)
@@ -90,13 +72,13 @@ def parse_anzu_spec(spec_file_name:str):
     raise NotImplemented('the code is not yet taken from the original parameterized tool')
 
 
-def parse_acacia_spec(spec_file_name:str):
+def parse_acacia_spec(spec_file_name:str, ltl2automaton_converter):
     """ :return: (inputs_signals, output_signals, expr) """
 
     assert spec_file_name.endswith('.ltl'), spec_file_name
     ltl_file_str = readfile(spec_file_name)
     part_file_str = readfile(spec_file_name.replace('.ltl', '.part'))
-    return _get_acacia_spec(ltl_file_str, part_file_str)
+    return _get_acacia_spec(ltl_file_str, part_file_str, ltl2automaton_converter)
 
 
 def main(spec_file_name,
@@ -106,9 +88,10 @@ def main(spec_file_name,
          ltl2automaton_converter:LTL3BA,
          smt_solver):
     parse_spec = { 'py':parse_python_spec,
-                  'ltl':parse_acacia_spec,
+                  'ltl':lambda f: parse_acacia_spec(f, ltl2automaton_converter),
                   'cfg':parse_anzu_spec
                  }[spec_file_name.split('.')[-1]]
+
     input_signals, output_signals, ltl = parse_spec(spec_file_name)
 
     logger.info('LTL is:\n' + str(ltl))
@@ -130,7 +113,7 @@ def main(spec_file_name,
     logger.info(['unrealizable', 'realizable'][is_realizable])
 
     if is_realizable:
-        dot_model = lts_to_dot(model, [ARG_MODEL_STATE], not is_moore)
+        dot_model = lts_to_dot(model, ARG_MODEL_STATE, not is_moore)
 
         if not dot_file_name:
             logger.info(dot_model)
@@ -178,14 +161,22 @@ if __name__ == "__main__":
         smt_files_prefix = smt_file.name
 
     logic = UFLIA(None)
-    ltl2ucw_converter, solver_factory = create_spec_converter_z3(logger, logic, False, smt_files_prefix)
-    if not ltl2ucw_converter or not solver_factory:
+    ltl2automaton_converter, solver_factory = create_spec_converter_z3(logger,
+                                                                       logic,
+                                                                       False,
+                                                                       smt_files_prefix)
+    if not ltl2automaton_converter or not solver_factory:
         exit(1)
 
     bounds = list(range(1, args.bound + 1) if args.size == 0
                   else range(args.size, args.size + 1))
 
-    is_realizable = main(args.spec, args.moore, args.dot, bounds, ltl2ucw_converter, solver_factory.create())
+    is_realizable = main(args.spec,
+                         args.moore,
+                         args.dot,
+                         bounds,
+                         ltl2automaton_converter,
+                         solver_factory.create())
 
     if not args.tmp:
         remove_files_prefixed(smt_files_prefix.split('/')[-1])
