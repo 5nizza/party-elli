@@ -1,0 +1,4 @@
+# synthesis traffic light
+.inputs ets ec
+.outputs fl hl
+

@@ -1,0 +1,78 @@
+################
+[spec_unit u0]
+################
+
+assume (G ((!((idle=1) * (!(X(grant0=1))) * (!(X(grant1=1))) * (!(X(grant2=1))) * (!(X(grant3=1))) * (!(X(grant4=1))))) + (X (idle=1))));
+assume (G (F (idle=1)));
+assume (G ((!(X(grant0=1))) + (X (((!(request0=1)) * (!(idle=1))) U ((!(request0=1)) * (idle=1))))));
+
+(G (((!(X(grant0=1))) + (!(X(grant1=1)))) * ((!(X(grant0=1))) + (!(X(grant2=1)))) * ((!(X(grant0=1))) + (!(X(grant3=1)))) * ((!(X(grant0=1))) + (!(X(grant4=1)))) * ((!(X(grant1=1))) + (!(X(grant0=1)))) * ((!(X(grant1=1))) + (!(X(grant2=1)))) * ((!(X(grant1=1))) + (!(X(grant3=1)))) * ((!(X(grant1=1))) + (!(X(grant4=1)))) * ((!(X(grant2=1))) + (!(X(grant0=1)))) * ((!(X(grant2=1))) + (!(X(grant1=1)))) * ((!(X(grant2=1))) + (!(X(grant3=1)))) * ((!(X(grant2=1))) + (!(X(grant4=1)))) * ((!(X(grant3=1))) + (!(X(grant0=1)))) * ((!(X(grant3=1))) + (!(X(grant1=1)))) * ((!(X(grant3=1))) + (!(X(grant2=1)))) * ((!(X(grant3=1))) + (!(X(grant4=1)))) * ((!(X(grant4=1))) + (!(X(grant0=1)))) * ((!(X(grant4=1))) + (!(X(grant1=1)))) * ((!(X(grant4=1))) + (!(X(grant2=1)))) * ((!(X(grant4=1))) + (!(X(grant3=1))))));
+
+################
+[spec_unit u1]
+################
+
+assume (G ((!((idle=1) * (!(X(grant0=1))) * (!(X(grant1=1))) * (!(X(grant2=1))) * (!(X(grant3=1))) * (!(X(grant4=1))))) + (X (idle=1))));
+assume (G (F (idle=1)));
+assume (G ((!(X(grant0=1))) + (X (((!(request0=1)) * (!(idle=1))) U ((!(request0=1)) * (idle=1))))));
+
+(G ((!(X(grant0=1))) + (request0=1)));
+(!(F (G ((request0=1) * (!(X(grant0=1)))))));
+(G (((!(X(grant0=1))) * (!(X(grant1=1))) * (!(X(grant2=1))) * (!(X(grant3=1))) * (!(X(grant4=1)))) + (idle=1)));
+(G ((!(request0=1)) + (!(X(grant1=1)))));
+
+
+################
+[spec_unit u2]
+################
+
+assume (G ((!((idle=1) * (!(X(grant0=1))) * (!(X(grant1=1))) * (!(X(grant2=1))) * (!(X(grant3=1))) * (!(X(grant4=1))))) + (X (idle=1))));
+assume (G (F (idle=1)));
+assume (G ((!(X(grant0=1))) + (X (((!(request0=1)) * (!(idle=1))) U ((!(request0=1)) * (idle=1))))));
+
+(!(F (G ((request1=1) * (!(X(grant1=1)))))));
+
+
+(G ((!(X(grant1=1))) + (request1=1)));
+(G ((!(request0=1)) + (!(X(grant2=1)))));
+
+
+################
+[spec_unit u3]
+###############
+
+assume (G ((!((idle=1) * (!(X(grant0=1))) * (!(X(grant1=1))) * (!(X(grant2=1))) * (!(X(grant3=1))) * (!(X(grant4=1))))) + (X (idle=1))));
+assume (G (F (idle=1)));
+assume (G ((!(X(grant0=1))) + (X (((!(request0=1)) * (!(idle=1))) U ((!(request0=1)) * (idle=1))))));
+
+(!(F (G ((request2=1) * (!(X(grant2=1)))))));
+
+(G ((!(X(grant2=1))) + (request2=1)));
+
+(G ((!(request0=1)) + (!(X(grant4=1)))));
+
+################
+[spec_unit u4]
+################
+
+assume (G ((!((idle=1) * (!(X(grant0=1))) * (!(X(grant1=1))) * (!(X(grant2=1))) * (!(X(grant3=1))) * (!(X(grant4=1))))) + (X (idle=1))));
+assume (G (F (idle=1)));
+assume (G ((!(X(grant0=1))) + (X (((!(request0=1)) * (!(idle=1))) U ((!(request0=1)) * (idle=1))))));
+
+(!(F (G ((request3=1) * (!(X(grant3=1)))))));
+(G ((!(X(grant3=1))) + (request3=1)));
+(G ((!(request0=1)) + (!(X(grant3=1)))));
+
+################
+[spec_unit u5]
+################
+
+assume (G ((!((idle=1) * (!(X(grant0=1))) * (!(X(grant1=1))) * (!(X(grant2=1))) * (!(X(grant3=1))) * (!(X(grant4=1))))) + (X (idle=1))));
+assume (G (F (idle=1)));
+assume (G ((!(X(grant0=1))) + (X (((!(request0=1)) * (!(idle=1))) U ((!(request0=1)) * (idle=1))))));
+
+(!(F (G ((request4=1) * (!(X(grant4=1)))))));
+(G ((!(X(grant4=1))) + (request4=1)));
+
+
+group_order = FLAT;
