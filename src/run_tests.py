@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
-import os
 import sys
 import argparse
-from tests.common import run_benchmark
 
+from tests.common import run_benchmark
 
 _REALIZABLE = [
     "others/count1.ltl --moore --size 2",

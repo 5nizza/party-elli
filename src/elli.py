@@ -6,7 +6,7 @@ import tempfile
 from parsing import acacia_parser
 from helpers import automaton2dot
 from helpers.automata_classifier import is_safety_automaton
-from helpers.gr1helpers import build_weak_gr1_formula
+from helpers.gr1helpers import build_almost_gr1_formula
 from helpers.main_helper import setup_logging, create_spec_converter_z3, remove_files_prefixed
 from helpers.python_ext import readfile
 from interfaces.expr import Expr, and_expressions, Bool
@@ -60,16 +60,12 @@ def _get_acacia_spec(ltl_text:str, part_text:str, ltl2automaton_converter) -> (l
         g_safety, g_liveness = (and_expressions(p)
                                 for p in _split_safety_liveness(guarantees, ltl2automaton_converter))
 
-        ltl_property = build_weak_gr1_formula(Bool(True), Bool(True),
-                                              a_safety, g_safety,
-                                              a_liveness, g_liveness)
+        ltl_property = build_almost_gr1_formula(Bool(True), Bool(True),
+                                                a_safety, g_safety,
+                                                a_liveness, g_liveness)
         ltl_properties.append(ltl_property)
 
     return input_signals, output_signals, and_expressions(ltl_properties)
-
-
-def parse_anzu_spec(spec_file_name:str):
-    raise NotImplemented('the code is not yet taken from the original parameterized tool')
 
 
 def parse_acacia_spec(spec_file_name:str, ltl2automaton_converter):
@@ -81,14 +77,17 @@ def parse_acacia_spec(spec_file_name:str, ltl2automaton_converter):
     return _get_acacia_spec(ltl_file_str, part_file_str, ltl2automaton_converter)
 
 
+def parse_anzu_spec(spec_file_name:str):
+    raise NotImplemented('the code is not yet taken from the original parameterized tool')
+
+
 def main(spec_file_name,
          is_moore,
          dot_file_name,
          bounds,
          ltl2automaton_converter:LTL3BA,
          smt_solver):
-    parse_spec = { 'py':parse_python_spec,
-                  'ltl':lambda f: parse_acacia_spec(f, ltl2automaton_converter),
+    parse_spec = { 'ltl': lambda f: parse_acacia_spec(f, ltl2automaton_converter),
                   'cfg':parse_anzu_spec
                  }[spec_file_name.split('.')[-1]]
 
