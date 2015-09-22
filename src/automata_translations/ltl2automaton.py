@@ -5,9 +5,9 @@ from helpers.converter_to_wring import ConverterToWringVisitor
 from helpers.shell import execute_shell
 from interfaces.automata import Automaton
 from interfaces.expr import UnaryOp, Expr, Signal
-from parsing.visitor import WeakToUntilConverterVisitor
 from automata_translations.ast_to_ltl3ba import ConverterToLtl2BaFormatVisitor
 from automata_translations.ltl3ba_wrapper import parse_ltl2ba_ba
+from parsing.weak_until_converter import WeakToUntilConverterVisitor
 
 
 def _negate(expr:Expr) -> Expr:

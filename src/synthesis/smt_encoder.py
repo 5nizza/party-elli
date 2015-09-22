@@ -313,11 +313,11 @@ class SMTEncoder:
     def _get_all_possible_inputs(self, func_desc:FuncDescription):
         arg_type_pairs = func_desc.inputs
 
-        def get_values(t):
-            return {          'Bool': ('true', 'false'),
-                    TYPE_MODEL_STATE: [smt_name_m(m) for m in self.last_allowed_states],
-                        TYPE_A_STATE: [smt_name_spec(s, TYPE_A_STATE) for s in self.automaton.nodes]
-                   }[t]
+        get_values = lambda t: {          'Bool': ('true', 'false'),
+                                TYPE_MODEL_STATE: [smt_name_m(m) for m in self.last_allowed_states],
+                                    TYPE_A_STATE: [smt_name_spec(s, TYPE_A_STATE) for s in self.automaton.nodes]
+                               }[t]
+
         records = product(*[get_values(t) for (_,t) in arg_type_pairs])
 
         args = list(map(lambda a_t: a_t[0], arg_type_pairs))

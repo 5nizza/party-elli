@@ -1,14 +1,10 @@
-from interfaces.expr import Number, ForallExpr, UnaryOp, BinOp, Bool, Signal
+from interfaces.expr import Number, UnaryOp, BinOp, Bool, Signal
 from parsing.visitor import Visitor
 
 
 class ConverterToWringVisitor(Visitor):
     def visit_number(self, number:Number):
         return str(number)
-
-    def visit_forall(self, node:ForallExpr):
-        # assert 0
-        return self.dispatch(node.arg2)
 
     def visit_unary_op(self, unary_op:UnaryOp):
         arg = self.dispatch(unary_op.arg)

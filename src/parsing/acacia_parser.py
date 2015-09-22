@@ -3,7 +3,7 @@ import logging
 from itertools import chain
 from logging import Logger
 from helpers.python_ext import lfilter
-from interfaces.expr import QuantifiedSignal
+from interfaces.expr import Signal
 from parsing.acacia_lexer_desc import acacia_lexer
 from parsing.acacia_parser_desc import acacia_parser
 from parsing.sanity_checker import check_unknown_signals_in_properties
@@ -14,7 +14,7 @@ from unittest import TestCase
 def _parse_signals_from_lines(signal_lines:list) -> list:
     signals_raw = chain(*[l.split()[1:] for l in signal_lines])
 
-    signals = [QuantifiedSignal(n.strip(), 0)
+    signals = [Signal(n.strip())
                for n in signals_raw]
 
     return signals
@@ -92,10 +92,10 @@ class Test(TestCase):
     def tests_all(self):
         input_signals, output_signals, data_by_name = parse(test_string_ltl,test_string_part, logging.getLogger())
 
-        exp_input_signals = [QuantifiedSignal(n, 0) for n in 'idle request0 request1'.split()]
+        exp_input_signals = [Signal(n) for n in 'idle request0 request1'.split()]
         assert set(input_signals) == set(exp_input_signals)
 
-        exp_output_signals = [QuantifiedSignal(n, 0) for n in 'grant0 grant1'.split()]
+        exp_output_signals = [Signal(n) for n in 'grant0 grant1'.split()]
         assert set(output_signals) == set(exp_output_signals)
 
         for (k, v) in data_by_name.items():

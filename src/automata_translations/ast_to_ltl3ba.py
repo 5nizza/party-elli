@@ -1,4 +1,4 @@
-from interfaces.expr import BinOp, Number, UnaryOp, QuantifiedSignal, ForallExpr
+from interfaces.expr import BinOp, Number, UnaryOp
 from parsing.visitor import Visitor
 
 
@@ -38,8 +38,8 @@ class ConverterToLtl2BaFormatVisitor(Visitor):
 
     def visit_signal(self, signal):
         suffix = ''
-        if isinstance(signal, QuantifiedSignal) and len(signal.binding_indices) > 0:
-            suffix = '_' + '_'.join(map(str, signal.binding_indices))
+        # if isinstance(signal, QuantifiedSignal) and len(signal.binding_indices) > 0:
+        #     suffix = '_' + '_'.join(map(str, signal.binding_indices))
 
         name = (signal.name + suffix).lower()  # ltl3ba treats upper letters wrongly
         self.signal_by_name[name] = signal
@@ -48,6 +48,3 @@ class ConverterToLtl2BaFormatVisitor(Visitor):
 
     def visit_number(self, number:Number):
         return number
-
-    def visit_forall(self, node:ForallExpr):
-        return self.dispatch(node.arg2)  # TODO: default behaviour of this visitor is to ignore Forall

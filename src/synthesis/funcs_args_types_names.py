@@ -6,11 +6,6 @@ from interfaces.expr import Signal
 
 
 TYPE_MODEL_STATE = 'M'
-TYPE_S_a_STATE = 'S_a'
-TYPE_S_g_STATE = 'S_g'
-TYPE_L_a_STATE = 'L_a'
-TYPE_L_g_STATE = 'L_g'
-
 TYPE_A_STATE = 'A'
 TYPE_S_STATE = 'S'
 
@@ -18,18 +13,7 @@ FUNC_MODEL_TRANS = '_tau_'
 FUNC_REACH = '_reach_'
 FUNC_R = '_r_'
 
-FUNC_S_g_TRANS = 'tau_S_g'
-FUNC_S_g_ACC = 'tau_S_g_acc'
-FUNC_L_a_TRANS = 'tau_L_a'
-FUNC_L_a_ACC = 'tau_L_a_acc'
-FUNC_L_g_TRANS = 'tau_L_g'
-FUNC_L_g_ACC = 'tau_L_g_acc'
-
 ARG_MODEL_STATE = '_m_'
-ARG_S_a_STATE = '_s_a_'
-ARG_S_g_STATE = '_s_g_'
-ARG_L_a_STATE = '_l_a_'
-ARG_L_g_STATE = '_l_g_'
 ARG_A_STATE = '_a_'   # intended to be used for the whole specification (safety and liveness)
 ARG_S_STATE = '_s_'   # for the safety automaton
 
@@ -45,14 +29,10 @@ def smt_unname_if_signal(arg_name:str, signals):
                                   signals))
 
     if arg_name in signal_by_smt_name:
-        assert arg_name not in {ARG_MODEL_STATE,
-                                ARG_S_a_STATE, ARG_S_g_STATE,
-                                ARG_L_a_STATE, ARG_L_g_STATE}, arg_name  # not ambiguities!
+        assert arg_name != ARG_MODEL_STATE,arg_name  # no ambiguities!
         return signal_by_smt_name[arg_name]
 
-    assert arg_name in {ARG_MODEL_STATE,
-                        ARG_S_a_STATE, ARG_S_g_STATE,
-                        ARG_L_a_STATE, ARG_L_g_STATE}, arg_name
+    assert arg_name in ARG_MODEL_STATE, arg_name
 
     return arg_name
 

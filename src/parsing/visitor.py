@@ -1,4 +1,4 @@
-from interfaces.expr import Number, BinOp, UnaryOp, Bool, Signal, ForallExpr
+from interfaces.expr import Number, BinOp, UnaryOp, Bool, Signal
 
 
 class Visitor:
@@ -21,9 +21,6 @@ class Visitor:
         if isinstance(node, tuple):
             return self.visit_tuple(node)
 
-        if isinstance(node, ForallExpr):
-            return self.visit_forall(node)
-
         assert 0, 'unknown node type ' + str(node.__class__) + ': ' + str(node)
 
     def visit_binary_op(self, binary_op:BinOp):
@@ -43,11 +40,3 @@ class Visitor:
 
     def visit_tuple(self, node:tuple):
         return node
-
-    def visit_forall(self, node:ForallExpr):
-        #: :type: tuple
-        binding_indices_visited = self.dispatch(node.arg1)
-        #: :type: Expr
-        quantified_expr_visited = self.dispatch(node.arg2)
-
-        return ForallExpr(binding_indices_visited, quantified_expr_visited)

@@ -3,12 +3,10 @@ import unittest
 import logging
 from unittest import TestCase
 
-from helpers.console_helpers import print_green, print_red
 from helpers.python_ext import StrAwareList, add_dicts, lmap
 from interfaces.automata import Label
 from interfaces.lts import LTS
-from interfaces.expr import QuantifiedSignal, Signal
-from third_party import boolean
+from interfaces.expr import Signal
 
 
 def _colorize_nodes(lts):
@@ -61,10 +59,8 @@ def _get_outputvals(label:dict, lts:LTS, outvars_treated_as_moore) -> dict:
 
 def _label_states_with_outvalues(lts:LTS, state_args, filter='all'):
     # state_args = [ARG_S_a_STATE, ARG_S_g_STATE, ARG_L_a_STATE, ARG_L_g_STATE, ARG_MODEL_STATE]
-    print_green(state_args)
 
     dot_lines = StrAwareList()
-    print_red(filter)
 
     for state in lts.states:
         signal_model_pairs = [(signal, model)
@@ -73,7 +69,6 @@ def _label_states_with_outvalues(lts:LTS, state_args, filter='all'):
 
         value_by_signal = dict()
         for signal,model in signal_model_pairs:
-            print_red(state)
             # TODO: fragile
             state_label = Label(zip(state_args, state if isinstance(state, Iterable)
                                                 else [state]))
@@ -93,29 +88,29 @@ def _label_states_with_outvalues(lts:LTS, state_args, filter='all'):
 
     return dot_lines
 
-
-def _to_expr(l:Label) -> boolean.Expression:
-    expr = boolean.TRUE
-    for var, val in l.items():
-        s = boolean.Symbol(str(var))   # boolean.py has the bug when object is not a string
-        # s = boolean.Symbol(var)
-        expr = (expr * s) if val else (expr * ~s)
-    return expr
-
-
-def _to_label(cube:boolean.Expression) -> Label:
-    label = dict()
-    for l in cube.literals:
-        #: :type: boolean.Expression
-        l = l
-        assert len(list(l.symbols)) == 1
-        symbol = list(l.symbols)[0]
-        assert str(symbol.obj) not in label
-        label[str(symbol.obj)] = not isinstance(l, boolean.NOT)
-
-    return label
-
-
+#
+# def _to_expr(l:Label) -> boolean.Expression:
+#     expr = boolean.TRUE
+#     for var, val in l.items():
+#         s = boolean.Symbol(str(var))   # boolean.py has the bug when object is not a string
+#         # s = boolean.Symbol(var)
+#         expr = (expr * s) if val else (expr * ~s)
+#     return expr
+#
+#
+# def _to_label(cube:boolean.Expression) -> Label:
+#     label = dict()
+#     for l in cube.literals:
+#         #: :type: boolean.Expression
+#         l = l
+#         assert len(list(l.symbols)) == 1
+#         symbol = list(l.symbols)[0]
+#         assert str(symbol.obj) not in label
+#         label[str(symbol.obj)] = not isinstance(l, boolean.NOT)
+#
+#     return label
+#
+#
 def _build_srcdst_to_io_labels(lts:LTS, state_args, outvars_treated_as_moore) -> dict:
     srcdst_to_io_labels = dict()
     for label, next_state in lts.tau_model.items():
@@ -133,32 +128,32 @@ def _build_srcdst_to_io_labels(lts:LTS, state_args, outvars_treated_as_moore) ->
         srcdst_to_io_labels[(crt_state, next_state)].append(io_label)
 
     return srcdst_to_io_labels
-
-
-def _simplify_srcdst_to_io_labels(srcdst_to_io_labels:dict) -> dict:
-    """ Careful -- side effect is that every signal becomes string in the returned result.
-    """
-    assert 0, 'there is a bug somewhere here, do not comment me! -- try to update that third-party package'
-
-    simplified_srcdst_to_io_labels = dict()
-    for (src, dst), io_labels in srcdst_to_io_labels.items():
-        io_labels_as_exprs = [_to_expr(l) for l in io_labels]
-
-        io_labels_as_dnf = boolean.FALSE
-        for le in io_labels_as_exprs:
-            io_labels_as_dnf = io_labels_as_dnf + le
-
-        assert io_labels_as_dnf != boolean.FALSE
-
-        simplified_io_labels_as_exprs = tuple()
-
-        if io_labels_as_dnf != boolean.TRUE:
-            simplified_io_labels_as_exprs = boolean.normalize(boolean.OR, io_labels_as_dnf)
-
-        simplified_io_labels = [_to_label(e) for e in simplified_io_labels_as_exprs]
-        simplified_srcdst_to_io_labels[(src, dst)] = simplified_io_labels
-
-    return simplified_srcdst_to_io_labels
+#
+#
+# def _simplify_srcdst_to_io_labels(srcdst_to_io_labels:dict) -> dict:
+#     """ Careful -- side effect is that every signal becomes string in the returned result.
+#     """
+#     assert 0, 'there is a bug somewhere here, do not comment me! -- try to update that third-party package'
+#
+#     simplified_srcdst_to_io_labels = dict()
+#     for (src, dst), io_labels in srcdst_to_io_labels.items():
+#         io_labels_as_exprs = [_to_expr(l) for l in io_labels]
+#
+#         io_labels_as_dnf = boolean.FALSE
+#         for le in io_labels_as_exprs:
+#             io_labels_as_dnf = io_labels_as_dnf + le
+#
+#         assert io_labels_as_dnf != boolean.FALSE
+#
+#         simplified_io_labels_as_exprs = tuple()
+#
+#         if io_labels_as_dnf != boolean.TRUE:
+#             simplified_io_labels_as_exprs = boolean.normalize(boolean.OR, io_labels_as_dnf)
+#
+#         simplified_io_labels = [_to_label(e) for e in simplified_io_labels_as_exprs]
+#         simplified_srcdst_to_io_labels[(src, dst)] = simplified_io_labels
+#
+#     return simplified_srcdst_to_io_labels
 
 
 def _lts_to_dot(lts:LTS, state_args, outvars_treated_as_moore):
@@ -182,7 +177,7 @@ def _lts_to_dot(lts:LTS, state_args, outvars_treated_as_moore):
 
     # simplified_srcdst_to_io_labels = minimize_dnf_set()
 
-    simplified_srcdst_to_io_labels = srcdst_to_io_labels
+    simplified_srcdst_to_io_labels = srcdst_to_io_labels   # TODO: implement simplification using numpy
     # logger.debug('the model after edge simplifications: \n' + str(simplified_srcdst_to_io_labels))
 
     for (src, dst), io_labels in simplified_srcdst_to_io_labels.items():
@@ -287,14 +282,14 @@ class Test(TestCase):
         # [{prev_0: True}]
         # ------------------------------------------------
         srcdst_io_labels = dict()
-        srcdst_io_labels[('t2', 't5')] = [{QuantifiedSignal('prev', 0): True, 'mlocked_0': True, QuantifiedSignal('sready', 0): True, QuantifiedSignal('mbusreq', 0): True},
-                                          {QuantifiedSignal('prev', 0): True, 'mlocked_0': True, QuantifiedSignal('sready', 0): False, QuantifiedSignal('mbusreq', 0): True},
-                                          {QuantifiedSignal('prev', 0): True, 'mlocked_0': False, QuantifiedSignal('sready', 0): True, QuantifiedSignal('mbusreq', 0): False},
-                                          {QuantifiedSignal('prev', 0): True, 'mlocked_0': True, QuantifiedSignal('sready', 0): True, QuantifiedSignal('mbusreq', 0): False},
-                                          {QuantifiedSignal('prev', 0): True, 'mlocked_0': True, QuantifiedSignal('sready', 0): False, QuantifiedSignal('mbusreq', 0): False},
-                                          {QuantifiedSignal('prev', 0): True, 'mlocked_0': False, QuantifiedSignal('sready', 0): False, QuantifiedSignal('mbusreq', 0): False},
-                                          {QuantifiedSignal('prev', 0): True, 'mlocked_0': False, QuantifiedSignal('sready', 0): False, QuantifiedSignal('mbusreq', 0): True},
-                                          {QuantifiedSignal('prev', 0): True, 'mlocked_0': False, QuantifiedSignal('sready', 0): True, QuantifiedSignal('mbusreq', 0): True}]
+        srcdst_io_labels[('t2', 't5')] = [{Signal('prev'): True, 'mlocked_0': True, Signal('sready'): True, Signal('mbusreq'): True},
+                                          {Signal('prev'): True, 'mlocked_0': True, Signal('sready'): False,Signal('mbusreq'): True},
+                                          {Signal('prev'): True, 'mlocked_0': False,Signal('sready'): True, Signal('mbusreq'): False},
+                                          {Signal('prev'): True, 'mlocked_0': True, Signal('sready'): True, Signal('mbusreq'): False},
+                                          {Signal('prev'): True, 'mlocked_0': True, Signal('sready'): False,Signal('mbusreq'): False},
+                                          {Signal('prev'): True, 'mlocked_0': False,Signal('sready'): False,Signal('mbusreq'): False},
+                                          {Signal('prev'): True, 'mlocked_0': False,Signal('sready'): False,Signal('mbusreq'): True},
+                                          {Signal('prev'): True, 'mlocked_0': False,Signal('sready'): True, Signal('mbusreq'): True}]
 
         simplified_srcdst_io_labels = _simplify_srcdst_to_io_labels(srcdst_io_labels)
 

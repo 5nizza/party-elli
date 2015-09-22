@@ -2,6 +2,7 @@
 import argparse
 from functools import lru_cache
 import tempfile
+from parsing import acacia_parser
 
 from helpers import automaton2dot
 from helpers.automata_classifier import is_safety_automaton
@@ -10,12 +11,11 @@ from helpers.main_helper import setup_logging, create_spec_converter_z3, remove_
 from helpers.python_ext import readfile
 from interfaces.expr import Expr, BinOp, UnaryOp, and_expressions
 from module_generation.dot import lts_to_dot
-from parsing.acacia_parser_desc import acacia_parser
 from parsing.python_spec_parser import parse_python_spec
 from parsing.visitor import Visitor
-from synthesis import original_model_searcher, model_searcher
+from synthesis import model_searcher
+from synthesis.encoder_builder import create_encoder
 from synthesis.funcs_args_types_names import ARG_MODEL_STATE
-from synthesis.smt_encoder import SMTEncoder
 from synthesis.smt_logic import UFLIA
 from automata_translations.ltl2automaton import LTL3BA
 
@@ -37,7 +37,7 @@ def is_safety_ltl(expr:Expr, ltl2automaton_converter) -> bool:
 
 
 @lru_cache()
-def is_boolean_ltl(expr:Expr, ltl2automaton_converter) -> bool:
+def is_boolean_ltl(expr:Expr) -> bool:
     class TemporalOperatorFoundException(Exception):
         pass
 
@@ -99,28 +99,6 @@ def parse_acacia_spec(spec_file_name:str):
     return _get_acacia_spec(ltl_file_str, part_file_str)
 
 
-def _get_tau_desc(inputs):
-    arg_types_dict = dict()
-    arg_types_dict[ARG_MODEL_STATE] = TYPE_MODEL_STATE
-
-    for s in inputs:
-        arg_types_dict[smt_arg_name_signal(s)] = 'Bool'
-
-    tau_desc = FuncDescription(FUNC_MODEL_TRANS, arg_types_dict, TYPE_MODEL_STATE, None)
-    return tau_desc
-
-
-def _get_output_desc(output:Signal, is_mealy, inputs):
-    arg_types_dict = dict()
-    arg_types_dict[ARG_MODEL_STATE] = TYPE_MODEL_STATE
-
-    if is_mealy:
-        for s in inputs:
-            arg_types_dict[smt_arg_name_signal(s)] = 'Bool'
-
-    return FuncDescription(output.name, arg_types_dict, 'Bool', None)
-
-
 def main(spec_file_name,
          is_moore,
          dot_file_name,
@@ -140,17 +118,11 @@ def main(spec_file_name,
     logger.debug('automaton (dot) is:\n' + automaton2dot.to_dot(automaton))
     logger.debug(automaton)
 
-    # TODO: use model_searcher instead
-    tau_desc = _get_tau_desc(input_signals)
+    encoder = create_encoder(input_signals, output_signals,
+                             is_moore,
+                             automaton,
+                             smt_solver, UFLIA(None))
 
-    desc_by_output = dict((o, _get_output_desc(o, not is_moore, input_signals))
-                         for o in output_signals)
-
-    encoder = SMTEncoder(UFLIA(None),
-                         automaton,
-                         smt_solver,
-                         tau_desc,
-                         input_signals, desc_by_output)
     model = model_searcher.search(bounds, encoder)
 
     is_realizable = model is not None
@@ -213,7 +185,7 @@ if __name__ == "__main__":
     bounds = list(range(1, args.bound + 1) if args.size == 0
                   else range(args.size, args.size + 1))
 
-    is_realizable = main(args.ltl, args.moore, args.dot, bounds, ltl2ucw_converter, solver_factory.create())
+    is_realizable = main(args.spec, args.moore, args.dot, bounds, ltl2ucw_converter, solver_factory.create())
 
     if not args.tmp:
         remove_files_prefixed(smt_files_prefix.split('/')[-1])
