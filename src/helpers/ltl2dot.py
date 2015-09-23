@@ -33,7 +33,7 @@ if __name__ == "__main__":
     with tempfile.NamedTemporaryFile(dir='./') as smt_file:
         smt_files_prefix = smt_file.name
 
-    converter, _ = create_spec_converter_z3(logger, UFLIA(None), False, smt_files_prefix)
+    converter, _ = create_spec_converter_z3(logger, UFLIA(None), False, False, smt_files_prefix, True)
 
     if not args.file:
         line = args.Formula

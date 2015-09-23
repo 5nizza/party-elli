@@ -43,7 +43,7 @@ def _split_safety_liveness(formulas, ltl2automaton_converter):
     return safety, liveness
 
 
-def _get_acacia_spec(ltl_text:str, part_text:str, ltl2automaton_converter) -> (list, list, Expr):
+def _get_acacia_spec(ltl_text:str, part_text:str, ltl2automaton_converter, logger) -> (list, list, Expr):
     input_signals, output_signals, data_by_name = acacia_parser.parse(ltl_text, part_text, logger)
 
     if data_by_name is None:
@@ -67,13 +67,13 @@ def _get_acacia_spec(ltl_text:str, part_text:str, ltl2automaton_converter) -> (l
     return input_signals, output_signals, and_expressions(ltl_properties)
 
 
-def parse_acacia_spec(spec_file_name:str, ltl2automaton_converter):
+def parse_acacia_spec(spec_file_name:str, ltl2automaton_converter, logger):
     """ :return: (inputs_signals, output_signals, expr) """
 
     assert spec_file_name.endswith('.ltl'), spec_file_name
     ltl_file_str = readfile(spec_file_name)
     part_file_str = readfile(spec_file_name.replace('.ltl', '.part'))
-    return _get_acacia_spec(ltl_file_str, part_file_str, ltl2automaton_converter)
+    return _get_acacia_spec(ltl_file_str, part_file_str, ltl2automaton_converter, logger)
 
 
 def parse_anzu_spec(spec_file_name:str):
@@ -85,8 +85,9 @@ def main(spec_file_name,
          dot_file_name,
          bounds,
          ltl2automaton_converter:LTL3BA,
-         smt_solver):
-    parse_spec = { 'ltl': lambda f: parse_acacia_spec(f, ltl2automaton_converter),
+         smt_solver,
+         logger):
+    parse_spec = { 'ltl': lambda f: parse_acacia_spec(f, ltl2automaton_converter, logger),
                   'cfg':parse_anzu_spec
                  }[spec_file_name.split('.')[-1]]
 
@@ -128,9 +129,9 @@ if __name__ == "__main__":
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--moore', action='store_true', required=False,
-                       help='treat the spec as Moore and produce Moore machine')
+                       help='search a Moore machine')
     group.add_argument('--mealy', action='store_false', required=False,
-                       help='treat the spec as Mealy and produce Mealy machine')
+                       help='search a Mealy machine')
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--bound', metavar='bound', type=int, default=128, required=False,
@@ -152,29 +153,33 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     logger = setup_logging(args.verbose, args.log)
-
     logger.info(args)
+
+    if args.incr and args.tmp:
+        logger.warn("--tmp --incr: incremental queries do not produce smt2 files, "
+                    "so I won't save any temporal files.")
 
     with tempfile.NamedTemporaryFile(dir='./') as smt_file:
         smt_files_prefix = smt_file.name
 
-    logic = UFLIA(None)
     ltl2automaton_converter, solver_factory = create_spec_converter_z3(logger,
-                                                                       logic,
+                                                                       UFLIA(None),
                                                                        args.incr,
-                                                                       smt_files_prefix)
+                                                                       False,
+                                                                       smt_files_prefix,
+                                                                       not args.tmp)
 
     bounds = list(range(1, args.bound + 1)) if args.size == 0 \
         else (args.size,)
 
+    solver = solver_factory.create()
     is_realizable = main(args.spec,
                          args.moore,
                          args.dot,
                          bounds,
                          ltl2automaton_converter,
-                         solver_factory.create())
-
-    if not args.tmp:
-        remove_files_prefixed(smt_files_prefix.split('/')[-1])
+                         solver,
+                         logger)
+    solver.die()
 
     exit(is_realizable)

@@ -1,4 +1,6 @@
 from _collections_abc import Iterable
+import os
+import shutil
 from helpers.shell import execute_shell
 from synthesis import smt_helper
 from synthesis.smt_logic import Logic
@@ -42,7 +44,6 @@ class TruncatableQueryStorage_ViaFile:
 
 class EmulatePushPop:
     def __init__(self, query_storage:'truncate-able query storage'):
-        assert hasattr(query_storage, 'flush')
         assert hasattr(query_storage, 'truncate')
         assert hasattr(query_storage, 'position')
 
@@ -61,20 +62,24 @@ class Z3NonInteractiveViaFiles(SmtSolverWithQueryStorageAbstract):
     """
     I use this solver for non-incremental solving.
     """
-    def __init__(self, files_prefix:str,
+    def __init__(self,
+                 files_prefix:str,
                  z3_path:str,
                  logic:Logic,
-                 logger):
+                 logger,
+                 remove_file:bool):
         self._logger = logger
         self._file_name = files_prefix + '.smt2'
-        super().__init__(TruncatableQueryStorage_ViaFile(self._file_name),
-                         logic)
+        super().__init__(TruncatableQueryStorage_ViaFile(self._file_name), logic)
 
         self._emulate_push_pop = EmulatePushPop(self._query_storage)
         self._z3_cmd = z3_path + ' -smt2 ' + self._file_name
+        self.__remove_file = remove_file
 
     def die(self):
         self._query_storage.close()
+        if self.__remove_file:
+            os.remove(self._file_name)
 
     def push(self):
         return self._emulate_push_pop.push()
@@ -104,3 +109,28 @@ class Z3NonInteractiveViaFiles(SmtSolverWithQueryStorageAbstract):
             return out_lines[1:]
         else:
             return None
+
+
+class FakeSolver(Z3NonInteractiveViaFiles):
+    """
+    Solver saves the query into file, instead of calling the solver.
+    Always returns UNSAT.
+    """
+
+    def __init__(self, smt_file_prefix, z3_path:str, logic:Logic, logger):
+        super().__init__(smt_file_prefix, z3_path, logic, logger, True)
+        self.__cur_index = 1
+        self.__file_prefix = smt_file_prefix
+
+    def solve(self):
+        self._query_storage += smt_helper.make_exit()
+        self._query_storage.flush()
+
+        file_name = '{file_prefix}_{index}.smt2'.format(file_prefix=self.__file_prefix,
+                                                        index=str(self.__cur_index))
+
+        self._logger.info('copying {src} into {dst}'.format(src=self._file_name, dst=file_name))
+        self._logger.info(shutil.copyfile(self._file_name, file_name))
+
+        self.__cur_index += 1
+        return None  # always return UNSAT
