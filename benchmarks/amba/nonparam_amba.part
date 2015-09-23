@@ -1,2 +1,0 @@
-.inputs sready_i mbusreq_i mlocked_i mburst_i
-.outputs agrant_i auxonegrant_i auxlockedburstgrant_i auxlockedincr_i
