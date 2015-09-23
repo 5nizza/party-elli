@@ -19,11 +19,10 @@ if __name__ == "__main__":
     group.add_argument('--mealy', action='store_false', required=False,
                        help='assume a Mealy model')
 
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument('--minsize', metavar='minsize', type=int, default=1, required=False,
-                       help='start from size (default: %(default)i)')
-    group.add_argument('--maxsize', metavar='maxsize', type=int, default=4, required=False,
-                       help='stop at this size (default: %(default)i)')
+    parser.add_argument('--minsize', metavar='minsize', type=int, default=1, required=False,
+                        help='start from size (default: %(default)i)')
+    parser.add_argument('--maxsize', metavar='maxsize', type=int, default=4, required=False,
+                        help='stop at this size (default: %(default)i)')
 
     parser.add_argument('-v', '--verbose', action='count', default=0)
 
