@@ -132,21 +132,21 @@ if __name__ == "__main__":
     group.add_argument('--mealy', action='store_false', required=False,
                        help='treat the spec as Mealy and produce Mealy machine')
 
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--bound', metavar='bound', type=int, default=128, required=False,
+                       help='upper bound on the size of the model (default: %(default)i)')
+    group.add_argument('--size', metavar='size', type=int, default=0, required=False,
+                       help='search the model of this size (default: %(default)i)')
+
+    parser.add_argument('--incr', action='store_true', required=False, default=False,
+                        help='use incremental solving')
+    parser.add_argument('--tmp', action='store_true', required=False, default=False,
+                        help='keep temporary smt2 files')
     parser.add_argument('--dot', metavar='dot', type=str, required=False,
                         help='writes the output into a dot graph file')
-
     parser.add_argument('--log', metavar='log', type=str, required=False,
                         default=None,
                         help='name of the log file')
-
-    group_bound = parser.add_mutually_exclusive_group()
-    group_bound.add_argument('--bound', metavar='bound', type=int, default=128, required=False,
-                             help='upper bound on the size of local process (default: %(default)i)')
-    group_bound.add_argument('--size', metavar='size', type=int, default=0, required=False,
-                             help='exact size of the process implementation(default: %(default)i)')
-
-    parser.add_argument('--tmp', action='store_true', required=False, default=False,
-                        help='keep temporary smt2 files')
     parser.add_argument('-v', '--verbose', action='count', default=0)
 
     args = parser.parse_args()
@@ -161,13 +161,11 @@ if __name__ == "__main__":
     logic = UFLIA(None)
     ltl2automaton_converter, solver_factory = create_spec_converter_z3(logger,
                                                                        logic,
-                                                                       False,
+                                                                       args.incr,
                                                                        smt_files_prefix)
-    if not ltl2automaton_converter or not solver_factory:
-        exit(1)
 
-    bounds = list(range(1, args.bound + 1) if args.size == 0
-                  else range(args.size, args.size + 1))
+    bounds = list(range(1, args.bound + 1)) if args.size == 0 \
+        else (args.size,)
 
     is_realizable = main(args.spec,
                          args.moore,

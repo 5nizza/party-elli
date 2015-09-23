@@ -1,11 +1,8 @@
 from abc import ABCMeta, abstractmethod
-from interfaces.lts import LTS
 from synthesis.func_description import FuncDescription
 
 
-class SolverInterface:
-    __metaclass__ = ABCMeta
-
+class SolverInterface(metaclass=ABCMeta):
     def TYPE_BOOL(self):
         return 'Bool'
 

@@ -19,13 +19,13 @@ _REALIZABLE = [
     "others/elevator2.ltl --mealy --size 2",
 
     # some random subset of tests with --incr
-    # "others/count2.ltl --moore --bound 3 --incr",
-    # "others/full_arbiter2.ltl --mealy --bound 3 --incr",
-    #
-    # "others/pnueli_arbiter2.ltl --moore --bound 3 --incr",
-    # "others/pnueli_arbiter2.ltl --mealy --bound 3 --incr",
-    #
-    # "others/elevator2.ltl --mealy --bound 2 --incr"
+    "others/count2.ltl --moore --bound 3 --incr",
+    "others/full_arbiter2.ltl --mealy --bound 3 --incr",
+
+    "others/pnueli_arbiter2.ltl --moore --bound 3 --incr",
+    "others/pnueli_arbiter2.ltl --mealy --bound 3 --incr",
+
+    "others/elevator2.ltl --mealy --bound 2 --incr"
 ]
 
 
@@ -43,11 +43,9 @@ _UNREALIZABLE = [
     "others/elevator2.ltl --mealy --size 1",
 
     # random subset for --incr
-    # "others/count2.ltl --moore --bound 2 --incr",
-    #
-    # "others/full_arbiter2.ltl --moore --bound 3 --incr",
-    #
-    # "others/pnueli_arbiter2.ltl --moore --bound 2 --incr",
+    "others/count2.ltl --moore --bound 2 --incr",
+    "others/full_arbiter2.ltl --moore --bound 3 --incr",
+    "others/pnueli_arbiter2.ltl --moore --bound 2 --incr",
 ]
 
 

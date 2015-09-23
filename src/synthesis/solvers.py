@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from collections import Iterable
 import shlex
 import subprocess
@@ -56,6 +57,14 @@ class EmulatePushPop:
 
 
 class SmtSolverWithQueryStorageAbstract(SolverInterface):
+    @abstractmethod
+    def die(self):
+        pass
+
+    @abstractmethod
+    def solve(self) -> list:
+        pass
+
     def __init__(self, query_storage, logic:Logic):
         self._query_storage = query_storage
         self._query_storage += smt_helper.make_headers()
@@ -179,25 +188,6 @@ class Z3_Smt_NonInteractive_ViaFiles(SmtSolverWithQueryStorageAbstract):
             return None
 
 
-# class Z3_NonInteractive_ViaPipes(SmtSolverWithQueryStorageAbstract):
-#
-#     def solve(self):
-#         query_storage += 'check-sat'
-#         query_storage += 'exit'
-#
-#         out = execute_shell("z3", "file=..", "args=",
-#                             input=query_storage.to_str())
-#
-#         return parse(out)
-#
-#     def push(self):
-#         assert 0
-#
-#     def pop(self):
-#         assert 0
-#
-#
-
 class Z3_Smt_Interactive(SmtSolverWithQueryStorageAbstract):
     def __init__(self, logic:Logic, z3_path, logger):
         super().__init__(StrAwareList(), logic)
@@ -255,10 +245,3 @@ class Z3_Smt_Interactive(SmtSolverWithQueryStorageAbstract):
         if lines[0] == 'sat':
             return lines[1:]
         return None
-
-        # TODO: what about killing z3 process?
-
-#
-#
-# class Z3_Api:  # should implement all methods from SolverInterface
-#     pass
