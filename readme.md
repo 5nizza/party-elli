@@ -5,7 +5,7 @@ SMT based Bounded Synthesis, an implementation of the approach of
 This is the fork of tool [PARTY](https://github.com/5nizza/Party),
 whose main point was 
 [parameterized synthesis of token rings](http://link.springer.com/chapter/10.1007/978-3-642-39799-8_66).
-This version is significantly cleaner compared to the original Party,
+But this version is significantly cleaner,
 it supports only monolithic synthesis (no token rings!), 
 and contains tool `query_elli.py` to generate SMT queries without solving them.
 The functionality might be slightly smaller compared to the original Party,
