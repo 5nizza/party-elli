@@ -2,7 +2,8 @@
 
 SMT based Bounded Synthesis, an implementation of the approach of 
 [Schewe and Finkbeiner](https://www.react.uni-saarland.de/publications/atva07.pdf).
-This is the fork of tool [PARTY](https://github.com/5nizza/Party) that also supports 
+This is the fork of tool [PARTY](https://github.com/5nizza/Party),
+whose main point was 
 [parameterized synthesis of token rings](http://link.springer.com/chapter/10.1007/978-3-642-39799-8_66).
 This version is significantly cleaner compared to the original Party,
 it supports only monolithic synthesis (no token rings!), 
