@@ -1,6 +1,5 @@
 from interfaces.labels_map import LabelsMap
 from helpers.python_ext import to_str
-from interfaces.automata import Label
 
 
 class LTS:

@@ -1,9 +1,8 @@
 import sys
-from helpers.console_helpers import print_green
+
 from helpers.main_helper import get_root_dir
 from helpers.python_ext import is_empty_str
 from helpers.shell import execute_shell
-
 
 _BENCHMARKS_DIR = get_root_dir() + "benchmarks/"
 

@@ -1,4 +1,4 @@
-from interfaces.automata import Node, Label
+import interfaces.automata
 from interfaces.expr import Signal
 
 
@@ -37,7 +37,7 @@ def smt_unname_if_signal(arg_name:str, signals):
     return arg_name
 
 
-def smt_name_spec(spec_state:Node, spec_state_type:str):
+def smt_name_spec(spec_state:interfaces.automata.Node, spec_state_type:str):
     return '{0}_{1}'.format(spec_state_type, spec_state.name)
 
 

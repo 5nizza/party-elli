@@ -1,5 +1,5 @@
 from parsing.visitor import Visitor
-from interfaces.expr import BinOp, UnaryOp, Signal, Number
+from interfaces.expr import BinOp, Signal
 
 
 class SignalsChecker(Visitor):

@@ -1,7 +1,7 @@
 import itertools
 import logging
+
 from helpers.logging_helper import log_entrance
-from helpers.python_ext import get_add
 from interfaces.automata import Node
 
 
@@ -52,64 +52,6 @@ def _get_create(node_tok, name_to_node, initial_nodes, rejecting_nodes, states_p
     return node
 
 
-def _unwind_label(pattern_lbl, vars):
-    lbl_vars = pattern_lbl.keys()
-    free_vars = vars.difference(lbl_vars)
-    free_vars_values = list(itertools.product([True, False], repeat=len(free_vars)))
-
-    if len(free_vars_values) is 0:
-        return pattern_lbl
-
-    concrete_labels = []
-    for free_vars_value in free_vars_values:
-        free_vars_lbl = {}
-        for i, free_var in enumerate(free_vars):
-            free_vars_lbl[free_var] = free_vars_value[i]
-
-        concrete_lbl = dict(pattern_lbl)
-        concrete_lbl.update(free_vars_lbl)
-        concrete_labels.append(concrete_lbl)
-
-    return concrete_labels
-
-
-def _flatten(dst_set_list):
-    return set(itertools.chain(*dst_set_list))
-
-
-def _get_create_new_nodes(new_name_to_node, flagged_nodes_set):
-    new_nodes = [(get_add(new_name_to_node, fn[0].name, Node(fn[0].name)), fn[1])
-                 for fn in flagged_nodes_set]
-    return new_nodes
-
-
-# def _conform2acw(init_nodes, rej_nodes, nodes):
-#     """ Modify `incorrect' transitions:
-#         label->[set1,set2] modified to label->[set3], where set3=set1+set2
-#     """
-#     new_name_to_node = {}
-#     for n in nodes:
-#         new_node = get_add(new_name_to_node, n.name, Node(n.name))
-#
-#         lbl_to_flagged_nodes = {}
-#
-#         lbl_dst_set_pairs = [(lbl, _flatten(list_of_sets))
-#                              for lbl, list_of_sets in n.transitions.items()]
-#         for pattern_lbl, old_dst_nodes in lbl_dst_set_pairs:
-#             new_dst_nodes = _get_create_new_nodes(new_name_to_node, old_dst_nodes)
-#
-#             lbl_nodes = get_add(lbl_to_flagged_nodes, pattern_lbl, set())
-#             lbl_nodes.update(new_dst_nodes)  # TODO: determinize, make labels do not intersect
-#
-#         for lbl, flagged_dst_nodes in lbl_to_flagged_nodes.items():
-#             new_node.add_transition(lbl, flagged_dst_nodes)
-#
-#     new_init_nodes = [new_name_to_node[n.name] for n in init_nodes]
-#     new_rej_nodes = [new_name_to_node[n.name] for n in rej_nodes]
-#
-#     return new_init_nodes, new_rej_nodes, list(new_name_to_node.values())
-
-
 def _parse_trans_tok(trans:str,
                      src:Node,
                      name_to_node,
@@ -130,17 +72,22 @@ def _parse_trans_tok(trans:str,
     return dst, labels
 
 
-# TODO: rename
-def _get_hacked_ucw(text:str, signal_by_name:dict, states_prefix):
+@log_entrance(log_level=logging.DEBUG)
+def parse_ltl2ba_ba(text:str, signal_by_name:dict, states_prefix):
     """
-    :return: initial_nodes:set, rejecting_nodes:set, nodes:set, label variables:set
-
-    It is `hacked' since it doesn't conform to description of Node transitions:
-    label->[set1, set2] here means: with label go to _both set1 and set2
-
-    @see _conform2acw which corrects this
+    Parse ltl2ba output
+    Return (initial_nodes, acc_nodes, nodes of Node class)
 
     """
+    # TODO: account for the following special case (accept_init and s0_init)
+    #       (GOAL returns this, that is alright):
+    #    never {
+    #    accept_init:
+    #    s0_init:
+    #        if
+    #        :: !(g) -> goto s0_init
+    #        fi;
+    #    }
 
     toks = text.split('\n')
     toks = [x.strip() for x in toks][1:-1]
@@ -157,16 +104,16 @@ def _get_hacked_ucw(text:str, signal_by_name:dict, states_prefix):
     #    accept_all :    /* 1 */
     #    skip
 
-    vars = set()
+    variables = set()
     init_nodes = set()
-    rej_nodes = set()
+    acc_nodes = set()
     name_to_node = {}
 
     for b in blocks:
         lines = b.strip().split('\n')
 
         src_tok = lines[0].split(':')[0].strip()
-        src = _get_create(src_tok, name_to_node, init_nodes, rej_nodes, states_prefix)
+        src = _get_create(src_tok, name_to_node, init_nodes, acc_nodes, states_prefix)
 
         trans_block = lines[1:]
         # if
@@ -182,47 +129,24 @@ def _get_hacked_ucw(text:str, signal_by_name:dict, states_prefix):
             trans_toks = [trans_block[0].strip()]
 
         if trans_toks == ['skip']:
-            src.add_transition({}, {(src, src in rej_nodes)})
+            src.add_transition({}, {(src, src in acc_nodes)})
             continue
 
         for trans in trans_toks:
             dst, labels = _parse_trans_tok(trans,
                                            src,
                                            name_to_node,
-                                           init_nodes, rej_nodes,
+                                           init_nodes, acc_nodes,
                                            signal_by_name,
                                            states_prefix)
-            vars.update(itertools.chain(*[l.keys() for l in labels]))
+            variables.update(itertools.chain(*[l.keys() for l in labels]))
 
             for l in labels:
                 # that is not correct - there are no ORs in UCT
                 # => this is corrected in _conform2acw
-                src.add_transition(l, {(dst, dst in rej_nodes)})
+                src.add_transition(l, {(dst, dst in acc_nodes)})
 
-    return init_nodes, rej_nodes, name_to_node.values(), vars
-
-
-@log_entrance(logging.getLogger(), logging.DEBUG)
-def parse_ltl2ba_ba(text:str, signal_by_name:dict, states_prefix):
-    """
-    Parse ltl2ba output
-    Return (initial_nodes, rejecting_nodes, nodes of Node class)
-    """
-    # TODO: account for the following special case (accept_init and s0_init)
-    #       (GOAL returns this, that is alright):
-    #    never {
-    #    accept_init:
-    #    s0_init:
-    #        if
-    #        :: !(g) -> goto s0_init
-    #        fi;
-    #    }
-    init_nodes, rej_nodes, nodes, vars = \
-        _get_hacked_ucw(text, signal_by_name, states_prefix)
-
-    # ucw_init_nodes, ucw_rej_nodes, ucw_nodes = _conform2acw(init_nodes, rej_nodes, nodes)
-
-    return init_nodes, rej_nodes, nodes
+    return init_nodes, acc_nodes, name_to_node.values()
 
 
 #_tmp = """

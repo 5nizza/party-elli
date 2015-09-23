@@ -7,7 +7,7 @@ from parsing import acacia_parser
 from helpers import automaton2dot
 from helpers.automata_classifier import is_safety_automaton
 from helpers.gr1helpers import build_almost_gr1_formula
-from helpers.main_helper import setup_logging, create_spec_converter_z3, remove_files_prefixed
+from helpers.main_helper import setup_logging, create_spec_converter_z3
 from helpers.python_ext import readfile
 from interfaces.expr import Expr, and_expressions, Bool
 from module_generation.dot import lts_to_dot

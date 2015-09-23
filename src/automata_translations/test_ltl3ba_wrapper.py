@@ -1,5 +1,5 @@
 import unittest
-from automata_translations.ltl3ba_wrapper import _get_hacked_ucw, _unwind_label
+from automata_translations.ltl3ba_wrapper import parse_ltl2ba_ba
 from interfaces.expr import Signal
 
 
@@ -30,7 +30,7 @@ class Test(unittest.TestCase):
         sig_r = Signal('r')
         signal_by_name = {'r': sig_r, 'g': sig_g}
 
-        initial_nodes, rejecting_nodes, nodes, _ = _get_hacked_ucw(text, signal_by_name, '')
+        initial_nodes, rejecting_nodes, nodes = parse_ltl2ba_ba(text, signal_by_name, '')
 
         assert len(initial_nodes) == 1, str(len(initial_nodes))
         assert len(rejecting_nodes) == 1, str(len(rejecting_nodes))
@@ -73,7 +73,7 @@ class Test(unittest.TestCase):
         sig_g = Signal('g')
         sig_r = Signal('r')
         signal_by_name = {'r': sig_r, 'g': sig_g}
-        initial_nodes, _, nodes, _ = _get_hacked_ucw(text, signal_by_name, '')
+        initial_nodes, _, nodes = parse_ltl2ba_ba(text, signal_by_name, '')
 
         assert len(initial_nodes) == 1, str(len(initial_nodes))
         assert len(nodes) == 2, str(nodes)
@@ -94,7 +94,7 @@ class Test(unittest.TestCase):
         sig_g = Signal('g')
         sig_r = Signal('r')
         signal_by_name = {'r': sig_r, 'g': sig_g}
-        initial_nodes, rejecting_nodes, nodes, _ = _get_hacked_ucw(text, signal_by_name, '')
+        initial_nodes, rejecting_nodes, nodes = parse_ltl2ba_ba(text, signal_by_name, '')
 
         assert len(initial_nodes) == 1, str(len(initial_nodes))
         assert len(rejecting_nodes) == 1, str(len(rejecting_nodes))
@@ -124,7 +124,7 @@ class Test(unittest.TestCase):
         sig_g = Signal('g')
         sig_r = Signal('r')
         signal_by_name = {'r': sig_r, 'g': sig_g}
-        initial_nodes, rejecting_nodes, nodes, _ = _get_hacked_ucw(text, signal_by_name, '')
+        initial_nodes, rejecting_nodes, nodes = parse_ltl2ba_ba(text, signal_by_name, '')
 
         assert len(initial_nodes) == 1, str(len(initial_nodes))
         assert len(rejecting_nodes) == 1, str(len(rejecting_nodes))
@@ -139,33 +139,6 @@ class Test(unittest.TestCase):
                 assert (label == {} and dst == init_node) \
                            or (label == {sig_r: True} and dst != init_node) \
                            or (label == {sig_g: False} and dst != init_node)
-
-    def test_unwind_labels__true_lbl(self):
-        pattern_lbl = {}
-        vars = {'r', 'g'}
-
-        concrete_labels = _unwind_label(pattern_lbl, vars)
-        _assert_equal_list_dict(
-            concrete_labels,
-            [{'r': True, 'g': True}, {'r': True, 'g': False},
-             {'r': False, 'g': True}, {'r': False, 'g': False}])
-
-    def test_unwind_labels__concrete_lbl(self):
-        pattern_lbl = {'r': True}
-        vars = {'r'}
-
-        concrete_labels = _unwind_label(pattern_lbl, vars)
-        assert concrete_labels == [{'r': True}]
-
-    def test_unwind_labels__main_case(self):
-        pattern_lbl = {'r': True}
-        vars = {'r', 'g'}
-
-        concrete_labels = _unwind_label(pattern_lbl, vars)
-
-        _assert_equal_list_dict(
-            concrete_labels,
-            [{'r': True, 'g': True}, {'r': True, 'g': False}])
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 from collections import defaultdict
+
 from pygraph.algorithms.accessibility import mutual_accessibility
 from pygraph.classes.digraph import digraph
-from helpers.console_helpers import print_green
 
 
 def _convert_to_digraph(nodes):

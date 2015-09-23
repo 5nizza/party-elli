@@ -1,4 +1,4 @@
-from abc import abstractmethod, ABCMeta
+from abc import ABCMeta
 
 from interfaces.solver_interface import SolverInterface
 from synthesis.func_description import FuncDescription

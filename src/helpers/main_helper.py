@@ -96,10 +96,3 @@ def create_spec_converter_z3(logger:logging.Logger,
                                      remove_tmp_files)
 
     return converter, solver_factory
-
-
-def remove_files_prefixed(file_prefix:str):
-    """ Remove files from the current directory prefixed with a given prefix """
-    for f in os.listdir():
-        if f.startswith(file_prefix):
-            os.remove(f)

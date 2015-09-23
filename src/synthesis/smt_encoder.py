@@ -11,8 +11,8 @@ from interfaces.expr import Signal
 from interfaces.solver_interface import SolverInterface
 from synthesis.func_description import FuncDescription
 from synthesis.funcs_args_types_names import TYPE_MODEL_STATE, ARG_MODEL_STATE, FUNC_REACH, FUNC_R, \
-    smt_name_spec, smt_name_m, smt_name_free_arg, smt_arg_name_signal, smt_unname_if_signal, smt_unname_m, ARG_A_STATE, \
-    TYPE_A_STATE
+    smt_name_spec, smt_name_m, smt_name_free_arg, smt_arg_name_signal, smt_unname_if_signal, smt_unname_m, \
+    ARG_A_STATE, TYPE_A_STATE
 from synthesis.rejecting_states_finder import build_state_to_rejecting_scc
 
 
@@ -97,10 +97,9 @@ class SMTEncoder:
     def _build_args_dict(self, smt_m:str, i_o, q:Node) -> dict:
         args_dict = dict()
         args_dict[ARG_MODEL_STATE] = smt_m
-
         args_dict[ARG_A_STATE] = smt_name_spec(q, TYPE_A_STATE)
 
-        if i_o is None:   # TODO: bad smell
+        if i_o is None:
             return args_dict
 
         smt_label_args, _ = _build_signals_values(self.inputs, i_o)
@@ -127,10 +126,8 @@ class SMTEncoder:
     def _encode_counters(self):
         self.solver.declare_fun(self.reach_func_desc)
         self.solver.declare_fun(self.r_func_desc)
-    ##
-    ##
 
-    ## encoding rules
+    # ################## encoding rules ####################
     def encode_initialization(self):
         for q, m in product(self.automaton.initial_nodes, [self.model_init_state]):
             vals_by_vars = self._build_args_dict(smt_name_m(m), None, q)
@@ -140,37 +137,6 @@ class SMTEncoder:
                     self.reach_func_desc, vals_by_vars))
 
     def encode_run_graph(self, states_to_encode):
-        # state_to_rejecting_scc = build_state_to_rejecting_scc(impl.automaton)  # TODO: Does it help?
-
-        # One option is to encode automata directly into SMT and have a query like:
-        #
-        # forall (s_a, s_a'), (s_g, s_g'), (l_a, l_a'), (l_g, l_g'), (m, m'), i_o:
-        # (s_a, i_o, s_a') \in edge(S_a) &
-        # (s_g, i_o, s_g') \in edge(S_g) &
-        # (l_a, i_o, l_a') \in edge(L_a) &
-        # (l_g, i_o, l_g') \in edge(L_g) &
-        # (tau(m,i) = m') & out(m,i,other_args) = o &
-        # reach(s_a,s_g,l_a,l_g,m)
-        # ->
-        # reach(s_a',s_g',l_a',l_g',m') & r(...) >< r(...)
-        #
-        # This requires Z3 to optimize a lot
-        # (e.g., to understand that only valid automata transitions should be considered)
-        # But the plus is that the query is _very_ compact.
-        # I don't know if Z3 capable of doing such optimization.
-        #
-        # Thus, instead we will construct a query like:
-        #
-        # forall s_a, s_g, l_a, l_g, m, (i_o,s_a') in edges(s_a):
-        # out(..) = o &
-        # reach(s_a,..,m)
-        # ->
-        # reach(..) & r(..) >< r(..)
-        #
-        # We will explicitly enumerate all i_o for a given label (of the edge),
-        # and compute s_g', l_a', l_g' depending on i_o.
-        # We will handle the special case when s_g' is the rejecting state.
-
         state_to_rejecting_scc = build_state_to_rejecting_scc(self.automaton)
 
         for q in self.automaton.nodes:
@@ -283,7 +249,7 @@ class SMTEncoder:
 
     #
     #
-    ###################### SMT Solver and Model Parser ###############################
+    # ##################### SMT Solver and Model Parser ###############################
     def push(self):
         return self.solver.push()
 

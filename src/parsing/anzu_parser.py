@@ -131,10 +131,9 @@ G(F(((hmaster0=1) * (hmaster1=0))  +  hbusreq1=0));
 G(F(((hmaster0=0) * (hmaster1=1))  +  hbusreq2=0)); """
 
 
-
-
-
 from unittest import TestCase
+
+
 class Test(TestCase):
     def tests_all(self):
         result = yacc.parse(test_string)
@@ -151,6 +150,6 @@ class Test(TestCase):
             actual = len(data)
             expected = expected_results[section_name]
             assert actual == expected, '{actual} != {expected}: {section}'.format(
-                actual = actual, expected =expected, section = section_name)
+                actual=actual, expected=expected, section=section_name)
 
 
