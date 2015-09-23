@@ -4,7 +4,7 @@ import os
 import sys
 from synthesis.smt_logic import Logic
 
-from synthesis.solvers import Z3_Smt_NonInteractive_ViaFiles, Z3_Smt_Interactive
+from synthesis.solver_with_query_storage import Z3NonInteractiveViaFiles, Z3InteractiveViaPipes
 from third_party.ansistrm import ColorizingStreamHandler
 from automata_translations.ltl2automaton import LTL3BA
 
@@ -56,9 +56,9 @@ class Z3SolverFactory:
 
     def create(self, seed=''):
         if self.is_incremental:
-            solver = Z3_Smt_Interactive(self.logic, self.z3_path, self.logger)
+            solver = Z3InteractiveViaPipes(self.logic, self.z3_path, self.logger)
         else:
-            solver = Z3_Smt_NonInteractive_ViaFiles(self.smt_tmp_files_prefix+seed,
+            solver = Z3NonInteractiveViaFiles(self.smt_tmp_files_prefix+seed,
                                                     self.z3_path,
                                                     self.logic,
                                                     self.logger)
