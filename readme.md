@@ -23,7 +23,7 @@ but this is the version I plan to support and update in future.
   and install using python3
 
 ## To configure
-Modify `src/config.py` to provide absolute paths to executables of z3 and ltl3ba
+Modify `src/config.py` to provide absolute paths to executables `z3` and `ltl3ba`.
 
 If you plan to develop smth then you might want to ignore future changes to config.py, to do so run:
 	
