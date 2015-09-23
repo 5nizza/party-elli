@@ -30,7 +30,7 @@ If you plan to develop smth then you might want to ignore future changes to conf
 	git update-index --assume-unchanged src/config.py
 
 `.gitignore` is not enough.
-(not very optimal)
+(i know, not optimal)
 
 ## To run
 `./elli.py` to run the synthesizer
@@ -41,7 +41,7 @@ If you plan to develop smth then you might want to ignore future changes to conf
 Run `run_tests.py` for functional tests, and `nosetests3 ./` -- for unit tests.
 
 ## Questions
-Submit to github or directly to ayrat.khalimov(gmail)
+Submit here or to ayrat.khalimov(gmail)
 
 ## Authors
 Now the main contributor is Ayrat, but at different stages participated:
