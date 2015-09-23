@@ -58,11 +58,11 @@ class Expr:   # TODO: override boolean operations
     def __ior__(self, other):
         return self | other
 
-    def __neg__(self):
-        return UnaryOp('!', self)
-
     def __invert__(self):
         return UnaryOp('!', self)
+
+    def __rshift__(self, other):
+        return ~self | other
 
 
 class Bool(Expr):

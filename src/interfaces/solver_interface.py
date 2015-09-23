@@ -46,7 +46,7 @@ class SolverInterface:
         raise NotImplementedError()
 
     @abstractmethod
-    def true(self):
+    def get_true(self):
         raise NotImplementedError()
 
     @abstractmethod

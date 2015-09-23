@@ -87,7 +87,7 @@ class SmtSolverWithQueryStorageAbstract(SolverInterface):
     def false(self):
         return smt_helper.false()
 
-    def true(self):
+    def get_true(self):
         return smt_helper.true()
 
     def op_eq(self, first_arg, second_arg):

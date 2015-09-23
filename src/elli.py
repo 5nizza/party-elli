@@ -11,7 +11,6 @@ from helpers.main_helper import setup_logging, create_spec_converter_z3, remove_
 from helpers.python_ext import readfile
 from interfaces.expr import Expr, and_expressions, Bool
 from module_generation.dot import lts_to_dot
-from parsing.python_spec_parser import parse_python_spec
 from synthesis import model_searcher
 from synthesis.encoder_builder import create_encoder
 from synthesis.funcs_args_types_names import ARG_MODEL_STATE
@@ -30,7 +29,7 @@ def write_out(model, is_moore, file_type, file_name):
 
 @lru_cache()
 def is_safety_ltl(expr:Expr, ltl2automaton_converter) -> bool:
-    automaton = ltl2automaton_converter.convert(-expr)  # !(safety ltl) has safety automaton
+    automaton = ltl2automaton_converter.convert(~expr)  # !(safety ltl) has safety automaton
     res = is_safety_automaton(automaton)
     return res
 
@@ -95,7 +94,7 @@ def main(spec_file_name,
 
     logger.info('LTL is:\n' + str(ltl))
 
-    automaton = ltl2automaton_converter.convert(-ltl)
+    automaton = ltl2automaton_converter.convert(~ltl)
 
     logger.debug('automaton (dot) is:\n' + automaton2dot.to_dot(automaton))
     logger.debug(automaton)

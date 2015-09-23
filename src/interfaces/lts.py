@@ -6,12 +6,12 @@ from interfaces.automata import Label
 class LTS:
     def __init__(self,
                  init_states,
-                 model_by_name:dict,
+                 model_by_signal:dict,
                  tau_model:LabelsMap,
                  state_name:str,
                  input_signals,
                  output_signals):
-        self._output_models = model_by_name
+        self._output_models = model_by_signal
         self._tau_model = tau_model
         self._init_states = set(init_states)
 
@@ -49,16 +49,12 @@ class LTS:
         return self._tau_model
 
     @property
-    def model_by_name(self):   # TODO: rename: should be model_by_signal
+    def model_by_signal(self):
         return self._output_models
 
     @property
     def output_models(self) -> dict:
         return self._output_models
-
-    def get_outputs(self, label:Label):
-        return dict((outvar, transitions[label])
-                    for (outvar, transitions) in self._output_models.items())
 
     def __str__(self):
         return 'LTS:\n' \
@@ -68,6 +64,6 @@ class LTS:
                '  states: {states}\n' \
                '  output_models: {output_models}'.format(init=str(self._init_states),
                                                          states=str(self.states),
-                                                         output_models=str(self.model_by_name),
+                                                         output_models=str(self.model_by_signal),
                                                          inputs=to_str(self._input_signals),
                                                          outputs=to_str(self._output_signals))

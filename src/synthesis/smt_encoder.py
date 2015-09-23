@@ -100,7 +100,7 @@ class SMTEncoder:
 
         args_dict[ARG_A_STATE] = smt_name_spec(q, TYPE_A_STATE)
 
-        if i_o is None:
+        if i_o is None:   # TODO: bad smell
             return args_dict
 
         smt_label_args, _ = _build_signals_values(self.inputs, i_o)
@@ -379,7 +379,8 @@ class SMTEncoder:
                 return_value = smt_unname_m(return_value_raw)
             else:
                 assert func_desc.output_ty == self.solver.TYPE_BOOL(), func_desc.output_ty
-                return_value = (return_value_raw == self.solver.true)
+                assert return_value_raw.strip() == return_value_raw  # TODO: remove after debugging phase
+                return_value = (return_value_raw == self.solver.get_true())
 
             func_model[args_label] = return_value
 

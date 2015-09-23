@@ -1,4 +1,4 @@
-# TODO: use this module
+# TODO: restore this module!
 
 import math
 
@@ -98,7 +98,7 @@ def to_boolean_nusmv(lts:LTS, specification:AssumptionsGuaranteesPair) -> str:
     dot_lines += 'DEFINE'
     dot_lines += ['  {out_name} := {formula} ;'.format(out_name=out_name,
                                                        formula=_get_formula(out_name, out_model, bits_by_state))
-                  for (out_name,out_model) in lts.model_by_name.items()]
+                  for (out_name,out_model) in lts.model_by_signal.items()]
 
     dot_lines += 'ASSIGN'
     for i,sb in enumerate(state_bits):

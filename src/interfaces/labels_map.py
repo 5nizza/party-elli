@@ -14,14 +14,11 @@ class LabelsMap:
         indices = [v for (l, v) in self._value_by_label
                    if set(l.items()).issubset(set(key.items()))]
 
-        assert len(indices) == 0 or len(indices) == 1, str(indices) + ', for ' + str(key)
-
-        if len(indices) == 1:
-            return indices[0]
-        elif len(indices) == 0:
+        if len(indices) == 0:
             raise KeyError(key)
-        else:
-            assert 0, str(key) + ' leads to ambiguity: ' + str(indices)
+
+        assert len(indices) == 1, 'return value is not unique: %s: %s' % (str(key), str(indices))
+        return indices[0]
 
     def __setitem__(self, key:Label, value):
         if not isinstance(key, Label):
