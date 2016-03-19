@@ -3,7 +3,7 @@
 import argparse
 import tempfile
 
-from elli import main
+from elli import main, parse_acacia_spec
 from helpers.main_helper import setup_logging, create_spec_converter_z3
 from synthesis.smt_logic import UFLIA
 
@@ -45,7 +45,12 @@ if __name__ == "__main__":
     bounds = list(range(args.minsize, args.maxsize+1))
 
     solver = solver_factory.create()
-    is_realizable = main(args.spec,
+    input_signals, output_signals, ltl = parse_acacia_spec(args.spec,
+                                                           ltl2automaton_converter,
+                                                           logger)
+    is_realizable = main(input_signals,
+                         output_signals,
+                         ltl,
                          args.moore,
                          None,
                          bounds,

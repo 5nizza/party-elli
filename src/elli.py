@@ -18,8 +18,8 @@ from synthesis.smt_logic import UFLIA
 from automata_translations.ltl2automaton import LTL3BA
 
 
-def write_out(model, is_moore, file_type, file_name):
-    with open(file_name + '.' + file_type, 'w') as out:
+def write_out(model, is_moore, file_name):
+    with open(file_name, 'w') as out:
         out.write(model)
 
         logger.info('{model_type} model is written to {file}'.format(
@@ -76,22 +76,13 @@ def parse_acacia_spec(spec_file_name:str, ltl2automaton_converter, logger):
     return _get_acacia_spec(ltl_file_str, part_file_str, ltl2automaton_converter, logger)
 
 
-def parse_anzu_spec(spec_file_name:str):
-    raise NotImplemented('the code is not yet taken from the original parameterized tool')
-
-
-def main(spec_file_name,
+def main(input_signals, output_signals, ltl,
          is_moore,
          dot_file_name,
          bounds,
          ltl2automaton_converter:LTL3BA,
          smt_solver,
          logger):
-    parse_spec = { 'ltl': lambda f: parse_acacia_spec(f, ltl2automaton_converter, logger),
-                  'cfg':parse_anzu_spec
-                 }[spec_file_name.split('.')[-1]]
-
-    input_signals, output_signals, ltl = parse_spec(spec_file_name)
 
     logger.info('LTL is:\n' + str(ltl))
 
@@ -117,7 +108,7 @@ def main(spec_file_name,
         if not dot_file_name:
             logger.info(dot_model)
         else:
-            write_out(dot_model, is_moore, 'dot', dot_file_name)
+            write_out(dot_model, is_moore, dot_file_name)
 
     return is_realizable
 
@@ -125,13 +116,13 @@ def main(spec_file_name,
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Bounded Synthesis Tool')
     parser.add_argument('spec', metavar='spec', type=str,
-                        help='the specification file (anzu, acacia+, or python format)')
+                        help='the specification file (acacia+ format)')
 
-    group = parser.add_mutually_exclusive_group()
+    group = parser.add_mutually_exclusive_group()  # default: moore=False, mealy=True
     group.add_argument('--moore', action='store_true', required=False,
-                       help='search a Moore machine')
+                       help='system is Moore')
     group.add_argument('--mealy', action='store_false', required=False,
-                       help='search a Mealy machine')
+                       help='system is Mealy')
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--bound', metavar='bound', type=int, default=128, required=False,
@@ -144,10 +135,16 @@ if __name__ == "__main__":
     parser.add_argument('--tmp', action='store_true', required=False, default=False,
                         help='keep temporary smt2 files')
     parser.add_argument('--dot', metavar='dot', type=str, required=False,
-                        help='writes the output into a dot graph file')
+                        help='write the output into a dot graph file')
     parser.add_argument('--log', metavar='log', type=str, required=False,
                         default=None,
                         help='name of the log file')
+    parser.add_argument('--unreal', action='store_true', required=False,
+                        help='simple check of unrealizability: '
+                             'invert the spec, system type, (in/out)puts, '
+                             'assume that env is det. and has the specified number of states, '
+                             'and synthesize the model for env '
+                             '(a more sophisticated check could search for env that disproves systems of given size)')
     parser.add_argument('-v', '--verbose', action='count', default=0)
 
     args = parser.parse_args()
@@ -173,13 +170,30 @@ if __name__ == "__main__":
         else (args.size,)
 
     solver = solver_factory.create()
-    is_realizable = main(args.spec,
-                         args.moore,
+
+    input_signals, output_signals, ltl = parse_acacia_spec(args.spec,
+                                                           ltl2automaton_converter,
+                                                           logger)
+
+    moore = args.moore
+    if args.unreal:
+        input_signals, output_signals = output_signals, input_signals
+        ltl = ~ltl
+        moore = not args.moore
+
+    is_realizable = main(input_signals,
+                         output_signals,
+                         ltl,
+                         moore,
                          args.dot,
                          bounds,
                          ltl2automaton_converter,
                          solver,
                          logger)
+    if args.unreal:
+        logger.info('{status_verb} model for _env_ to disprove the specification'
+                    .format(status_verb=['could not find', 'found'][is_realizable]))
+
     solver.die()
 
-    exit(is_realizable)
+    exit(is_realizable ^ args.unreal)
