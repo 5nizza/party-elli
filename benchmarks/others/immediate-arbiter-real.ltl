@@ -1,0 +1,7 @@
+# realizable (by Mealy, but not by Moore)
+
+assume G(!(r1=1 * r2=1));
+
+G(r1=1 <-> g1=1);
+G(r2=1 <-> g2=1);
+G(!(g1=1 * g2=1));

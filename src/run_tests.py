@@ -25,7 +25,16 @@ _REALIZABLE = [
     "others/pnueli_arbiter2.ltl --moore --bound 3 --incr",
     "others/pnueli_arbiter2.ltl --mealy --bound 3 --incr",
 
-    "others/elevator2.ltl --mealy --bound 2 --incr"
+    "others/elevator2.ltl --mealy --bound 2 --incr",
+
+    # checking --unreal
+    "others/unreal.ltl --unreal --moore",  # returns realizable meaning env has a model
+    "others/unreal.ltl --mealy",           # returns realizable
+
+    "others/immediate-arbiter-real.ltl --mealy --bound 5",
+    "others/immediate-arbiter-real.ltl --unreal --moore",
+    "others/immediate-arbiter-unreal.ltl --unreal --mealy",
+    "others/immediate-arbiter-unreal.ltl --unreal --mealy",
 ]
 
 

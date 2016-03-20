@@ -126,9 +126,13 @@ if __name__ == "__main__":
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--bound', metavar='bound', type=int, default=128, required=False,
-                       help='upper bound on the size of the model (default: %(default)i)')
+                       help='upper bound on the size of the model'
+                            ' (default: %(default)i)'
+                            ' (ignored for --unreal)')
     group.add_argument('--size', metavar='size', type=int, default=0, required=False,
-                       help='search the model of this size (default: %(default)i)')
+                       help='search the model of this size'
+                            ' (default: %(default)i)'
+                            ' (ignored for --unreal)')
 
     parser.add_argument('--incr', action='store_true', required=False, default=False,
                         help='use incremental solving')
@@ -142,7 +146,6 @@ if __name__ == "__main__":
     parser.add_argument('--unreal', action='store_true', required=False,
                         help='simple check of unrealizability: '
                              'invert the spec, system type, (in/out)puts, '
-                             'assume that env is det. and has the specified number of states, '
                              'and synthesize the model for env '
                              '(a more sophisticated check could search for env that disproves systems of given size)')
     parser.add_argument('-v', '--verbose', action='count', default=0)
@@ -166,9 +169,6 @@ if __name__ == "__main__":
                                                                        smt_files_prefix,
                                                                        not args.tmp)
 
-    bounds = list(range(1, args.bound + 1)) if args.size == 0 \
-        else (args.size,)
-
     solver = solver_factory.create()
 
     input_signals, output_signals, ltl = parse_acacia_spec(args.spec,
@@ -180,6 +180,14 @@ if __name__ == "__main__":
         input_signals, output_signals = output_signals, input_signals
         ltl = ~ltl
         moore = not args.moore
+
+    # setting bounds:
+    if args.unreal:
+        bounds = list(range(1,128))
+    elif args.size == 0:
+        bounds = list(range(1, args.bound + 1))
+    else:
+        bounds = (args.size,)
 
     is_realizable = main(input_signals,
                          output_signals,
@@ -196,4 +204,4 @@ if __name__ == "__main__":
 
     solver.die()
 
-    exit(is_realizable ^ args.unreal)
+    exit(is_realizable)
