@@ -27,10 +27,10 @@ def _get_output_desc(output:Signal, is_moore, inputs):
 
 
 def create_encoder(input_signals, output_signals,
-                    is_moore,
-                    automaton,
-                    smt_solver,
-                    logic):
+                   is_moore,
+                   automaton,
+                   smt_solver,
+                   logic):
     tau_desc = _get_tau_desc(input_signals)
 
     desc_by_output = dict((o, _get_output_desc(o, is_moore, input_signals))
