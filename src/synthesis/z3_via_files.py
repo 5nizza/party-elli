@@ -1,3 +1,4 @@
+import logging
 from _collections_abc import Iterable
 import os
 import shutil
@@ -66,9 +67,7 @@ class Z3NonInteractiveViaFiles(SmtSolverWithQueryStorageAbstract):
                  files_prefix:str,
                  z3_path:str,
                  logic:Logic,
-                 logger,
                  remove_file:bool):
-        self._logger = logger
         self._file_name = files_prefix + '.smt2'
         super().__init__(TruncatableQueryStorage_ViaFile(self._file_name), logic)
 
@@ -88,14 +87,14 @@ class Z3NonInteractiveViaFiles(SmtSolverWithQueryStorageAbstract):
         return self._emulate_push_pop.pop()
 
     def solve(self):
-        self._logger.info('solving ' + self._file_name)
+        logging.info('solving ' + self._file_name)
 
         self._query_storage += smt_helper.make_exit()
         self._query_storage.flush()
         #change the name of file and z3_cmd if necessary
         ret, out, err = execute_shell(self._z3_cmd)
 
-        self._logger.debug('solver returned: \n' + out)
+        logging.debug('solver returned: \n' + out)
 
         out_lines = [s.strip() for s in out.splitlines() if s]
         if ret == 1 and out_lines[0].strip() != 'unsat':
@@ -117,8 +116,8 @@ class FakeSolver(Z3NonInteractiveViaFiles):
     Always returns UNSAT.
     """
 
-    def __init__(self, smt_file_prefix, z3_path:str, logic:Logic, logger):
-        super().__init__(smt_file_prefix, z3_path, logic, logger, True)
+    def __init__(self, smt_file_prefix, z3_path:str, logic:Logic):
+        super().__init__(smt_file_prefix, z3_path, logic, True)
         self.__cur_index = 1
         self.__file_prefix = smt_file_prefix
 
@@ -129,8 +128,8 @@ class FakeSolver(Z3NonInteractiveViaFiles):
         file_name = '{file_prefix}_{index}.smt2'.format(file_prefix=self.__file_prefix,
                                                         index=str(self.__cur_index))
 
-        self._logger.info('copying {src} into {dst}'.format(src=self._file_name, dst=file_name))
-        self._logger.info(shutil.copyfile(self._file_name, file_name))
+        logging.info('copying {src} into {dst}'.format(src=self._file_name, dst=file_name))
+        logging.info(shutil.copyfile(self._file_name, file_name))
 
         self.__cur_index += 1
         return None  # always return UNSAT
