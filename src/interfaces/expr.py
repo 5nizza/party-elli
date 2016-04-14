@@ -85,7 +85,7 @@ class BinOp(Expr):
         if self.name != '=':
             return str(self.arg1) + ' ' + self.name + ' ' + str(self.arg2)
         else:
-            return str(self.arg1) + self.name + str(self.arg2)
+            return str(self.arg1) + '=' + str(self.arg2)
 
 
 class UnaryOp(Expr):
