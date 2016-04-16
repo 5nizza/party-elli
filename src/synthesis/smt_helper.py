@@ -1,5 +1,5 @@
 from helpers.python_ext import lmap
-from synthesis.func_description import FuncDescription
+from interfaces.func_description import FuncDescription
 
 
 def get_bits_definition(arg_prefix, nof_bits):
@@ -103,7 +103,7 @@ def call_func(func_desc:FuncDescription, func_args_dict:dict):
 
     func_args_dict = smt_func_args_dict
 
-    args = func_desc.get_args_list(func_args_dict)  # TODO: bad dependence
+    args = func_desc.get_args_list(func_args_dict)
 
     smt_str = '(' + func_name + ' '
     for arg in args:
