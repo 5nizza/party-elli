@@ -23,6 +23,12 @@ class SmtSolverWithQueryStorageAbstract(SolverInterface, metaclass=ABCMeta):
     def declare_enum(self, enum_name:str, values):
         self._query_storage += smt_helper.declare_enum(enum_name, values)
 
+    def declare_fun(self, func_desc:FuncDescription):
+        self._query_storage += func_desc.declare_fun()
+
+    def define_fun(self, func_desc:FuncDescription):
+        self._query_storage += func_desc.definition()
+
     #
     def op_not(self, e):
         return smt_helper.op_not(e)
@@ -59,7 +65,7 @@ class SmtSolverWithQueryStorageAbstract(SolverInterface, metaclass=ABCMeta):
 
     #
     def call_func(self, func_desc:FuncDescription, vals_by_vars:dict):
-        return smt_helper.call_func(func_desc, vals_by_vars)
+        return func_desc.call_func(vals_by_vars)
 
     #
     def assert_(self, assertion):
