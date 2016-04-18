@@ -1,8 +1,8 @@
 from abc import ABCMeta
 
+import interfaces.smt_helper as smt_helper
+from interfaces.func_description import FuncDescription
 from interfaces.solver_interface import SolverInterface
-from synthesis.func_description import FuncDescription
-import synthesis.smt_helper as smt_helper
 from synthesis.smt_logic import Logic
 
 
@@ -22,12 +22,6 @@ class SmtSolverWithQueryStorageAbstract(SolverInterface, metaclass=ABCMeta):
 
     def declare_enum(self, enum_name:str, values):
         self._query_storage += smt_helper.declare_enum(enum_name, values)
-
-    def declare_fun(self, func_desc:FuncDescription):
-        self._query_storage += smt_helper.declare_fun(func_desc)
-
-    def define_fun(self, func_desc:FuncDescription):
-        self._query_storage += smt_helper.define_fun(func_desc)
 
     #
     def op_not(self, e):
