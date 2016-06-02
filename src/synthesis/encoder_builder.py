@@ -1,5 +1,5 @@
 from interfaces.expr import Signal
-from synthesis.func_description import FuncDescription
+from interfaces.func_description import FuncDesc
 from synthesis.funcs_args_types_names import ARG_MODEL_STATE, TYPE_MODEL_STATE, smt_arg_name_signal, FUNC_MODEL_TRANS
 from synthesis.smt_encoder import SMTEncoder
 
@@ -11,7 +11,7 @@ def _get_tau_desc(inputs):
     for s in inputs:
         arg_types_dict[smt_arg_name_signal(s)] = 'Bool'
 
-    tau_desc = FuncDescription(FUNC_MODEL_TRANS, arg_types_dict, TYPE_MODEL_STATE, None)
+    tau_desc = FuncDesc(FUNC_MODEL_TRANS, arg_types_dict, TYPE_MODEL_STATE, None)
     return tau_desc
 
 
@@ -23,7 +23,7 @@ def _get_output_desc(output:Signal, is_moore, inputs):
         for s in inputs:
             arg_types_dict[smt_arg_name_signal(s)] = 'Bool'
 
-    return FuncDescription(output.name, arg_types_dict, 'Bool', None)
+    return FuncDesc(output.name, arg_types_dict, 'Bool', None)
 
 
 def create_encoder(input_signals, output_signals,

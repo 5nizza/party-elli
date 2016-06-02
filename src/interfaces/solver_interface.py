@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from synthesis.func_description import FuncDescription
+from interfaces.func_description import FuncDesc
 
 
 class SolverInterface(metaclass=ABCMeta):
@@ -15,11 +15,11 @@ class SolverInterface(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def declare_fun(self, func_desc:FuncDescription):
+    def declare_fun(self, func_desc:FuncDesc):
         raise NotImplementedError()
 
     @abstractmethod
-    def define_fun(self, func_desc:FuncDescription):
+    def define_fun(self, func_desc:FuncDesc):
         raise NotImplementedError()
 
     @abstractmethod
@@ -68,7 +68,7 @@ class SolverInterface(metaclass=ABCMeta):
 
     #
     @abstractmethod
-    def call_func(self, func_desc:FuncDescription, vals_by_vars:dict):
+    def call_func(self, func_desc:FuncDesc, vals_by_vars:dict):
         raise NotImplementedError()
 
     #

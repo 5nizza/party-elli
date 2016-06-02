@@ -62,17 +62,15 @@ class Z3SolverFactory:
 
     def create(self, seed=''):
         if self.is_incremental:
-            solver = Z3InteractiveViaPipes(self.logic, self.z3_path, self.logger)
+            solver = Z3InteractiveViaPipes(self.logic, self.z3_path)
         elif self.generate_queries:
             solver = FakeSolver(self.smt_tmp_files_prefix+seed,
                                 self.z3_path,
-                                self.logic,
-                                self.logger)
+                                self.logic)
         else:
             solver = Z3NonInteractiveViaFiles(self.smt_tmp_files_prefix+seed,
                                               self.z3_path,
                                               self.logic,
-                                              self.logger,
                                               self.remove_files)
 
         return solver

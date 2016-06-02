@@ -1,5 +1,5 @@
 from helpers.python_ext import lmap
-from interfaces.func_description import FuncDescription
+from interfaces.func_description import FuncDesc
 
 
 def get_bits_definition(arg_prefix, nof_bits):
@@ -91,30 +91,6 @@ def declare_tuple(name, component_types, getter_prefix):
     return smt_str
 
 
-def call_func(func_desc:FuncDescription, func_args_dict:dict):
-    func_name = func_desc.name
-    smt_func_args_dict = dict()
-    for (var,val) in func_args_dict.items():
-        if val is True:
-            val = true()
-        elif val is False:
-            val = false()
-        smt_func_args_dict[var] = val
-
-    func_args_dict = smt_func_args_dict
-
-    args = func_desc.get_args_list(func_args_dict)
-
-    smt_str = '(' + func_name + ' '
-    for arg in args:
-        smt_str += str(arg) + ' '
-    if len(args):
-        smt_str = smt_str[:-1]
-    smt_str += ')'
-
-    return smt_str
-
-
 def make_assert(formula):
     smt_str = '(assert ' + formula + ')\n'
     return smt_str
@@ -125,11 +101,11 @@ def comment(comment):
     return smt_str
 
 
-def define_fun(func_desc:FuncDescription) -> str:
+def define_fun(func_desc:FuncDesc) -> str:
     return func_desc.definition  # TODO: looks dirty
 
 
-def declare_fun(func_desc:FuncDescription) -> str:
+def declare_fun(func_desc:FuncDesc) -> str:
     input_types = lmap(lambda i_t: i_t[1], func_desc.inputs)
     smt_str = '(declare-fun '
     smt_str += func_desc.name + ' ('

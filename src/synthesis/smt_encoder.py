@@ -9,7 +9,7 @@ from interfaces.automata import Label, Automaton, Node, DEAD_END
 from interfaces.lts import LTS
 from interfaces.expr import Signal
 from interfaces.solver_interface import SolverInterface
-from synthesis.func_description import FuncDescription
+from interfaces.func_description import FuncDesc
 from synthesis.funcs_args_types_names import TYPE_MODEL_STATE, ARG_MODEL_STATE, FUNC_REACH, FUNC_R, \
     smt_name_spec, smt_name_m, smt_name_free_arg, smt_arg_name_signal, smt_unname_if_signal, smt_unname_m, \
     ARG_A_STATE, TYPE_A_STATE
@@ -39,7 +39,7 @@ class SMTEncoder:
                  logic,
                  automaton:Automaton,
                  underlying_solver:SolverInterface,
-                 tau_desc:FuncDescription,
+                 tau_desc:FuncDesc,
                  inputs,
                  descr_by_output,
                  model_init_state:int=0):  # the automata alphabet is inputs+outputs
@@ -59,10 +59,10 @@ class SMTEncoder:
 
         r_args = reach_args
 
-        self.reach_func_desc = FuncDescription(FUNC_REACH, reach_args, 'Bool', None)
-        self.r_func_desc = FuncDescription(FUNC_R, r_args,
-                                           logic.counters_type(sys.maxsize),
-                                           None)
+        self.reach_func_desc = FuncDesc(FUNC_REACH, reach_args, 'Bool', None)
+        self.r_func_desc = FuncDesc(FUNC_R, r_args,
+                                    logic.counters_type(sys.maxsize),
+                                    None)
 
         #: :type: int
         self.model_init_state = model_init_state
@@ -276,7 +276,7 @@ class SMTEncoder:
             for input_dict in self._get_all_possible_inputs(func_desc):
                 self.solver.get_value(self.solver.call_func(func_desc, input_dict))
 
-    def _get_all_possible_inputs(self, func_desc:FuncDescription):
+    def _get_all_possible_inputs(self, func_desc:FuncDesc):
         arg_type_pairs = func_desc.inputs
 
         get_values = lambda t: {          'Bool': ('true', 'false'),
@@ -314,7 +314,7 @@ class SMTEncoder:
 
         return lts
 
-    def _build_func_model_from_smt(self, func_smt_lines, func_desc:FuncDescription) -> dict:
+    def _build_func_model_from_smt(self, func_smt_lines, func_desc:FuncDesc) -> dict:
         """
         Return graph for the transition (or output) function: {label:output}.
         For label's keys are used:
