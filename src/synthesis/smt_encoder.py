@@ -1,19 +1,19 @@
 import logging
-from itertools import product
 import sys
+from itertools import product
 
-from interfaces.labels_map import LabelsMap
 from helpers.logging_helper import log_entrance
 from helpers.python_ext import lmap
+from helpers.rejecting_states_finder import build_state_to_rejecting_scc
 from interfaces.automata import Label, Automaton, Node, DEAD_END
-from interfaces.lts import LTS
 from interfaces.expr import Signal
-from interfaces.solver_interface import SolverInterface
 from interfaces.func_description import FuncDesc
+from interfaces.labels_map import LabelsMap
+from interfaces.lts import LTS
+from interfaces.solver_interface import SolverInterface
 from synthesis.funcs_args_types_names import TYPE_MODEL_STATE, ARG_MODEL_STATE, FUNC_REACH, FUNC_R, \
     smt_name_spec, smt_name_m, smt_name_free_arg, smt_arg_name_signal, smt_unname_if_signal, smt_unname_m, \
     ARG_A_STATE, TYPE_A_STATE
-from synthesis.rejecting_states_finder import build_state_to_rejecting_scc
 
 
 def _build_signals_values(signals, label) -> (dict, list):

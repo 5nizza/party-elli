@@ -1,6 +1,6 @@
 from helpers.python_ext import index_of
+from helpers.rejecting_states_finder import build_state_to_rejecting_scc  # TODO: bad smell: inter-dependence?
 from interfaces.automata import LABEL_TRUE
-from synthesis.rejecting_states_finder import build_state_to_rejecting_scc  # TODO: bad smell: inter-dependence?
 
 
 def _flatten_flagged_nodes_in_transitions(node_transitions):
@@ -26,8 +26,9 @@ def is_absorbing(node):
 
 def is_safety_automaton(automaton):
     """
-    In safety automata,
-    the only accepting nodes allowed are absorbing nodes (dead ends).
+    This function is sound (yes answer is correct),
+    but incomplete (may so while the automaton is safety).
+    In safety automata, the only accepting nodes allowed are absorbing nodes (dead ends).
     """
     #TODO: are there better ways to identify automata than checking automata?
 

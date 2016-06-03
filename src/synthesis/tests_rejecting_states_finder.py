@@ -1,8 +1,8 @@
-from itertools import chain
 import unittest
+from itertools import chain
 
+from helpers.rejecting_states_finder import find_rejecting_sccs
 from interfaces.automata import Automaton, Node, Label
-from synthesis.rejecting_states_finder import find_rejecting_sccs
 
 
 class Test(unittest.TestCase):
