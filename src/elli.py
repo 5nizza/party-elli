@@ -1,46 +1,21 @@
 #!/usr/bin/env python3
 import argparse
 import logging
-from functools import lru_cache
 import tempfile
 
-from parsing import acacia_parser
 from helpers import automaton2dot
-from helpers.automata_classifier import is_safety_automaton
 from helpers.gr1helpers import build_almost_gr1_formula
 from helpers.main_helper import setup_logging, create_spec_converter_z3
 from helpers.python_ext import readfile
+from helpers.spec_helper import split_safety_liveness
 from interfaces.expr import Expr, and_expressions, Bool
+from ltl3ba.ltl2automaton import LTL3BA
 from module_generation.dot import lts_to_dot
+from parsing import acacia_parser
 from synthesis import model_searcher
 from synthesis.encoder_builder import create_encoder
 from synthesis.funcs_args_types_names import ARG_MODEL_STATE
 from synthesis.smt_logic import UFLIA
-from ltl3ba.ltl2automaton import LTL3BA
-
-
-def write_out(model, is_moore, file_name):
-    with open(file_name, 'w') as out:
-        out.write(model)
-        logging.info('{model_type} model is written to {file}'.format(
-                     model_type=['Mealy', 'Moore'][is_moore],
-                     file=out.name))
-
-
-@lru_cache()
-def is_safety_ltl(expr:Expr, ltl2automaton) -> bool:
-    automaton = ltl2automaton.convert(~expr)  # !(safety ltl) has safety automaton
-    res = is_safety_automaton(automaton)
-    return res
-
-
-def _split_safety_liveness(formulas, ltl2automaton):
-    formulas = set(formulas)
-
-    safety = set(filter(lambda f: is_safety_ltl(f, ltl2automaton), formulas))
-    liveness = formulas - safety
-
-    return safety, liveness
 
 
 def _get_acacia_spec(ltl_text:str, part_text:str, ltl2automaton) -> (list, list, Expr):
@@ -55,9 +30,9 @@ def _get_acacia_spec(ltl_text:str, part_text:str, ltl2automaton) -> (list, list,
         guarantees = unit_data[1]
 
         a_safety, a_liveness = (and_expressions(p)
-                                for p in _split_safety_liveness(assumptions, ltl2automaton))
+                                for p in split_safety_liveness(assumptions, ltl2automaton))
         g_safety, g_liveness = (and_expressions(p)
-                                for p in _split_safety_liveness(guarantees, ltl2automaton))
+                                for p in split_safety_liveness(guarantees, ltl2automaton))
 
         ltl_property = build_almost_gr1_formula(Bool(True), Bool(True),
                                                 a_safety, g_safety,
@@ -82,7 +57,6 @@ def main(input_signals, output_signals, ltl,
          bounds,
          ltl2automaton:LTL3BA,
          smt_solver):
-
     logging.info('LTL is:\n' + str(ltl))
 
     automaton = ltl2automaton.convert(~ltl)
@@ -102,12 +76,16 @@ def main(input_signals, output_signals, ltl,
     logging.info(['unrealizable', 'realizable'][is_realizable])
 
     if is_realizable:
-        dot_model = lts_to_dot(model, ARG_MODEL_STATE, not is_moore)
+        dot_model_str = lts_to_dot(model, ARG_MODEL_STATE, not is_moore)
 
-        if not dot_file_name:
-            logging.info(dot_model)
+        if dot_file_name:
+            with open(dot_file_name, 'w') as out:
+                out.write(dot_model_str)
+                logging.info('{model_type} model is written to {file}'.format(
+                             model_type=['Mealy', 'Moore'][is_moore],
+                             file=out.name))
         else:
-            write_out(dot_model, is_moore, dot_file_name)
+            logging.info(dot_model_str)
 
     return is_realizable
 
