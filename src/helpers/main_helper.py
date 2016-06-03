@@ -47,14 +47,13 @@ def setup_logging(verbose_level:int=0, filename:str=None):
 
 
 class Z3SolverFactory:
-    def __init__(self, smt_tmp_files_prefix, z3_path, logic, logger,
+    def __init__(self, smt_tmp_files_prefix, z3_path, logic,
                  is_incremental,
                  generate_queries_only,
                  remove_files):
         self.smt_tmp_files_prefix = smt_tmp_files_prefix
         self.z3_path = z3_path
         self.logic = logic
-        self.logger = logger
         self.is_incremental = is_incremental
         self.generate_queries = generate_queries_only
         self.remove_files = remove_files
@@ -76,8 +75,7 @@ class Z3SolverFactory:
         return solver
 
 
-def create_spec_converter_z3(logger:logging.Logger,
-                             logic:Logic,
+def create_spec_converter_z3(logic:Logic,
                              is_incremental:bool,
                              generate_queries_only:bool,
                              smt_tmp_files_prefix:str,
@@ -88,7 +86,7 @@ def create_spec_converter_z3(logger:logging.Logger,
     from config import z3_path, ltl3ba_path
 
     converter = LTL3BA(ltl3ba_path)
-    solver_factory = Z3SolverFactory(smt_tmp_files_prefix, z3_path, logic, logger,
+    solver_factory = Z3SolverFactory(smt_tmp_files_prefix, z3_path, logic,
                                      is_incremental,
                                      generate_queries_only,
                                      remove_tmp_files)

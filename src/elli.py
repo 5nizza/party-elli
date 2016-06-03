@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import logging
 from functools import lru_cache
 import tempfile
 
@@ -21,10 +22,9 @@ from automata_translations.ltl2automaton import LTL3BA
 def write_out(model, is_moore, file_name):
     with open(file_name, 'w') as out:
         out.write(model)
-
-        logger.info('{model_type} model is written to {file}'.format(
-            model_type=['Mealy', 'Moore'][is_moore],
-            file=out.name))
+        logging.info('{model_type} model is written to {file}'.format(
+                     model_type=['Mealy', 'Moore'][is_moore],
+                     file=out.name))
 
 
 @lru_cache()
@@ -43,8 +43,8 @@ def _split_safety_liveness(formulas, ltl2automaton_converter):
     return safety, liveness
 
 
-def _get_acacia_spec(ltl_text:str, part_text:str, ltl2automaton_converter, logger) -> (list, list, Expr):
-    input_signals, output_signals, data_by_name = acacia_parser.parse(ltl_text, part_text, logger)
+def _get_acacia_spec(ltl_text:str, part_text:str, ltl2automaton_converter) -> (list, list, Expr):
+    input_signals, output_signals, data_by_name = acacia_parser.parse(ltl_text, part_text)
 
     if data_by_name is None:
         return None, None, None
@@ -67,13 +67,13 @@ def _get_acacia_spec(ltl_text:str, part_text:str, ltl2automaton_converter, logge
     return input_signals, output_signals, and_expressions(ltl_properties)
 
 
-def parse_acacia_spec(spec_file_name:str, ltl2automaton_converter, logger):
+def parse_acacia_spec(spec_file_name:str, ltl2automaton_converter):
     """ :return: (inputs_signals, output_signals, expr) """
 
     assert spec_file_name.endswith('.ltl'), spec_file_name
     ltl_file_str = readfile(spec_file_name)
     part_file_str = readfile(spec_file_name.replace('.ltl', '.part'))
-    return _get_acacia_spec(ltl_file_str, part_file_str, ltl2automaton_converter, logger)
+    return _get_acacia_spec(ltl_file_str, part_file_str, ltl2automaton_converter)
 
 
 def main(input_signals, output_signals, ltl,
@@ -81,15 +81,14 @@ def main(input_signals, output_signals, ltl,
          dot_file_name,
          bounds,
          ltl2automaton_converter:LTL3BA,
-         smt_solver,
-         logger):
+         smt_solver):
 
-    logger.info('LTL is:\n' + str(ltl))
+    logging.info('LTL is:\n' + str(ltl))
 
     automaton = ltl2automaton_converter.convert(~ltl)
 
-    logger.debug('automaton (dot) is:\n' + automaton2dot.to_dot(automaton))
-    logger.debug(automaton)
+    logging.debug('automaton (dot) is:\n' + automaton2dot.to_dot(automaton))
+    logging.debug(automaton)
 
     encoder = create_encoder(input_signals, output_signals,
                              is_moore,
@@ -100,13 +99,13 @@ def main(input_signals, output_signals, ltl,
 
     is_realizable = model is not None
 
-    logger.info(['unrealizable', 'realizable'][is_realizable])
+    logging.info(['unrealizable', 'realizable'][is_realizable])
 
     if is_realizable:
         dot_model = lts_to_dot(model, ARG_MODEL_STATE, not is_moore)
 
         if not dot_file_name:
-            logger.info(dot_model)
+            logging.info(dot_model)
         else:
             write_out(dot_model, is_moore, dot_file_name)
 
@@ -152,18 +151,17 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    logger = setup_logging(args.verbose, args.log)
-    logger.info(args)
+    setup_logging(args.verbose, args.log)
+    logging.info(args)
 
     if args.incr and args.tmp:
-        logger.warn("--tmp --incr: incremental queries do not produce smt2 files, "
-                    "so I won't save any temporal files.")
+        logging.warning("--tmp --incr: incremental queries do not produce smt2 files, "
+                        "so I won't save any temporal files.")
 
     with tempfile.NamedTemporaryFile(dir='./') as smt_file:
         smt_files_prefix = smt_file.name
 
-    ltl2automaton_converter, solver_factory = create_spec_converter_z3(logger,
-                                                                       UFLIA(None),
+    ltl2automaton_converter, solver_factory = create_spec_converter_z3(UFLIA(None),
                                                                        args.incr,
                                                                        False,
                                                                        smt_files_prefix,
@@ -172,8 +170,7 @@ if __name__ == "__main__":
     solver = solver_factory.create()
 
     input_signals, output_signals, ltl = parse_acacia_spec(args.spec,
-                                                           ltl2automaton_converter,
-                                                           logger)
+                                                           ltl2automaton_converter)
 
     moore = args.moore
     if args.unreal:
@@ -181,7 +178,7 @@ if __name__ == "__main__":
         ltl = ~ltl
         moore = not args.moore
 
-    # setting bounds:
+    # set the bounds:
     if args.unreal:
         bounds = list(range(1,128))
     elif args.size == 0:
@@ -196,11 +193,10 @@ if __name__ == "__main__":
                          args.dot,
                          bounds,
                          ltl2automaton_converter,
-                         solver,
-                         logger)
+                         solver)
     if args.unreal:
-        logger.info('{status_verb} model for _env_ to disprove the specification'
-                    .format(status_verb=['could not find', 'found'][is_realizable]))
+        logging.info('{status_verb} model for _env_ to disprove the specification'
+                     .format(status_verb=['could not find', 'found'][is_realizable]))
 
     solver.die()
 

@@ -1,7 +1,6 @@
 import logging
 
 from itertools import chain
-from logging import Logger
 from helpers.python_ext import lfilter
 from interfaces.expr import Signal
 from parsing.acacia_lexer_desc import acacia_lexer
@@ -44,7 +43,7 @@ def _add_spec_unit_if_necessary(acacia_ltl_text):
     return '\n'.join(lines)
 
 
-def parse(acacia_ltl_text:str, acacia_part_text:str, logger:Logger) -> (list,list,dict):
+def parse(acacia_ltl_text:str, acacia_part_text:str) -> (list,list,dict):
     acacia_ltl_text = _add_spec_unit_if_necessary(acacia_ltl_text)
 
     input_signals, output_signals = _parse_part(acacia_part_text)
@@ -55,7 +54,7 @@ def parse(acacia_ltl_text:str, acacia_part_text:str, logger:Logger) -> (list,lis
         error = check_unknown_signals_in_properties(assumptions+guarantees, known_signals)
 
         if error:
-            logger.error(error)
+            logging.error(error)
             return None
 
     return input_signals, output_signals, data_by_unit
@@ -90,7 +89,7 @@ group_order = (u1 u2);
 
 class Test(TestCase):
     def tests_all(self):
-        input_signals, output_signals, data_by_name = parse(test_string_ltl,test_string_part, logging.getLogger())
+        input_signals, output_signals, data_by_name = parse(test_string_ltl, test_string_part)
 
         exp_input_signals = [Signal(n) for n in 'idle request0 request1'.split()]
         assert set(input_signals) == set(exp_input_signals)
@@ -108,4 +107,3 @@ class Test(TestCase):
         u2_assumptions, u2_guarantees = data_by_name['u2']
         assert len(u2_assumptions) == 2
         assert len(u2_guarantees) == 3
-
