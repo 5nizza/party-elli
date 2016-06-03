@@ -18,7 +18,7 @@ from synthesis.funcs_args_types_names import ARG_MODEL_STATE
 from synthesis.smt_logic import UFLIA
 
 
-def _get_acacia_spec(ltl_text:str, part_text:str, ltl2automaton) -> (list, list, Expr):
+def _get_acacia_spec(ltl_text:str, part_text:str, ltl3ba) -> (list, list, Expr):
     input_signals, output_signals, data_by_name = acacia_parser.parse(ltl_text, part_text)
 
     if data_by_name is None:
@@ -30,9 +30,9 @@ def _get_acacia_spec(ltl_text:str, part_text:str, ltl2automaton) -> (list, list,
         guarantees = unit_data[1]
 
         a_safety, a_liveness = (and_expressions(p)
-                                for p in split_safety_liveness(assumptions, ltl2automaton))
+                                for p in split_safety_liveness(assumptions, ltl3ba))
         g_safety, g_liveness = (and_expressions(p)
-                                for p in split_safety_liveness(guarantees, ltl2automaton))
+                                for p in split_safety_liveness(guarantees, ltl3ba))
 
         ltl_property = build_almost_gr1_formula(Bool(True), Bool(True),
                                                 a_safety, g_safety,
@@ -42,24 +42,24 @@ def _get_acacia_spec(ltl_text:str, part_text:str, ltl2automaton) -> (list, list,
     return input_signals, output_signals, and_expressions(ltl_properties)
 
 
-def parse_acacia_spec(spec_file_name:str, ltl2automaton):
+def parse_acacia_spec(spec_file_name:str, ltl3ba):
     """ :return: (inputs_signals, output_signals, expr) """
 
     assert spec_file_name.endswith('.ltl'), spec_file_name
     ltl_file_str = readfile(spec_file_name)
     part_file_str = readfile(spec_file_name.replace('.ltl', '.part'))
-    return _get_acacia_spec(ltl_file_str, part_file_str, ltl2automaton)
+    return _get_acacia_spec(ltl_file_str, part_file_str, ltl3ba)
 
 
-def main(input_signals, output_signals, ltl,
+def main(input_signals, output_signals, ltl:Expr,
          is_moore,
          dot_file_name,
          bounds,
-         ltl2automaton:LTL3BA,
+         ltl3ba:LTL3BA,
          smt_solver):
     logging.info('LTL is:\n' + str(ltl))
 
-    automaton = ltl2automaton.convert(~ltl)
+    automaton = ltl3ba.convert(~ltl)
 
     logging.debug('automaton (dot) is:\n' + automaton2dot.to_dot(automaton))
     logging.debug(automaton)
@@ -139,16 +139,15 @@ if __name__ == "__main__":
     with tempfile.NamedTemporaryFile(dir='./') as smt_file:
         smt_files_prefix = smt_file.name
 
-    ltl2automaton, solver_factory = create_spec_converter_z3(UFLIA(None),
-                                                             args.incr,
-                                                             False,
-                                                             smt_files_prefix,
-                                                             not args.tmp)
+    ltl3ba, solver_factory = create_spec_converter_z3(UFLIA(None),
+                                                      args.incr,
+                                                      False,
+                                                      smt_files_prefix,
+                                                      not args.tmp)
 
     solver = solver_factory.create()
 
-    input_signals, output_signals, ltl = parse_acacia_spec(args.spec,
-                                                           ltl2automaton)
+    input_signals, output_signals, ltl = parse_acacia_spec(args.spec, ltl3ba)
 
     moore = args.moore
     if args.unreal:
@@ -170,7 +169,7 @@ if __name__ == "__main__":
                          moore,
                          args.dot,
                          bounds,
-                         ltl2automaton,
+                         ltl3ba,
                          solver)
     if args.unreal:
         logging.info('{status_verb} model for _env_ to disprove the specification'
