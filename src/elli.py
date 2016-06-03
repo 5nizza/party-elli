@@ -28,22 +28,22 @@ def write_out(model, is_moore, file_name):
 
 
 @lru_cache()
-def is_safety_ltl(expr:Expr, ltl2automaton_converter) -> bool:
-    automaton = ltl2automaton_converter.convert(~expr)  # !(safety ltl) has safety automaton
+def is_safety_ltl(expr:Expr, ltl2automaton) -> bool:
+    automaton = ltl2automaton.convert(~expr)  # !(safety ltl) has safety automaton
     res = is_safety_automaton(automaton)
     return res
 
 
-def _split_safety_liveness(formulas, ltl2automaton_converter):
+def _split_safety_liveness(formulas, ltl2automaton):
     formulas = set(formulas)
 
-    safety = set(filter(lambda f: is_safety_ltl(f, ltl2automaton_converter), formulas))
+    safety = set(filter(lambda f: is_safety_ltl(f, ltl2automaton), formulas))
     liveness = formulas - safety
 
     return safety, liveness
 
 
-def _get_acacia_spec(ltl_text:str, part_text:str, ltl2automaton_converter) -> (list, list, Expr):
+def _get_acacia_spec(ltl_text:str, part_text:str, ltl2automaton) -> (list, list, Expr):
     input_signals, output_signals, data_by_name = acacia_parser.parse(ltl_text, part_text)
 
     if data_by_name is None:
@@ -55,9 +55,9 @@ def _get_acacia_spec(ltl_text:str, part_text:str, ltl2automaton_converter) -> (l
         guarantees = unit_data[1]
 
         a_safety, a_liveness = (and_expressions(p)
-                                for p in _split_safety_liveness(assumptions, ltl2automaton_converter))
+                                for p in _split_safety_liveness(assumptions, ltl2automaton))
         g_safety, g_liveness = (and_expressions(p)
-                                for p in _split_safety_liveness(guarantees, ltl2automaton_converter))
+                                for p in _split_safety_liveness(guarantees, ltl2automaton))
 
         ltl_property = build_almost_gr1_formula(Bool(True), Bool(True),
                                                 a_safety, g_safety,
@@ -67,25 +67,25 @@ def _get_acacia_spec(ltl_text:str, part_text:str, ltl2automaton_converter) -> (l
     return input_signals, output_signals, and_expressions(ltl_properties)
 
 
-def parse_acacia_spec(spec_file_name:str, ltl2automaton_converter):
+def parse_acacia_spec(spec_file_name:str, ltl2automaton):
     """ :return: (inputs_signals, output_signals, expr) """
 
     assert spec_file_name.endswith('.ltl'), spec_file_name
     ltl_file_str = readfile(spec_file_name)
     part_file_str = readfile(spec_file_name.replace('.ltl', '.part'))
-    return _get_acacia_spec(ltl_file_str, part_file_str, ltl2automaton_converter)
+    return _get_acacia_spec(ltl_file_str, part_file_str, ltl2automaton)
 
 
 def main(input_signals, output_signals, ltl,
          is_moore,
          dot_file_name,
          bounds,
-         ltl_to_automaton:LTL3BA,
+         ltl2automaton:LTL3BA,
          smt_solver):
 
     logging.info('LTL is:\n' + str(ltl))
 
-    automaton = ltl_to_automaton.convert(~ltl)
+    automaton = ltl2automaton.convert(~ltl)
 
     logging.debug('automaton (dot) is:\n' + automaton2dot.to_dot(automaton))
     logging.debug(automaton)
@@ -161,16 +161,16 @@ if __name__ == "__main__":
     with tempfile.NamedTemporaryFile(dir='./') as smt_file:
         smt_files_prefix = smt_file.name
 
-    ltl2automaton_converter, solver_factory = create_spec_converter_z3(UFLIA(None),
-                                                                       args.incr,
-                                                                       False,
-                                                                       smt_files_prefix,
-                                                                       not args.tmp)
+    ltl2automaton, solver_factory = create_spec_converter_z3(UFLIA(None),
+                                                             args.incr,
+                                                             False,
+                                                             smt_files_prefix,
+                                                             not args.tmp)
 
     solver = solver_factory.create()
 
     input_signals, output_signals, ltl = parse_acacia_spec(args.spec,
-                                                           ltl2automaton_converter)
+                                                           ltl2automaton)
 
     moore = args.moore
     if args.unreal:
@@ -192,7 +192,7 @@ if __name__ == "__main__":
                          moore,
                          args.dot,
                          bounds,
-                         ltl2automaton_converter,
+                         ltl2automaton,
                          solver)
     if args.unreal:
         logging.info('{status_verb} model for _env_ to disprove the specification'
