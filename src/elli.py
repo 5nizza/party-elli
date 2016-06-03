@@ -80,12 +80,12 @@ def main(input_signals, output_signals, ltl,
          is_moore,
          dot_file_name,
          bounds,
-         ltl2automaton_converter:LTL3BA,
+         ltl_to_automaton:LTL3BA,
          smt_solver):
 
     logging.info('LTL is:\n' + str(ltl))
 
-    automaton = ltl2automaton_converter.convert(~ltl)
+    automaton = ltl_to_automaton.convert(~ltl)
 
     logging.debug('automaton (dot) is:\n' + automaton2dot.to_dot(automaton))
     logging.debug(automaton)
