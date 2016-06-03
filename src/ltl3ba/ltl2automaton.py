@@ -5,8 +5,8 @@ from helpers.converter_to_wring import ConverterToWringVisitor
 from helpers.shell import execute_shell
 from interfaces.automata import Automaton
 from interfaces.expr import UnaryOp, Expr, Signal
-from automata_translations.ast_to_ltl3ba import ConverterToLtl2BaFormatVisitor
-from automata_translations.ltl3ba_wrapper import parse_ltl2ba_ba
+from ltl3ba.ast_to_ltl3ba import ConverterToLtl2BaFormatVisitor
+from ltl3ba.ltl3ba_wrapper import parse_ltl2ba_ba
 from parsing.weak_until_converter import WeakToUntilConverterVisitor
 
 
@@ -24,13 +24,12 @@ def _assert_are_signals_in_labels(nodes):  # TODO: remove me after debugging pha
 class LTL3BA:
     def __init__(self, ltl2ba_path):
         self._execute_cmd = ltl2ba_path + ' -f'  # determinization is enabled by default
-        self._logger = logging.getLogger(__name__)
 
     @lru_cache()
     def convert(self, expr:Expr, states_prefix='') -> Automaton:
         expr = WeakToUntilConverterVisitor().dispatch(expr)
 
-        self._logger.info('Ltl2UCW: converting:\n' + ConverterToWringVisitor().dispatch(expr))
+        logging.info('Ltl2UCW: converting:\n' + ConverterToWringVisitor().dispatch(expr))
 
         format_converter = ConverterToLtl2BaFormatVisitor()
         property_in_ltl2ba_format = format_converter.dispatch(expr)
@@ -45,7 +44,7 @@ class LTL3BA:
         rc, ba, err = execute_shell('{0} "{1}"'.format(self._execute_cmd, property))
         assert rc == 0, str(rc) + ', err: ' + str(err) + ', out: ' + str(ba)
         assert (err == '') or err is None, err
-        self._logger.debug(ba)
+        logging.debug(ba)
 
         initial_nodes, rejecting_nodes, nodes = parse_ltl2ba_ba(ba, signal_by_name, states_prefix)
 

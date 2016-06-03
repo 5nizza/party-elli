@@ -1,5 +1,5 @@
 import unittest
-from automata_translations.ltl3ba_wrapper import parse_ltl2ba_ba
+from ltl3ba.ltl3ba_wrapper import parse_ltl2ba_ba
 from interfaces.expr import Signal
 
 
