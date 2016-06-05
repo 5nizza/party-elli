@@ -6,14 +6,11 @@ import tempfile
 from typing import Iterable
 
 from helpers import automaton2dot
-from helpers.gr1helpers import build_almost_gr1_formula
 from helpers.main_helper import setup_logging, create_spec_converter_z3
 from helpers.python_ext import readfile
-from helpers.spec_helper import split_safety_liveness
-from interfaces.expr import Expr, and_expressions, Bool, Signal
+from interfaces.expr import Expr, Signal
 from ltl3ba.ltl2automaton import LTL3BA
 from module_generation.dot import lts_to_dot
-from parsing import acacia_parser
 from parsing.acacia_parser_helper import parse_acacia_and_build_expr
 from synthesis import model_searcher
 from synthesis.encoder_builder import create_encoder
@@ -71,24 +68,24 @@ def main(input_signals, output_signals, ltl:Expr,
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Bounded Synthesis Tool')
+    parser = argparse.ArgumentParser(description='Bounded Synthesis Tool',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
     parser.add_argument('spec', metavar='spec', type=str,
                         help='the specification file (acacia+ format)')
 
     group = parser.add_mutually_exclusive_group()  # default: moore=False, mealy=True
-    group.add_argument('--moore', action='store_true', required=False,
+    group.add_argument('--moore', action='store_true', default=False,
                        help='system is Moore')
-    group.add_argument('--mealy', action='store_false', required=False,
+    group.add_argument('--mealy', action='store_false', default=True,
                        help='system is Mealy')
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--bound', metavar='bound', type=int, default=128, required=False,
                        help='upper bound on the size of the model'
-                            ' (default: %(default)i)'
                             ' (ignored for --unreal)')
     group.add_argument('--size', metavar='size', type=int, default=0, required=False,
                        help='search the model of this size'
-                            ' (default: %(default)i)'
                             ' (ignored for --unreal)')
 
     parser.add_argument('--incr', action='store_true', required=False, default=False,
