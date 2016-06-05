@@ -35,27 +35,22 @@ if __name__ == "__main__":
     with tempfile.NamedTemporaryFile(dir='./') as smt_file:
         smt_files_prefix = smt_file.name
 
-    ltl2automaton_converter, solver_factory = create_spec_converter_z3(logger,
-                                                                       UFLIA(None),
+    ltl2automaton_converter, solver_factory = create_spec_converter_z3(UFLIA(None),
                                                                        False,
                                                                        True,
                                                                        smt_files_prefix,
                                                                        True)
 
-    bounds = list(range(args.minsize, args.maxsize+1))
-
     solver = solver_factory.create()
     input_signals, output_signals, ltl = parse_acacia_spec(args.spec,
-                                                           ltl2automaton_converter,
-                                                           logger)
+                                                           ltl2automaton_converter)
     is_realizable = main(input_signals,
                          output_signals,
                          ltl,
                          args.moore,
                          None,
-                         bounds,
+                         args.minsize, args.maxsize,
                          ltl2automaton_converter,
-                         solver,
-                         logger)
+                         solver)
     solver.die()
     exit(0)
