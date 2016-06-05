@@ -1,5 +1,3 @@
-# arbiter with cancellation
-
 # A1 assume always(cancel -> next_e[1:2](go));
 # P1 assert always(req -> next_e[1:3](grant || cancel));
 # P2 assert always(grant -> next(!grant));

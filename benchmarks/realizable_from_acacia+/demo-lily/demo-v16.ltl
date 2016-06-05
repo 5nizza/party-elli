@@ -1,6 +1,3 @@
-#tripple almost reasonable arbiter
-#add globally?
-
 G(r0=1 -> F(a0=1));
 G(r1=1 -> F(a1=1));
 G(r2=1 -> F(a2=1));

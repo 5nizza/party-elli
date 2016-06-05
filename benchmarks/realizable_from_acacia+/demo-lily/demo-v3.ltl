@@ -1,6 +1,3 @@
-# little sense: inputs are ignored
-# the solution is to !g,g,!g,g.. and ignore inputs
-
 # A1 always(cancel -> next(go))
 # P1 always(req -> next_e[1:3](grant));
 # P2 always(grant -> next(!grant));

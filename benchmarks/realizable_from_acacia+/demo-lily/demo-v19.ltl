@@ -1,5 +1,4 @@
-#naive traffic lights: 01,10,01,10.. (but can change state only on etc=1)
-#timer
+# timer
 #G(F(ets=1));
 
 # # green last at least for one time slot

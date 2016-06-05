@@ -1,4 +1,3 @@
-#naive tripple arbiter: 100,010,001, and so on
 G(F(i0=1)) -> G(F(a0=1));
 G(F(i1=1)) -> G(F(a1=1));
 G(F(a2=1));

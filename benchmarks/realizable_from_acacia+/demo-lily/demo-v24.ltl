@@ -1,7 +1,3 @@
-# this spec does not seem to have any sense:
-# there is 1-state implementation, which does not force violations of assumptions:
-# always output b2r_req1!b2r_req0
-
 assume r2b_ack0=0;
 assume G(b2r_req0=0 -> X(r2b_ack0=0));	
 assume G(b2r_req0=1 -> X(F(r2b_ack0=1)));

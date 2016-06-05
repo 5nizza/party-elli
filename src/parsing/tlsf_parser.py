@@ -11,10 +11,10 @@ def _parse_tuple_str(tuple_str) -> Iterable[str]:
 
 
 def parse_tlsf(spec_file_name, ltl3ba)\
-        -> (Iterable[Signal], Iterable[Signal], Expr):
+        -> (Iterable[Signal], Iterable[Signal], Expr, bool):
     """
     NOTE: it strengthens the formula (don't assume liveness for safety guarantees)
-    :return: (input_signals, output_signals, ltl)
+    :return: (input_signals, output_signals, ltl, is_moore)
     """
 
     rc, out, err = execute_shell('{syfco} -ins {spec_file_name}'.format(syfco=syfco_path,
@@ -35,4 +35,12 @@ def parse_tlsf(spec_file_name, ltl3ba)\
     input_signals, output_signals, expr = parse_acacia_and_build_expr(ltl_text,
                                                                       part_text,
                                                                       ltl3ba)
-    return input_signals, output_signals, expr
+
+    rc, out, err = execute_shell('{syfco} -g {spec_file_name}'.format(syfco=syfco_path,
+                                                                      spec_file_name=spec_file_name))
+    assert_exec_strict(rc, out, err)
+    out_stripped = out.strip().lower()
+    assert out_stripped in ['moore', 'mealy'], out_stripped
+    is_moore = out_stripped == 'moore'
+
+    return input_signals, output_signals, expr, is_moore

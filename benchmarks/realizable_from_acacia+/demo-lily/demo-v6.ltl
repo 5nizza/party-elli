@@ -1,5 +1,3 @@
-#arbiter with cancellation
-
 #assume always(cancel -> next_e[1:3](go));
 #assert always(req -> next_e[1:3] (grant || cancel));
 #assert always(grant -> next(!grant));

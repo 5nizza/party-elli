@@ -1,5 +1,3 @@
-# naive quadro arbiter
-
 assume G(r1=0 + r2=0);
 assume G(r1=0 + r3=0);
 assume G(r1=0 + r4=0);

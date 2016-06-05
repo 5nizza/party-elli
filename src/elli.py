@@ -31,7 +31,7 @@ def parse_acacia_spec(spec_file_name:str, ltl3ba)\
 def main(input_signals, output_signals, ltl:Expr,
          is_moore,
          dot_file_name,
-         bounds,
+         min_size, max_size,
          ltl3ba:LTL3BA,
          smt_solver):
     logging.info('LTL is:\n' + str(ltl))
@@ -46,7 +46,7 @@ def main(input_signals, output_signals, ltl:Expr,
                              automaton,
                              smt_solver, UFLIA(None))
 
-    model = model_searcher.search(bounds, encoder)
+    model = model_searcher.search(min_size, max_size, encoder)
 
     is_realizable = model is not None
 
@@ -134,18 +134,18 @@ if __name__ == "__main__":
 
     # set the bounds:
     if args.unreal:
-        bounds = list(range(1,128))
+        min_size, max_size = 1, 128
     elif args.size == 0:
-        bounds = list(range(1, args.bound + 1))
+        min_size, max_size = 1, args.bound + 1
     else:
-        bounds = (args.size,)
+        min_size, max_size = args.size, args.size+1
 
     is_realizable = main(input_signals,
                          output_signals,
                          ltl,
                          moore,
                          args.dot,
-                         bounds,
+                         min_size, max_size,
                          ltl3ba,
                          solver)
     if args.unreal:
