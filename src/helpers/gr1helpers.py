@@ -1,11 +1,11 @@
 from interfaces.expr import Expr
 
 
-def build_almost_gr1_formula(a_init:Expr, g_init:Expr,  # TODO: rename into a_init, etc.
+def build_almost_gr1_formula(a_init:Expr, g_init:Expr,
                              a_safety:Expr, g_safety:Expr,
                              a_liveness:Expr, g_liveness:Expr) -> Expr:
     """
-    NOTE that a_safety and g_safety are _safety_ formulas and not transition formulas
+    PRE: a_safety and g_safety are _safety_ formulas and not transition formulas
     (thus, they are of the form G(..))
     """
 

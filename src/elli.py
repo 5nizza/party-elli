@@ -3,52 +3,32 @@ import argparse
 import logging
 import tempfile
 
+from typing import Iterable
+
 from helpers import automaton2dot
 from helpers.gr1helpers import build_almost_gr1_formula
 from helpers.main_helper import setup_logging, create_spec_converter_z3
 from helpers.python_ext import readfile
 from helpers.spec_helper import split_safety_liveness
-from interfaces.expr import Expr, and_expressions, Bool
+from interfaces.expr import Expr, and_expressions, Bool, Signal
 from ltl3ba.ltl2automaton import LTL3BA
 from module_generation.dot import lts_to_dot
 from parsing import acacia_parser
+from parsing.acacia_parser_helper import parse_acacia_and_build_expr
 from synthesis import model_searcher
 from synthesis.encoder_builder import create_encoder
 from synthesis.funcs_args_types_names import ARG_MODEL_STATE
 from synthesis.smt_logic import UFLIA
 
 
-def _get_acacia_spec(ltl_text:str, part_text:str, ltl3ba) -> (list, list, Expr):
-    input_signals, output_signals, data_by_name = acacia_parser.parse(ltl_text, part_text)
-
-    if data_by_name is None:
-        return None, None, None
-
-    ltl_properties = []
-    for (unit_name, unit_data) in data_by_name.items():
-        assumptions = unit_data[0]
-        guarantees = unit_data[1]
-
-        a_safety, a_liveness = (and_expressions(p)
-                                for p in split_safety_liveness(assumptions, ltl3ba))
-        g_safety, g_liveness = (and_expressions(p)
-                                for p in split_safety_liveness(guarantees, ltl3ba))
-
-        ltl_property = build_almost_gr1_formula(Bool(True), Bool(True),
-                                                a_safety, g_safety,
-                                                a_liveness, g_liveness)
-        ltl_properties.append(ltl_property)
-
-    return input_signals, output_signals, and_expressions(ltl_properties)
-
-
-def parse_acacia_spec(spec_file_name:str, ltl3ba):
+def parse_acacia_spec(spec_file_name:str, ltl3ba)\
+        -> (Iterable[Signal], Iterable[Signal], Expr):
     """ :return: (inputs_signals, output_signals, expr) """
 
     assert spec_file_name.endswith('.ltl'), spec_file_name
     ltl_file_str = readfile(spec_file_name)
     part_file_str = readfile(spec_file_name.replace('.ltl', '.part'))
-    return _get_acacia_spec(ltl_file_str, part_file_str, ltl3ba)
+    return parse_acacia_and_build_expr(ltl_file_str, part_file_str, ltl3ba)
 
 
 def main(input_signals, output_signals, ltl:Expr,

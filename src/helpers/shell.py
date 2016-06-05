@@ -1,6 +1,7 @@
 import subprocess
 import sys
 
+from helpers.python_ext import is_empty_str
 
 if sys.version_info < (3, 0):
     # python2.7 version
@@ -51,3 +52,11 @@ else:
             out, err = p.communicate()
 
         return p.returncode, str(out, encoding='utf-8'), str(err, encoding='utf-8')
+
+
+def rc_out_err_to_str(rc, out, err) -> str:
+    return 'rc: ' + str(rc) + '\nout: ' + out + '\nerr: ' + err
+
+
+def assert_exec_strict(rc, out, err):
+    assert rc==0 and is_empty_str(err), rc_out_err_to_str(rc, out, err)

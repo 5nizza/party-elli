@@ -1,13 +1,14 @@
 import logging
-
 from itertools import chain
+from unittest import TestCase
+
+from typing import Iterable
+
 from helpers.python_ext import lfilter
 from interfaces.expr import Signal
 from parsing.acacia_lexer_desc import acacia_lexer
 from parsing.acacia_parser_desc import acacia_parser
 from parsing.sanity_checker import check_unknown_signals_in_properties
-
-from unittest import TestCase
 
 
 def _parse_signals_from_lines(signal_lines:list) -> list:
@@ -43,7 +44,9 @@ def _add_spec_unit_if_necessary(acacia_ltl_text):
     return '\n'.join(lines)
 
 
-def parse(acacia_ltl_text:str, acacia_part_text:str) -> (list,list,dict):
+def parse(acacia_ltl_text:str, acacia_part_text:str)\
+        -> (Iterable[Signal],Iterable[Signal],dict):
+    """ :return: inputs, outputs, dict{unit_name -> (assumptions,guarantees)} """
     acacia_ltl_text = _add_spec_unit_if_necessary(acacia_ltl_text)
 
     input_signals, output_signals = _parse_part(acacia_part_text)

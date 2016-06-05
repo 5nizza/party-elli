@@ -31,7 +31,7 @@ class Number:
         return not self.__eq__(other)
 
 
-class Expr:   # TODO: override boolean operations
+class Expr:
     def __init__(self, name):
         self.name = name
 
