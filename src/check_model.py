@@ -44,9 +44,11 @@ def _create_combined(model_file_name, monitor_aiger_file_name) -> str:
 def _model_check(combined_aiger_file:str) -> int:
     """ :return: 0 if correct, 1 if wrong """
     for pi in range(get_nof_properties(combined_aiger_file)):
-        rc, out, err = execute_shell('{IIMC} {aiger_file}'.format(
+        logging.debug('checking property ' + str(pi))
+        rc, out, err = execute_shell('{IIMC} {aiger_file} --pi {pi}'.format(
             IIMC=IIMC_PATH,
-            aiger_file=combined_aiger_file))
+            aiger_file=combined_aiger_file,
+            pi=pi))
         if rc != 0:
             logging.warning('model checking failed: \n' + rc_out_err_to_str(rc, out, err))
             return rc

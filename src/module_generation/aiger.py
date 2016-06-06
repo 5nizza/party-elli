@@ -4,7 +4,7 @@ import sys
 
 from config import VL2MV_PATH, ABC_PATH, AIGTOAIG_PATH
 from helpers.python_ext import readfile
-from helpers.shell import execute_shell, assert_exec_strict
+from helpers.shell import execute_shell, assert_exec_strict, rc_out_err_to_str
 from interfaces.lts import LTS
 from module_generation.verilog import lts_to_verilog
 
@@ -33,7 +33,7 @@ def verilog_to_aiger(verilog:str) -> str:
         vl2mv=VL2MV_PATH,
         file_input_verilog=input_verilog_file,
         file_blif_mv=file_blif_mv))
-    assert rc == 0   # cannot check stderr='' because vl2mv prints there the input file name
+    assert rc == 0, rc_out_err_to_str(rc, out, err)   # cannot check stderr='' because vl2mv prints there the input file name
 
     # abc
     rc, out, err = execute_shell('{abc} -c '
@@ -59,4 +59,5 @@ def verilog_to_aiger(verilog:str) -> str:
 
 
 def lts_to_aiger(lts:LTS) -> str:
-    return verilog_to_aiger(lts_to_verilog(lts))
+    v = lts_to_verilog(lts)
+    return verilog_to_aiger(v)
