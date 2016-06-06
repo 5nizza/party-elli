@@ -11,6 +11,7 @@ from helpers.python_ext import readfile
 from interfaces.expr import Expr, Signal
 from module_generation.aiger import lts_to_aiger
 from module_generation.dot import lts_to_dot
+from module_generation.verilog import lts_to_verilog
 from parsing.acacia_parser_helper import parse_acacia_and_build_expr
 from parsing.tlsf_parser import parse_tlsf
 from synthesis import model_searcher
@@ -77,7 +78,7 @@ def main(tlsf_file_name,
             logging.info(dot_model_str)
 
         if output_file_name:
-            aiger_model_str = lts_to_aiger(model, ARG_MODEL_STATE, not is_moore)
+            aiger_model_str = lts_to_aiger(model)
             with open(output_file_name, 'w') as out:
                 out.write(aiger_model_str)
 

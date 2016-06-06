@@ -1,6 +1,6 @@
 from typing import Iterable
 
-from config import syfco_path
+from config import SYFCO_PATH
 from helpers.shell import execute_shell, assert_exec_strict
 from interfaces.expr import Expr, Signal
 from parsing.acacia_parser_helper import parse_acacia_and_build_expr
@@ -17,17 +17,17 @@ def parse_tlsf(spec_file_name, ltl3ba)\
     :return: (input_signals, output_signals, ltl, is_moore)
     """
 
-    rc, out, err = execute_shell('{syfco} -ins {spec_file_name}'.format(syfco=syfco_path,
+    rc, out, err = execute_shell('{syfco} -ins {spec_file_name}'.format(syfco=SYFCO_PATH,
                                                                         spec_file_name=spec_file_name))
     assert_exec_strict(rc, out, err)
     part_text = '.inputs ' + ' '.join(_parse_tuple_str(out))
 
-    rc, out, err = execute_shell('{syfco} -outs {spec_file_name}'.format(syfco=syfco_path,
+    rc, out, err = execute_shell('{syfco} -outs {spec_file_name}'.format(syfco=SYFCO_PATH,
                                                                          spec_file_name=spec_file_name))
     assert_exec_strict(rc, out, err)
     part_text += '\n.outputs ' + ' '.join(_parse_tuple_str(out))
 
-    rc, out, err = execute_shell('{syfco} -f acacia {spec_file_name}'.format(syfco=syfco_path,
+    rc, out, err = execute_shell('{syfco} -f acacia {spec_file_name}'.format(syfco=SYFCO_PATH,
                                                                              spec_file_name=spec_file_name))
     assert_exec_strict(rc, out, err)
     ltl_text = out
@@ -36,7 +36,7 @@ def parse_tlsf(spec_file_name, ltl3ba)\
                                                                       part_text,
                                                                       ltl3ba)
 
-    rc, out, err = execute_shell('{syfco} -g {spec_file_name}'.format(syfco=syfco_path,
+    rc, out, err = execute_shell('{syfco} -g {spec_file_name}'.format(syfco=SYFCO_PATH,
                                                                       spec_file_name=spec_file_name))
     assert_exec_strict(rc, out, err)
     out_stripped = out.strip().lower()

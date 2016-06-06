@@ -33,7 +33,7 @@ else:
     def execute_shell(cmd, input=''):
         """
         :param cmd:
-        :param input: sent to sdtin
+        :param input: sent to stdin
         :return: returncode, stdout, stderr.
         """
 

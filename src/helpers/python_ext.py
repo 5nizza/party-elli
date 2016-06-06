@@ -91,6 +91,9 @@ class StrAwareList(Iterable):
     def to_str(self):
         return str(self)
 
+    def newline(self):
+        self.__add__('')
+
     __repr__ = __str__
 
     def __len__(self):
