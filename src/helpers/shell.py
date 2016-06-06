@@ -47,11 +47,13 @@ else:
                              shell=True)
 
         if proc_input:
-            out, err = p.communicate(bytes(proc_input, encoding='utf-8'))
+            out, err = p.communicate(bytes(proc_input, encoding=sys.getdefaultencoding()))
         else:
             out, err = p.communicate()
 
-        return p.returncode, str(out, encoding='utf-8'), str(err, encoding='utf-8')
+        return p.returncode,\
+               str(out, sys.getdefaultencoding()),\
+               str(err, sys.getdefaultencoding())
 
 
 def rc_out_err_to_str(rc, out, err) -> str:
