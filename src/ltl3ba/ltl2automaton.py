@@ -27,8 +27,6 @@ class LTL3BA:
 
     @lru_cache()
     def convert(self, expr:Expr, states_prefix='') -> Automaton:
-        expr = WeakToUntilConverterVisitor().dispatch(expr)
-
         logging.info('Ltl2UCW: converting:\n' + ConverterToWringVisitor().dispatch(expr))
 
         format_converter = ConverterToLtl2BaFormatVisitor()
