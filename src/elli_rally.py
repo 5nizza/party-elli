@@ -80,10 +80,12 @@ def main(tlsf_file_name,
         else:
             logging.info(dot_model_str)
 
+        aiger_model_str = lts_to_aiger(model)
         if output_file_name:
-            aiger_model_str = lts_to_aiger(model)
             with open(output_file_name, 'w') as out:
                 out.write(aiger_model_str)
+        else:
+            print(aiger_model_str)
 
     return is_realizable
 
@@ -95,7 +97,7 @@ if __name__ == "__main__":
     parser.add_argument('spec', metavar='spec', type=str,
                         help='tlsf spec file')
     parser.add_argument('-o', '--output', metavar='output', type=str,
-                        help='output file for a model in the aiger format')
+                        help='output file for a model in the aiger format (if not given -- print to stdout)')
 
     parser.add_argument('--check',
                         choices=(CHECK_BOTH, CHECK_REAL, CHECK_UNREAL),
@@ -125,4 +127,4 @@ if __name__ == "__main__":
                          smt_files_prefix,
                          args.tmp)
 
-    exit(is_realizable)
+    exit([20, 10][is_realizable])
