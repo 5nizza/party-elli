@@ -10,7 +10,7 @@ def _parse_tuple_str(tuple_str) -> Iterable[str]:
     return [s.strip() for s in tuple_str.split(',') if s.strip()]
 
 
-def parse_tlsf(spec_file_name, ltl3ba)\
+def parse_tlsf_build_expr(spec_file_name, ltl3ba)\
         -> (Iterable[Signal], Iterable[Signal], Expr, bool):
     """
     NOTE: it strengthens the formula (don't assume liveness for safety guarantees)

@@ -2,6 +2,7 @@
 import argparse
 import logging
 import tempfile
+import helpers.timer as timer
 
 from typing import Iterable
 
@@ -11,9 +12,8 @@ from helpers.python_ext import readfile
 from interfaces.expr import Expr, Signal
 from module_generation.aiger import lts_to_aiger
 from module_generation.dot import lts_to_dot
-from module_generation.verilog import lts_to_verilog
 from parsing.acacia_parser_helper import parse_acacia_and_build_expr
-from parsing.tlsf_parser import parse_tlsf
+from parsing.tlsf_parser import parse_tlsf_build_expr
 from synthesis import model_searcher
 from synthesis.encoder_builder import create_encoder
 from synthesis.funcs_args_types_names import ARG_MODEL_STATE
@@ -22,7 +22,7 @@ from synthesis.smt_logic import UFLIA
 CHECK_BOTH, CHECK_REAL, CHECK_UNREAL = 'both', 'real', 'unreal'
 
 
-def parse_acacia_spec(spec_file_name:str, ltl3ba)\
+def _parse_acacia_spec(spec_file_name:str, ltl3ba)\
         -> (Iterable[Signal], Iterable[Signal], Expr):
     """ :return: (inputs_signals, output_signals, expr) """
 
@@ -47,23 +47,26 @@ def main(tlsf_file_name,
                                                       smt_files_prefix,
                                                       not keep_temp_files)
 
-    inputs, outputs, expr, is_moore = parse_tlsf(tlsf_file_name, ltl3ba)
-    automaton = ltl3ba.convert(~expr)
+    timer.sec_restart()
 
+    inputs, outputs, expr, is_moore = parse_tlsf_build_expr(tlsf_file_name, ltl3ba)
+    logging.info('parsing and building expr took (sec): %i' % timer.sec_restart())
+
+    automaton = ltl3ba.convert(~expr)
+    logging.info('automata translation took (sec): %i' % timer.sec_restart())
     logging.debug('automaton (dot) is:\n' + automaton2dot.to_dot(automaton))
-    logging.debug(automaton)
 
     encoder = create_encoder(inputs, outputs,
                              is_moore,
                              automaton,
                              solver_factory.create(), UFLIA(None))
 
-    min_size, max_size = 1, 128   # TODO: guess better
-    model = model_searcher.search(min_size, max_size, encoder)
+    model = model_searcher.search(1, 24, encoder)  # TODO: guess better min max sizes
+    logging.info('model_searcher.search took (sec): %i' %timer.sec_restart())
 
     is_realizable = model is not None
 
-    logging.info(['unrealizable', 'realizable'][is_realizable])
+    logging.info(['unrealizable within the bounds', 'realizable'][is_realizable])
 
     if is_realizable:
         dot_model_str = lts_to_dot(model, ARG_MODEL_STATE, not is_moore)
