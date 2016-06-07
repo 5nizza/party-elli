@@ -1,17 +1,12 @@
-from functools import lru_cache
 import logging
+from functools import lru_cache
 
 from helpers.converter_to_wring import ConverterToWringVisitor
 from helpers.shell import execute_shell
 from interfaces.automata import Automaton
-from interfaces.expr import UnaryOp, Expr, Signal
+from interfaces.expr import Expr, Signal
 from ltl3ba.ast_to_ltl3ba import ConverterToLtl2BaFormatVisitor
 from ltl3ba.ltl3ba_wrapper import parse_ltl2ba_ba
-from parsing.weak_until_converter import WeakToUntilConverterVisitor
-
-
-def _negate(expr:Expr) -> Expr:
-    return UnaryOp('!', expr)
 
 
 def _assert_are_signals_in_labels(nodes):  # TODO: remove me after debugging phase finished
