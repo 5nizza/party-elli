@@ -58,12 +58,11 @@ def t_SPEC_UNIT(t):
 
 
 def t_TEMPORAL_UNARY(t):
-    r"""(G|F|X)(?=[ \t\n]*\()"""  # temporal operators require parenthesis
+    r"""(G|F|X)(?=([ \t\n]*\()|([ \t\n]+))"""  # unary temporal operators require parenthesis or blank spaces
     return t
 
 
 def t_TEMPORAL_BINARY(t):
-#    r"""U(?=[ \t]*\()""" #temporal operators require parenthesis
     r"""(U|W)(?=[ \t\n])"""  # temporal operators require parenthesis
     return t
 
