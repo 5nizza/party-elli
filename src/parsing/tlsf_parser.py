@@ -20,12 +20,12 @@ def parse_tlsf_build_expr(spec_file_name, ltl3ba)\
     rc, out, err = execute_shell('{syfco} -ins {spec_file_name}'.format(syfco=SYFCO_PATH,
                                                                         spec_file_name=spec_file_name))
     assert_exec_strict(rc, out, err)
-    part_text = '.inputs ' + ' '.join(_parse_tuple_str(out))
+    part_text = '.inputs ' + ' '.join(_parse_tuple_str(out.lower()))  # syfco lowers all signal names in props
 
     rc, out, err = execute_shell('{syfco} -outs {spec_file_name}'.format(syfco=SYFCO_PATH,
                                                                          spec_file_name=spec_file_name))
     assert_exec_strict(rc, out, err)
-    part_text += '\n.outputs ' + ' '.join(_parse_tuple_str(out))
+    part_text += '\n.outputs ' + ' '.join(_parse_tuple_str(out.lower()))  # syfco lowers all signal names in props
 
     rc, out, err = execute_shell('{syfco} -f acacia {spec_file_name}'.format(syfco=SYFCO_PATH,
                                                                              spec_file_name=spec_file_name))

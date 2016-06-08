@@ -33,7 +33,10 @@ def verilog_to_aiger(verilog:str) -> str:
         vl2mv=VL2MV_PATH,
         file_input_verilog=input_verilog_file,
         file_blif_mv=file_blif_mv))
-    assert rc == 0, rc_out_err_to_str(rc, out, err)   # cannot check stderr='' because vl2mv prints there the input file name
+    if rc != 0:
+        print('verilog was: ')
+        print(readfile(input_verilog_file))
+        assert rc == 0, rc_out_err_to_str(rc, out, err)   # cannot check stderr='' because vl2mv prints there the input file name
 
     # abc
     rc, out, err = execute_shell('{abc} -c '

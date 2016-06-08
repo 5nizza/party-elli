@@ -81,6 +81,8 @@ def main(tlsf_file_name,
             logging.info(dot_model_str)
 
         aiger_model_str = lts_to_aiger(model)
+        logging.info('circuit size: %i' % len(model.states))
+
         if output_file_name:
             with open(output_file_name, 'w') as out:
                 out.write(aiger_model_str)

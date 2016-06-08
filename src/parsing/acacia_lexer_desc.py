@@ -2,7 +2,7 @@ from interfaces.expr import *
 import third_party.ply.lex as lex
 
 #reserved words: syntactic sugar to help to match exactly reserved word
-reserved_bools = dict((s, s) for s in ('TRUE', 'FALSE'))
+reserved_bools = dict((s, s) for s in ('TRUE', 'FALSE', 'true', 'false'))
 
 tokens = [
              'ASSUME', 'SPEC_UNIT', 'NAME', 'NUMBER', 'BOOL',
@@ -73,7 +73,7 @@ def t_NAME(t):
 
     if t.value in reserved_bools:
         t.type = 'BOOL'
-        t.value = Bool(t.value == 'TRUE')
+        t.value = Bool(t.value == 'true' or t.value == 'TRUE')
         return t
 
     return t
