@@ -89,6 +89,8 @@ def main(tlsf_file_name,
         else:
             print(aiger_model_str)
 
+    solver_factory.down_solvers()
+
     return is_realizable
 
 

@@ -1,12 +1,14 @@
 import logging
-from logging import FileHandler
 import os
 import sys
+from typing import List
+from logging import FileHandler
 from synthesis.smt_logic import Logic
 from synthesis.z3_via_files import Z3NonInteractiveViaFiles, FakeSolver
 from synthesis.z3_via_pipe import Z3InteractiveViaPipes
 from third_party.ansistrm import ColorizingStreamHandler
 from ltl3ba.ltl2automaton import LTL3BA
+from interfaces.solver_interface import SolverInterface
 
 
 def get_root_dir() -> str:
@@ -47,7 +49,8 @@ def setup_logging(verbose_level:int=0, filename:str=None):
 
 
 class Z3SolverFactory:
-    def __init__(self, smt_tmp_files_prefix, z3_path, logic,
+    def __init__(self,
+                 smt_tmp_files_prefix, z3_path, logic,
                  is_incremental,
                  generate_queries_only,
                  remove_files):
@@ -58,6 +61,7 @@ class Z3SolverFactory:
         self.generate_queries = generate_queries_only
         self.remove_files = remove_files
         assert not (self.is_incremental and self.generate_queries)
+        self.solvers = []  # type: List[SolverInterface]
 
     def create(self, seed=''):
         if self.is_incremental:
@@ -72,7 +76,12 @@ class Z3SolverFactory:
                                               self.logic,
                                               self.remove_files)
 
+        self.solvers.append(solver)
         return solver
+
+    def down_solvers(self):
+        for s in self.solvers:
+            s.die()
 
 
 def create_spec_converter_z3(logic:Logic,
