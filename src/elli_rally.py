@@ -9,6 +9,7 @@ from typing import Iterable
 from helpers import automaton2dot
 from helpers.main_helper import setup_logging, create_spec_converter_z3
 from helpers.python_ext import readfile
+from helpers.shell import execute_shell
 from interfaces.expr import Expr, Signal
 from module_generation.aiger import lts_to_aiger
 from module_generation.dot import lts_to_dot
