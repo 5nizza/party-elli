@@ -1,3 +1,4 @@
+import logging
 import tempfile
 import os
 import sys
@@ -29,14 +30,18 @@ def verilog_to_aiger(verilog:str) -> str:
                        file_output_aiger)  # tmp files stay if smth goes wrong
 
     # run vl2mv
-    rc, out, err = execute_shell('{vl2mv} {file_input_verilog} -o {file_blif_mv}'.format(
-        vl2mv=VL2MV_PATH,
-        file_input_verilog=input_verilog_file,
-        file_blif_mv=file_blif_mv))
-    if rc != 0:
-        print('verilog was: ')
-        print(readfile(input_verilog_file))
-        assert rc == 0, rc_out_err_to_str(rc, out, err)   # cannot check stderr='' because vl2mv prints there the input file name
+    # ugly workaround: sometimes vl2mv gets SIGSEGV (i didn't check why)
+    # so i try to run vl2mv 5 times:
+    for i in range(5):
+        rc, out, err = execute_shell('{vl2mv} {file_input_verilog} -o {file_blif_mv}'.format(
+            vl2mv=VL2MV_PATH,
+            file_input_verilog=input_verilog_file,
+            file_blif_mv=file_blif_mv))
+        if rc != -11:
+            break
+        logging.warning('vl2mv caught SIGSEGV: trying again (trial %i)' % i)
+        logging.debug('verilog was: ' + readfile(input_verilog_file))
+    assert rc == 0, rc_out_err_to_str(rc, out, err)   # no check that stderr='' because vl2mv outputs the input file name
 
     # abc
     rc, out, err = execute_shell('{abc} -c '
