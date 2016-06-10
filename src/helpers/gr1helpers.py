@@ -60,12 +60,12 @@ def strengthen2(a_inits:List[Expr], g_inits:List[Expr],
 
     liveness = (a_init & a_non_state & UnaryOp.G(a_state) & a_liveness) >> g_liveness
 
-    logging.info('a_state', str(a_state))
-    logging.info('g_state', str(g_state))
-    logging.info('a_non_state', str(a_non_state))
-    logging.info('g_non_state', str(g_non_state))
-    logging.info('a_livenesses', str(a_liveness))
-    logging.info('g_liveness', str(g_liveness))
+    logging.debug('a_state: ' + str(a_state))
+    logging.debug('g_state: ' + str(g_state))
+    logging.debug('a_non_state: ' + str(a_non_state))
+    logging.debug('g_non_state: ' + str(g_non_state))
+    logging.debug('a_liveness: ' + str(a_liveness))
+    logging.debug('g_liveness: ' + str(g_liveness))
 
     return safety_init & safety_weak & safety_other & liveness
 
