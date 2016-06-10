@@ -4,6 +4,7 @@ from typing import List
 
 from helpers.console_helpers import print_green, print_red
 from interfaces.expr import Expr, and_expr, UnaryOp, BinOp
+from ltl3ba.ast_to_ltl3ba import ConverterToLtl2BaFormatVisitor
 
 
 def strengthen1(a_inits:List[Expr], g_inits:List[Expr],
@@ -60,7 +61,7 @@ def strengthen2(a_inits:List[Expr], g_inits:List[Expr],
 
     liveness = (a_init & a_non_state & UnaryOp.G(a_state) & a_liveness) >> g_liveness
 
-    logging.debug('a_state: ' + str(a_state))
+    logging.debug('a_state: ' + str(ConverterToLtl2BaFormatVisitor().dispatch(a_state)))
     logging.debug('g_state: ' + str(g_state))
     logging.debug('a_non_state: ' + str(a_non_state))
     logging.debug('g_non_state: ' + str(g_non_state))

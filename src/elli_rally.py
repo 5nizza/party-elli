@@ -2,35 +2,19 @@
 import argparse
 import logging
 import tempfile
+
 import helpers.timer as timer
-
-from typing import Iterable
-
 from helpers import automaton2dot
 from helpers.main_helper import setup_logging, create_spec_converter_z3
-from helpers.python_ext import readfile
-from helpers.shell import execute_shell
-from interfaces.expr import Expr, Signal
 from module_generation.aiger import lts_to_aiger
 from module_generation.dot import lts_to_dot
-from parsing.acacia_parser_helper import parse_acacia_and_build_expr
 from parsing.tlsf_parser import parse_tlsf_build_expr
 from synthesis import model_searcher
 from synthesis.encoder_builder import create_encoder
 from synthesis.funcs_args_types_names import ARG_MODEL_STATE
-from synthesis.smt_logic import UFLIA
+from synthesis.smt_logic import UFLRA
 
 CHECK_BOTH, CHECK_REAL, CHECK_UNREAL = 'both', 'real', 'unreal'
-
-
-def _parse_acacia_spec(spec_file_name:str, ltl3ba)\
-        -> (Iterable[Signal], Iterable[Signal], Expr):
-    """ :return: (inputs_signals, output_signals, expr) """
-
-    assert spec_file_name.endswith('.ltl'), spec_file_name
-    ltl_file_str = readfile(spec_file_name)
-    part_file_str = readfile(spec_file_name.replace('.ltl', '.part'))
-    return parse_acacia_and_build_expr(ltl_file_str, part_file_str, ltl3ba)
 
 
 def main(tlsf_file_name,
@@ -39,10 +23,11 @@ def main(tlsf_file_name,
          synthesis_type,
          smt_files_prefix,
          keep_temp_files):
+    logic = UFLRA()
 
     assert synthesis_type == CHECK_REAL, 'the rest is not impl yet'
 
-    ltl3ba, solver_factory = create_spec_converter_z3(UFLIA(None),  # TODO: use UFLRA
+    ltl3ba, solver_factory = create_spec_converter_z3(logic,
                                                       False,
                                                       False,
                                                       smt_files_prefix,
@@ -61,7 +46,8 @@ def main(tlsf_file_name,
     encoder = create_encoder(inputs, outputs,
                              is_moore,
                              automaton,
-                             solver_factory.create(), UFLIA(None))
+                             solver_factory.create(),
+                             logic)
 
     model = model_searcher.search(1, 24, encoder)  # TODO: guess better min max sizes
     logging.info('model_searcher.search took (sec): %i' %timer.sec_restart())

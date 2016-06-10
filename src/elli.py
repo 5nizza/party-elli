@@ -15,7 +15,7 @@ from parsing.acacia_parser_helper import parse_acacia_and_build_expr
 from synthesis import model_searcher
 from synthesis.encoder_builder import create_encoder
 from synthesis.funcs_args_types_names import ARG_MODEL_STATE
-from synthesis.smt_logic import UFLIA
+from synthesis.smt_logic import UFLIA, UFLRA
 
 
 def parse_acacia_spec(spec_file_name:str, ltl3ba, strengthen_lvl:int)\
@@ -116,7 +116,7 @@ if __name__ == "__main__":
     with tempfile.NamedTemporaryFile(dir='./') as smt_file:
         smt_files_prefix = smt_file.name
 
-    ltl3ba, solver_factory = create_spec_converter_z3(UFLIA(None),
+    ltl3ba, solver_factory = create_spec_converter_z3(UFLRA(),
                                                       args.incr,
                                                       False,
                                                       smt_files_prefix,
