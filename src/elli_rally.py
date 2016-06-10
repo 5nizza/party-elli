@@ -55,6 +55,7 @@ def main(tlsf_file_name,
 
     automaton = ltl3ba.convert(~expr)
     logging.info('automata translation took (sec): %i' % timer.sec_restart())
+    logging.info('automaton size is: %i' % len(automaton.nodes))
     logging.debug('automaton (dot) is:\n' + automaton2dot.to_dot(automaton))
 
     encoder = create_encoder(inputs, outputs,

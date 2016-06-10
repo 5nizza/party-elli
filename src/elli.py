@@ -18,14 +18,14 @@ from synthesis.funcs_args_types_names import ARG_MODEL_STATE
 from synthesis.smt_logic import UFLIA
 
 
-def parse_acacia_spec(spec_file_name:str, ltl3ba)\
+def parse_acacia_spec(spec_file_name:str, ltl3ba, strengthen_lvl:int)\
         -> (Iterable[Signal], Iterable[Signal], Expr):
     """ :return: (inputs_signals, output_signals, expr) """
 
     assert spec_file_name.endswith('.ltl'), spec_file_name
     ltl_file_str = readfile(spec_file_name)
     part_file_str = readfile(spec_file_name.replace('.ltl', '.part'))
-    return parse_acacia_and_build_expr(ltl_file_str, part_file_str, ltl3ba)
+    return parse_acacia_and_build_expr(ltl_file_str, part_file_str, ltl3ba, strengthen_lvl)
 
 
 def main(input_signals, output_signals, ltl:Expr,
@@ -124,7 +124,7 @@ if __name__ == "__main__":
 
     solver = solver_factory.create()
 
-    input_signals, output_signals, ltl = parse_acacia_spec(args.spec, ltl3ba)
+    input_signals, output_signals, ltl = parse_acacia_spec(args.spec, ltl3ba, 1)
 
     moore = args.moore
     if args.unreal:
@@ -136,9 +136,9 @@ if __name__ == "__main__":
     if args.unreal:
         min_size, max_size = 1, 128
     elif args.size == 0:
-        min_size, max_size = 1, args.bound + 1
+        min_size, max_size = 1, args.bound
     else:
-        min_size, max_size = args.size, args.size+1
+        min_size, max_size = args.size, args.size
 
     is_realizable = main(input_signals,
                          output_signals,

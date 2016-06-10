@@ -34,7 +34,8 @@ def parse_tlsf_build_expr(spec_file_name, ltl3ba)\
 
     input_signals, output_signals, expr = parse_acacia_and_build_expr(ltl_text,
                                                                       part_text,
-                                                                      ltl3ba)
+                                                                      ltl3ba,
+                                                                      2)
 
     rc, out, err = execute_shell('{syfco} -g {spec_file_name}'.format(syfco=SYFCO_PATH,
                                                                       spec_file_name=spec_file_name))

@@ -43,7 +43,8 @@ if __name__ == "__main__":
 
     solver = solver_factory.create()
     input_signals, output_signals, ltl = parse_acacia_spec(args.spec,
-                                                           ltl2automaton_converter)
+                                                           ltl2automaton_converter,
+                                                           1)
     is_realizable = main(input_signals,
                          output_signals,
                          ltl,
