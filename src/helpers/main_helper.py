@@ -62,16 +62,18 @@ class Z3SolverFactory:
         self.remove_files = remove_files
         assert not (self.is_incremental and self.generate_queries)
         self.solvers = []  # type: List[SolverInterface]
+        self.seed = 0
 
-    def create(self, seed=''):
+    def create(self):
+        self.seed += 1
         if self.is_incremental:
             solver = Z3InteractiveViaPipes(self.logic, self.z3_path)
         elif self.generate_queries:
-            solver = FakeSolver(self.smt_tmp_files_prefix+seed,
+            solver = FakeSolver(self.smt_tmp_files_prefix+str(self.seed),
                                 self.z3_path,
                                 self.logic)
         else:
-            solver = Z3NonInteractiveViaFiles(self.smt_tmp_files_prefix+seed,
+            solver = Z3NonInteractiveViaFiles(self.smt_tmp_files_prefix+str(self.seed),
                                               self.z3_path,
                                               self.logic,
                                               self.remove_files)
