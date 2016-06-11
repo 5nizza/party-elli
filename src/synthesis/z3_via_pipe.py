@@ -19,7 +19,7 @@ class Z3InteractiveViaPipes(SmtSolverWithQueryStorageAbstract):
         self._process = subprocess.Popen(args,
                                          stdin=subprocess.PIPE,
                                          stdout=subprocess.PIPE,
-                                         stderr=subprocess.PIPE)
+                                         stderr=subprocess.STDOUT)
 
         logging.info('created z3 process: ' + str(self._process.pid))
 
@@ -38,6 +38,8 @@ class Z3InteractiveViaPipes(SmtSolverWithQueryStorageAbstract):
         return lines
 
     def _assert_no_errors(self, lines):
+        logging.debug('solver returned:')
+        logging.debug('\n'.join(lines))
         real_error_lines = lfilter(lambda l: 'error' in l and 'model is not available' not in l, lines)
         if real_error_lines:
             msg = 'z3 found errors in query. Last piece of query: \n' \
