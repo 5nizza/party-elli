@@ -88,7 +88,7 @@ def create_spec_converter_z3(logic:Logic,
                              is_incremental:bool,
                              generate_queries_only:bool,
                              smt_tmp_files_prefix:str,
-                             remove_tmp_files):
+                             remove_tmp_files) -> (LTL3BA, Z3SolverFactory):
     """ Return ltl to automaton converter, Z3 solver """
     assert smt_tmp_files_prefix or is_incremental
 

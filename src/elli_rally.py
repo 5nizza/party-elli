@@ -3,12 +3,15 @@ import argparse
 import logging
 import tempfile
 
+import elli
 import helpers.timer as timer
 from helpers import automaton2dot
-from helpers.main_helper import setup_logging, create_spec_converter_z3
+from helpers.main_helper import setup_logging, create_spec_converter_z3, Z3SolverFactory
+from ltl3ba.ltl2automaton import LTL3BA
 from module_generation.aiger import lts_to_aiger
 from module_generation.dot import lts_to_dot
-from parsing.tlsf_parser import parse_tlsf_build_expr
+from parsing.acacia_parser_helper import parse_acacia_and_build_expr
+from parsing.tlsf_parser import convert_tlsf_to_acacia, get_spec_type
 from synthesis import model_searcher
 from synthesis.encoder_builder import create_encoder
 from synthesis.funcs_args_types_names import ARG_MODEL_STATE
@@ -17,15 +20,19 @@ from synthesis.smt_logic import UFLRA
 CHECK_BOTH, CHECK_REAL, CHECK_UNREAL = 'both', 'real', 'unreal'
 
 
+def _check_unrealizability(ltl3ba:LTL3BA, solver_factory:Z3SolverFactory) -> bool:
+    pass
+
+
 def main(tlsf_file_name,
          output_file_name,
          dot_file_name,
          synthesis_type,
          smt_files_prefix,
-         keep_temp_files):
-    logic = UFLRA()
+         keep_temp_files) -> str:
+    """ :return: 'real', 'unreal', 'unknown' """
 
-    assert synthesis_type == CHECK_REAL, 'the rest is not impl yet'
+    logic = UFLRA()
 
     ltl3ba, solver_factory = create_spec_converter_z3(logic,
                                                       False,
@@ -33,30 +40,24 @@ def main(tlsf_file_name,
                                                       smt_files_prefix,
                                                       not keep_temp_files)
 
+    ltl_text, part_text = convert_tlsf_to_acacia(tlsf_file_name)
+    is_moore = get_spec_type(tlsf_file_name)
+
     timer.sec_restart()
+    env_model = elli.check_unreal(ltl_text, part_text, is_moore,
+                                  ltl3ba, solver_factory,
+                                  1, 1)
+    logging.info('unreal check took (sec): %i' % timer.sec_restart())
+    if env_model:
+        return 'unreal'
 
-    inputs, outputs, expr, is_moore = parse_tlsf_build_expr(tlsf_file_name, ltl3ba)
-    logging.info('parsing and building expr took (sec): %i' % timer.sec_restart())
+    model = elli.check_real(ltl_text, part_text, is_moore,
+                            ltl3ba, solver_factory,
+                            1, 24)
 
-    automaton = ltl3ba.convert(~expr)
-    logging.info('automata translation took (sec): %i' % timer.sec_restart())
-    logging.info('automaton size is: %i' % len(automaton.nodes))
-    logging.debug('automaton (dot) is:\n' + automaton2dot.to_dot(automaton))
+    logging.info(['unrealizable within the bounds', 'realizable'][model is not None])
 
-    encoder = create_encoder(inputs, outputs,
-                             is_moore,
-                             automaton,
-                             solver_factory.create(),
-                             logic)
-
-    model = model_searcher.search(1, 24, encoder)  # TODO: guess better min max sizes
-    logging.info('model_searcher.search took (sec): %i' %timer.sec_restart())
-
-    is_realizable = model is not None
-
-    logging.info(['unrealizable within the bounds', 'realizable'][is_realizable])
-
-    if is_realizable:
+    if model:
         dot_model_str = lts_to_dot(model, ARG_MODEL_STATE, not is_moore)
 
         if dot_file_name:
@@ -79,7 +80,7 @@ def main(tlsf_file_name,
 
     solver_factory.down_solvers()
 
-    return is_realizable
+    return ['real', 'unknown'][model is None]
 
 
 if __name__ == "__main__":
@@ -112,11 +113,15 @@ if __name__ == "__main__":
     with tempfile.NamedTemporaryFile(dir='./') as smt_file:
         smt_files_prefix = smt_file.name
 
-    is_realizable = main(args.spec,
-                         args.output,
-                         args.dot,
-                         args.check,
-                         smt_files_prefix,
-                         args.tmp)
+    status = main(args.spec,
+                  args.output,
+                  args.dot,
+                  args.check,
+                  smt_files_prefix,
+                  args.tmp)
 
-    exit([20, 10][is_realizable])
+    if status == 'real':
+        exit(10)
+    if status == 'unreal':
+        exit(20)
+    exit(30)   # could not find model or counter-model, thus 'unknown'

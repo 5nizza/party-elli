@@ -3,71 +3,73 @@ import argparse
 import logging
 import tempfile
 
-from typing import Iterable
-
 from helpers import automaton2dot
-from helpers.main_helper import setup_logging, create_spec_converter_z3
+from helpers.main_helper import setup_logging, create_spec_converter_z3, Z3SolverFactory
 from helpers.python_ext import readfile
-from interfaces.expr import Expr, Signal
-from ltl3ba.ltl2automaton import LTL3BA
+from helpers.timer import Timer
+from interfaces.lts import LTS
 from module_generation.dot import lts_to_dot
 from parsing.acacia_parser_helper import parse_acacia_and_build_expr
 from synthesis import model_searcher
 from synthesis.encoder_builder import create_encoder
 from synthesis.funcs_args_types_names import ARG_MODEL_STATE
-from synthesis.smt_logic import UFLIA, UFLRA
+from synthesis.smt_logic import UFLRA
 
 
-def parse_acacia_spec(spec_file_name:str, ltl3ba, strengthen_lvl:int)\
-        -> (Iterable[Signal], Iterable[Signal], Expr):
-    """ :return: (inputs_signals, output_signals, expr) """
-
-    assert spec_file_name.endswith('.ltl'), spec_file_name
-    ltl_file_str = readfile(spec_file_name)
-    part_file_str = readfile(spec_file_name.replace('.ltl', '.part'))
-    return parse_acacia_and_build_expr(ltl_file_str, part_file_str, ltl3ba, strengthen_lvl)
+REALIZABLE = 10
+UNREALIZABLE = 20
+UNKNOWN = 30
 
 
-def main(input_signals, output_signals, ltl:Expr,
-         is_moore,
-         dot_file_name,
-         min_size, max_size,
-         ltl3ba:LTL3BA,
-         smt_solver):
-    logging.info('LTL is:\n' + str(ltl))
+def check_unreal(ltl_text, part_text, is_moore,
+                 ltl3ba, solver_factory:Z3SolverFactory,
+                 min_size, max_size) -> LTS:
+    timer = Timer()
+    outputs, inputs, expr = parse_acacia_and_build_expr(ltl_text, part_text, ltl3ba, 2)  # TODO: is opt=1 faster?
 
-    automaton = ltl3ba.convert(~ltl)
+    timer.sec_restart()
+    automaton = ltl3ba.convert(expr)  # note no negation
+    logging.info('(unreal) automaton size is: %i' % len(automaton.nodes))
+    logging.debug('(unreal) automaton (dot) is:\n' + automaton2dot.to_dot(automaton))
+    logging.debug('(unreal) automaton translation took (sec): %i' % timer.sec_restart())
 
-    logging.debug('automaton (dot) is:\n' + automaton2dot.to_dot(automaton))
-    logging.debug(automaton)
-
-    encoder = create_encoder(input_signals, output_signals,
-                             is_moore,
+    encoder = create_encoder(inputs, outputs,
+                             not is_moore,
                              automaton,
-                             smt_solver, UFLIA(None))
+                             solver_factory.create())
 
     model = model_searcher.search(min_size, max_size, encoder)
+    logging.debug('(unreal) model_searcher.search took (sec): %i' % timer.sec_restart())
 
-    is_realizable = model is not None
-
-    logging.info(['unrealizable', 'realizable'][is_realizable])
-
-    if is_realizable:
-        dot_model_str = lts_to_dot(model, ARG_MODEL_STATE, not is_moore)
-
-        if dot_file_name:
-            with open(dot_file_name, 'w') as out:
-                out.write(dot_model_str)
-                logging.info('{model_type} model is written to {file}'.format(
-                             model_type=['Mealy', 'Moore'][is_moore],
-                             file=out.name))
-        else:
-            logging.info(dot_model_str)
-
-    return is_realizable
+    return model
 
 
-if __name__ == "__main__":
+def check_real(ltl_text, part_text, is_moore,
+               ltl3ba, solver_factory:Z3SolverFactory,
+               min_size, max_size) -> LTS:
+    timer = Timer()
+    inputs, outputs, expr = parse_acacia_and_build_expr(ltl_text, part_text, ltl3ba, 2)
+
+    timer.sec_restart()
+    automaton = ltl3ba.convert(~expr)
+    logging.info('(real) automaton size is: %i' % len(automaton.nodes))
+    logging.debug('(real) automaton (dot) is:\n' + automaton2dot.to_dot(automaton))
+    logging.debug('(real) automaton translation took (sec): %i' % timer.sec_restart())
+
+    encoder = create_encoder(inputs, outputs,
+                             is_moore,
+                             automaton,
+                             solver_factory.create())
+
+    model = model_searcher.search(min_size, max_size, encoder)
+    logging.debug('(real) model_searcher.search took (sec): %i' % timer.sec_restart())
+
+    return model
+
+
+def main():
+    """ :return: 1 if model is found, 0 otherwise """
+
     parser = argparse.ArgumentParser(description='Bounded Synthesis Tool',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
@@ -101,7 +103,8 @@ if __name__ == "__main__":
                         help='simple check of unrealizability: '
                              'invert the spec, system type, (in/out)puts, '
                              'and synthesize the model for env '
-                             '(a more sophisticated check could search for env that disproves systems of given size)')
+                             '(a more sophisticated check could search for env that disproves systems of given size)'
+                             '(note that the inverted spec will also be strengthened)')
     parser.add_argument('-v', '--verbose', action='count', default=0)
 
     args = parser.parse_args()
@@ -121,37 +124,35 @@ if __name__ == "__main__":
                                                       False,
                                                       smt_files_prefix,
                                                       not args.tmp)
-
-    solver = solver_factory.create()
-
-    input_signals, output_signals, ltl = parse_acacia_spec(args.spec, ltl3ba, 1)
-
-    moore = args.moore
-    if args.unreal:
-        input_signals, output_signals = output_signals, input_signals
-        ltl = ~ltl
-        moore = not args.moore
-
-    # set the bounds:
-    if args.unreal:
-        min_size, max_size = 1, 128
-    elif args.size == 0:
+    if args.size == 0:
         min_size, max_size = 1, args.bound
     else:
         min_size, max_size = args.size, args.size
 
-    is_realizable = main(input_signals,
-                         output_signals,
-                         ltl,
-                         moore,
-                         args.dot,
-                         min_size, max_size,
-                         ltl3ba,
-                         solver)
-    if args.unreal:
-        logging.info('{status_verb} model for _env_ to disprove the specification'
-                     .format(status_verb=['could not find', 'found'][is_realizable]))
+    ltl_text, part_text = readfile(args.spec), readfile(args.spec.replace('.ltl', '.part'))
+    if not args.unreal:
+        model = check_real(ltl_text, part_text, args.moore, ltl3ba, solver_factory, min_size, max_size)
+    else:
+        model = check_unreal(ltl_text, part_text, args.moore, ltl3ba, solver_factory, min_size, max_size)
 
-    solver.die()
+    logging.info('{status} model for {who}'.format(status=('FOUND', 'NOT FOUND')[model is None],
+                                                   who=('sys', 'env')[args.unreal]))
+    if model:
+        dot_model_str = lts_to_dot(model, ARG_MODEL_STATE, (not args.moore) ^ args.unreal)
 
-    exit(is_realizable)
+        if args.dot:
+            with open(args.dot, 'w') as out:
+                out.write(dot_model_str)
+                logging.info('{model_type} model is written to {file}'.format(
+                             model_type=['Mealy', 'Moore'][args.moore],
+                             file=out.name))
+        else:
+            logging.info(dot_model_str)
+
+    solver_factory.down_solvers()
+
+    return UNKNOWN if model is None else (REALIZABLE, UNREALIZABLE)[args.unreal]
+
+
+if __name__ == "__main__":
+    exit(main())
