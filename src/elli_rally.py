@@ -14,8 +14,6 @@ from parsing.tlsf_parser import convert_tlsf_to_acacia, get_spec_type
 from synthesis.funcs_args_types_names import ARG_MODEL_STATE
 from synthesis.smt_logic import UFLRA
 
-CHECK_BOTH, CHECK_REAL, CHECK_UNREAL = 'both', 'real', 'unreal'
-
 
 def main(tlsf_file_name,
          output_file_name,
