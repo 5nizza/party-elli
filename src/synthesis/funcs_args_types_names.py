@@ -7,19 +7,19 @@ from interfaces.expr import Signal
 
 TYPE_MODEL_STATE = 'M'
 TYPE_A_STATE = 'A'
-TYPE_S_STATE = 'S'
 
-FUNC_MODEL_TRANS = '_tau_'
-FUNC_REACH = '_reach_'
-FUNC_R = '_r_'
+FUNC_MODEL_TRANS = '__tau'
+FUNC_REACH = '__reach'
+FUNC_R = '__r'
 
-ARG_MODEL_STATE = '_m_'
-ARG_A_STATE = '_a_'   # intended to be used for the whole specification (safety and liveness)
-ARG_S_STATE = '_s_'   # for the safety automaton
+ARG_MODEL_STATE = '__m'
+ARG_A_STATE = '__a'   # intended to be used for the whole specification (safety and liveness)
 
 
-def smt_arg_name_signal(s:Signal):
-    return '_%s_' % str(s).lower()
+def smt_arg_name_signal(s:Signal):   # TODO: need better checks of no name collisions
+    result = '%s_' % str(s).lower()
+    assert result not in (ARG_A_STATE, ARG_MODEL_STATE)
+    return result
 
 
 def smt_unname_if_signal(arg_name:str, signals):
@@ -42,11 +42,11 @@ def smt_name_spec(spec_state:interfaces.automata.Node, spec_state_type:str):
 
 
 def smt_name_m(m:int):
-    return '_m%i_' % m
+    return '__m%i' % m
 
 
 def smt_unname_m(str_m):
-    return int(str_m[2:-1])
+    return int(str_m[3:])
 
 
 def smt_name_free_arg(smt_arg):

@@ -2,7 +2,7 @@ from interfaces.expr import *
 import third_party.ply.lex as lex
 
 #reserved words: syntactic sugar to help to match exactly reserved word
-reserved_bools = dict((s, s) for s in ('TRUE', 'FALSE'))
+reserved_bools = dict((s, s) for s in ('TRUE', 'FALSE', 'true', 'false'))
 
 tokens = [
              'ASSUME', 'SPEC_UNIT', 'NAME', 'NUMBER', 'BOOL',
@@ -58,12 +58,11 @@ def t_SPEC_UNIT(t):
 
 
 def t_TEMPORAL_UNARY(t):
-    r"""(G|F|X)(?=[ \t\n]*\()"""  # temporal operators require parenthesis
+    r"""(G|F|X)(?=([ \t\n]*\()|([ \t\n]+))"""  # unary temporal operators require parenthesis or blank spaces
     return t
 
 
 def t_TEMPORAL_BINARY(t):
-#    r"""U(?=[ \t]*\()""" #temporal operators require parenthesis
     r"""(U|W)(?=[ \t\n])"""  # temporal operators require parenthesis
     return t
 
@@ -73,7 +72,7 @@ def t_NAME(t):
 
     if t.value in reserved_bools:
         t.type = 'BOOL'
-        t.value = Bool(t.value == 'TRUE')
+        t.value = Bool(t.value == 'true' or t.value == 'TRUE')
         return t
 
     return t

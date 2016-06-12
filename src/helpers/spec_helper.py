@@ -4,7 +4,6 @@ from helpers.automata_classifier import is_safety_automaton
 from interfaces.expr import Expr
 
 
-@lru_cache()
 def is_safety_ltl(expr:Expr, ltl2automaton) -> bool:
     automaton = ltl2automaton.convert(~expr)  # !(safety ltl) has safety automaton
     res = is_safety_automaton(automaton)

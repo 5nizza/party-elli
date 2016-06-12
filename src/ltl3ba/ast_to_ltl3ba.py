@@ -23,7 +23,7 @@ class ConverterToLtl2BaFormatVisitor(Visitor):
         if binary_op.name == '+':
             return '({arg1}) || ({arg2})'.format(arg1=arg1, arg2=arg2)
 
-        if binary_op.name == 'U' or binary_op.name == '->' or binary_op.name == '<->':
+        if binary_op.name in ('U', '->', '<->'):
             return '({arg1}) {op} ({arg2})'.format(arg1=arg1, arg2=arg2, op=binary_op.name)
 
         assert 0, 'unknown binary operator: ' + "'" + str(binary_op.name) + "'"

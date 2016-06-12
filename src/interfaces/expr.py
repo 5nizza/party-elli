@@ -47,18 +47,32 @@ class Expr:
         return str(self) == str(other)
 
     def __and__(self, other):
+        if self == Bool(True):
+            return other
+        if other == Bool(True):
+            return self
+        if other == Bool(False) or self == Bool(False):
+            return Bool(False)
         return BinOp('*', self, other)
 
     def __iand__(self, other):
         return self & other
 
     def __or__(self, other):
+        if self == Bool(False):
+            return other
+        if other == Bool(False):
+            return self
+        if other == Bool(True) or self == Bool(True):
+            return Bool(True)
         return BinOp('+', self, other)
 
     def __ior__(self, other):
         return self | other
 
     def __invert__(self):
+        if self == Bool(True) or self == Bool(False):
+            return Bool(self == Bool(False))  # false becomes true
         return UnaryOp('!', self)
 
     def __rshift__(self, other):
@@ -87,6 +101,10 @@ class BinOp(Expr):
         else:
             return str(self.arg1) + '=' + str(self.arg2)
 
+    @staticmethod
+    def W(arg1, arg2):
+        return BinOp('W', arg1, arg2)
+
 
 class UnaryOp(Expr):
     def __init__(self, name, arg):
@@ -96,26 +114,15 @@ class UnaryOp(Expr):
     def __repr__(self):
         return self.name + '({0})'.format(self.arg)
 
-
-class OpG(UnaryOp):
-    def __init__(self, arg):
-        super().__init__('G', arg)
-
-
-class OpF(UnaryOp):
-    def __init__(self, arg):
-        super().__init__('F', arg)
-
-
-class OpU(BinOp):
-    def __init__(self, arg1, arg2):
-        super().__init__('U', arg1, arg2)
+    @staticmethod
+    def G(a):
+        return UnaryOp('G', a)
 
 
 ########################################################################################
 # helpers
 
-def and_expressions(conjuncts):
+def and_expr(conjuncts):
     conjuncts = [c for c in conjuncts if c != Bool(True)]
 
     if len(conjuncts) == 0:

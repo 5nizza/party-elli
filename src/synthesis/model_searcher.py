@@ -5,13 +5,13 @@ from interfaces.lts import LTS
 
 
 @log_entrance()
-def search(sizes, encoder) -> LTS:
-    max_model_states = list(range(sizes[-1]))
+def search(min_size, max_size, encoder) -> LTS:
+    max_model_states = list(range(max_size))
     encoder.encode_headers(max_model_states)
     encoder.encode_initialization()
 
     last_size = 0
-    for size in sizes:
+    for size in range(min_size, max_size+1):
         logging.info('searching a model of size {0}..'.format(size))
 
         cur_all_states = range(size)
