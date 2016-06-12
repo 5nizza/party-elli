@@ -22,7 +22,7 @@ class LTL3BA:
         self._execute_cmd = ltl2ba_path + ' -f'  # determinization is enabled by default
 
     @lru_cache()
-    def convert(self, expr:Expr, states_prefix='') -> Automaton:
+    def convert(self, expr:Expr, states_prefix='', timeout=None) -> Automaton:
         expr = WeakToUntilConverterVisitor().dispatch(expr)   # ltl3ba 1.1.2 does not support W
 
         format_converter = ConverterToLtl2BaFormatVisitor()
@@ -30,14 +30,14 @@ class LTL3BA:
 
         logging.info('Ltl2UCW: converting:\n' + property_in_ltl2ba_format)
 
-        return self.convert_raw(property_in_ltl2ba_format, format_converter.signal_by_name, states_prefix)
+        return self.convert_raw(property_in_ltl2ba_format, format_converter.signal_by_name, states_prefix, timeout)
 
-    def convert_raw(self, property:str, signal_by_name:dict, states_prefix) -> Automaton:
+    def convert_raw(self, property:str, signal_by_name:dict, states_prefix, timeout=None) -> Automaton:
         """
         :param property: in the LTL2BA format (we do NOT negate it!)
         """
 
-        rc, ba, err = execute_shell('{0} "{1}"'.format(self._execute_cmd, property))
+        rc, ba, err = execute_shell('{0} "{1}"'.format(self._execute_cmd, property), timeout=timeout)
         assert rc == 0, str(rc) + ', err: ' + str(err) + ', out: ' + str(ba)
         assert (err == '') or err is None, err
         logging.debug(ba)

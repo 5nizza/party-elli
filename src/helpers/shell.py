@@ -1,5 +1,9 @@
+import logging
+import os
 import subprocess
 import sys
+
+import signal
 
 from helpers.python_ext import is_empty_str
 
@@ -30,11 +34,12 @@ if sys.version_info < (3, 0):
         return p.returncode, out, err
 
 else:
-    def execute_shell(cmd, input=''):
+    def execute_shell(cmd, input='', timeout=None):
         """
         :param cmd:
         :param input: sent to stdin
         :return: returncode, stdout, stderr.
+        :raise: subprocess.TimeoutExpired (I kill the process!)
         """
 
         proc_stdin = subprocess.PIPE if input != '' else None
@@ -44,12 +49,18 @@ else:
                              stdin=proc_stdin,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE,
-                             shell=True)
-
-        if proc_input:
-            out, err = p.communicate(bytes(proc_input, encoding=sys.getdefaultencoding()))
-        else:
-            out, err = p.communicate()
+                             shell=True,
+                             preexec_fn=os.setsid if timeout else None)  # http://stackoverflow.com/a/4791612/801203
+        try:
+            if proc_input:
+                out, err = p.communicate(bytes(proc_input, encoding=sys.getdefaultencoding()), timeout=timeout)
+            else:
+                out, err = p.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            logging.debug('Timeout expired, killing the process')
+            os.killpg(os.getpgid(p.pid), signal.SIGTERM)
+            p.communicate()
+            raise
 
         return p.returncode,\
                str(out, sys.getdefaultencoding()),\

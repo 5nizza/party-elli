@@ -1,6 +1,7 @@
 import logging
 import shlex
 import subprocess
+
 from helpers.python_ext import StrAwareList, lfilter
 from synthesis.smt_logic import Logic
 from synthesis.solver_with_query_storage import SmtSolverWithQueryStorageAbstract
@@ -29,8 +30,10 @@ class Z3InteractiveViaPipes(SmtSolverWithQueryStorageAbstract):
     def _read_block(self) -> str:
         lines = []
 
+        logging.debug('reading z3 output:')
         while True:
             line = str(self._process.stdout.readline(), 'utf-8').strip()
+            logging.debug(line)
             if line == 'done':
                 break
             lines.append(line)
@@ -38,8 +41,6 @@ class Z3InteractiveViaPipes(SmtSolverWithQueryStorageAbstract):
         return lines
 
     def _assert_no_errors(self, lines):
-        logging.debug('solver returned:')
-        logging.debug('\n'.join(lines))
         real_error_lines = lfilter(lambda l: 'error' in l and 'model is not available' not in l, lines)
         if real_error_lines:
             msg = 'z3 found errors in query. Last piece of query: \n' \
@@ -55,14 +56,26 @@ class Z3InteractiveViaPipes(SmtSolverWithQueryStorageAbstract):
 
         self._query_storage += '(echo "done")'
 
-        self._process.stdin.write(bytes(str(self._query_storage), 'utf-8'))
-        self._process.stdin.flush()  # just in case
-
-        lines = self._read_block()
-        self._assert_no_errors(lines)
+        lines_response = []
+        # TODO: XXX: ugly (know about check-sat + protected): avoiding deadlock due to pipe overfull
+        extracting = False
+        for l in self._query_storage._output:
+            self._process.stdin.write(bytes(l + '\n', 'utf-8'))
+            self._process.stdin.flush()  # just in case
+            if l == '(check-sat)':
+                z3_response = str(self._process.stdout.readline(), 'utf-8').strip()
+                if z3_response == 'unsat':
+                    self._query_storage = StrAwareList()
+                    return None
+                if z3_response == 'sat':
+                    logging.debug('z3 returned sat, extracting the model')
+                    extracting = True
+                    continue
+                else:
+                    assert 0, 'z3 returned unexpected smth: ' + lines_response[0]
+            if extracting:
+                z3_response = str(self._process.stdout.readline(), 'utf-8').strip()
+                lines_response.append(z3_response)
 
         self._query_storage = StrAwareList()
-
-        if lines[0] == 'sat':
-            return lines[1:]
-        return None
+        return lines_response

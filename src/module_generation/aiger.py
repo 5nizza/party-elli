@@ -3,6 +3,8 @@ import tempfile
 import os
 import sys
 
+import resource
+
 from config import VL2MV_PATH, ABC_PATH, AIGTOAIG_PATH
 from helpers.python_ext import readfile
 from helpers.shell import execute_shell, assert_exec_strict, rc_out_err_to_str
@@ -29,17 +31,16 @@ def verilog_to_aiger(verilog:str) -> str:
                        file_aiger_tmp,
                        file_output_aiger)  # tmp files stay if smth goes wrong
 
-    # run vl2mv
-    # ugly workaround: sometimes vl2mv gets SIGSEGV (i didn't check why)
-    # so i try to run vl2mv 5 times:
-    for i in range(5):
-        rc, out, err = execute_shell('{vl2mv} {file_input_verilog} -o {file_blif_mv}'.format(
-            vl2mv=VL2MV_PATH,
-            file_input_verilog=input_verilog_file,
-            file_blif_mv=file_blif_mv))
-        if rc != -11:
-            break
-        logging.warning('vl2mv caught SIGSEGV: trying again (trial %i)' % i)
+    # vl2mv
+    # on some examples vl2mv fails with a standard stack limit, so we raise it
+    hard_limit = resource.getrlimit(resource.RLIMIT_STACK)[1]
+    resource.setrlimit(resource.RLIMIT_STACK, (hard_limit, hard_limit))
+    rc, out, err = execute_shell('{vl2mv} {file_input_verilog} -o {file_blif_mv}'.format(
+        vl2mv=VL2MV_PATH,
+        file_input_verilog=input_verilog_file,
+        file_blif_mv=file_blif_mv))
+    if rc == -11:
+        logging.warning('vl2mv caught SIGSEGV: ha-ha! Re-run me on this example, or manually convert into aiger')
         logging.debug('verilog was: ' + readfile(input_verilog_file))
     assert rc == 0, rc_out_err_to_str(rc, out, err)   # no check that stderr='' because vl2mv outputs the input file name
 

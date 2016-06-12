@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import logging
+import subprocess
 import tempfile
 
 import elli
@@ -27,7 +28,7 @@ def main(tlsf_file_name,
     logic = UFLRA()
 
     ltl3ba, solver_factory = create_spec_converter_z3(logic,
-                                                      False,
+                                                      True,
                                                       False,
                                                       smt_files_prefix,
                                                       not keep_temp_files)
@@ -35,18 +36,23 @@ def main(tlsf_file_name,
     ltl_text, part_text = convert_tlsf_to_acacia(tlsf_file_name)
     is_moore = get_spec_type(tlsf_file_name)
 
-    timer.sec_restart()
-    env_model = elli.check_unreal(ltl_text, part_text, is_moore,
-                                  ltl3ba, solver_factory,
-                                  1, 1)
-    logging.info('unreal check took (sec): %i' % timer.sec_restart())
-    logging.info('env model is {NOT} FOUND'.format(NOT='' if env_model else 'NOT'))
-    if env_model:
-        return UNREALIZABLE
+    try:
+        timer.sec_restart()
+        env_model = elli.check_unreal(ltl_text, part_text, is_moore,
+                                      ltl3ba, solver_factory,
+                                      1, 1,
+                                      ltl3ba_timeout_sec=200)
+        logging.info('unreal check took (sec): %i' % timer.sec_restart())
+        logging.info('env model is {NOT} FOUND'.format(NOT='' if env_model else 'NOT'))
+        if env_model:
+            print('UNREALIZABLE')
+            return UNREALIZABLE
+    except subprocess.TimeoutExpired:
+        logging.info('I aborted unreal check (>200sec). Proceed to real check.')
 
     model = elli.check_real(ltl_text, part_text, is_moore,
                             ltl3ba, solver_factory,
-                            1, 24)
+                            1, 40)
     logging.info('real check took (sec): %i' % timer.sec_restart())
     logging.info('sys model is {NOT} FOUND'.format(NOT='' if model else 'NOT'))
     if not model:
@@ -70,6 +76,7 @@ def main(tlsf_file_name,
         with open(output_file_name, 'w') as out:
             out.write(aiger_model_str)
     else:
+        print('REALIZABLE')
         print(aiger_model_str)
 
     solver_factory.down_solvers()

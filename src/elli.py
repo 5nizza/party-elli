@@ -8,6 +8,7 @@ from helpers.main_helper import setup_logging, create_spec_converter_z3, Z3Solve
 from helpers.python_ext import readfile
 from helpers.timer import Timer
 from interfaces.lts import LTS
+from ltl3ba.ltl2automaton import LTL3BA
 from module_generation.dot import lts_to_dot
 from parsing.acacia_parser_helper import parse_acacia_and_build_expr
 from synthesis import model_searcher
@@ -22,13 +23,17 @@ UNKNOWN = 30
 
 
 def check_unreal(ltl_text, part_text, is_moore,
-                 ltl3ba, solver_factory:Z3SolverFactory,
-                 min_size, max_size) -> LTS:
+                 ltl3ba:LTL3BA, solver_factory:Z3SolverFactory,
+                 min_size, max_size,
+                 ltl3ba_timeout_sec=None) -> LTS:
+    """
+    :raise: subprocess.TimeoutException
+    """
     timer = Timer()
     outputs, inputs, expr = parse_acacia_and_build_expr(ltl_text, part_text, ltl3ba, 2)  # TODO: is opt=1 faster?
 
     timer.sec_restart()
-    automaton = ltl3ba.convert(expr)  # note no negation
+    automaton = ltl3ba.convert(expr, timeout=ltl3ba_timeout_sec)  # note no negation
     logging.info('(unreal) automaton size is: %i' % len(automaton.nodes))
     logging.debug('(unreal) automaton (dot) is:\n' + automaton2dot.to_dot(automaton))
     logging.debug('(unreal) automaton translation took (sec): %i' % timer.sec_restart())

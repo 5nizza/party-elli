@@ -18,7 +18,7 @@ def _create_monitor_file(tlsf_file_name) -> str:
     assert_exec_strict(rc, out, err)
 
     rc, out, err = execute_shell('{smvtoaig} -a'.format(smvtoaig=SMVTOAIG_PATH), input=out)
-    assert rc == 0   # it outputs the LTL into stderr
+    assert rc == 0, rc_out_err_to_str(rc, out, err)   # it outputs the LTL into stderr
 
     (fd, aag_file_name) = tempfile.mkstemp(text=True, suffix='.aag')
     os.write(fd, bytes(out, encoding=sys.getdefaultencoding()))
