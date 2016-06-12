@@ -2,14 +2,6 @@
 
 SMT based Bounded Synthesis, an implementation of the approach of 
 [Schewe and Finkbeiner](https://www.react.uni-saarland.de/publications/atva07.pdf).
-This is the fork of tool [PARTY](https://github.com/5nizza/Party),
-whose main point was 
-[parameterized synthesis of token rings](http://link.springer.com/chapter/10.1007/978-3-642-39799-8_66).
-But this version is significantly cleaner,
-it supports only monolithic synthesis (no token rings!), 
-and contains tool `query_elli.py` to generate SMT queries without solving them.
-The functionality might be slightly smaller compared to the original Party,
-but this is the version I support and update.
 
 ## Requirements
 - Ubuntu 14.04 (likely to work with others)
