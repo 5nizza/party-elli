@@ -49,9 +49,11 @@ def _model_check(combined_aiger_file:str) -> int:
             IIMC=IIMC_PATH,
             aiger_file=combined_aiger_file,
             pi=pi))
-        if rc != 0:
-            logging.warning('model checking failed: \n' + rc_out_err_to_str(rc, out, err))
-            return rc
+        assert rc == 0, 'model checking call failed: \n' + rc_out_err_to_str(rc, out, err)
+        is_correct = out.splitlines()[0].strip() == '0'
+        if not is_correct:
+            return 1
+
     return 0
 
 
@@ -74,7 +76,7 @@ def main(model_file_name:str, tlsf_file_name:str):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='I model check the aiger model found by Elli.'
+    parser = argparse.ArgumentParser(description='I model check the aiger model found by Elli. '
                                                  'Return: 0 if correct, 1 if model is wrong.',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
