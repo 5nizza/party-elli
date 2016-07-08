@@ -26,7 +26,13 @@ If you plan to develop smth then you might want to ignore future changes to conf
 
 `./query_elli.py` to generate SMT queries without running the solver
 
-`./elli_rally.py` to run the SYNTCOMP version (deps on many things!)
+`./elli_rally.py` to run the SYNTCOMP version (has additional deps on many things!)
+
+## Note
+
+Altough I accept Acacia+-like format,
+it actually has a different priorities of `+` and `*`.
+(here, `*` has a higher priority, while in Acacia+ -- it has lower).
 
 ## To test
 Run `run_tests.py` for functional tests, and `nosetests3 ./` -- for unit tests.
