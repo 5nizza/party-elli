@@ -69,4 +69,5 @@ def verilog_to_aiger(verilog:str) -> str:
 
 def lts_to_aiger(lts:LTS) -> str:
     v = lts_to_verilog(lts)
+    logging.debug('verilog output is \n' + v)
     return verilog_to_aiger(v)
