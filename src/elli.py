@@ -25,12 +25,17 @@ UNKNOWN = 30
 def check_unreal(ltl_text, part_text, is_moore,
                  ltl3ba:LTL3BA, solver_factory:Z3SolverFactory,
                  min_size, max_size,
-                 ltl3ba_timeout_sec=None) -> LTS:
+                 ltl3ba_timeout_sec=None,
+                 opt_level=0) -> LTS:
     """
     :raise: subprocess.TimeoutException
+    :arg opt_level: Note that opt_level > 0 may introduce unsoundness (returns unrealizable while it is)
     """
     timer = Timer()
-    outputs, inputs, expr = parse_acacia_and_build_expr(ltl_text, part_text, ltl3ba, 2)  # TODO: is opt=1 faster?
+    outputs, inputs, expr = parse_acacia_and_build_expr(ltl_text,
+                                                        part_text,
+                                                        ltl3ba,
+                                                        opt_level)
 
     timer.sec_restart()
     automaton = ltl3ba.convert(expr, timeout=ltl3ba_timeout_sec)  # note no negation
@@ -51,9 +56,13 @@ def check_unreal(ltl_text, part_text, is_moore,
 
 def check_real(ltl_text, part_text, is_moore,
                ltl3ba, solver_factory:Z3SolverFactory,
-               min_size, max_size) -> LTS:
+               min_size, max_size,
+               opt_level=2) -> LTS:
+    """
+    :param opt_level: values > 0 introduce incompleteness (but it is sound: if returns REAL, then REAL)
+    """
     timer = Timer()
-    inputs, outputs, expr = parse_acacia_and_build_expr(ltl_text, part_text, ltl3ba, 2)
+    inputs, outputs, expr = parse_acacia_and_build_expr(ltl_text, part_text, ltl3ba, opt_level)
 
     timer.sec_restart()
     automaton = ltl3ba.convert(~expr)
@@ -89,11 +98,9 @@ def main():
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--bound', metavar='bound', type=int, default=128, required=False,
-                       help='upper bound on the size of the model'
-                            ' (ignored for --unreal)')
+                       help='upper bound on the size of the model (for unreal this specifies size of env model)')
     group.add_argument('--size', metavar='size', type=int, default=0, required=False,
-                       help='search the model of this size'
-                            ' (ignored for --unreal)')
+                       help='search the model of this size (for unreal this specifies size of env model)')
 
     parser.add_argument('--incr', action='store_true', required=False, default=False,
                         help='use incremental solving')
@@ -109,7 +116,7 @@ def main():
                              'invert the spec, system type, (in/out)puts, '
                              'and synthesize the model for env '
                              '(a more sophisticated check could search for env that disproves systems of given size)'
-                             '(note that the inverted spec will also be strengthened)')
+                             '(note that the inverted spec will NOT be strengthened)')
     parser.add_argument('-v', '--verbose', action='count', default=0)
 
     args = parser.parse_args()

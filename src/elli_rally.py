@@ -55,6 +55,14 @@ def main(tlsf_file_name,
     logging.info('real check took (sec): %i' % timer.sec_restart())
     logging.info('sys model is {NOT} FOUND'.format(NOT='' if model else 'NOT'))
     if not model:
+        logging.info('trying check_real without formula strengthening')
+        model = elli.check_real(ltl_text, part_text, is_moore,
+                                ltl3ba, solver_factory,
+                                1, 40, opt_level=0)
+        logging.info('(without formula strengthening): real check took (sec): %i' % timer.sec_restart())
+        logging.info('(without formula strengthening): sys model is {NOT} FOUND'.format(NOT='' if model else 'NOT'))
+
+    if not model:
         return UNKNOWN
 
     dot_model_str = lts_to_dot(model, ARG_MODEL_STATE, not is_moore)

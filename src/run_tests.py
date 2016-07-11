@@ -58,6 +58,9 @@ unknown = [  # no model should be found for these
     "others/count2.ltl --moore --bound 2 --incr",
     "others/full_arbiter2.ltl --moore --bound 3 --incr",
     "others/pnueli_arbiter2.ltl --moore --bound 2 --incr",
+
+    # bug when I used strengthening in unrealizability check
+    "others/lilydemo23.ltl --mealy --unreal --size 1"
 ]
 
 

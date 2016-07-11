@@ -31,10 +31,13 @@ def parse_acacia_and_build_expr(ltl_text: str, part_text: str,
             ltl_property = strengthen2([], [],
                                        a_safeties, g_safeties,
                                        a_livenesses, g_livenesses)
-        else:
+        elif strengthen_lvl == 1:
             ltl_property = strengthen1([], [],
                                        a_safeties, g_safeties,
                                        a_livenesses, g_livenesses)
+        else:
+            ltl_property = and_expr(list(a_safeties) + list(a_livenesses))\
+                           >> and_expr(list(g_safeties) + list(g_livenesses))
         ltl_properties.append(ltl_property)
 
     return input_signals, output_signals, and_expr(ltl_properties)
