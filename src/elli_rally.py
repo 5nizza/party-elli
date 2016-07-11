@@ -44,6 +44,7 @@ def main(tlsf_file_name,
         logging.info('env model is {NOT} FOUND'.format(NOT='' if env_model else 'NOT'))
         if env_model:
             print('UNREALIZABLE')
+            logging.debug(lts_to_dot(env_model, ARG_MODEL_STATE, is_moore))
             return UNREALIZABLE
     except subprocess.TimeoutExpired:
         logging.info('I aborted unreal check (>200sec). Proceed to real check.')
