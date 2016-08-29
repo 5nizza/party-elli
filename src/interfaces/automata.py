@@ -55,7 +55,7 @@ LABEL_TRUE = Label(dict())
 class Node:
     def __init__(self, name, transitions=None):
         self._name = name
-        assert name != '0'  # TODO: why?
+        assert name != '0'  # TODO: why? remove me
         if transitions is None:
             self._transitions = {}  # label -> {node1,...}
 
