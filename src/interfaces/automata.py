@@ -1,11 +1,12 @@
 from functools import lru_cache
 from itertools import product
+from typing import Iterable
 
 from helpers.hashable import HashableDict
 
 
 class Automaton:
-    def __init__(self, init_nodes, acc_nodes, nodes, name=''):
+    def __init__(self, init_nodes, acc_nodes, nodes:Iterable[Node], name=''):
         self._init_nodes = set(init_nodes)
         self._acc_nodes = set(acc_nodes)
         self._nodes = set(nodes)
@@ -66,7 +67,7 @@ class Node:
     @property
     def transitions(self) -> dict:
         """
-        :return: dict { label -> {(is_acc,node), ...}, ... }
+        :return: dict { label -> {(is_acc,node), ...} }
         """
         return self._transitions
 
