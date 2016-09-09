@@ -1,5 +1,5 @@
-z3_path = "/path/to/z3"
-ltl3ba_path = "/path/to/ltl3ba"
+Z3_PATH = "/path/to/z3"
+LTL3BA_PATH = "/path/to/ltl3ba"
 
 
 if __name__ == '__main__':
