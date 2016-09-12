@@ -18,7 +18,7 @@ def distinct(iterable):
 
 
 def to_str(enumerable:Iterable) -> str:
-    return ', '.join(map(str, enumerable))
+    return 'Iterable:[\n' + ', '.join(map(str, enumerable)) + '\n]'
 
 
 def lmap(lambda_func, iterable) -> list:
@@ -27,6 +27,10 @@ def lmap(lambda_func, iterable) -> list:
 
 def lfilter(lambda_func, iterable) -> list:
     return list(filter(lambda_func, iterable))
+
+
+def sfilter(lambda_func, iterable) -> set:
+    return set(filter(lambda_func, iterable))
 
 
 def separate(criteria, iterable) -> (list,list):

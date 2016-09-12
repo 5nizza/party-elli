@@ -2,7 +2,10 @@ from interfaces.expr import Number, BinOp, UnaryOp, Bool, Signal
 
 
 class Visitor:
-    def dispatch(self, node):  # TODO: clear: should accept Expr and return Expr
+    def dispatch(self, node):
+        assert node
+
+        """ Note that it does not necessary returns object of Expr class """
         if isinstance(node, BinOp):
             return self.visit_binary_op(node)
 
@@ -24,7 +27,9 @@ class Visitor:
         assert 0, 'unknown node type ' + str(node.__class__) + ': ' + str(node)
 
     def visit_binary_op(self, binary_op:BinOp):
-        return BinOp(binary_op.name, self.dispatch(binary_op.arg1), self.dispatch(binary_op.arg2))
+        return BinOp(binary_op.name,
+                     self.dispatch(binary_op.arg1),
+                     self.dispatch(binary_op.arg2))
 
     def visit_unary_op(self, unary_op:UnaryOp):
         return UnaryOp(unary_op.name, self.dispatch(unary_op.arg))

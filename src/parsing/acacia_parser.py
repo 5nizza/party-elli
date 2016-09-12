@@ -21,7 +21,6 @@ def _parse_signals_from_lines(signal_lines:list) -> list:
 
 
 def _parse_part(acacia_part_text:str):
-    #TODO: stupid parser, but this part/ltl format is stupid anyway
     lines = [l.strip() for l in acacia_part_text.split('\n') if l.strip()]
 
     input_lines = lfilter(lambda l: l.startswith('.inputs'), lines)

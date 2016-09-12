@@ -42,11 +42,12 @@ class Expr:
         return hash(str(self))
 
     def __eq__(self, other):
-        if not isinstance(other, self.__class__):
+        if other is None:
             return False
+        assert issubclass(other.__class__, Expr), str(other.__class__)
         return str(self) == str(other)
 
-    def __and__(self, other):
+    def __and__(self, other) -> 'Expr':
         if self == Bool(True):
             return other
         if other == Bool(True):
@@ -55,10 +56,10 @@ class Expr:
             return Bool(False)
         return BinOp('*', self, other)
 
-    def __iand__(self, other):
+    def __iand__(self, other) -> 'Expr':
         return self & other
 
-    def __or__(self, other):
+    def __or__(self, other) -> 'Expr':
         if self == Bool(False):
             return other
         if other == Bool(False):
@@ -67,15 +68,15 @@ class Expr:
             return Bool(True)
         return BinOp('+', self, other)
 
-    def __ior__(self, other):
+    def __ior__(self, other) -> 'Expr':
         return self | other
 
-    def __invert__(self):
+    def __invert__(self) -> 'Expr':
         if self == Bool(True) or self == Bool(False):
             return Bool(self == Bool(False))  # false becomes true
         return UnaryOp('!', self)
 
-    def __rshift__(self, other):
+    def __rshift__(self, other) -> 'Expr':
         return ~self | other
 
 
@@ -92,6 +93,8 @@ class Bool(Expr):
 class BinOp(Expr):
     def __init__(self, name, arg1, arg2):
         super().__init__(name)
+        assert arg1
+        assert arg2
         self.arg1 = arg1
         self.arg2 = arg2
 
@@ -114,25 +117,11 @@ class UnaryOp(Expr):
     def __repr__(self):
         return self.name + '({0})'.format(self.arg)
 
+    def __invert__(self) -> 'Expr':
+        if self.name == '!':
+            return self.arg  # cancel out double negations
+        return super().__invert__()
+
     @staticmethod
     def G(a):
         return UnaryOp('G', a)
-
-
-########################################################################################
-# helpers
-
-def and_expr(conjuncts):
-    conjuncts = [c for c in conjuncts if c != Bool(True)]
-
-    if len(conjuncts) == 0:
-        return Bool(True)
-
-    if len(conjuncts) == 1:
-        return conjuncts[0]
-
-    res = conjuncts[0]
-    for c in conjuncts[1:]:
-        res &= c
-
-    return res

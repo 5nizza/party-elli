@@ -8,7 +8,7 @@ SMT based Bounded Synthesis, an implementation of the approach of
 - python3 (tested with version 3.4)
 - Z3 (tested with version 4.3.2 and 4.4.1)
 - ltl3ba (tested with versions 1.1.2 and 1.0.2)
-- python packages: sympy, pygraph, typing
+- python packages: sympy, python3-pygraph, typing
 
 ## To configure
 Modify `src/config.py` to provide absolute paths to executables `z3` and `ltl3ba`

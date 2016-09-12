@@ -1,12 +1,12 @@
 from functools import lru_cache
 from itertools import product
-from typing import Iterable
+from typing import Iterable, Dict, Set, Tuple
 
 from helpers.hashable import HashableDict
 
 
 class Automaton:
-    def __init__(self, init_nodes, acc_nodes, nodes:Iterable[Node], name=''):
+    def __init__(self, init_nodes, acc_nodes, nodes:Iterable['Node'], name=''):
         self._init_nodes = set(init_nodes)
         self._acc_nodes = set(acc_nodes)
         self._nodes = set(nodes)
@@ -17,7 +17,7 @@ class Automaton:
         return self._name
 
     @property
-    def nodes(self):
+    def nodes(self) -> Iterable['Node']:
         return self._nodes
 
     @property
@@ -42,7 +42,7 @@ class Automaton:
     __repr__ = __str__
 
 
-class Label(HashableDict):
+class Label(HashableDict):  # TODO: use Expr instead (cube)
     """
     hashable dict: signal -> True/False
     Label({}) means 'True'
@@ -65,7 +65,7 @@ class Node:
         return self._name
 
     @property
-    def transitions(self) -> dict:
+    def transitions(self) -> Dict[Label, Set[Tuple[bool,'Node']]]:
         """
         :return: dict { label -> {(is_acc,node), ...} }
         """
