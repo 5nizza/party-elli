@@ -1,4 +1,4 @@
-from typing import Set, List
+from typing import List
 
 from sympy import Symbol
 from sympy.logic.boolalg import Or, And, Not, to_dnf
@@ -8,30 +8,30 @@ from sympy.logic.boolalg import false as sympy_false
 from helpers.expr_helper import get_sig_number
 from helpers.python_ext import StrAwareList
 from helpers.spec_helper import prop
-from interfaces.aht_automaton import AHT, DstFormulaPropMgr, ExtLabel
+from interfaces.aht_automaton import DstFormulaPropMgr, ExtLabel, SharedAHT
 from interfaces.aht_automaton import Transition
 from interfaces.expr import Expr, UnaryOp, Bool, BinOp, Number
 from parsing.visitor import Visitor
 
 
-def convert(aht:AHT, dstFormPropManager:DstFormulaPropMgr) -> str:
-    def _gen_unique_name(__=[]):  # mutable default arg is on purpose
+def convert(shared_aht:SharedAHT, dstFormPropMgr:DstFormulaPropMgr)\
+        -> str:
+    def _gen_unique_name(__=[]) -> str:  # mutable default arg is on purpose
         name = '__n' + str(len(__))
         __.append('')
         return name
 
-    init_state_dot = '"{0}" [shape=box];'.format(aht.init_node)
-    final_states_dot = '\n'.join(['"{0}" [shape=doublecircle];'.format(n)
-                                  for n in aht.final_nodes])
+    final_nodes = set()  # Set[Node]
+    exist_nodes = set()  # Set[Node]
 
     trans_dot = StrAwareList()
     inv_nodes = set()
-    for t in aht.transitions:  # type: Transition
+    for t in shared_aht.transitions:  # type: Transition
         inv_node = _gen_unique_name()
         inv_nodes.add(inv_node)
 
         trans_dot += '"{src}" -> "{invisible}" [label="{label}"];'.format(
-            src=t.src, invisible=inv_node, label=_label_to_short_string(t.state_label))
+            src=str(t.src), invisible=inv_node, label=_label_to_short_string(t.state_label))
 
         cubes = to_dnf_set(t.dst_expr)  # type: List[List[Expr]]
 
@@ -41,21 +41,29 @@ def convert(aht:AHT, dstFormPropManager:DstFormulaPropMgr) -> str:
             color = colors.pop(0) if len(colors) else 'gray'
             for lit in cube:  # type: Expr
                 assert lit.name == '=', "should be prop of the form sig=1; and not negated"
-                dstFormProp = dstFormPropManager.get_dst_expr_prop(get_sig_number(lit)[0].name)
+                dstFormProp = dstFormPropMgr.get_dst_expr_prop(get_sig_number(lit)[0].name)
 
                 trans_dot += '"{invisible}" -> "{dst}" [color={color}, label="{ext_label}"];'.format(
                     invisible=inv_node,
-                    dst=dstFormProp.dst_state,
+                    dst=str(dstFormProp.dst_state),
                     color=color,
                     ext_label=_ext_label_to_short_string(dstFormProp.ext_label))
+
+                dst_state = dstFormProp.dst_state
+                if dst_state.is_final:
+                    final_nodes.add(dst_state)
+                if dst_state.is_existential:
+                    exist_nodes.add(dst_state)
     # end of 'for t in aht.transitions'
 
     inv_nodes_dot = ['{n} [shape=point];'.format(n=n) for n in inv_nodes]
+    final_nodes_dot = '\n'.join(['"{0}" [shape=doubleoctagon];'.format(n)
+                                 for n in final_nodes])
+    # TODO: mark exist states
 
     dot_lines = StrAwareList() + 'digraph "automaton" {' + \
                 'rankdir=LR;' + \
-                init_state_dot + '\n' + \
-                final_states_dot + '\n' + \
+                final_nodes_dot + '\n' + \
                 trans_dot +\
                 inv_nodes_dot +\
                 '}'
@@ -110,9 +118,14 @@ def _label_to_short_string(label):
     return short_string
 
 
-def _ext_label_to_short_string(ext_label:ExtLabel) -> str:
-
-    return str(ext_label)
+def _ext_label_to_short_string(el:ExtLabel) -> str:
+    res = ''
+    if el.fixed_inputs:
+        res += _label_to_short_string(el.fixed_inputs)
+    if el.free_inputs:
+        res += "{Q}({free})".format(Q={el.FORALL:'A', el.EXISTS:'E'}[el.type_],
+                                    free=','.join(map(str, el.free_inputs)))
+    return res
 
 
 def _get_cubes(dnf_expr) -> tuple:

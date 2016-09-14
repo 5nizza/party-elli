@@ -33,13 +33,15 @@ def FG(arg) -> UnaryOp: return F(G(arg))
 def AG(arg) -> UnaryOp: return A(G(arg))
 def AF(arg) -> UnaryOp: return A(F(arg))
 def EF(arg) -> UnaryOp: return E(F(arg))
+def EG(arg) -> UnaryOp: return E(G(arg))
 
 def AGF(arg) -> UnaryOp: return A(G(F(arg)))
 def EGF(arg) -> UnaryOp: return E(G(F(arg)))
 def EFG(arg) -> UnaryOp: return E(F(G(arg)))
 
 def AGEF(arg) -> UnaryOp: return A(G(E(F(arg))))
-def EFEG(arg) -> UnaryOp: return E(F(E(G(arg))))
+def AFEG(arg) -> UnaryOp: return A(F(E(G(arg))))
+# def EFEG(arg) -> UnaryOp: return E(F(E(G(arg))))  # <- equiv. to EFG
 
 def U(a1, a2) -> BinOp: return BinOp('U', a1, a2)
 def W(a1, a2) -> BinOp: return BinOp('W', a1, a2)

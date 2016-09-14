@@ -1,10 +1,11 @@
-from itertools import chain
 from typing import Dict, Tuple, Set, Iterable
 
 from helpers.expr_helper import get_names, Normalizer, get_sig_number
-from helpers.python_ext import lfilter, to_str
+from helpers.python_ext import lfilter
 from helpers.spec_helper import prop
-from interfaces.aht_automaton import AHT, dualize_aht, Transition, ExtLabel, DstFormulaProp, DstFormulaPropMgr
+from interfaces import automata
+from interfaces.aht_automaton import AHT, dualize_aht, Transition, ExtLabel, DstFormulaProp, DstFormulaPropMgr, \
+    SharedAHT, get_reachable_from, Node
 from interfaces.automata import Automaton as NBW, Label
 from interfaces.expr import Expr, Signal, UnaryOp, BinOp
 from interfaces.spec import Spec
@@ -12,7 +13,7 @@ from ltl3ba.ltl2automaton import LTL3BA
 from parsing.visitor import Visitor
 
 
-def is_state_formula(formula:Expr, inputs:Iterable[Signal]):
+def is_state_formula(formula:Expr, inputs:Iterable[Signal]) -> bool:
     class PathFormulaDetector(Visitor):
         def __init__(self, inputs_:Iterable[Signal]):
             self.inputs = inputs_
@@ -46,39 +47,50 @@ def is_state_formula(formula:Expr, inputs:Iterable[Signal]):
     return not detector.is_path_detected
 
 
-def nbw_to_nbt(nbw:NBW, inputs:Set[Signal], dst_form_prop_manager:DstFormulaPropMgr) -> AHT:
-    aht_nodes = set(n.name for n in nbw.nodes)
-    assert len(nbw.initial_nodes) == 1, "more than one is not supported"
-    aht_init_node = list(nbw.initial_nodes)[0].name
-    aht_final_nodes = set(map(lambda n: n.name, nbw.acc_nodes))
-
+def nbw_to_nbt(nbw:NBW,
+               inputs:Set[Signal],
+               shared_aht:SharedAHT, dst_form_prop_mgr:DstFormulaPropMgr)\
+        -> AHT:
+    # 1. create transitions
     aht_transitions = set()
-    for n in nbw.nodes:
+    for n in nbw.nodes:  # type: automata.Node
         for (l, dst_acc_pairs) in n.transitions.items():
             l_inputs = Label((s, l[s])
                              for s in set(l.keys()).intersection(inputs))
             l_outputs = Label((s, l[s])
                               for s in set(l.keys()).difference(inputs))
-            for (dst_state, _) in dst_acc_pairs:
+            for (dst_state, _) in dst_acc_pairs:  # type: Tuple[automata.Node, bool]
                 ext_label = ExtLabel(l_inputs,
                                      inputs.difference(set(l_inputs.keys())),
                                      ExtLabel.EXISTS)
-                dst_formula_prop = DstFormulaProp(ext_label, dst_state.name)
+                dst_formula_prop = DstFormulaProp(ext_label,
+                                                  Node(dst_state.name,
+                                                       True,
+                                                       dst_state in nbw.acc_nodes))
 
                 # we introduce auxiliary signals for propositions '(ext_label, dst_state)'
                 # and later work with boolean expressions over such signals
                 # Here the boolean expression is simply 'aux_sig_name = 1'
-                aux_sig_name = dst_form_prop_manager.get_add_signal_name(dst_formula_prop)
+                aux_sig_name = dst_form_prop_mgr.get_add_signal_name(dst_formula_prop)
                 expr = prop(aux_sig_name)
 
-                t = Transition(n.name, l_outputs, expr)
+                t = Transition(Node(n.name, True, n in nbw.acc_nodes),
+                               l_outputs,
+                               expr)
                 aht_transitions.add(t)
+        # end of for (n.transitions)
+    # end of for (nbw.nodes)
 
-    aht = AHT(aht_init_node, aht_final_nodes, aht_transitions)
+    shared_aht.transitions.update(aht_transitions)
+
+    assert len(nbw.initial_nodes) == 1
+    nbw_init_node = list(nbw.initial_nodes)[0]
+    aht_init_node = Node(nbw_init_node.name, True, nbw_init_node in nbw.acc_nodes)
+    aht = AHT(aht_init_node)
     return aht
 
 
-def assert_no_name_collisions(formula, prefix_to_try:str):
+def assert_no_name_collisions(formula:Expr, prefix_to_try:str):
     for n in get_names(formula):
         assert prefix_to_try not in n, str(n)
 
@@ -124,7 +136,7 @@ def replace_ae(formula:Expr) -> (Tuple[Tuple[Expr, Expr]], Expr):
         #
     # end of ReplacerVisitor
 
-    prop_prefix = 'oxouv'  # TODO: better name?
+    prop_prefix = 'oxouv'  # TODO: XXX: better name!
     assert_no_name_collisions(formula, prop_prefix)
 
     replacer = ReplacerVisitor(prop_prefix)
@@ -133,7 +145,7 @@ def replace_ae(formula:Expr) -> (Tuple[Tuple[Expr, Expr]], Expr):
            new_f
 
 
-def is_ltl_formula(f_with_props):
+def is_ltl_formula(f_with_props) -> bool:
     class AEFinder(Visitor):
         def __init__(self):
             self.is_found = False
@@ -148,42 +160,19 @@ def is_ltl_formula(f_with_props):
     return not finder.is_found
 
 
-def _get_used_alien_props(nbt:AHT, all_alien_props:Iterable[Expr]) -> Iterable[Expr]:
-    aht_label_signals = set(chain(*[t.state_label.keys() for t in nbt.transitions]))
-    aht_label_props = set(prop(s.name) for s in aht_label_signals)
-    return aht_label_props.intersection(set(all_alien_props))
-
-
-def adapt_alphabet(nbt:AHT, aht_by_p:Dict[Expr, AHT], dstFormPropManager, transMgr:Set[Transition]) -> AHT:
+def adapt_alphabet(aht:AHT,
+                   aht_by_p:Dict[Expr, AHT],
+                   shared_aht:SharedAHT,
+                   dstFormPropMgr:DstFormulaPropMgr):
     """
     :param aht_by_p: must be: AHT by 'positive' proposition (signal=1)
-    :return _PARTIAL_ AHT, the resulting automaton does not unwind sub-automata transitions
-            except transitions from the initial state.
-            Thus:
-            - you need to complete the transitions!
-            - you need to complete the states:
-              the resulting AHT states are original states
-              plus only _some_ states of sub-automata
-              (those activated by transitions from the init states of sub-automata)
     """
-    new_transitions = set()
-    for t in nbt.transitions:
-        print()
-        print(t)
-        t_new_transitions = adapt_alphabet_for_transition(t, aht_by_p, dstFormPropManager)
-        print(to_str(t_new_transitions))
-        new_transitions.update(t_new_transitions)
 
-    alien_props_seen = _get_used_alien_props(nbt, set(aht_by_p.keys()))
-
-    new_final_nodes = set(nbt.final_nodes)
-    new_final_nodes.update(chain(*[aht_by_p[p].final_nodes for p in alien_props_seen]))
-
-    result_aht = AHT(nbt.init_node,
-                     new_final_nodes,
-                     new_transitions)
-
-    return result_aht
+    aht_transitions = get_reachable_from(aht.init_node, shared_aht, dstFormPropMgr)[1]
+    for t in aht_transitions:  # type: Transition
+        t_new_transitions = adapt_alphabet_for_transition(t, aht_by_p, shared_aht, dstFormPropMgr)
+        shared_aht.transitions.remove(t)
+        shared_aht.transitions.update(t_new_transitions)
 
 
 def _common_props(state_label:Label, props:Iterable[Expr]) -> Set[Expr]:
@@ -206,12 +195,16 @@ def _occurs_positive(proposition:Expr, state_label:Label) -> bool:
 
 def adapt_alphabet_for_transition(transition:Transition,
                                   aht_by_p:Dict[Expr, AHT],
+                                  shared_aht:SharedAHT,
                                   dstFormPropManager) -> Iterable[Transition]:
+    print("adapt_alphabet_for_transition")
+    print(transition)
     props_to_adapt = _common_props(transition.state_label, aht_by_p.keys())
 
     if not props_to_adapt:
         return [transition]
 
+    # Two steps:
     # 1. Pick one alien proposition and adapt the transition wrt. it
     # 2. Then call myself recursively for newly created transitions
 
@@ -219,10 +212,10 @@ def adapt_alphabet_for_transition(transition:Transition,
     p = props_to_adapt.pop()
 
     p_aht = aht_by_p[p] if _occurs_positive(p, transition.state_label) else \
-            dualize_aht(aht_by_p[p], dstFormPropManager)
+            dualize_aht(aht_by_p[p], shared_aht, dstFormPropManager)
 
-    p_init_transitions = filter(lambda p_t: p_t.src == p_aht.init_node,
-                                p_aht.transitions)
+    p_init_transitions = lfilter(lambda p_t: p_t.src == p_aht.init_node,
+                                 get_reachable_from(p_aht.init_node, shared_aht, dstFormPropManager)[1])
     p_relevant_init_transitions = lfilter(lambda p_t: is_non_empty_intersection(transition.state_label, p_t.state_label),
                                           p_init_transitions)
 
@@ -247,18 +240,19 @@ def adapt_alphabet_for_transition(transition:Transition,
     for t in p_induced_transitions:
         new_transitions.extend(adapt_alphabet_for_transition(t,
                                                              aht_by_p,
+                                                             shared_aht,
                                                              dstFormPropManager))
     return new_transitions
 
 
-def is_non_empty_intersection(base_label, l):
+def is_non_empty_intersection(base_label, l) -> bool:
     for k in base_label:
         if k in l and l[k] != base_label[k]:
             return False
     return True
 
 
-def intersection(base_label, l):
+def intersection(base_label, l) -> Label:
     assert is_non_empty_intersection(base_label, l), str(base_label) + ' & ' + str(l)
 
     new_dict = dict(base_label)
@@ -268,8 +262,8 @@ def intersection(base_label, l):
 
 def ctl2aht(spec:Spec,
             ltl2ba:LTL3BA,
-            dst_form_prop_mgr:DstFormulaPropMgr,
             shared_aht:SharedAHT,
+            dst_form_prop_mgr:DstFormulaPropMgr,
             _uniq=[]) -> AHT:
     """
     Assumes that spec.formula is in the normalized form
@@ -281,8 +275,8 @@ def ctl2aht(spec:Spec,
 
     if spec.formula.name == 'A':
         neg_spec = Spec(spec.inputs, spec.outputs, Normalizer().dispatch(~spec.formula))
-        neg_aht = ctl2aht(neg_spec, ltl2ba, dst_form_prop_mgr)
-        return dualize_aht(neg_aht)
+        neg_aht = ctl2aht(neg_spec, ltl2ba, shared_aht, dst_form_prop_mgr)
+        return dualize_aht(neg_aht, shared_aht, dst_form_prop_mgr)
 
     if spec.formula.name == 'E':
         f = spec.formula.arg
@@ -293,24 +287,22 @@ def ctl2aht(spec:Spec,
 
     assert is_ltl_formula(f_with_props), str(f_with_props)
 
-    nbw = ltl2ba.convert(f_with_props, 'n%i_'%len(_uniq))  # todo: do not create automaton for f, if it was already created
+    nbw = ltl2ba.convert(f_with_props, 'n%i_' % len(_uniq))  # todo: do not create automaton for f, if it was already created
 
-    nbt = nbw_to_nbt(nbw, spec.inputs, dst_form_prop_mgr)
+    aht = nbw_to_nbt(nbw, spec.inputs, shared_aht, dst_form_prop_mgr)
 
     aht_by_p = dict()
     for p,f in prop_f_pairs:
         aht_by_p[p] = ctl2aht(Spec(spec.inputs, spec.outputs, f),
                               ltl2ba,
+                              shared_aht,
                               dst_form_prop_mgr)
 
-    aht = adapt_alphabet(nbt, aht_by_p, dst_form_prop_mgr)
+    adapt_alphabet(aht, aht_by_p, shared_aht, dst_form_prop_mgr)
 
-    # assert that no alien propositions should be mentioned
-    for t in aht.transitions:  # type: Transition
+    # assert that no alien propositions are mentioned
+    for t in get_reachable_from(aht.init_node, shared_aht, dst_form_prop_mgr)[1]:  # type: Transition
         assert set(t.state_label.keys()).issubset(list(spec.inputs) + list(spec.outputs)), \
                "invariant violation"
-
-    # complete the automaton
-    # current
 
     return aht

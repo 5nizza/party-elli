@@ -1,5 +1,4 @@
 from functools import lru_cache
-from typing import Dict
 from typing import Set
 
 from interfaces.automata import Label
@@ -8,11 +7,34 @@ from interfaces.expr import Signal
 from parsing.visitor import Visitor
 
 
+class Node:
+    def __init__(self, name:str, is_existential:bool, is_final:bool):
+        self.name = name                        # type: str
+        self.is_existential = is_existential    # type: bool
+        self.is_final = is_final                # type: bool
+
+    def __eq__(self, other):
+        if not isinstance(other, Node):
+            return False
+        return other.name == self.name and \
+               other.is_existential == self.is_existential and \
+               other.is_final == self.is_final
+
+    def __hash__(self, *args, **kwargs):
+        return hash(self.name) + self.is_final + self.is_existential
+
+    def __str__(self):
+        return "'%s' (%s,%s)" %\
+               (self.name, ('uni', 'exi')[self.is_existential], ('nor', 'fin')[self.is_final])
+# end of Node
+
+
 class Transition:
-    def __init__(self, src:str, state_label:Label, dst_expr:Expr):
+    def __init__(self, src:Node, state_label:Label, dst_expr:Expr):
         self.src = src
         self.state_label = state_label
         self.dst_expr = dst_expr
+        assert isinstance(src, Node)  # TODO: rm me
 
     def __eq__(self, other):
         if not isinstance(other, Transition):
@@ -21,7 +43,7 @@ class Transition:
                self.state_label == other.state_label and \
                self.dst_expr == other.dst_expr
 
-    def __hash__(self, *args, **kwargs):
+    def __hash__(self):
         return hash(self.src) + hash(self.state_label) + hash(self.dst_expr)
 
     def __str__(self):
@@ -29,39 +51,34 @@ class Transition:
                (self.src, str(self.state_label), str(self.dst_expr))
 # end of Transition
 
-# class AHT:
-#     """ Alternating hesitant tree automaton """
-#     def __init__(self,
-#                  init_node:       str,
-#                  final_nodes:     Set[str],
-#                  transitions:     Set[Transition]):
-#         self.init_node = init_node
-#         self.final_nodes = final_nodes
-#         self.transitions = transitions
-#
-#     def __str__(self):
-#         return "init_node: '%s', final_nodes: '%s', transitions: '%s'" % \
-#                tuple(map(str, [self.init_node, self.final_nodes,
-#                                ', '.join(map(str, self.transitions))]))
-# end of AHT
 
+class AHT:
+    def __init__(self, init_node:Node):
+        self.init_node = init_node  # type: Node
 
-Node = str   # Node is not a class -- it is an alias to str
-AHT = Node   # AHT is not a class -- it is an alias to Node
+    def __str__(self):
+        return "AHT with init_node: '%s'" % self.init_node
+
+    def __eq__(self, other):
+        if other is None:
+            return False
+        assert issubclass(other.__class__, AHT), str(other.__class__)
+        return str(self) == str(other)
+
+    def __hash__(self):
+        return hash(str(self))
 
 
 class AtmRecord:
     def __init__(self):
-        self.init_node = None  # type: Node
+        self.init_node = None     # type: Node
         self.transitions = set()  # type: Set[Transition]
 
 
 class SharedAHT:
     def __init__(self):
-        self.automata = dict()          # type: Dict[str, Node]
+        # self.automata = set()           # type: Set[AHT]
         self.transitions = set()        # type: Set[Transition]
-        self.universal_nodes = set()    # type: Set[Node]
-        self.final_nodes = set()        # type: Set[Node]
 
 
 class ExtLabel:
@@ -77,7 +94,7 @@ class ExtLabel:
             assert isinstance(fi, Signal)
         self.type_ = type_
 
-    def dual(self):
+    def dual(self) -> 'ExtLabel':
         return ExtLabel(self.fixed_inputs,
                         self.free_inputs,
                         (ExtLabel.FORALL, ExtLabel.EXISTS)[self.type_ == ExtLabel.FORALL])
@@ -100,9 +117,9 @@ class ExtLabel:
 
 
 class DstFormulaProp:
-    def __init__(self, ext_label:ExtLabel, dst_state:str):
-        self.ext_label = ext_label
-        self.dst_state = dst_state
+    def __init__(self, ext_label:ExtLabel, dst_state:Node):
+        self.ext_label = ext_label  # type: ExtLabel
+        self.dst_state = dst_state  # type: Node
 
     def __str__(self):
         return '({e}, {q})'.format(e=str(self.ext_label), q=str(self.dst_state))
@@ -165,7 +182,7 @@ class DualizerVisitor(Visitor):
         # 2. dst_name
         # We need (2) since the dual automaton has dualized state names.
         dual_dst_form_prop = DstFormulaProp(dst_form_prop.ext_label.dual(),
-                                            _dualize_state_name(dst_form_prop.dst_state))
+                                            _dualize_node(dst_form_prop.dst_state))
         dual_signal = Signal(self.dstFormPropManager.get_add_signal_name(dual_dst_form_prop))
         return dual_signal
 # end of Dualizer
@@ -181,19 +198,69 @@ class RenamerVisitor(Visitor):
 # end of Renamer
 
 
-def _dualize_state_name(name):
+class NodesCollector(Visitor):
+    def __init__(self, dstPropFormMgr:DstFormulaPropMgr):
+        self.dstPropFormMgr = dstPropFormMgr
+        self.nodes = set()  # type: Set[Node]
+
+    def visit_signal(self, signal:Signal):
+        dstFormulaProp = self.dstPropFormMgr.get_dst_expr_prop(signal.name)
+        self.nodes.add(dstFormulaProp.dst_state)
+        return super().visit_signal(signal)
+
+
+def _dualize_state_name(name) -> str:
     return name[1:] if name.startswith('~')\
         else '~' + name
 
 
+def _dualize_node(node:Node) -> Node:
+    return Node(_dualize_state_name(node.name), not node.is_existential, node.is_final)
+
+
+def get_dst_nodes(dstPropFormMgr:DstFormulaPropMgr, transition:Transition) -> Set[Node]:
+    nc = NodesCollector(dstPropFormMgr)
+    nc.dispatch(transition.dst_expr)
+    return nc.nodes
+
+
+def get_reachable_from(node:Node,
+                       shared_aht:SharedAHT,
+                       dstPropFormMgr:DstFormulaPropMgr)\
+        -> (Set[Node], Set[Transition]):
+    # ~|transitions * nodes|
+    reachable_transitions = set()   # type: Set[Transition]
+    reachable_nodes = {node}        # type: Set[Node]
+    while 1:
+        has_changed = False
+
+        for t in shared_aht.transitions:  # type: Transition
+            if t.src in reachable_nodes:
+                candidates = get_dst_nodes(dstPropFormMgr, t)
+                has_changed |= len(candidates.difference(reachable_nodes)) > 0
+                reachable_nodes.update(candidates)
+                reachable_transitions.add(t)
+
+        if not has_changed:
+            break
+
+    return reachable_nodes, reachable_transitions
+
+
 @lru_cache()
-def dualize_aht(aht:AHT, dstFormPropManager:DstFormulaPropMgr) -> AHT:
-    new_init_node = _dualize_state_name(aht.init_node)
-    new_final_nodes = set(map(_dualize_state_name, aht.final_nodes))
+def dualize_aht(aht:AHT,
+                shared_aht:SharedAHT,
+                dstFormPropMgr:DstFormulaPropMgr)\
+        -> AHT:
 
-    new_transitions = set(map(lambda t: Transition(_dualize_state_name(t.src),
-                                                   Label(t.state_label),
-                                                   DualizerVisitor(dstFormPropManager).dispatch(t.dst_expr)),
-                               aht.transitions))
+    aht_nodes, aht_transitions = get_reachable_from(aht.init_node,
+                                                    shared_aht, dstFormPropMgr)
+    for t in aht_transitions:
+        shared_aht.transitions.add(Transition(_dualize_node(t.src),
+                                              Label(t.state_label),
+                                              DualizerVisitor(dstFormPropMgr).dispatch(t.dst_expr)))
 
-    return AHT(new_init_node, new_final_nodes, new_transitions)
+    new_init_node = _dualize_node(aht.init_node)
+    dual_aht = AHT(new_init_node)
+
+    return dual_aht

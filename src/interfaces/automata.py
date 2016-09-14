@@ -17,15 +17,15 @@ class Automaton:
         return self._name
 
     @property
-    def nodes(self) -> Iterable['Node']:
+    def nodes(self) -> Set['Node']:
         return self._nodes
 
     @property
-    def initial_nodes(self) -> set:
+    def initial_nodes(self) -> Set['Node']:
         return self._init_nodes
 
     @property
-    def acc_nodes(self):
+    def acc_nodes(self) -> Set['Node']:
         # TODO: attention: will deprecated for rejecting edges automaton
         # TODO: rename to final nodes
         return self._acc_nodes
@@ -61,7 +61,7 @@ class Node:
             self._transitions = {}  # label -> {node1,...}
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self._name
 
     @property
