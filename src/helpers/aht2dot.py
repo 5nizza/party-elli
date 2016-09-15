@@ -66,9 +66,6 @@ def convert(shared_aht:SharedAHT, dstFormPropMgr:DstFormulaPropMgr)\
                                        color=('red', 'green')[n.is_existential],
                                        shape=('ellipse', 'doubleoctagon')[n.is_final])
                            for n in all_nodes])
-    # final_nodes_dot = '\n'.join(['"{0}" [shape=doubleoctagon];'.format(n)
-    #                              for n in final_nodes])
-    # TODO: mark exist states
 
     dot_lines = StrAwareList() + 'digraph "automaton" {' + \
                 'rankdir=LR;' + \
@@ -131,6 +128,7 @@ def _ext_label_to_short_string(el:ExtLabel) -> str:
     res = ''
     if el.fixed_inputs:
         res += _label_to_short_string(el.fixed_inputs)
+        res += '.'
     if el.free_inputs:
         res += "{Q}({free})".format(Q={el.FORALL:'A', el.EXISTS:'E'}[el.type_],
                                     free=','.join(map(str, el.free_inputs)))
