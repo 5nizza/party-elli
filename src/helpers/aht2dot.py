@@ -1,4 +1,7 @@
+from collections import namedtuple
+from types import SimpleNamespace
 from typing import List
+from typing import Set
 
 from sympy import Symbol
 from sympy.logic.boolalg import Or, And, Not, to_dnf
@@ -21,21 +24,24 @@ def convert(shared_aht:SharedAHT, dstFormPropMgr:DstFormulaPropMgr)\
         __.append('')
         return name
 
-    final_nodes = set()  # Set[Node]
-    exist_nodes = set()  # Set[Node]
+    all_nodes = set()  # Set[Node]
 
     trans_dot = StrAwareList()
-    inv_nodes = set()
+    InvisNode = namedtuple('InvisNode', ['name', 'is_existential'])
+    invis_nodes = set()  # type: Set['InvNode']
     for t in shared_aht.transitions:  # type: Transition
-        inv_node = _gen_unique_name()
-        inv_nodes.add(inv_node)
+        all_nodes.add(t.src)
+
+        inv_node = InvisNode(name=_gen_unique_name(),
+                             is_existential=t.src.is_existential)
+        invis_nodes.add(inv_node)
 
         trans_dot += '"{src}" -> "{invisible}" [label="{label}"];'.format(
-            src=str(t.src), invisible=inv_node, label=_label_to_short_string(t.state_label))
+            src=t.src.name, invisible=inv_node.name, label=_label_to_short_string(t.state_label))
 
         cubes = to_dnf_set(t.dst_expr)  # type: List[List[Expr]]
 
-        colors = 'black purple green yellow blue orange red brown pink gray'.split()
+        colors = 'black blue purple green yellow orange red brown pink gray'.split()
         for cube in cubes:  # type: List[Expr]
             # each cube gets its own color
             color = colors.pop(0) if len(colors) else 'gray'
@@ -44,28 +50,31 @@ def convert(shared_aht:SharedAHT, dstFormPropMgr:DstFormulaPropMgr)\
                 dstFormProp = dstFormPropMgr.get_dst_expr_prop(get_sig_number(lit)[0].name)
 
                 trans_dot += '"{invisible}" -> "{dst}" [color={color}, label="{ext_label}"];'.format(
-                    invisible=inv_node,
-                    dst=str(dstFormProp.dst_state),
+                    invisible=inv_node.name,
+                    dst=dstFormProp.dst_state.name,
                     color=color,
                     ext_label=_ext_label_to_short_string(dstFormProp.ext_label))
 
-                dst_state = dstFormProp.dst_state
-                if dst_state.is_final:
-                    final_nodes.add(dst_state)
-                if dst_state.is_existential:
-                    exist_nodes.add(dst_state)
+                all_nodes.add(dstFormProp.dst_state)
     # end of 'for t in aht.transitions'
 
-    inv_nodes_dot = ['{n} [shape=point];'.format(n=n) for n in inv_nodes]
-    final_nodes_dot = '\n'.join(['"{0}" [shape=doubleoctagon];'.format(n)
-                                 for n in final_nodes])
+    invis_nodes_dot = ['{n} [label="DNF", shape=box, fontsize=6, style=rounded, margin=0, width=0.3, height=0.2];'
+                           .format(n=n.name)
+                       for n in invis_nodes]
+    nodes_dot = '\n'.join(['"{n}" [color="{color}", shape="{shape}"];'
+                               .format(n=n.name,
+                                       color=('red', 'green')[n.is_existential],
+                                       shape=('ellipse', 'doubleoctagon')[n.is_final])
+                           for n in all_nodes])
+    # final_nodes_dot = '\n'.join(['"{0}" [shape=doubleoctagon];'.format(n)
+    #                              for n in final_nodes])
     # TODO: mark exist states
 
     dot_lines = StrAwareList() + 'digraph "automaton" {' + \
                 'rankdir=LR;' + \
-                final_nodes_dot + '\n' + \
+                nodes_dot + \
                 trans_dot +\
-                inv_nodes_dot +\
+                invis_nodes_dot +\
                 '}'
 
     return '\n'.join(dot_lines)

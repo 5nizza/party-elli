@@ -1,13 +1,13 @@
-from typing import Dict, Tuple, Set, Iterable
+from typing import Dict, Tuple, Set, Iterable, List
 
 from helpers.expr_helper import get_names, Normalizer, get_sig_number
-from helpers.python_ext import lfilter
+from helpers.python_ext import lfilter, to_str
 from helpers.spec_helper import prop
 from interfaces import automata
 from interfaces.aht_automaton import AHT, dualize_aht, Transition, ExtLabel, DstFormulaProp, DstFormulaPropMgr, \
     SharedAHT, get_reachable_from, Node
 from interfaces.automata import Automaton as NBW, Label
-from interfaces.expr import Expr, Signal, UnaryOp, BinOp
+from interfaces.expr import Expr, Signal, UnaryOp, BinOp, Bool
 from interfaces.spec import Spec
 from ltl3ba.ltl2automaton import LTL3BA
 from parsing.visitor import Visitor
@@ -28,7 +28,7 @@ def is_state_formula(formula:Expr, inputs:Iterable[Signal]) -> bool:
             return unary_op
 
         def visit_binary_op(self, binary_op:BinOp):
-            assert binary_op.name in 'URW*+', str(binary_op)
+            assert binary_op.name in 'URW*+=', str(binary_op)
 
             if binary_op.name in '*+':
                 return super().visit_binary_op(binary_op)  # inspect arguments
@@ -167,6 +167,7 @@ def adapt_alphabet(aht:AHT,
     """
     :param aht_by_p: must be: AHT by 'positive' proposition (signal=1)
     """
+    assert aht.init_node.is_existential, "we must adapt alphabets for NBT automata only"
 
     aht_transitions = get_reachable_from(aht.init_node, shared_aht, dstFormPropMgr)[1]
     for t in aht_transitions:  # type: Transition
@@ -197,8 +198,8 @@ def adapt_alphabet_for_transition(transition:Transition,
                                   aht_by_p:Dict[Expr, AHT],
                                   shared_aht:SharedAHT,
                                   dstFormPropManager) -> Iterable[Transition]:
-    print("adapt_alphabet_for_transition")
-    print(transition)
+    assert transition.src.is_existential, "we never adapt alphabet of universal automata (see below)"
+
     props_to_adapt = _common_props(transition.state_label, aht_by_p.keys())
 
     if not props_to_adapt:
@@ -214,16 +215,53 @@ def adapt_alphabet_for_transition(transition:Transition,
     p_aht = aht_by_p[p] if _occurs_positive(p, transition.state_label) else \
             dualize_aht(aht_by_p[p], shared_aht, dstFormPropManager)
 
-    p_init_transitions = lfilter(lambda p_t: p_t.src == p_aht.init_node,
-                                 get_reachable_from(p_aht.init_node, shared_aht, dstFormPropManager)[1])
-    p_relevant_init_transitions = lfilter(lambda p_t: is_non_empty_intersection(transition.state_label, p_t.state_label),
+    p_init_transitions = filter(lambda p_t: p_t.src == p_aht.init_node,
+                                get_reachable_from(p_aht.init_node, shared_aht, dstFormPropManager)[1])
+    p_relevant_init_transitions = lfilter(lambda p_t: is_non_empty_intersection(transition.state_label,
+                                                                                p_t.state_label),
                                           p_init_transitions)
 
-    assert p_relevant_init_transitions, "For every o |= t.state_label, " \
-                                        "there must be at least one transition satisfying o " \
-                                        "from the init state of 'aux' AHT (p_aht)"
+    p_induced_transitions = get_induced_transitions(p, p_aht, p_relevant_init_transitions, transition)
 
-    p_induced_transitions = list()
+    # 2. Adapt each newly generated transition.
+    #    (It does not contain `p` but may contain other alien propositions.)
+    new_transitions = list()
+    for t in p_induced_transitions:
+        new_transitions.extend(adapt_alphabet_for_transition(t,
+                                                             aht_by_p,
+                                                             shared_aht,
+                                                             dstFormPropManager))
+    return new_transitions
+
+
+def get_induced_transitions(p, p_aht, p_relevant_init_transitions, transition) -> List[Transition]:
+    assert get_sig_number(p)[0] in transition.state_label, str(p)
+
+    if not p_relevant_init_transitions:
+        # We might get empty `p_relevant_init_transitions`, e.g.:
+        # (non-det automaton):
+        # a --[e,g]--> b
+        # and universal automaton for `e` has only:
+        # x --[!g]--> y
+        # But actually the last means:
+        # x --[!g]--> y
+        #   --[g]--> true
+        # and hence we can keep the original transition.
+        # In general case, when `p_relevant_init_transitions` is empty:
+        # (NB: we adapt alphabet of NBTs only)
+        #    - if `p_aht` is universal, then `new_transition = orig_transition & true`  (stays the same)
+        #    -      ...   is non-deter, then `new_transition = orig_transition & false` (thus, should be removed)
+        if not p_aht.init_node.is_existential:  # p_aht is UCT
+            new_trans_label = Label(transition.state_label)
+            del new_trans_label[get_sig_number(p)[0]]
+            # transition stays almost unchanged,
+            # except signal(p) is removed from `state_label`
+            return [Transition(transition.src, new_trans_label, transition.dst_expr)]
+        else:
+            # transition is removed
+            return []
+
+    p_induced_transitions = []
     for p_t in p_relevant_init_transitions:
         label_and = Label(transition.state_label)
         del label_and[get_sig_number(p)[0]]
@@ -234,15 +272,7 @@ def adapt_alphabet_for_transition(transition:Transition,
         t_and = Transition(transition.src, label_and, dst_and)
         p_induced_transitions.append(t_and)
 
-    # 2. Adapt each newly generated transition.
-    #    (It does not contain the `p` but may contain other alien propositions.)
-    new_transitions = list()
-    for t in p_induced_transitions:
-        new_transitions.extend(adapt_alphabet_for_transition(t,
-                                                             aht_by_p,
-                                                             shared_aht,
-                                                             dstFormPropManager))
-    return new_transitions
+    return p_induced_transitions
 
 
 def is_non_empty_intersection(base_label, l) -> bool:
@@ -302,7 +332,7 @@ def ctl2aht(spec:Spec,
 
     # assert that no alien propositions are mentioned
     for t in get_reachable_from(aht.init_node, shared_aht, dst_form_prop_mgr)[1]:  # type: Transition
-        assert set(t.state_label.keys()).issubset(list(spec.inputs) + list(spec.outputs)), \
-               "invariant violation"
+        assert t.state_label.keys() <= (spec.inputs | spec.outputs), \
+               "invariant violation: " + str(t.state_label.keys())
 
     return aht
