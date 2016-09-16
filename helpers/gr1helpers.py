@@ -2,8 +2,8 @@ import logging
 
 from typing import List
 
-from helpers.console_helpers import print_green, print_red
-from interfaces.expr import Expr, and_expr, UnaryOp, BinOp
+from helpers.expr_helper import and_expr
+from interfaces.expr import Expr, UnaryOp, BinOp
 from ltl3ba.ast_to_ltl3ba import ConverterToLtl2BaFormatVisitor
 
 

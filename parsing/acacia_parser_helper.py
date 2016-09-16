@@ -1,8 +1,9 @@
 from typing import Iterable
 
+from helpers.expr_helper import and_expr
 from helpers.gr1helpers import strengthen1, strengthen2
 from helpers.spec_helper import split_safety_liveness
-from interfaces.expr import Signal, Expr, and_expr
+from interfaces.expr import Signal, Expr
 from parsing import acacia_parser
 
 

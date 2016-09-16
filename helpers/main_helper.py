@@ -15,7 +15,7 @@ def get_root_dir() -> str:
     #make paths independent of current working directory
     rel_path = str(os.path.relpath(__file__))
     bosy_dir_toks = ['./'] + rel_path.split(os.sep)   # abspath returns 'windows' (not cygwin) path
-    root_dir = ('/'.join(bosy_dir_toks[:-1]) + '/../../')   # root dir is two levels up compared to helpers/.
+    root_dir = ('/'.join(bosy_dir_toks[:-1]) + '/../')   # root dir is two levels up compared to helpers/.
     return root_dir
 
 

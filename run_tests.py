@@ -85,7 +85,7 @@ def main():
 
     all_passed = True
     for benchmark in realizable + unrealizable + unknown:
-        result = run_benchmark('src/elli.py', benchmark, _get_status(benchmark))
+        result = run_benchmark('elli.py', benchmark, _get_status(benchmark))
         all_passed &= result
 
         if not args.nonstop and result is False:
