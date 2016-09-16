@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Set
+from typing import Set, Iterable
 
 from interfaces.automata import Label
 from interfaces.expr import Expr, UnaryOp, BinOp, Bool, Number
@@ -67,12 +67,6 @@ class AHT:
 
     def __hash__(self):
         return hash(str(self))
-
-
-class AtmRecord:
-    def __init__(self):
-        self.init_node = None     # type: Node
-        self.transitions = set()  # type: Set[Transition]
 
 
 class SharedAHT:
@@ -225,7 +219,7 @@ def get_dst_nodes(dstPropFormMgr:DstFormulaPropMgr, transition:Transition) -> Se
 
 
 def get_reachable_from(node:Node,
-                       shared_aht:SharedAHT,
+                       transitions:Iterable[Transition],
                        dstPropFormMgr:DstFormulaPropMgr)\
         -> (Set[Node], Set[Transition]):
     # ~|transitions * nodes|
@@ -234,7 +228,7 @@ def get_reachable_from(node:Node,
     while 1:
         has_changed = False
 
-        for t in shared_aht.transitions:  # type: Transition
+        for t in transitions:  # type: Transition
             if t.src in reachable_nodes:
                 candidates = get_dst_nodes(dstPropFormMgr, t)
                 has_changed |= len(candidates.difference(reachable_nodes)) > 0
@@ -254,7 +248,7 @@ def dualize_aht(aht:AHT,
         -> AHT:
 
     aht_nodes, aht_transitions = get_reachable_from(aht.init_node,
-                                                    shared_aht, dstFormPropMgr)
+                                                    shared_aht.transitions, dstFormPropMgr)
     for t in aht_transitions:
         shared_aht.transitions.add(Transition(_dualize_node(t.src),
                                               Label(t.state_label),

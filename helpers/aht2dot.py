@@ -1,5 +1,4 @@
 from collections import namedtuple
-from types import SimpleNamespace
 from typing import List
 from typing import Set
 
@@ -11,25 +10,27 @@ from sympy.logic.boolalg import false as sympy_false
 from helpers.expr_helper import get_sig_number
 from helpers.python_ext import StrAwareList
 from helpers.spec_helper import prop
-from interfaces.aht_automaton import DstFormulaPropMgr, ExtLabel, SharedAHT
+from interfaces.aht_automaton import DstFormulaPropMgr, ExtLabel, SharedAHT, get_reachable_from, Node
 from interfaces.aht_automaton import Transition
 from interfaces.expr import Expr, UnaryOp, Bool, BinOp, Number
 from parsing.visitor import Visitor
 
 
-def convert(shared_aht:SharedAHT, dstFormPropMgr:DstFormulaPropMgr)\
+def convert(init_node:Node or None, shared_aht:SharedAHT, dstFormPropMgr:DstFormulaPropMgr)\
         -> str:
     def _gen_unique_name(__=[]) -> str:  # mutable default arg is on purpose
         name = '__n' + str(len(__))
         __.append('')
         return name
 
-    all_nodes = set()  # Set[Node]
+    transitions = shared_aht.transitions if not init_node \
+        else get_reachable_from(init_node, shared_aht.transitions, dstFormPropMgr)[1]
 
+    all_nodes = set()  # Set[Node]
     trans_dot = StrAwareList()
     InvisNode = namedtuple('InvisNode', ['name', 'is_existential'])
     invis_nodes = set()  # type: Set['InvNode']
-    for t in shared_aht.transitions:  # type: Transition
+    for t in transitions:  # type: Transition
         all_nodes.add(t.src)
 
         inv_node = InvisNode(name=_gen_unique_name(),
@@ -61,10 +62,11 @@ def convert(shared_aht:SharedAHT, dstFormPropMgr:DstFormulaPropMgr)\
     invis_nodes_dot = ['{n} [label="DNF", shape=box, fontsize=6, style=rounded, margin=0, width=0.3, height=0.2];'
                            .format(n=n.name)
                        for n in invis_nodes]
-    nodes_dot = '\n'.join(['"{n}" [color="{color}", shape="{shape}"];'
+    nodes_dot = '\n'.join(['"{n}" [color="{color}", shape="{shape}" {initial}];'
                                .format(n=n.name,
                                        color=('red', 'green')[n.is_existential],
-                                       shape=('ellipse', 'doubleoctagon')[n.is_final])
+                                       shape=('ellipse', 'doubleoctagon')[n.is_final],
+                                       initial='' if n != init_node else ', style=filled, fillcolor=gray')
                            for n in all_nodes])
 
     dot_lines = StrAwareList() + 'digraph "automaton" {' + \

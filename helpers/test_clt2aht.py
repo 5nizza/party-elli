@@ -69,7 +69,7 @@ class TestCtl2Aht(TestCase):
             ctl2aht(spec, self.ltl2ba, shared_aht, dstFormPropMgr)
 
             with tempfile.NamedTemporaryFile(delete=False) as dot_file:
-                dot = aht2dot.convert(shared_aht, dstFormPropMgr)
+                dot = aht2dot.convert(None, shared_aht, dstFormPropMgr)
                 dot_file.write(dot.encode())
                 # with open('/tmp/ttmmpp%i.dot'%i, 'w') as output:
                 #     output.write(dot)

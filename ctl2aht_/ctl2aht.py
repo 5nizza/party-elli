@@ -169,7 +169,7 @@ def adapt_alphabet(aht:AHT,
     """
     assert aht.init_node.is_existential, "we must adapt alphabets for NBT automata only"
 
-    aht_transitions = get_reachable_from(aht.init_node, shared_aht, dstFormPropMgr)[1]
+    aht_transitions = get_reachable_from(aht.init_node, shared_aht.transitions, dstFormPropMgr)[1]
     for t in aht_transitions:  # type: Transition
         t_new_transitions = adapt_alphabet_for_transition(t, aht_by_p, shared_aht, dstFormPropMgr)
         shared_aht.transitions.remove(t)
@@ -216,7 +216,7 @@ def adapt_alphabet_for_transition(transition:Transition,
             dualize_aht(aht_by_p[p], shared_aht, dstFormPropManager)
 
     p_init_transitions = filter(lambda p_t: p_t.src == p_aht.init_node,
-                                get_reachable_from(p_aht.init_node, shared_aht, dstFormPropManager)[1])
+                                get_reachable_from(p_aht.init_node, shared_aht.transitions, dstFormPropManager)[1])
     p_relevant_init_transitions = lfilter(lambda p_t: is_non_empty_intersection(transition.state_label,
                                                                                 p_t.state_label),
                                           p_init_transitions)
@@ -331,7 +331,7 @@ def ctl2aht(spec:Spec,
     adapt_alphabet(aht, aht_by_p, shared_aht, dst_form_prop_mgr)
 
     # assert that no alien propositions are mentioned
-    for t in get_reachable_from(aht.init_node, shared_aht, dst_form_prop_mgr)[1]:  # type: Transition
+    for t in get_reachable_from(aht.init_node, shared_aht.transitions, dst_form_prop_mgr)[1]:  # type: Transition
         assert t.state_label.keys() <= (spec.inputs | spec.outputs), \
                "invariant violation: " + str(t.state_label.keys())
 

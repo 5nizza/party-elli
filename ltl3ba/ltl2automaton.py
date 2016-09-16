@@ -28,7 +28,7 @@ class LTL3BA:
         format_converter = ConverterToLtl2BaFormatVisitor()
         property_in_ltl2ba_format = format_converter.dispatch(expr)
 
-        logging.info('Ltl2UCW: converting:\n' + property_in_ltl2ba_format)
+        logging.debug('Ltl2UCW: converting:\n' + property_in_ltl2ba_format)
 
         return self.convert_raw(property_in_ltl2ba_format, format_converter.signal_by_name, states_prefix, timeout)
 

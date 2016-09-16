@@ -66,7 +66,7 @@ def check_real(spec:Spec,
     timer = Timer()
     aht_automaton = ctl2aht.convert(spec, timeout=atm_timeout_sec)  # note no negation
     logging.info('(real) automaton size is: %i' % len(aht_automaton.nodes))
-    logging.debug('(real) automaton (dot) is:\n' + aht2dot.convert(aht_automaton))
+    logging.debug('(real) automaton (dot) is:\n' + aht2dot.convert_all(aht_automaton))
     logging.debug('(real) automaton translation took (sec): %i' % timer.sec_restart())
 
     encoder = create_encoder(spec.inputs, spec.outputs,
