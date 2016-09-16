@@ -1,10 +1,10 @@
-# Party ('elli')
+# Party
 
 SMT based Bounded Synthesis, an implementation of the approach of 
 [Schewe and Finkbeiner](https://www.react.uni-saarland.de/publications/atva07.pdf).
 
 ## Requirements
-- Ubuntu 14.04 (likely to work with others)
+- Ubuntu 16.04 (likely to work with others)
 - python3 (tested with version 3.4)
 - Z3 (tested with version 4.3.2 and 4.4.1)
 - ltl3ba (tested with versions 1.1.2 and 1.0.2)
