@@ -4,12 +4,9 @@ tmp*
 parser.out
 parsetab.py
 *.dot
-src/config.py
+config.py
 benchmarks/non_parameterized/others/*.smt2
 benchmarks/non_parameterized/others/*.dot
 benchmarks/non_parameterized/others/callgrind*
 *.smt2
 profiling_z3/*
-
-!src/ith-process/*
-!src/zero-process/*
