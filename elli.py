@@ -16,7 +16,6 @@ from synthesis.encoder_builder import create_encoder
 from synthesis.funcs_args_types_names import ARG_MODEL_STATE
 from synthesis.smt_logic import UFLRA
 
-
 REALIZABLE = 10
 UNREALIZABLE = 20
 UNKNOWN = 30

@@ -1,0 +1,111 @@
+from interfaces.expr import *
+import third_party.ply.lex as lex
+
+
+class CTLLexer:
+    def __init__(self):
+        super().__init__()
+
+    tokens = (
+        'ASSUME', 'SPEC_UNIT', 'NAME', 'NUMBER', 'BOOL',
+        'TEMPORAL_UNARY', 'NEG', 'TEMPORAL_BINARY',
+        'PATH',
+        'OR', 'AND', 'IMPLIES', 'EQUIV', 'EQUALS',
+        'LPAREN','RPAREN', 'LBRACKET', 'RBRACKET',
+        'SEP'
+    )
+
+    #reserved words: syntactic sugar to help to match exactly reserved word
+    reserved_bools = dict((s, s) for s in ('TRUE', 'FALSE', 'true', 'false'))
+
+    #constant to ensure consistency of the code
+    BIN_OPS = ('+','*','->','<->','=','U', 'W')
+
+    ############################################################
+    # http://www.dabeaz.com/ply/ply.html#ply_nn6
+    # functions first, vars second
+    # All tokens defined by functions are added in the same order as they appear in the lexer file.
+    # Tokens defined by strings are added next by sorting them in order of decreasing regular
+    # expression length (longer expressions are added first).
+
+    t_OR      = r'\+'
+    t_AND     = r'\*'
+    t_IMPLIES = r'->'
+    t_EQUIV   = r'<->'
+    t_EQUALS  = r'='
+    t_NEG     = r'\!'
+
+    t_LPAREN  = r'\('
+    t_RPAREN  = r'\)'
+
+    t_LBRACKET  = r'\['
+    t_RBRACKET  = r'\]'
+
+    t_SEP = r';+'
+
+    t_ignore = " \t"
+    t_ignore_comment = r"\#.*"
+
+    def t_ASSUME(self, t):
+        """assume"""
+        return t
+
+    def t_GROUP_ORDER(self, t):
+        """group_order.*"""
+        pass
+
+    def t_SPEC_UNIT(self, t):
+        """spec_unit"""
+        return t
+
+    def t_PATH(self, t):
+        r"""(A|E)(?=([ \t\n]*\()|([ \t\n]+))"""  # path operators require parenthesis or blank spaces
+        return t
+
+    def t_TEMPORAL_UNARY(self, t):
+        r"""(G|F|X)(?=([ \t\n]*\()|([ \t\n]+))"""  # unary temporal operators require parenthesis or blank spaces
+        return t
+
+    def t_TEMPORAL_BINARY(self, t):
+        r"""(U|W)(?=[ \t\n])"""  # temporal operators require parenthesis
+        return t
+
+    def t_NAME(self, t):
+        r"""[a-zA-Z_][a-zA-Z0-9_]*"""
+
+        if t.value in self.reserved_bools:
+            t.type = 'BOOL'
+            t.value = Bool(t.value == 'true' or t.value == 'TRUE')
+            return t
+
+        return t
+
+    def t_NUMBER(self, t):
+        r"""\d+"""
+        try:
+            value = int(t.value)
+            if not (0 <= value <= 1):
+                raise ValueError('currently only 0, 1 are supported')
+            t.value = Number(value)
+        except ValueError:
+            print("Integer value too large %d", t.value)
+            t.value = '0'
+
+        return t
+
+    def t_newline(self, t):
+        r"""\n+"""
+        t.lexer.lineno += t.value.count("\n")
+
+    def t_error(self, t):
+        if t:
+            print("Illegal character '%s'" % t.value[0])
+            t.lexer.skip(1)
+        else:
+            print('Error somewhere, current token is None')
+        assert 0
+
+    def build(self):
+        self.lexer = lex.lex(module=self)
+        return self.lexer
+
