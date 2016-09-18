@@ -6,7 +6,6 @@ from typing import Set
 
 from helpers.expr_helper import get_sig_number
 from helpers.logging_helper import log_entrance
-from helpers.python_ext import to_str
 from helpers.python_ext import lmap, lfilter
 from interfaces.aht_automaton import AHT, Node, get_reachable_from, Transition, ExtLabel
 from interfaces.aht_automaton import DstFormulaPropMgr
@@ -76,10 +75,10 @@ class CTLEncoder(EncoderInterface):
         self.model_init_state = model_init_state  # type: int
         self.last_allowed_states = None           # type: range
 
-    def _smt_out(self, label:Label, s_m:str, q:Node) -> str:
+    def _smt_out(self, label:Label, s_m:str) -> str:
         conjuncts = []
 
-        args_dict = self._build_args_dict(s_m, label, q)
+        args_dict = { ARG_MODEL_STATE: s_m }
 
         for sig, val in label.items():
             if sig not in self.descr_by_output:
@@ -137,19 +136,20 @@ class CTLEncoder(EncoderInterface):
     ##
 
     # encoding headers
-    def encode_headers(self, model_states):
+    def encode_headers(self, model_states:Iterable[int]):
         self._encode_automata_functions()
         self._encode_model_functions(model_states)
         self._encode_counters()
 
-    def _encode_model_functions(self, model_states):
+    def _encode_model_functions(self, model_states:Iterable[int]):
         self.solver.declare_enum(TYPE_MODEL_STATE, [smt_name_m(m) for m in model_states])
         self._define_declare_functions([self.tau_desc])
         self._define_declare_functions(self.descr_by_output.values())
 
     def _encode_automata_functions(self):
+        aht_nodes = get_reachable_from(self.aht.init_node, self.aht_transitions, self.dstPropMgr)[0]
         self.solver.declare_enum(TYPE_A_STATE,
-                                 map(lambda n: smt_name_spec(n, TYPE_A_STATE), self.automaton.nodes))
+                                 map(lambda n: smt_name_spec(n.name, TYPE_A_STATE), aht_nodes))
 
     def _encode_counters(self):
         self.solver.declare_fun(self.reach_func_desc)
@@ -157,24 +157,25 @@ class CTLEncoder(EncoderInterface):
 
     # ################## encoding rules ####################
     def encode_initialization(self):
-        for q, m in product(self.automaton.initial_nodes, [self.model_init_state]):
-            vals_by_vars = self._build_args_dict(smt_name_m(m), None, q)
+        q_init = self.aht.init_node
+        m_init = self.model_init_state
+        reach_args = {ARG_A_STATE: smt_name_spec(q_init.name, TYPE_A_STATE),
+                      ARG_MODEL_STATE: smt_name_m(m_init)}
 
-            self.solver.assert_(
-                self.solver.call_func(
-                    self.reach_func_desc, vals_by_vars))
+        self.solver.assert_(
+            self.solver.call_func(
+                self.reach_func_desc, reach_args))
 
     def encode_run_graph(self, states_to_encode:Iterable[int]):
         # state_to_rejecting_scc = build_state_to_rejecting_scc(self.automaton)
-        state_to_rejecting_scc = dict()
 
         states, _ = get_reachable_from(self.aht.init_node,
                                        self.aht_transitions,
                                        self.dstPropMgr)
         for q in states:                # type: Node
             for m in states_to_encode:  # type: int
-                self._encode_state(q, m, state_to_rejecting_scc)
-            self.solver.comment('encoded spec state ' + smt_name_spec(q, TYPE_A_STATE))
+                self._encode_state(q, m)
+            self.solver.comment('encoded spec state ' + smt_name_spec(q.name, TYPE_A_STATE))
 
     def _get_greater_op(self, q:Node):
         if q.is_existential:
@@ -200,95 +201,50 @@ class CTLEncoder(EncoderInterface):
         #
         # return [self.solver.op_ge, self.solver.op_gt][is_rejecting]
 
-    def _encode_state(self,
-                      q:Node,
-                      m:int,
-                      state_to_rejecting_scc):
-        # syntax sugar
-        def smt_rk(args:Dict[str,str]):
-            """ :param args: 'smt value by smt argument' """
-            return self.solver.call_func(self.rank_func_desc, args)
-
-        def smt_reach(args:Dict[str,str]):
-            """ :param args: 'smt value by smt argument' """
-            return self.solver.call_func(self.reach_func_desc, args)
-        #
-
+    def _encode_state(self, q:Node, m:int):
         q_transitions = lfilter(lambda t: t.src == q, self.aht_transitions)
 
         # Encoding:
         # - if q is existential, then one of the transitions must fire:
         #
         #     reach(q,t) ->
-        #                OR(state_label \in q_transitions): sys_out=state_label & reach(q',t')
+        #                OR{state_label \in q_transitions}: sys_out=state_label & reach(q',t')
         #
         # - if q is universal, then all transitions of that system output should fire
         #
         #     reach(q,t) ->
-        #                AND(state_label \in q_transitions): sys_out=state_label -> reach(q',t')
+        #                AND{state_label \in q_transitions}: sys_out=state_label -> reach(q',t')
         #
 
+        # build s_premise `reach(q,t)`
         s_m = smt_name_m(m)
         s_q = smt_name_spec(q.name, TYPE_A_STATE)
         s_premise = self.solver.call_func(self.reach_func_desc,
                                           {ARG_MODEL_STATE: s_m,
                                            ARG_A_STATE: s_q})
 
-        s_conclusion_elements = set()   # type: Set[str, str]
+        # build s_conclusion `exists`
+        s_conclusion_out_sExpr_pairs = set()   # type: Set[str, str]
         for t in q_transitions:  # type: Transition
-            s_t_state_label = self._smt_out(t.state_label, s_m, q)
+            s_t_state_label = self._smt_out(t.state_label, s_m)
             s_dst_expr = self._translate_dst_expr_into_smt(t.dst_expr, q, m)
-            s_conclusion_elements += (s_t_state_label, s_dst_expr)
+            s_conclusion_out_sExpr_pairs.add( (s_t_state_label, s_dst_expr) )
 
-        print(s_premise)
-        print(to_str(s_conclusion_elements))
-        exit(0)
+        if q.is_existential:
+            s_conclusion_elements = lmap(lambda sce: self.solver.op_and(sce),
+                                         s_conclusion_out_sExpr_pairs)
+        else:
+            s_conclusion_elements = lmap(lambda sce: self.solver.op_implies(sce[0],
+                                                                            sce[1]),
+                                         s_conclusion_out_sExpr_pairs)
 
-        s_conclusion = self._build_conclusion(q.is_existential, s_conclusion_elements)
+        s_conclusion = (self.solver.op_and,
+                        self.solver.op_or)[q.is_existential]\
+            (s_conclusion_elements)
 
         s_assertion = self.solver.op_implies(s_premise, s_conclusion)
 
         self.solver.assert_(s_assertion)
-
-
-        # args_dict = self._build_args_dict(smt_m, i_o, q)
-        # free_input_args = self._get_free_input_args(i_o)
-        #
-        # smt_out = self._smt_out(i_o, smt_m, q)
-        # smt_pre = self.solver.op_and([smt_reach(args_dict), smt_out])
-        #
-        # smt_m = smt_name_m(m)
-        #
-        # args_dict = self._build_args_dict(smt_m, i_o, q)
-        # free_input_args = self._get_free_input_args(i_o)
-        #
-        # smt_out = self._smt_out(i_o, smt_m, q)
-        # smt_pre = self.solver.op_and([smt_reach(args_dict), smt_out])
-        #
-        # dst_set = q.transitions[i_o]
-        # smt_m_next = self.solver.call_func(self.tau_desc, args_dict)
-        #
-        # smt_post_conjuncts = []
-        # for q_next, is_rejecting in dst_set:
-        #     if q_next is DEAD_END or 'accept_all' in q_next.name:  # TODO: hack
-        #         smt_post_conjuncts = [self.solver.false()]
-        #         break
-        #
-        #     args_dict_next = self._build_args_dict(smt_m_next, None, q_next)
-        #
-        #     smt_post_conjuncts.append(smt_reach(args_dict_next))
-        #
-        #     greater_op = self._get_greater_op(q, is_rejecting, q_next, state_to_rejecting_scc)
-        #
-            # if greater_op is not None:
-            #     smt_post_conjuncts.append(greater_op(smt_r(args_dict_next),
-            #                                          smt_r(args_dict)))
-        #
-        # smt_post = self.solver.op_and(smt_post_conjuncts)
-        # pre_implies_post = self.solver.op_implies(smt_pre, smt_post)
-        # self.solver.assert_(
-        #     self.solver.forall_bool(free_input_args,
-        #                             pre_implies_post))
 
     def encode_model_bound(self, allowed_model_states:range):
         self.solver.comment('encoding model bound: ' + str(allowed_model_states))
@@ -363,7 +319,10 @@ class CTLEncoder(EncoderInterface):
 
         get_values = lambda t: {          'Bool': ('true', 'false'),
                                 TYPE_MODEL_STATE: [smt_name_m(m) for m in self.last_allowed_states],
-                                    TYPE_A_STATE: [smt_name_spec(s, TYPE_A_STATE) for s in self.automaton.nodes]
+                                    TYPE_A_STATE: [smt_name_spec(s.name, TYPE_A_STATE)
+                                                   for s in get_reachable_from(self.aht.init_node,
+                                                                               self.aht_transitions,
+                                                                               self.dstPropMgr)[0]]
                                }[t]
 
         records = product(*[get_values(t) for (_,t) in arg_type_pairs])
@@ -437,8 +396,10 @@ class CTLEncoder(EncoderInterface):
     def _parse_value(self, str_v):
         if not hasattr(self, 'node_by_smt_value'):  # aka static method of the field
             self.node_by_smt_value = dict()
-            self.node_by_smt_value.update((smt_name_spec(s, TYPE_A_STATE), s)
-                                         for s in self.automaton.nodes)
+            self.node_by_smt_value.update((smt_name_spec(s.name, TYPE_A_STATE), s)
+                                         for s in get_reachable_from(self.aht.init_node,
+                                                                     self.aht_transitions,
+                                                                     self.dstPropMgr)[0])
 
         if str_v in self.node_by_smt_value:
             return self.node_by_smt_value[str_v]
@@ -500,11 +461,11 @@ class CTLEncoder(EncoderInterface):
                 if binary_op.name == '=':
                     return self._visit_prop(*get_sig_number(binary_op))
                 if binary_op.name == '*':
-                    return self.encoder.solver.op_and(self.dispatch(binary_op.arg1),
-                                                      self.dispatch(binary_op.arg2))
+                    return self.encoder.solver.op_and([self.dispatch(binary_op.arg1),
+                                                       self.dispatch(binary_op.arg2)])
                 if binary_op.name == '+':
-                    return self.encoder.solver.op_or(self.dispatch(binary_op.arg1),
-                                                     self.dispatch(binary_op.arg2))
+                    return self.encoder.solver.op_or([self.dispatch(binary_op.arg1),
+                                                      self.dispatch(binary_op.arg2)])
                 assert 0, "impossible: " + str(binary_op)
 
             def visit_unary_op(self, unary_op:UnaryOp):
@@ -534,25 +495,3 @@ class CTLEncoder(EncoderInterface):
         return s_expr
 
 # end of CTLEncoder
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

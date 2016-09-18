@@ -17,8 +17,8 @@ def distinct(iterable):
     return res
 
 
-def to_str(enumerable:Iterable) -> str:
-    return 'Iterable:[\n' + ', '.join(map(str, enumerable)) + '\n]'
+def to_str(enumerable:Iterable, sep=', ') -> str:
+    return 'Iterable:[\n' + sep.join(map(str, enumerable)) + '\n]'
 
 
 def lmap(lambda_func, iterable) -> list:

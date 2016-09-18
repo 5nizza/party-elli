@@ -149,11 +149,15 @@ def make_and_or_xor(arguments, op):
 
 def op_and(arguments):
     filtered_arguments = lfilter(lambda a: a != true(), arguments)
+    if not filtered_arguments:
+        return true()
     return make_and_or_xor(filtered_arguments, 'and')
 
 
 def op_or(arguments):
     filtered_arguments = lfilter(lambda a: a != false(), arguments)
+    if not filtered_arguments:
+        return false()
     return make_and_or_xor(filtered_arguments, 'or')
 
 

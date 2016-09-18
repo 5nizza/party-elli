@@ -73,7 +73,7 @@ def check_real(spec:Spec,
                          solver_factory.create(),
                          build_tau_desc(spec.inputs),
                          spec.inputs,
-                         dict((o, build_output_desc(o, False, spec.inputs))
+                         dict((o, build_output_desc(o, True, spec.inputs))
                               for o in spec.outputs))
 
     model = model_searcher.search(min_size, max_size, encoder)
@@ -147,14 +147,12 @@ def main():
     logging.info('{status} model for {who}'.format(status=('FOUND', 'NOT FOUND')[model is None],
                                                    who=('sys', 'env')[args.unreal]))
     if model:
-        dot_model_str = lts_to_dot(model, ARG_MODEL_STATE, (not args.moore) ^ args.unreal)
+        dot_model_str = lts_to_dot(model, ARG_MODEL_STATE, args.unreal)
 
         if args.dot:
             with open(args.dot, 'w') as out:
                 out.write(dot_model_str)
-                logging.info('{model_type} model is written to {file}'.format(
-                             model_type=['Mealy', 'Moore'][args.moore],
-                             file=out.name))
+                logging.info('Moore model is written to {file}'.format(file=out.name))
         else:
             logging.info(dot_model_str)
 
