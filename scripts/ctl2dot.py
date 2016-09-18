@@ -29,7 +29,7 @@ from interfaces.spec import Spec
 from ltl3ba.ltl2automaton import LTL3BA
 
 
-def _parse_spec(spec_file_name:str) -> Spec:
+def parse_python_spec(spec_file_name:str) -> Spec:
     code_dir = os.path.dirname(spec_file_name)
     code_file = os.path.basename(spec_file_name.strip('.py'))
 
@@ -52,7 +52,7 @@ def main(spec_file_name:str, should_print_all:bool) -> 0:
 
     ltl3ba = LTL3BA(LTL3BA_PATH)
     shared_aht, dstFormPropMgr = SharedAHT(), DstFormulaPropMgr()
-    spec = _parse_spec(spec_file_name)
+    spec = parse_python_spec(spec_file_name)
     aht = ctl2aht.ctl2aht(spec, ltl3ba, shared_aht, dstFormPropMgr)
 
     dot = aht2dot.convert(None if should_print_all else aht.init_node,

@@ -1,11 +1,15 @@
+from typing import Iterable, Dict
+
+from interfaces.automata import Automaton
 from interfaces.expr import Signal
 from interfaces.func_description import FuncDesc
+from interfaces.solver_interface import SolverInterface
 from synthesis.funcs_args_types_names import ARG_MODEL_STATE, TYPE_MODEL_STATE, smt_arg_name_signal, FUNC_MODEL_TRANS
-from synthesis.smt_encoder import SMTEncoder
+from synthesis.encoder import Encoder
 from synthesis.smt_logic import UFLRA
 
 
-def _get_tau_desc(inputs):
+def build_tau_desc(inputs:Iterable[Signal]):
     arg_types_dict = dict()
     arg_types_dict[ARG_MODEL_STATE] = TYPE_MODEL_STATE
 
@@ -16,7 +20,7 @@ def _get_tau_desc(inputs):
     return tau_desc
 
 
-def _get_output_desc(output:Signal, is_moore, inputs):
+def build_output_desc(output:Signal, is_moore, inputs:Iterable[Signal]) -> FuncDesc:
     arg_types_dict = dict()
     arg_types_dict[ARG_MODEL_STATE] = TYPE_MODEL_STATE
 
@@ -27,19 +31,21 @@ def _get_output_desc(output:Signal, is_moore, inputs):
     return FuncDesc(output.name, arg_types_dict, 'Bool', None)
 
 
-def create_encoder(input_signals, output_signals,
-                   is_moore,
-                   automaton,
-                   smt_solver,
-                   logic=UFLRA()):  # TODO: some mess with logic (two places: in solver and here)
-    tau_desc = _get_tau_desc(input_signals)
+# TODO: remove this function -- use the above functions only
+def create_encoder(input_signals:Iterable[Signal],
+                   output_signals:Iterable[Signal],
+                   is_moore:bool,
+                   automaton:Automaton,
+                   smt_solver:SolverInterface,
+                   logic=UFLRA()):  # FIXME: mess with logic (two places: in solver and here)
+    tau_desc = build_tau_desc(input_signals)
 
-    desc_by_output = dict((o, _get_output_desc(o, is_moore, input_signals))
+    desc_by_output = dict((o, build_output_desc(o, is_moore, input_signals))
                           for o in output_signals)
 
-    encoder = SMTEncoder(logic,
-                         automaton,
-                         smt_solver,
-                         tau_desc,
-                         input_signals, desc_by_output)
+    encoder = Encoder(logic,
+                      automaton,
+                      smt_solver,
+                      tau_desc,
+                      input_signals, desc_by_output)
     return encoder

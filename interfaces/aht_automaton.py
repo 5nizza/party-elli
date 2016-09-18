@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Set, Iterable
+from typing import Set, Iterable, Tuple
 
 from interfaces.automata import Label
 from interfaces.expr import Expr, UnaryOp, BinOp, Bool, Number
@@ -34,7 +34,6 @@ class Transition:
         self.src = src
         self.state_label = state_label
         self.dst_expr = dst_expr
-        assert isinstance(src, Node)  # TODO: rm me
 
     def __eq__(self, other):
         if not isinstance(other, Transition):
@@ -82,8 +81,8 @@ class ExtLabel:
                  fixed_inputs:  Label,
                  free_inputs:   Set[Signal],
                  type_:         str):
-        self.fixed_inputs = fixed_inputs
-        self.free_inputs = free_inputs
+        self.fixed_inputs = fixed_inputs   # type: Label
+        self.free_inputs = free_inputs     # type: Set[Signal]
         for fi in self.free_inputs:
             assert isinstance(fi, Signal)
         self.type_ = type_
@@ -137,7 +136,7 @@ class DstFormulaPropMgr:
 
         return self.__sigName_by_dstFormulaProp[dst_formula]
 
-    def get_dst_expr_prop(self, sig_name:str) -> DstFormulaProp:
+    def get_dst_form_prop(self, sig_name:str) -> DstFormulaProp:
         return self.__dstFormulaProp_by_sigName[sig_name]
 
     def _gen_name(self, dst_formula:DstFormulaProp) -> str:
@@ -170,7 +169,7 @@ class DualizerVisitor(Visitor):
         return Bool(bool_ == Bool(False))
 
     def visit_signal(self, signal:Signal):
-        dst_form_prop = self.dstFormPropManager.get_dst_expr_prop(signal.name)
+        dst_form_prop = self.dstFormPropManager.get_dst_form_prop(signal.name)
         # To dualize a proposition, dualize:
         # 1. ext_label
         # 2. dst_name
@@ -198,7 +197,7 @@ class NodesCollector(Visitor):
         self.nodes = set()  # type: Set[Node]
 
     def visit_signal(self, signal:Signal):
-        dstFormulaProp = self.dstPropFormMgr.get_dst_expr_prop(signal.name)
+        dstFormulaProp = self.dstPropFormMgr.get_dst_form_prop(signal.name)
         self.nodes.add(dstFormulaProp.dst_state)
         return super().visit_signal(signal)
 
@@ -221,7 +220,7 @@ def get_dst_nodes(dstPropFormMgr:DstFormulaPropMgr, transition:Transition) -> Se
 def get_reachable_from(node:Node,
                        transitions:Iterable[Transition],
                        dstPropFormMgr:DstFormulaPropMgr)\
-        -> (Set[Node], Set[Transition]):
+        -> Tuple[Set[Node], Set[Transition]]:
     # ~|transitions * nodes|
     reachable_transitions = set()   # type: Set[Transition]
     reachable_nodes = {node}        # type: Set[Node]

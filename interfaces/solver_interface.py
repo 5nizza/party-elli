@@ -1,8 +1,10 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
+from typing import Dict
+
 from interfaces.func_description import FuncDesc
 
 
-class SolverInterface(metaclass=ABCMeta):
+class SolverInterface(ABC):
     def TYPE_BOOL(self):
         return 'Bool'
 
@@ -63,12 +65,16 @@ class SolverInterface(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
+    def exists_bool(self, ground_args, formula):
+        raise NotImplementedError()
+
+    @abstractmethod
     def forall(self, ground_arg_type_pairs, formula):
         raise NotImplementedError()
 
     #
     @abstractmethod
-    def call_func(self, func_desc:FuncDesc, vals_by_vars:dict):
+    def call_func(self, func_desc:FuncDesc, val_by_var:Dict[str, str]):
         raise NotImplementedError()
 
     #
@@ -92,7 +98,7 @@ class SolverInterface(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def solve(self) -> list:  # TODO: currently returns lines, but should return some model witness
+    def solve(self) -> list:  # TODO: returns lines, but should return some model witness
         raise NotImplementedError()
 
     @abstractmethod

@@ -41,6 +41,9 @@ def convert(init_node:Node or None, shared_aht:SharedAHT, dstFormPropMgr:DstForm
             src=t.src.name, invisible=inv_node.name, label=_label_to_short_string(t.state_label))
 
         cubes = to_dnf_set(t.dst_expr)  # type: List[List[Expr]]
+        print()
+        print(t.dst_expr)
+        print()
 
         colors = 'black blue purple green yellow orange red brown pink gray'.split()
         for cube in cubes:  # type: List[Expr]
@@ -48,7 +51,7 @@ def convert(init_node:Node or None, shared_aht:SharedAHT, dstFormPropMgr:DstForm
             color = colors.pop(0) if len(colors) else 'gray'
             for lit in cube:  # type: Expr
                 assert lit.name == '=', "should be prop of the form sig=1; and not negated"
-                dstFormProp = dstFormPropMgr.get_dst_expr_prop(get_sig_number(lit)[0].name)
+                dstFormProp = dstFormPropMgr.get_dst_form_prop(get_sig_number(lit)[0].name)
 
                 trans_dot += '"{invisible}" -> "{dst}" [color={color}, label="{ext_label}"];'.format(
                     invisible=inv_node.name,

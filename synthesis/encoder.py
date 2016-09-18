@@ -6,6 +6,7 @@ from helpers.logging_helper import log_entrance
 from helpers.python_ext import lmap
 from helpers.rejecting_states_finder import build_state_to_rejecting_scc
 from interfaces.automata import Label, Automaton, Node, DEAD_END
+from interfaces.encoder_interface import EncoderInterface
 from interfaces.expr import Signal
 from interfaces.func_description import FuncDesc
 from interfaces.labels_map import LabelsMap
@@ -34,7 +35,7 @@ def _build_signals_values(signals, label) -> (dict, list):
     return value_by_signal, free_values
 
 
-class SMTEncoder:
+class Encoder(EncoderInterface):
     def __init__(self,
                  logic,
                  automaton:Automaton,
@@ -97,7 +98,7 @@ class SMTEncoder:
     def _build_args_dict(self, smt_m:str, i_o, q:Node) -> dict:
         args_dict = dict()
         args_dict[ARG_MODEL_STATE] = smt_m
-        args_dict[ARG_A_STATE] = smt_name_spec(q, TYPE_A_STATE)
+        args_dict[ARG_A_STATE] = smt_name_spec(q.name, TYPE_A_STATE)
 
         if i_o is None:
             return args_dict
@@ -121,7 +122,7 @@ class SMTEncoder:
 
     def _encode_automata_functions(self):
         self.solver.declare_enum(TYPE_A_STATE,
-                                 map(lambda n: smt_name_spec(n, TYPE_A_STATE), self.automaton.nodes))
+                                 map(lambda n: smt_name_spec(n.name, TYPE_A_STATE), self.automaton.nodes))
 
     def _encode_counters(self):
         self.solver.declare_fun(self.reach_func_desc)
@@ -145,7 +146,7 @@ class SMTEncoder:
                     self._encode_transitions(q, m, label,
                                              state_to_rejecting_scc)
 
-            self.solver.comment('encoded spec state ' + smt_name_spec(q, TYPE_A_STATE))
+            self.solver.comment('encoded spec state ' + smt_name_spec(q.name, TYPE_A_STATE))
 
     def _get_greater_op(self, q, is_rejecting,
                         q_next,
@@ -281,7 +282,7 @@ class SMTEncoder:
 
         get_values = lambda t: {          'Bool': ('true', 'false'),
                                 TYPE_MODEL_STATE: [smt_name_m(m) for m in self.last_allowed_states],
-                                    TYPE_A_STATE: [smt_name_spec(s, TYPE_A_STATE) for s in self.automaton.nodes]
+                                    TYPE_A_STATE: [smt_name_spec(s.name, TYPE_A_STATE) for s in self.automaton.nodes]
                                }[t]
 
         records = product(*[get_values(t) for (_,t) in arg_type_pairs])
@@ -355,7 +356,7 @@ class SMTEncoder:
     def _parse_value(self, str_v):
         if not hasattr(self, 'node_by_smt_value'):  # aka static method of the field
             self.node_by_smt_value = dict()
-            self.node_by_smt_value.update((smt_name_spec(s, TYPE_A_STATE), s)
+            self.node_by_smt_value.update((smt_name_spec(s.name, TYPE_A_STATE), s)
                                          for s in self.automaton.nodes)
 
         if str_v in self.node_by_smt_value:

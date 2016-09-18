@@ -1,4 +1,4 @@
-from helpers.python_ext import lmap
+from helpers.python_ext import lmap, lfilter
 from interfaces.func_description import FuncDesc
 
 
@@ -148,11 +148,13 @@ def make_and_or_xor(arguments, op):
 
 
 def op_and(arguments):
-    return make_and_or_xor(arguments, 'and')
+    filtered_arguments = lfilter(lambda a: a != true(), arguments)
+    return make_and_or_xor(filtered_arguments, 'and')
 
 
 def op_or(arguments):
-    return make_and_or_xor(arguments, 'or')
+    filtered_arguments = lfilter(lambda a: a != false(), arguments)
+    return make_and_or_xor(filtered_arguments, 'or')
 
 
 def forall(free_var_type_pairs, condition):
@@ -162,6 +164,14 @@ def forall(free_var_type_pairs, condition):
     forall_pre = ' '.join(['({0} {1})'.format(var, ty) for (var, ty) in free_var_type_pairs])
 
     return '(forall ({0}) {1})'.format(forall_pre, condition)
+
+def exists(free_var_type_pairs, condition):
+    if len(free_var_type_pairs) == 0:
+        return condition
+
+    forall_pre = ' '.join(['({0} {1})'.format(var, ty) for (var, ty) in free_var_type_pairs])
+
+    return '(exists ({0}) {1})'.format(forall_pre, condition)
 
 
 #def unwinding_forall_bool(free_input_vars, operation):
@@ -190,6 +200,9 @@ def forall(free_var_type_pairs, condition):
 
 def forall_bool(free_input_vars, condition):
     return forall([(var, 'Bool') for var in free_input_vars], condition)
+
+def exists_bool(free_input_vars, condition):
+    return exists([(var, 'Bool') for var in free_input_vars], condition)
 
 #    return unwinding_forall_bool(free_input_vars, condition)
 

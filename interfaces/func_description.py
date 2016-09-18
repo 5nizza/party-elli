@@ -1,3 +1,5 @@
+from typing import Dict
+
 from helpers.python_ext import lmap
 
 
@@ -27,15 +29,15 @@ class InlinePredDesc:
 
 
 class FuncDesc:
-    def __init__(self, func_name,
-                 type_by_arg:dict,
-                 output_ty,
+    def __init__(self, func_name:str,
+                 type_by_arg:Dict[str, str],
+                 output_ty:str,
                  body=None):
         self._name = func_name
         self._output = output_ty
         self._body = body
 
-        #TODO: evil hack
+        # FIXME: evil hack
         # Tau function of each process though isomorphic has slightly different signals
         # for example, tau_0 has signals indexed with 0 and tau_1 - signals indexed with 1
         #
@@ -77,7 +79,7 @@ class FuncDesc:
                             output=self._output,
                             body=self._body)
 
-    def _get_args_list(self, value_by_argname:dict) -> list:
+    def _get_args_list(self, value_by_argname:Dict[str, str]) -> list:
         my_args = set([p[0] for p in self._ordered_input_type_pairs])
         given_args = set(value_by_argname.keys())
         assert my_args.issubset(given_args), \
@@ -99,7 +101,7 @@ class FuncDesc:
 
         return value_by_arg
 
-    def call_func(self, func_args_dict:dict) -> str:
+    def call_func(self, func_args_dict:Dict[str, str]) -> str:
         smt_func_args_dict = dict()
         for (var,val) in func_args_dict.items():
             if val is True:

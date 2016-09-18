@@ -2,23 +2,22 @@
 import argparse
 import logging
 import tempfile
-from typing import Iterable
 
+from ctl2aht_ import ctl2aht
 from helpers import aht2dot
-from helpers import automaton2dot
 from helpers.main_helper import setup_logging, create_spec_converter_z3, Z3SolverFactory
-from helpers.python_ext import readfile
 from helpers.timer import Timer
-from interfaces.expr import Signal
+from interfaces.aht_automaton import SharedAHT, DstFormulaPropMgr, get_reachable_from
 from interfaces.lts import LTS
+from interfaces.spec import Spec
 from ltl3ba.ltl2automaton import LTL3BA
 from module_generation.dot import lts_to_dot
-from parsing.acacia_parser_helper import parse_acacia_and_build_expr
+from scripts.ctl2dot import parse_python_spec
 from synthesis import model_searcher
-from synthesis.encoder_builder import create_encoder
+from synthesis.ctl_encoder import CTLEncoder
+from synthesis.encoder_builder import build_tau_desc, build_output_desc
 from synthesis.funcs_args_types_names import ARG_MODEL_STATE
 from synthesis.smt_logic import UFLRA
-
 
 REALIZABLE = 10
 UNREALIZABLE = 20
@@ -52,27 +51,30 @@ UNKNOWN = 30
 #     return model
 
 def check_real(spec:Spec,
-               is_moore,
                min_size, max_size,
-               ctl2aht,
-               solver_factory:Z3SolverFactory,
-               atm_timeout_sec=None,
-               opt_level=0) -> LTS:
-    """
-    :raise: subprocess.TimeoutException
-    :param opt_level: values > 0 introduce incompleteness (but it is sound: if returns REAL, then REAL)
-    """
-
+               ltl2ba:LTL3BA,
+               solver_factory:Z3SolverFactory) -> LTS:
     timer = Timer()
-    aht_automaton = ctl2aht.convert(spec, timeout=atm_timeout_sec)  # note no negation
-    logging.info('(real) automaton size is: %i' % len(aht_automaton.nodes))
-    logging.debug('(real) automaton (dot) is:\n' + aht2dot.convert_all(aht_automaton))
-    logging.debug('(real) automaton translation took (sec): %i' % timer.sec_restart())
+    shared_aht, dstPropMgr = SharedAHT(), DstFormulaPropMgr()
 
-    encoder = create_encoder(spec.inputs, spec.outputs,
-                             is_moore,
-                             aht_automaton,
-                             solver_factory.create())
+    aht_automaton = ctl2aht.ctl2aht(spec, ltl2ba, shared_aht, dstPropMgr)
+    aht_nodes, aht_transitions = get_reachable_from(aht_automaton.init_node,
+                                                    shared_aht.transitions,
+                                                    dstPropMgr)
+    logging.info('(real) AHT automaton size (nodes/transitions) is: %i/%i' %
+                 (len(aht_nodes), len(aht_transitions)))
+    logging.debug('(real) AHT automaton (dot) is:\n' +
+                  aht2dot.convert(aht_automaton.init_node, shared_aht, dstPropMgr))
+    logging.debug('(real) AHT automaton translation took (sec): %i' % timer.sec_restart())
+
+    encoder = CTLEncoder(UFLRA(),
+                         aht_automaton, aht_transitions,
+                         dstPropMgr,
+                         solver_factory.create(),
+                         build_tau_desc(spec.inputs),
+                         spec.inputs,
+                         dict((o, build_output_desc(o, False, spec.inputs))
+                              for o in spec.outputs))
 
     model = model_searcher.search(min_size, max_size, encoder)
     logging.debug('(real) model_searcher.search took (sec): %i' % timer.sec_restart())
@@ -83,17 +85,11 @@ def check_real(spec:Spec,
 def main():
     """ :return: 1 if model is found, 0 otherwise """
 
-    parser = argparse.ArgumentParser(description='Bounded Synthesis Tool for CTL*',
+    parser = argparse.ArgumentParser(description='Bounded Synthesizer for CTL*',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('spec', metavar='spec', type=str,
                         help='the specification file (in python format)')
-
-    group = parser.add_mutually_exclusive_group()  # default: moore=False, mealy=True
-    group.add_argument('--moore', action='store_true', default=False,
-                       help='system is Moore')
-    group.add_argument('--mealy', action='store_false', default=True,
-                       help='system is Mealy')
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--bound', metavar='bound', type=int, default=128, required=False,
@@ -140,11 +136,13 @@ def main():
     else:
         min_size, max_size = args.size, args.size
 
-    ltl_text, part_text = readfile(args.spec), readfile(args.spec.replace('.ltl', '.part'))
+    spec = parse_python_spec(args.spec)
+    model = None
     if not args.unreal:
-        model = check_real(spec, args.moore, min_size, max_size, ltl3ba, solver_factory)
+        model = check_real(spec, min_size, max_size, ltl3ba, solver_factory)
     else:
-        model = check_unreal(ltl_text, part_text, args.moore, ltl3ba, solver_factory, min_size, max_size)
+        # model = check_unreal(spec, ltl3ba, solver_factory, min_size, max_size)
+        assert 0, "unreal check is not yet supported"
 
     logging.info('{status} model for {who}'.format(status=('FOUND', 'NOT FOUND')[model is None],
                                                    who=('sys', 'env')[args.unreal]))

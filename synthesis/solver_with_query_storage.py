@@ -1,4 +1,4 @@
-from abc import ABCMeta
+from abc import ABC
 
 from interfaces.solver_interface import SolverInterface
 from interfaces.func_description import FuncDesc
@@ -6,7 +6,7 @@ from synthesis import smt_helper
 from synthesis.smt_logic import Logic
 
 
-class SmtSolverWithQueryStorageAbstract(SolverInterface, metaclass=ABCMeta):
+class SmtSolverWithQueryStorageAbstract(SolverInterface, ABC):
     """
     Default implementation for most of the methods except
     die(), and solve()
@@ -59,6 +59,9 @@ class SmtSolverWithQueryStorageAbstract(SolverInterface, metaclass=ABCMeta):
 
     def forall_bool(self, ground_args, formula):
         return smt_helper.forall_bool(ground_args, formula)
+
+    def exists_bool(self, ground_args, formula):
+        return smt_helper.exists_bool(ground_args, formula)
 
     def forall(self, ground_arg_type_pairs, formula):
         return smt_helper.forall(ground_arg_type_pairs, formula)

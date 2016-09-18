@@ -1,8 +1,7 @@
-from abc import ABCMeta
+from abc import ABC
 
 
-class Logic:
-    __metaclass__ = ABCMeta
+class Logic(ABC):
 
     def counters_type(self, max_counter_value):
         raise NotImplementedError()
