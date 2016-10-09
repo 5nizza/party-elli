@@ -55,7 +55,7 @@ def main(spec_file_name:str, should_print_all:bool) -> 0:
     spec = parse_python_spec(spec_file_name)
     aht = ctl2aht.ctl2aht(spec, ltl3ba, shared_aht, dstFormPropMgr)
 
-    dot = aht2dot.convert(None if should_print_all else aht.init_node,
+    dot = aht2dot.convert(None if should_print_all else aht,
                           shared_aht,
                           dstFormPropMgr)
 

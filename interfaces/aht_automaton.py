@@ -32,7 +32,7 @@ class Node:
 class Transition:
     def __init__(self, src:Node, state_label:Label, dst_expr:Expr):
         self.src = src
-        self.state_label = state_label
+        self.state_label = state_label  # TODO: use Expr for this
         self.dst_expr = dst_expr
 
     def __eq__(self, other):
@@ -48,15 +48,18 @@ class Transition:
     def __str__(self):
         return 'src: "%s", state_label: "%s", dst_expr: "%s"' % \
                (self.src, str(self.state_label), str(self.dst_expr))
+
+    __repr__ = __str__
 # end of Transition
 
 
 class AHT:
-    def __init__(self, init_node:Node):
+    def __init__(self, init_node:Node, name:str=None):
         self.init_node = init_node  # type: Node
+        self.name = name            # type: str
 
     def __str__(self):
-        return "AHT with init_node: '%s'" % self.init_node
+        return "AHT '%s' with init_node: '%s'" % (self.name or 'unnamed', self.init_node)
 
     def __eq__(self, other):
         if other is None:
@@ -254,6 +257,6 @@ def dualize_aht(aht:AHT,
                                               DualizerVisitor(dstFormPropMgr).dispatch(t.dst_expr)))
 
     new_init_node = _dualize_node(aht.init_node)
-    dual_aht = AHT(new_init_node)
+    dual_aht = AHT(new_init_node, '~' + aht.name)
 
     return dual_aht

@@ -10,21 +10,21 @@ from sympy.logic.boolalg import false as sympy_false
 from helpers.expr_helper import get_sig_number
 from helpers.python_ext import StrAwareList
 from helpers.spec_helper import prop
-from interfaces.aht_automaton import DstFormulaPropMgr, ExtLabel, SharedAHT, get_reachable_from, Node
+from interfaces.aht_automaton import DstFormulaPropMgr, ExtLabel, SharedAHT, get_reachable_from, AHT
 from interfaces.aht_automaton import Transition
 from interfaces.expr import Expr, UnaryOp, Bool, BinOp, Number
 from parsing.visitor import Visitor
 
 
-def convert(init_node:Node or None, shared_aht:SharedAHT, dstFormPropMgr:DstFormulaPropMgr)\
+def convert(aht:AHT or None, shared_aht:SharedAHT, dstFormPropMgr:DstFormulaPropMgr)\
         -> str:
     def _gen_unique_name(__=[]) -> str:  # mutable default arg is on purpose
         name = '__n' + str(len(__))
         __.append('')
         return name
 
-    transitions = shared_aht.transitions if not init_node \
-        else get_reachable_from(init_node, shared_aht.transitions, dstFormPropMgr)[1]
+    transitions = shared_aht.transitions if not aht \
+        else get_reachable_from(aht.init_node, shared_aht.transitions, dstFormPropMgr)[1]
 
     all_nodes = set()  # Set[Node]
     trans_dot = StrAwareList()
@@ -41,9 +41,6 @@ def convert(init_node:Node or None, shared_aht:SharedAHT, dstFormPropMgr:DstForm
             src=t.src.name, invisible=inv_node.name, label=_label_to_short_string(t.state_label))
 
         cubes = to_dnf_set(t.dst_expr)  # type: List[List[Expr]]
-        print()
-        print(t.dst_expr)
-        print()
 
         colors = 'black blue purple green yellow orange red brown pink gray'.split()
         for cube in cubes:  # type: List[Expr]
@@ -69,11 +66,12 @@ def convert(init_node:Node or None, shared_aht:SharedAHT, dstFormPropMgr:DstForm
                                .format(n=n.name,
                                        color=('red', 'green')[n.is_existential],
                                        shape=('ellipse', 'doubleoctagon')[n.is_final],
-                                       initial='' if n != init_node else ', style=filled, fillcolor=gray')
+                                       initial='' if n != (aht.init_node if aht else None) else ', style=filled, fillcolor=gray')
                            for n in all_nodes])
 
     dot_lines = StrAwareList() + 'digraph "automaton" {' + \
                 'rankdir=LR;' + \
+                (('label="%s"' % aht.name) if aht else '') + \
                 nodes_dot + \
                 trans_dot +\
                 invis_nodes_dot +\

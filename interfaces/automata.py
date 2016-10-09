@@ -7,10 +7,10 @@ from helpers.hashable import HashableDict
 
 class Automaton:
     def __init__(self, init_nodes, acc_nodes, nodes:Iterable['Node'], name=''):
-        self._init_nodes = set(init_nodes)
-        self._acc_nodes = set(acc_nodes)
-        self._nodes = set(nodes)
-        self._name = name
+        self._init_nodes = set(init_nodes)   # type: Set['Node']
+        self._acc_nodes = set(acc_nodes)     # type: Set['Node']
+        self._nodes = set(nodes)             # type: Set['Node']
+        self._name = name                    # type: str
 
     @property
     def name(self):
@@ -54,11 +54,10 @@ LABEL_TRUE = Label(dict())
 
 
 class Node:
-    def __init__(self, name, transitions=None):
+    def __init__(self, name:str, transitions:Dict[Label, Set[Tuple[bool,'Node']]]=None):
         self._name = name
-        assert name != '0'  # TODO: why? remove me
         if transitions is None:
-            self._transitions = {}  # label -> {node1,...}
+            self._transitions = {}  # type: Dict[Label, Set[Tuple[bool,'Node']]]
 
     @property
     def name(self) -> str:
@@ -67,7 +66,9 @@ class Node:
     @property
     def transitions(self) -> Dict[Label, Set[Tuple[bool,'Node']]]:
         """
-        :return: dict { label -> {(is_acc,node), ...} }
+        :return: dict { label : {(is_acc,n1),(is_acc,n2),...},
+                        ...
+                      }
         """
         return self._transitions
 

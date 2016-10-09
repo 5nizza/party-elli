@@ -174,8 +174,8 @@ class CTLEncoder(EncoderInterface):
                                        self.dstPropMgr)
         for q in states:                # type: Node
             for m in states_to_encode:  # type: int
+                self.solver.comment("encoding spec state '%s':" % smt_name_spec(q.name, TYPE_A_STATE))
                 self._encode_state(q, m)
-            self.solver.comment('encoded spec state ' + smt_name_spec(q.name, TYPE_A_STATE))
 
     def _get_greater_op(self, q:Node):
         if q.is_existential:

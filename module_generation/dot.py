@@ -35,14 +35,14 @@ def _mark_states_with_moore_signals(lts:LTS, state_variable, moore_signals):
 
         color = ''
         if state in lts.init_states:
-            color = 'fillcolor="green", style=filled, '
+            color = ', fillcolor="green", style=filled'
 
         if signals_str != '':
-            dot_lines += '"{state}"[{color} label="{out}\\n{state}"]'.format(color=color,
+            dot_lines += '"{state}" [label="{out}\\n{state}"{color}]'.format(color=color,
                                                                              state=state,
                                                                              out=signals_str)
         else:
-            dot_lines += '"{state}"[{color} label="{state}"]'.format(color=color, state=state)
+            dot_lines += '"{state}" [label="{state}"{color}]'.format(color=color, state=state)
 
     return dot_lines
 

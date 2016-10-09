@@ -4,7 +4,7 @@ from interfaces.expr import Signal, Expr, BinOp, Bool, UnaryOp, Number
 from parsing.visitor import Visitor
 
 
-def get_names(e:Expr) -> Set[str]:
+def get_signal_names(e:Expr) -> Set[str]:
     class NamesCollectorVisitor(Visitor):
         def __init__(self):
             self.names = set()

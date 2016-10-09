@@ -31,8 +31,10 @@ def GF(arg) -> UnaryOp: return G(F(arg))
 def FG(arg) -> UnaryOp: return F(G(arg))
 
 def AG(arg) -> UnaryOp: return A(G(arg))
+def AX(arg) -> UnaryOp: return A(X(arg))
 def AF(arg) -> UnaryOp: return A(F(arg))
 def EF(arg) -> UnaryOp: return E(F(arg))
+def EX(arg) -> UnaryOp: return E(X(arg))
 def EG(arg) -> UnaryOp: return E(G(arg))
 
 def AGF(arg) -> UnaryOp: return A(G(F(arg)))
