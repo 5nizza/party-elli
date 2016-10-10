@@ -56,48 +56,6 @@ def normalize_nbw_transitions(transitions:Dict[Label, Set[Tuple[bool, NBWNode]]]
     return transitions
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    label .restart  # see decorator goto on how to use labels and GOTOs
-    new_transitions = dict(transitions.items())  # type: Dict[Label, Set[Tuple[bool,'Node']]]:
-    for l1,l2 in combinations(transitions.keys(), 2):  # type: Tuple[Label,Label]
-        l1_l2  = common_label(l1, l2)
-        if l1_l2 is None:
-            continue
-
-        new_transitions[l1_l2] = transitions[l1] | transitions[l2]
-
-        assert 0, "bug here -- it assumes that negate_label returns a single label," \
-                  "while it returns a set"
-        l1_nl2 = common_label(l1, negate_label(l2))
-        if l1_nl2 is not None:
-            new_transitions[l1_nl2] = transitions.get(l1_nl2, set()) | transitions[l1]
-
-        nl1_l2 = common_label(negate_label(l1), l2)
-        if nl1_l2 is not None:
-            new_transitions[nl1_l2] = transitions.get(nl1_l2, set()) | transitions[l2]
-
-        if new_transitions != transitions:
-            transitions = new_transitions
-            goto .restart
-    # end of `for l1,l2 in ...`
-
-    return new_transitions
-
-
 def pick_two_intersecting_transitions(transitions:Iterable[AHTTransition])\
         -> Tuple[AHTTransition, AHTTransition]:
     """"""
