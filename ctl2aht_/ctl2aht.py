@@ -269,24 +269,19 @@ def adapt_alphabet(aht_by_p:Dict[Expr, AHT],
     nodes = set(map(lambda t: t.src, transitions))
 
     for n in nodes:
-        n_new_transitions = list()  # type: List[Transition]
         n_transitions = lfilter(lambda t: t.src == n, transitions)
+        n_orig_transitions = n_transitions
         for aux_sig in all_aux_signals:
-            for t in n_transitions:  # CURRENT: problem is here: we should replace with `for t in new_transitions`...
-                print()
-                print('t')
-                print(t)
-                print()
+            n_new_transitions = list()  # type: List[Transition]
+            for t in n_transitions:
                 t_new_transitions = intersect_transition_with_aux_aht_init_transitions(t,
                                                                                        aux_sig,
                                                                                        aht_by_p[prop(aux_sig.name)],  # TODO: ugly prop call
                                                                                        shared_aht, dstFormPropMgr)
-                print('t_new_transitions')
-                print(t_new_transitions)
-                print()
                 n_new_transitions.extend(t_new_transitions)
+            n_transitions = n_new_transitions
 
-        normalized_n_new_transitions = normalize_aht_transitions(n_new_transitions)
+        normalized_n_new_transitions = normalize_aht_transitions(n_transitions)
         _assert_no_label_intersections_in_node(normalized_n_new_transitions)
 
         # print()
@@ -296,7 +291,7 @@ def adapt_alphabet(aht_by_p:Dict[Expr, AHT],
         # print()
         # print(aht2dot.convert(None, shared_aht, dstFormPropMgr))
 
-        transitions.difference_update(n_transitions)
+        transitions.difference_update(n_orig_transitions)
         transitions.update(normalized_n_new_transitions)
 
         # print()
