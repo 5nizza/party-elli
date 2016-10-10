@@ -270,7 +270,7 @@ def adapt_alphabet(aht_by_p:Dict[Expr, AHT],
 
     for n in nodes:
         n_transitions = lfilter(lambda t: t.src == n, transitions)
-        n_orig_transitions = n_transitions
+        n_orig_transitions = n_transitions  # save original transitions -- later we replace them with newly generated
         for aux_sig in all_aux_signals:
             n_new_transitions = list()  # type: List[Transition]
             for t in n_transitions:
@@ -279,7 +279,7 @@ def adapt_alphabet(aht_by_p:Dict[Expr, AHT],
                                                                                        aht_by_p[prop(aux_sig.name)],  # TODO: ugly prop call
                                                                                        shared_aht, dstFormPropMgr)
                 n_new_transitions.extend(t_new_transitions)
-            n_transitions = n_new_transitions
+            n_transitions = n_new_transitions  # we extended one aux_sig -- the next is extended on new transitions
 
         normalized_n_new_transitions = normalize_aht_transitions(n_transitions)
         _assert_no_label_intersections_in_node(normalized_n_new_transitions)
