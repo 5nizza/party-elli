@@ -1,18 +1,14 @@
 from itertools import combinations
 from typing import Dict, Set, Tuple, Iterable
+from typing import List
 
 from helpers.nbw_automata_helper import common_label, negate_label
-from helpers.python_ext import to_str
+from helpers.python_ext import lfilter
 from interfaces.aht_automaton import Transition as AHTTransition
-
 from interfaces.automata import Automaton as NBWAutomaton
 from interfaces.automata import Node as NBWNode
-
 from interfaces.automata import Label
-
 from third_party.goto import goto
-
-from interfaces.expr import Expr
 
 
 def _assert_no_label_intersections(transitions:Dict[Label, Set[Tuple[bool,NBWNode]]]):
@@ -28,12 +24,56 @@ def _assert_no_label_intersections(transitions:Dict[Label, Set[Tuple[bool,NBWNod
 def normalize_nbw_transitions(transitions:Dict[Label, Set[Tuple[bool, NBWNode]]])\
         -> Dict[Label, Set[Tuple[bool,NBWNode]]]:
 
-    # NB: @goto: no vars called `label`, `goto`!
+    while True:
+        # pick two intersecting 'transitions':
+        l1, l2 = (lfilter(lambda l_l: common_label(l_l[0], l_l[1]) is not None,
+                          combinations(transitions.keys(), 2))
+                  + [(None, None)])[0]
+        if l1 is None:
+            break
+
+        t_split = []  # type: List[Tuple[Label, Set[Tuple[bool, NBWNode]]]]
+
+        t_split.append((common_label(l1,l2), transitions[l1] | transitions[l2]))
+
+        nl2_labels = negate_label(l2)
+        for nl2 in nl2_labels:
+            l1_nl2 = common_label(l1, nl2)
+            if l1_nl2 is not None:
+                t_split.append((l1_nl2, transitions[l1]))
+
+        nl1_labels = negate_label(l1)
+        for nl1 in nl1_labels:
+            nl1_l2 = common_label(nl1, l2)
+            if nl1_l2 is not None:
+                t_split.append((nl1_l2, transitions[l2]))
+
+        # NB: we can remove t1 and t2, since the newly generated transitions cover them
+        del transitions[l1]
+        del transitions[l2]
+        transitions.update(t_split)
+
+    return transitions
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     label .restart  # see decorator goto on how to use labels and GOTOs
     new_transitions = dict(transitions.items())  # type: Dict[Label, Set[Tuple[bool,'Node']]]:
     for l1,l2 in combinations(transitions.keys(), 2):  # type: Tuple[Label,Label]
-
         l1_l2  = common_label(l1, l2)
         if l1_l2 is None:
             continue
@@ -58,59 +98,6 @@ def normalize_nbw_transitions(transitions:Dict[Label, Set[Tuple[bool, NBWNode]]]
     return new_transitions
 
 
-def subtract_label(state_label, param) -> Label:
-    pass
-
-
-def union_labels(param):
-    pass
-
-
-def or_expr_no_repeat(*expr) -> Expr:
-    pass
-
-
-def get_existing(l1_l2, transitions:Iterable[AHTTransition]) -> AHTTransition:
-    pass
-
-
-def new_normalize_aht_transitions(transitions:Iterable[AHTTransition]) \
-        -> Set[AHTTransition]:
-    """"""
-    transitions = list(transitions)
-    processed = set()  # type: Set[Tuple[AHTTransition]]
-    for t1 in transitions:  # type: AHTTransition
-        for t2 in transitions:  # type: AHTTransition
-            if t1 == t2 or (t2,t1) in processed:  # case 'I see (t1,t2)' is impossible
-                continue
-            processed.add((t1,t2))
-
-            l1_l2 = common_label(t1.state_label, t2.state_label)
-            if l1_l2 is None:
-                continue
-
-            existing_t_l1_l2 = get_existing(l1_l2, transitions)  # type: AHTTransition
-            if existing_t_l1_l2 is None:
-                transitions.append(AHTTransition(t1.src, l1_l2, or_expr_no_repeat(t1.dst_expr,
-                                                                                  t2.dst_expr)))
-            else:
-                existing_t_l1_l2.dst_expr = or_expr_no_repeat(existing_t_l1_l2.dst_expr,
-                                                              t1.dst_expr,
-                                                              t2.dst_expr)
-        # end of `for t2 in ...`
-        # FIXME: rest_l can actually be several labels (like: ~g | ~c)
-        rest_l = subtract_label(t1.state_label, union_labels(set(transitions)-t1))
-        if rest_l is None:
-            transitions.remove(t1)
-        else:
-            transitions.remove(t1)
-            transitions.append(AHTTransition(t1.src, rest_l, t1.dst_expr))
-    # end of `for t1 in ...`
-
-    return transitions
-# end of new_normalize
-
-
 def pick_two_intersecting_transitions(transitions:Iterable[AHTTransition])\
         -> Tuple[AHTTransition, AHTTransition]:
     """"""
@@ -118,15 +105,6 @@ def pick_two_intersecting_transitions(transitions:Iterable[AHTTransition])\
         if common_label(t1.state_label, t2.state_label) is not None:
             return t1,t2
     return None, None
-
-
-def replace_two_by_split(t1:AHTTransition, t2:AHTTransition,
-                         t_split:Iterable[AHTTransition],
-                         transitions:Set[AHTTransition]):
-    """"""
-    transitions.remove(t1)
-    transitions.remove(t2)
-    transitions.update(t_split)
 
 
 def normalize_aht_transitions(transitions:Iterable[AHTTransition]) \
@@ -160,7 +138,7 @@ def normalize_aht_transitions(transitions:Iterable[AHTTransition]) \
             if nl1_l2 is not None:
                 t_split.append(AHTTransition(t2.src, nl1_l2, t2.dst_expr))
 
-        # NB: we can remove t1 and t2, since
+        # NB: we can remove t1 and t2, since the newly generated transitions cover them
         transitions.remove(t1)
         transitions.remove(t2)
         transitions.update(t_split)

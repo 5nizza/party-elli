@@ -59,17 +59,17 @@ def check_real(spec:Spec,
     shared_aht, dstFormPropMgr = SharedAHT(), DstFormulaPropMgr()
 
     aht_automaton = ctl2aht.ctl2aht(spec, ltl2ba, shared_aht, dstFormPropMgr)
-    print()
-    print_green('aht_automaton is')
-    print(aht2dot.convert(aht_automaton, shared_aht, dstFormPropMgr))
+    # print()
+    # print_green('aht_automaton is')
+    # print(aht2dot.convert(aht_automaton, shared_aht, dstFormPropMgr))
 
     aht_nodes, aht_transitions = get_reachable_from(aht_automaton.init_node,
                                                     shared_aht.transitions,
                                                     dstFormPropMgr)
     logging.info('(real) AHT automaton size (nodes/transitions) is: %i/%i' %
                  (len(aht_nodes), len(aht_transitions)))
-    logging.debug('(real) AHT automaton (dot) is:\n' +
-                  aht2dot.convert(aht_automaton, shared_aht, dstFormPropMgr))
+    # logging.debug('(real) AHT automaton (dot) is:\n' +
+    #               aht2dot.convert(aht_automaton, shared_aht, dstFormPropMgr))
     logging.debug('(real) AHT automaton translation took (sec): %i' % timer.sec_restart())
 
     encoder = CTLEncoder(UFLRA(),

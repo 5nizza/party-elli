@@ -44,6 +44,7 @@ def EFG(arg) -> UnaryOp: return E(F(G(arg)))
 def AGEF(arg) -> UnaryOp: return A(G(E(F(arg))))
 def AFEG(arg) -> UnaryOp: return A(F(E(G(arg))))
 # def EFEG(arg) -> UnaryOp: return E(F(E(G(arg))))  # <- equiv. to EFG
+def EFAG(arg) -> UnaryOp: return E(F(A(G(arg))))
 
 def U(a1, a2) -> BinOp: return BinOp('U', a1, a2)
 def W(a1, a2) -> BinOp: return BinOp('W', a1, a2)
