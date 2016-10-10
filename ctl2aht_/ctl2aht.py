@@ -3,6 +3,7 @@ from typing import Dict, Tuple, Set, Iterable, List
 
 from third_party.goto import goto
 
+from helpers import aht2dot
 from helpers.expr_helper import get_signal_names, Normalizer, get_sig_number
 from helpers.nbw_automata_helper import common_label, negate_label
 from helpers.normalizer import normalize_nbw_inplace, normalize_aht_transitions
@@ -101,7 +102,7 @@ def assert_no_name_collisions(formula:Expr, prefix_to_try:str):
         assert prefix_to_try not in n, str(n)
 
 
-def replace_AE(formula:Expr) -> (Tuple[Tuple[Expr, Expr]], Expr):
+def replace_top_AEs(formula:Expr) -> (Tuple[Tuple[Expr, Expr]], Expr):
     """
     :return: (new_proposition, formula) pairs,
              top formula with newly introduced propositions
@@ -142,7 +143,7 @@ def replace_AE(formula:Expr) -> (Tuple[Tuple[Expr, Expr]], Expr):
         #
     # end of ReplacerVisitor
 
-    prop_prefix = 'oxouv'  # TODO: XXX: better name!
+    prop_prefix = 'oxouv'  # FIXME: better name!
     assert_no_name_collisions(formula, prop_prefix)
 
     replacer = ReplacerVisitor(prop_prefix)
@@ -194,10 +195,11 @@ def intersect_transition_with_aux_aht_init_transitions(transition:Transition,
                                                        shared_aht:SharedAHT,
                                                        dstFormPropMgr:DstFormulaPropMgr)\
                                                        -> Set[Transition]:
-    assert transition.src.is_existential, "we never adapt alphabet of universal automata"
-
     if aux_sig not in transition.state_label:
         return [transition]
+
+    assert transition.src.is_existential,\
+        "we never adapt alphabet of universal automata"  # the func is exec for uni trans, but it returns above
 
     p_aht = aux_aht if transition.state_label[aux_sig] else \
         dualize_aht(aux_aht, shared_aht, dstFormPropMgr)
@@ -237,7 +239,6 @@ def intersect_transition_with_aux_aht_init_transitions(transition:Transition,
     transition_label = Label(transition.state_label)
     del transition_label[aux_sig]
 
-    # CURRENT -- what is that? do we really need to normalize? can we do normalize in n^2? (for ... for ...)
     p_induced_transitions = []
     for p_t in p_relevant_init_transitions:
         new_label = common_label(transition_label, p_t.state_label)
@@ -259,26 +260,50 @@ def adapt_alphabet(aht_by_p:Dict[Expr, AHT],
     :param aht_by_p: must be: AHT by 'positive' proposition (signal=1)
     """
 
-    nodes = set(map(lambda t: t.src, shared_aht.transitions))
-
+    # MAKE IT WORK THEN MAKE IT SMART
     all_aux_signals = set(map(lambda e: get_sig_number(e)[0], aht_by_p.keys()))
+    if not all_aux_signals:  # to avoid disappearing of transitions
+        return
+
+    transitions = shared_aht.transitions
+    nodes = set(map(lambda t: t.src, transitions))
 
     for n in nodes:
         n_new_transitions = list()  # type: List[Transition]
-        n_transitions = lfilter(lambda t: t.src == n, shared_aht.transitions)
+        n_transitions = lfilter(lambda t: t.src == n, transitions)
         for aux_sig in all_aux_signals:
-            for t in n_transitions:
+            for t in n_transitions:  # CURRENT: problem is here: we should replace with `for t in new_transitions`...
+                print()
+                print('t')
+                print(t)
+                print()
                 t_new_transitions = intersect_transition_with_aux_aht_init_transitions(t,
                                                                                        aux_sig,
-                                                                                       aht_by_p[aux_sig.name],
+                                                                                       aht_by_p[prop(aux_sig.name)],  # TODO: ugly prop call
                                                                                        shared_aht, dstFormPropMgr)
+                print('t_new_transitions')
+                print(t_new_transitions)
+                print()
                 n_new_transitions.extend(t_new_transitions)
 
         normalized_n_new_transitions = normalize_aht_transitions(n_new_transitions)
         _assert_no_label_intersections_in_node(normalized_n_new_transitions)
 
-        shared_aht.transitions.difference_update(n_transitions)
-        shared_aht.transitions.update(normalized_n_new_transitions)
+        # print()
+        # print('handled node:', n)
+        # print('~'*80)
+        # print('before')
+        # print()
+        # print(aht2dot.convert(None, shared_aht, dstFormPropMgr))
+
+        transitions.difference_update(n_transitions)
+        transitions.update(normalized_n_new_transitions)
+
+        # print()
+        # print('after')
+        # print()
+        # print(aht2dot.convert(None, shared_aht, dstFormPropMgr))
+        # print()
 
         # NB1: we need normalization, since different `aux_sig` can produce intersecting transitions:
         #        q --[e]-->..
@@ -395,26 +420,7 @@ def ctl2aht(spec:Spec,
     else:  # non-quantified state formula
         f = spec.formula
 
-    prop_f_pairs, f_with_props = replace_AE(f)
-
-    # if _un_index == 0:
-    #     print_green('f_with_props')
-    #     print(f_with_props)
-    #     print_green('to_str(prop_f_pairs)')
-    #     print(to_str(prop_f_pairs))
-
-    assert is_ltl_formula(f_with_props), str(f_with_props)
-
-    # todo: do not create automaton for f, if it was already created
-    nbw = ltl2ba.convert(f_with_props, 'n%i_' % _un_index)
-    # FIXME: SSA -- should be nbw = normalize_nbw(nbw)
-    normalize_nbw_inplace(nbw)
-
-    aht = nbw_to_nbt(nbw, spec.inputs, shared_aht, dstFormPropMgr)
-
-    # print('~'*80)
-    # print(aht2dot.convert(aht, shared_aht, dstFormPropMgr))
-    # print('~'*80)
+    prop_f_pairs, f_with_props = replace_top_AEs(f)
 
     aht_by_p = dict()  # type: Dict[Expr, AHT]
     for p,f in prop_f_pairs:
@@ -422,16 +428,15 @@ def ctl2aht(spec:Spec,
                               ltl2ba,
                               shared_aht,
                               dstFormPropMgr)
-        # if _un_index == 0:
-        #     print_green('prop:')
-        #     print(p)
-        #     print_green('formula:')
-        #     print(f)
-        #     print_green('automaton:')
-        #     print(aht2dot.convert(aht_by_p[p], shared_aht, dstFormPropMgr))
 
-    # FIXME: SSA -- should be `aht = adapt_alphabet(aht)`
-    adapt_alphabet(aht_by_p, shared_aht, dstFormPropMgr)
+    assert is_ltl_formula(f_with_props), str(f_with_props)
+
+    nbw = ltl2ba.convert(f_with_props, 'n%i_' % _un_index)
+    normalize_nbw_inplace(nbw)  # FIXME: SSA -- should be nbw = normalize_nbw(nbw)
+
+    aht = nbw_to_nbt(nbw, spec.inputs, shared_aht, dstFormPropMgr)
+
+    adapt_alphabet(aht_by_p, shared_aht, dstFormPropMgr)  # FIXME: SSA -- should be `aht = adapt_alphabet(aht)`
 
     # assert that no alien propositions are mentioned
     for t in shared_aht.transitions:  # type: Transition

@@ -2,6 +2,7 @@ from itertools import combinations
 from typing import Dict, Set, Tuple, Iterable
 
 from helpers.nbw_automata_helper import common_label, negate_label
+from helpers.python_ext import to_str
 from interfaces.aht_automaton import Transition as AHTTransition
 
 from interfaces.automata import Automaton as NBWAutomaton
@@ -150,12 +151,14 @@ def normalize_aht_transitions(transitions:Iterable[AHTTransition]) \
         nl2_labels = negate_label(l2)
         for nl2 in nl2_labels:
             l1_nl2 = common_label(l1, nl2)
-            t_split.append(AHTTransition(t1.src, l1_nl2, t1.dst_expr))
+            if l1_nl2 is not None:
+                t_split.append(AHTTransition(t1.src, l1_nl2, t1.dst_expr))
 
         nl1_labels = negate_label(l1)
         for nl1 in nl1_labels:
             nl1_l2 = common_label(nl1, l2)
-            t_split.append(AHTTransition(t2.src, nl1_l2, t2.dst_expr))
+            if nl1_l2 is not None:
+                t_split.append(AHTTransition(t2.src, nl1_l2, t2.dst_expr))
 
         # NB: we can remove t1 and t2, since
         transitions.remove(t1)
