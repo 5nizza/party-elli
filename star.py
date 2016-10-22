@@ -111,12 +111,6 @@ def main():
     parser.add_argument('--log', metavar='log', type=str, required=False,
                         default=None,
                         help='name of the log file')
-    parser.add_argument('--unreal', action='store_true', required=False,
-                        help='simple check of unrealizability: '
-                             'invert the spec, system type, (in/out)puts, '
-                             'and synthesize the model for env '
-                             '(a more sophisticated check could search for env that disproves systems of given size)'
-                             '(note that the inverted spec will NOT be strengthened)')
     parser.add_argument('-v', '--verbose', action='count', default=0)
 
     args = parser.parse_args()
@@ -142,17 +136,12 @@ def main():
         min_size, max_size = args.size, args.size
 
     spec = parse_python_spec(args.spec)
-    model = None
-    if not args.unreal:
-        model = check_real(spec, min_size, max_size, ltl3ba, solver_factory)
-    else:
-        # model = check_unreal(spec, ltl3ba, solver_factory, min_size, max_size)
-        assert 0, "unreal check is not yet supported"
+    model = check_real(spec, min_size, max_size, ltl3ba, solver_factory)
 
     logging.info('{status} model for {who}'.format(status=('FOUND', 'NOT FOUND')[model is None],
-                                                   who=('sys', 'env')[args.unreal]))
+                                                   who='sys'))
     if model:
-        dot_model_str = lts_to_dot(model, ARG_MODEL_STATE, args.unreal)
+        dot_model_str = lts_to_dot(model, ARG_MODEL_STATE, False)
 
         if args.dot:
             with open(args.dot, 'w') as out:
@@ -163,7 +152,7 @@ def main():
 
     solver_factory.down_solvers()
 
-    return UNKNOWN if model is None else (REALIZABLE, UNREALIZABLE)[args.unreal]
+    return UNKNOWN if model is None else REALIZABLE
 
 
 if __name__ == "__main__":
