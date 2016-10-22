@@ -23,6 +23,15 @@ Modify `src/config.py` to provide absolute paths to executables `z3` and `ltl3ba
 `./star.py` to run the synthesizer from CTL*
 
 
+## Notes
+
+The encoding of `system*AHT != empty` (AHT=alternating hesitant tree automaton)
+is done in `synthesis/ctl_encoder.py`.
+The translator `CTL* -> AHT` is in `ctl2aht_/ctl2aht.py`.
+
+These are the main two files that were added to support the synthesis from CTL*.
+
+
 ## Input format
 
 See `example.py` in the project root directoty.
