@@ -1,6 +1,8 @@
+import logging
 from itertools import combinations
 from typing import Dict, Tuple, Set, Iterable, List
 
+from helpers import aht2dot
 from helpers.expr_helper import get_signal_names, Normalizer, get_sig_number
 from helpers.nbw_automata_helper import common_label
 from helpers.normalizer import normalize_nbw_inplace, normalize_aht_transitions
@@ -249,12 +251,17 @@ def adapt_alphabet(aht_by_p:Dict[Expr, AHT],
     :param aht_by_p: must be: AHT by 'positive' proposition (signal=1)
     """
 
-    all_aux_signals = set(map(lambda e: get_sig_number(e)[0], aht_by_p.keys()))
-    if not all_aux_signals:  # to avoid disappearing of transitions
+    if not aht_by_p:  # to avoid disappearing of transitions
         return
+    all_aux_signals = set(map(lambda e: get_sig_number(e)[0], aht_by_p.keys()))
 
     transitions = shared_aht.transitions
     nodes = set(map(lambda t: t.src, transitions))
+    # NB: we fixed the set of nodes before doing the iteration.
+    #     Before the iteration all nodes are 'existential'.
+    #     During the iterations, the set can change:
+    #     'universal' nodes can appear due to dualization in function `intersect...`
+    # CURRENT: can the bug be due: we normalize high-level nodes, then lower ones...?
 
     for n in nodes:
         n_transitions = lfilter(lambda t: t.src == n, transitions)
@@ -269,11 +276,16 @@ def adapt_alphabet(aht_by_p:Dict[Expr, AHT],
                 n_new_transitions.extend(t_new_transitions)
             n_transitions = n_new_transitions  # we extended one aux_sig -- the next is extended on new transitions
 
+        logging.debug("orig transitions %s", n_orig_transitions)
+        logging.debug("non-normalized new transitions %s", n_transitions)
         normalized_n_new_transitions = normalize_aht_transitions(n_transitions)
+        logging.debug("normalized transitions %s", normalized_n_new_transitions)
         _assert_no_label_intersections_in_node(normalized_n_new_transitions)
 
+        logging.debug("before updating transitions %s", transitions)
         transitions.difference_update(n_orig_transitions)
         transitions.update(normalized_n_new_transitions)
+        logging.debug("after updating transitions %s", transitions)
 
         # NB1: we need normalization, since different `aux_sig` can produce intersecting transitions:
         #        q --[e]-->..
@@ -305,7 +317,7 @@ def ctl2aht(spec:Spec,
     """
 
     _un_index = len(_uniq)
-    _uniq.append('')  # to generate unique prefix names
+    _uniq.append(1)  # to generate unique prefix names
 
     assert is_state_formula(spec.formula, spec.inputs), str(spec.formula)
 
@@ -320,6 +332,7 @@ def ctl2aht(spec:Spec,
         f = spec.formula
 
     prop_f_pairs, f_with_props = replace_top_AEs(f)
+    # NB: all formulas in prop_f_pairs are of the form `E..` --- no `A..`s!
 
     # We first create AHTs for sub-formulas.
     # NB: we must do this before call `nbw_to_nbt`,
@@ -338,7 +351,13 @@ def ctl2aht(spec:Spec,
 
     aht = nbw_to_nbt(nbw, spec.inputs, shared_aht, dstFormPropMgr)
 
+    logging.debug('BEFORE adapt: aht_automaton is')
+    logging.debug(aht2dot.convert(aht, shared_aht, dstFormPropMgr))
+
     adapt_alphabet(aht_by_p, shared_aht, dstFormPropMgr)  # FIXME: SSA -- should be `aht = adapt_alphabet(aht)`
+
+    logging.debug('AFTER adapt: aht_automaton is')
+    logging.debug(aht2dot.convert(aht, shared_aht, dstFormPropMgr))
 
     # assert that no alien propositions are mentioned
     for t in shared_aht.transitions:  # type: Transition

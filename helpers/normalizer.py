@@ -68,7 +68,8 @@ def pick_two_intersecting_transitions(transitions:Iterable[AHTTransition])\
 def normalize_aht_transitions(transitions:Iterable[AHTTransition]) \
         -> Set[AHTTransition]:
     # NB: assumption: the automaton that we normalize is non-det (since we do dst_expr1 _&_ dst_expr2)
-    # NB: @goto: no vars called `label`, `goto`!
+    for t in transitions:  # type: AHTTransition
+        assert not t.src.name[0] == '~', "violates the method assumption"
 
     transitions = set(transitions)  # type: Set[AHTTransition]
 
