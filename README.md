@@ -6,8 +6,7 @@ SMT based Bounded Synthesis, an implementation of the approach of
 This is README file for `star.py` --- synthesizer from CTL*
 (a prototype implementing the approach submitted to TACAS)
 
-__unfortunately, during the submission I spotted the bug in ctl*->automaton translation that sometimes results in buggy systems__
-__I am fixing it..__
+__Beware__: the tool is very raw now -- it may crash sometimes!
 
 
 ## Requirements
