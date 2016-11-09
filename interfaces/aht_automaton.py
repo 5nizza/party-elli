@@ -1,3 +1,4 @@
+import logging
 from functools import lru_cache
 from typing import Set, Iterable, Tuple
 
@@ -243,11 +244,12 @@ def get_reachable_from(node:Node,
     return reachable_nodes, reachable_transitions
 
 
-@lru_cache()
 def dualize_aht(aht:AHT,
                 shared_aht:SharedAHT,
                 dstFormPropMgr:DstFormulaPropMgr)\
         -> AHT:
+
+    logging.info('dualize_aht: %s' % aht.init_node)
 
     aht_nodes, aht_transitions = get_reachable_from(aht.init_node,
                                                     shared_aht.transitions, dstFormPropMgr)

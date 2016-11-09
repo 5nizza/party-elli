@@ -59,9 +59,9 @@ def check_real(spec:Spec,
     shared_aht, dstFormPropMgr = SharedAHT(), DstFormulaPropMgr()
 
     aht_automaton = ctl2aht.ctl2aht(spec, ltl2ba, shared_aht, dstFormPropMgr)
-    print()
-    print('aht_automaton is')
-    print(aht2dot.convert(aht_automaton, shared_aht, dstFormPropMgr))
+    # print()
+    # print('aht_automaton is')
+    # print(aht2dot.convert(None, shared_aht, dstFormPropMgr))
 
     aht_nodes, aht_transitions = get_reachable_from(aht_automaton.init_node,
                                                     shared_aht.transitions,

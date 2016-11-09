@@ -1,4 +1,7 @@
-def to_dot(automaton) -> str:
+from interfaces.automata import Automaton
+
+
+def to_dot(automaton:Automaton) -> str:
     if automaton is None:
         return ''
 

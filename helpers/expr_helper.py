@@ -98,7 +98,7 @@ class Normalizer(Visitor):
 # end of Normalizer
 
 
-def get_sig_number(binary_op) -> Tuple[Signal, Number]:
+def get_sig_number(binary_op:BinOp) -> Tuple[Signal, Number]:
     assert binary_op.name == '=', str(binary_op)
     sig_arg, number_arg = binary_op.arg1, binary_op.arg2
     if not isinstance(sig_arg, Signal):
