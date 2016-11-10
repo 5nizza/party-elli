@@ -5,6 +5,7 @@ from typing import Dict, Tuple, Set, Iterable, List
 from helpers import aht2dot
 from helpers.automaton2dot import to_dot
 from helpers.expr_helper import get_signal_names, Normalizer, get_sig_number
+from helpers.logging_helper import log_entrance
 from helpers.nbw_automata_helper import common_label
 from helpers.normalizer import normalize_nbw_inplace, normalize_aht_transitions
 from helpers.python_ext import lfilter, to_str
@@ -53,25 +54,20 @@ def is_state_formula(formula:Expr, inputs:Iterable[Signal]) -> bool:
     return not detector.is_path_detected
 
 
+@log_entrance()
 def nbw_to_nbt(nbw:NBW,
                inputs:Set[Signal],
                shared_aht:SharedAHT, dst_form_prop_mgr:DstFormulaPropMgr)\
         -> AHT:
-    logging.info("nbw_to_nbt")
     # 1. create transitions
     aht_transitions = set()
     for n in nbw.nodes:  # type: automata.Node
-        print("nbw_to_nbt: node: ", n)
         for (l, dst_acc_pairs) in n.transitions.items():
             l_inputs = Label((s, l[s])
                              for s in l.keys() & inputs)
             l_outputs = Label((s, l[s])
                               for s in l.keys() - inputs)
 
-            print("l_inputs: ", l_inputs)
-            print("l_outputs: ", l_outputs)
-
-            _tmp = set()
             for (dst_state, _) in dst_acc_pairs:  # type: Tuple[automata.Node, bool]
                 ext_label = ExtLabel(l_inputs,
                                      inputs - l_inputs.keys(),
@@ -91,11 +87,6 @@ def nbw_to_nbt(nbw:NBW,
                                l_outputs,
                                expr)
                 aht_transitions.add(t)
-                _tmp.add(t)
-
-            print("dst_acc_pairs", dst_acc_pairs)
-            print("dst_acc_pairs gave transitions ", _tmp)
-            print()
         # end of for (n.transitions)
     # end of for (nbw.nodes)
 
@@ -113,6 +104,7 @@ def assert_no_name_collisions(formula:Expr, prefix_to_try:str):
         assert prefix_to_try not in n, str(n)
 
 
+@log_entrance()
 def replace_top_AEs(formula:Expr) -> (Tuple[Tuple[Expr, Expr]], Expr):
     """
     :return: (new_proposition, formula) pairs,
@@ -254,30 +246,31 @@ def intersect_transition_with_aux_aht_init_transitions(transition:Transition,
     return p_induced_transitions
 
 
-def adapt_alphabet(aht_by_p:Dict[Expr, AHT],
+@log_entrance()
+def adapt_alphabet(nbt_transitions:Iterable[Transition],
+                   aht_by_p:Dict[Expr, AHT],
                    shared_aht:SharedAHT,
-                   dstFormPropMgr:DstFormulaPropMgr):
+                   dstFormPropMgr:DstFormulaPropMgr) -> Set[Transition]:
     """
+    Adapt alphabet in nbt_transitions.
     :pre: all automata are 'normalized' (no two transitions can fire simultaneously)
-          (namely, normalization step assumes this)
+          (namely, `normalize_aht_transitions` assumes this)
     :param aht_by_p: must be: AHT by 'positive' proposition (signal=1)
     """
-
     if not aht_by_p:  # to avoid disappearing of transitions
-        return
+        return nbt_transitions
     all_aux_signals = set(map(lambda e: get_sig_number(e)[0], aht_by_p.keys()))
 
-    transitions = shared_aht.transitions
-    nodes = set(map(lambda t: t.src, transitions))
-    # NB: we fixed the set of nodes and transitions before doing the iteration.
+    nbt_transitions = set(nbt_transitions)
+    nodes = set(map(lambda t: t.src, nbt_transitions))
+    # NB: we adapt the alphabet of the given transition only.
     #     Before the iteration all nodes are 'existential'.
     #     During the iterations, the set can change:
     #     'universal' nodes can appear due to dualization in function `intersect...`
 
     for n in nodes:  # type: Node
-        logging.info("node: %s"%n)
         assert n.is_existential, "we never adapt alphabet of universal nodes: " + str(n)
-        n_transitions = lfilter(lambda t: t.src == n, transitions)
+        n_transitions = lfilter(lambda t: t.src == n, nbt_transitions)
         n_orig_transitions = n_transitions  # save original transitions -- later we replace them with newly generated
         for aux_sig in all_aux_signals:
             n_new_transitions = list()  # type: List[Transition]
@@ -289,28 +282,11 @@ def adapt_alphabet(aht_by_p:Dict[Expr, AHT],
                 n_new_transitions.extend(t_new_transitions)
             n_transitions = n_new_transitions  # we extended one aux_sig -- the next is extended on new transitions
 
-        # logging.debug("orig transitions %s", n_orig_transitions)
-        # logging.debug("non-normalized new transitions %s", n_transitions)
         normalized_n_new_transitions = normalize_aht_transitions(n_transitions)
-        # logging.debug("normalized transitions %s", normalized_n_new_transitions)
         _assert_no_label_intersections_in_node(normalized_n_new_transitions)
 
-        # print("converting into dot..")
-        # dot_str = aht2dot.convert(None, shared_aht, dstFormPropMgr)
-        # with open('/tmp/aux.dot', 'w') as dot_file:
-        #     dot_file.write(dot_str)
-        # input("enter to continue")
-
-        transitions.difference_update(n_orig_transitions)
-        transitions.update(normalized_n_new_transitions)
-
-        # print("converting into dot..")
-        # dot_str = aht2dot.convert(None, shared_aht, dstFormPropMgr)
-        # with open('/tmp/aux.dot', 'w') as dot_file:
-        #     dot_file.write(dot_str)
-        # input("enter to continue")
-
-        # logging.debug("after updating transitions %s", transitions)
+        nbt_transitions.difference_update(n_orig_transitions)
+        nbt_transitions.update(normalized_n_new_transitions)
 
         # NB1: we need normalization, since different `aux_sig` can produce intersecting transitions:
         #        q --[e]-->..
@@ -328,6 +304,7 @@ def adapt_alphabet(aht_by_p:Dict[Expr, AHT],
         #       then we would get `t1 & _tA OR t1 & _tB` instead of `t1 & _tA & _tB`)
         #      )
     # end of `for n in nodes`
+    return nbt_transitions
 # end of adapt_alphabet
 
 
@@ -341,7 +318,7 @@ def ctl2aht(spec:Spec,
     Assumes that spec.formula is in the normalized form
     """
 
-    logging.info('ctl2aht: ' + str(spec))
+    logging.info('ctl2aht: \n inputs: %s\n outputs: %s\n formula: %s' % (spec.inputs, spec.outputs, spec.formula))
 
     _un_index = len(_uniq)
     _uniq.append(1)  # to generate unique prefix names
@@ -374,41 +351,30 @@ def ctl2aht(spec:Spec,
     assert is_ltl_formula(f_with_props), str(f_with_props)
 
     nbw = ltl2ba.convert(f_with_props, 'n%i_' % _un_index)
-    print('ltl2ba returned: \n' + to_dot(nbw))
+    logging.info("created an NBW for the formula: nof_nodes = %i" % len(nbw.nodes))
 
+    logging.info('normalize_nbw_inplace')
     normalize_nbw_inplace(nbw)  # FIXME: SSA -- should be nbw = normalize_nbw(nbw)
 
-    print('after normalizing nbw: \n' + to_dot(nbw))
-
-    print('before nbw_to_nbt: nbw is\n' + to_dot(nbw))
     aht = nbw_to_nbt(nbw, spec.inputs, shared_aht, dstFormPropMgr)
-    print('AHT: node = %s' % aht.init_node + '\n spec: %s' % aht.name)
+    logging.info('created an NBT from the NBW: init_node = %s ' % aht.init_node)
 
     # NB: normalized nbw can become non-normalized nbt,
     #     since we move direction labels into the destination expression
     # We normalize only transitions belonging to the nbt
-    # -- we cannot normalize all ('for simplicity'), since others may be universal
+    # -- we cannot normalize all (even 'for simplicity'), since others may be universal
+    logging.info("normalize_aht_transitions")
     _, aht_transitions = get_reachable_from(aht.init_node, shared_aht.transitions, dstFormPropMgr)
-    # print()
-    # print("before nbt normalization")
-    # print("aht_transitions", to_str(aht_transitions))
     norm_aht_transitions = normalize_aht_transitions(aht_transitions)
-    # print("after nbt normalization")
-    # print("norm_aht_transitions", to_str(norm_aht_transitions))
-    # print()
     shared_aht.transitions -= aht_transitions
     shared_aht.transitions |= norm_aht_transitions
 
-    print("after nbw to nbt and normalization: spec = " + str(spec))
-    # dot_str = aht2dot.convert(None, shared_aht, dstFormPropMgr)
-    # with open('/tmp/aux.dot', 'w') as dot_file:
-    #     dot_file.write(dot_str)
-    # input('enter to continue')
-
-    adapt_alphabet(aht_by_p, shared_aht, dstFormPropMgr)  # FIXME: SSA -- should be `aht = adapt_alphabet(aht)`
-
-    # logging.debug('AFTER adapt: aht_automaton is')
-    # logging.debug(aht2dot.convert(aht, shared_aht, dstFormPropMgr))
+    # NB: it changes shared_aht
+    adapted_nbt_transitions = adapt_alphabet(norm_aht_transitions,
+                                             aht_by_p,
+                                             shared_aht, dstFormPropMgr)
+    shared_aht.transitions -= norm_aht_transitions
+    shared_aht.transitions |= adapted_nbt_transitions
 
     # assert that no alien propositions are mentioned
     for t in shared_aht.transitions:  # type: Transition

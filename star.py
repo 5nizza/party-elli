@@ -6,6 +6,7 @@ import tempfile
 from ctl2aht_ import ctl2aht
 from helpers import aht2dot
 from helpers.console_helpers import print_green
+from helpers.logging_helper import log_entrance
 from helpers.main_helper import setup_logging, create_spec_converter_z3, Z3SolverFactory
 from helpers.timer import Timer
 from interfaces.aht_automaton import SharedAHT, DstFormulaPropMgr, get_reachable_from
@@ -51,26 +52,22 @@ UNKNOWN = 30
 #
 #     return model
 
+@log_entrance()
 def check_real(spec:Spec,
                min_size, max_size,
                ltl2ba:LTL3BA,
                solver_factory:Z3SolverFactory) -> LTS:
-    timer = Timer()
     shared_aht, dstFormPropMgr = SharedAHT(), DstFormulaPropMgr()
 
     aht_automaton = ctl2aht.ctl2aht(spec, ltl2ba, shared_aht, dstFormPropMgr)
-    # print()
-    # print('aht_automaton is')
-    # print(aht2dot.convert(None, shared_aht, dstFormPropMgr))
 
     aht_nodes, aht_transitions = get_reachable_from(aht_automaton.init_node,
                                                     shared_aht.transitions,
                                                     dstFormPropMgr)
-    # logging.info('(real) AHT automaton size (nodes/transitions) is: %i/%i' %
-    #              (len(aht_nodes), len(aht_transitions)))
+    logging.info('The AHT automaton size (nodes/transitions) is: %i/%i' %
+                 (len(aht_nodes), len(aht_transitions)))
     # logging.debug('(real) AHT automaton (dot) is:\n' +
     #               aht2dot.convert(aht_automaton, shared_aht, dstFormPropMgr))
-    # logging.debug('(real) AHT automaton translation took (sec): %i' % timer.sec_restart())
 
     encoder = CTLEncoder(UFLRA(),
                          aht_automaton, aht_transitions,
@@ -82,8 +79,6 @@ def check_real(spec:Spec,
                               for o in spec.outputs))
 
     model = model_searcher.search(min_size, max_size, encoder)
-    logging.debug('(real) model_searcher.search took (sec): %i' % timer.sec_restart())
-
     return model
 
 

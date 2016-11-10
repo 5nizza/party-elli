@@ -13,6 +13,7 @@ outputs = [gs1,gs2]
 formula = ~g1 & ~g2 & \
           AG((r1 >> F(g1)) & (r2 >> F(g2))) & \
           AG(~(g1&g2)) & \
-          AG(EF(r1 & ~g1 & X(r1 & ~g1 & X(r1 & ~g1)))) & \
-          AG(EF(r2 & ~g2 & X(r2 & ~g2 & X(r2 & ~g2))))
+          AG(EFG(~r1 & ~g1)) & \
+          AG(EFG(~r2 & ~g2))
+
 spec = Spec(inputs, outputs, formula)

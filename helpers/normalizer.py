@@ -2,14 +2,12 @@ from itertools import combinations
 from typing import Dict, Set, Tuple, Iterable
 from typing import List
 
-from helpers.automaton2dot import to_dot
 from helpers.nbw_automata_helper import common_label, negate_label
 from helpers.python_ext import lfilter
 from interfaces.aht_automaton import Transition as AHTTransition
 from interfaces.automata import Automaton as NBWAutomaton
 from interfaces.automata import Node as NBWNode
 from interfaces.automata import Label
-from third_party.goto import goto
 
 
 def _assert_no_label_intersections(transitions:Dict[Label, Set[Tuple[bool,NBWNode]]]):
@@ -21,35 +19,20 @@ def _assert_no_label_intersections(transitions:Dict[Label, Set[Tuple[bool,NBWNod
 
 
 # TODO: merge these two version of normalize -- by removing NBWAutomaton and using only AHT?
-def normalize_nbw_transitions(nbw:NBWAutomaton,
-                              node:NBWNode,
+def normalize_nbw_transitions(node:NBWNode,
                               transitions:Dict[Label, Set[Tuple[bool, NBWNode]]])\
         -> Dict[Label, Set[Tuple[bool,NBWNode]]]:
-    print('normalize_nbw_transitions')
-    print(transitions)
-
-    with open('/tmp/norm_nbw_orig.dot', 'w') as out:
-        out.write(to_dot(nbw))
-
-    i = 0
     while True:
-        i += 1
         # pick two intersecting 'transitions':
         all_intersecting_label_pairs = lfilter(lambda l_l: common_label(l_l[0], l_l[1]) is not None,
                                                combinations(transitions.keys(), 2))
         if not all_intersecting_label_pairs:
             break
         l1, l2 = all_intersecting_label_pairs[0]
-        print("\n\nl1:", l1)
-        print("t1", transitions[l1])
-        print("l2:", l2)
-        print("t2", transitions[l2])
 
         t_split = []  # type: List[Tuple[Label, Set[Tuple[bool, NBWNode]]]]
 
         t_split.append((common_label(l1,l2), transitions[l1] | transitions[l2]))
-
-        print('t_split', t_split)
 
         nl2_labels = negate_label(l2)
         for nl2 in nl2_labels:
@@ -57,24 +40,16 @@ def normalize_nbw_transitions(nbw:NBWAutomaton,
             if l1_nl2 is not None:
                 t_split.append((l1_nl2, transitions[l1]))
 
-        print('t_split', t_split)
-
         nl1_labels = negate_label(l1)
         for nl1 in nl1_labels:
             nl1_l2 = common_label(nl1, l2)
             if nl1_l2 is not None:
                 t_split.append((nl1_l2, transitions[l2]))
 
-        print('t_split', t_split)
-
         # NB: we can remove t1 and t2, since the newly generated transitions cover them
-        print('end of iteration: removing t1, t2')
-        print('\tt1', transitions[l1])
-        print('\tt2', transitions[l2])
         del transitions[l1]
         del transitions[l2]
-        print('..adding instead\n\t', t_split)
-        # careful, we may have other transitions with exactly the same label!
+        # Careful, we may have other transitions with exactly the same label!
         # => we do not replace but rather 'update'
         for (new_lbl, new_transitions) in t_split:
             if new_lbl in transitions:
@@ -85,12 +60,7 @@ def normalize_nbw_transitions(nbw:NBWAutomaton,
         # transitions.update(t_split)
 
         node._transitions = transitions  # FIXME: fix access to the private member
-        with open('/tmp/norm_nbw%i.dot'%i, 'w') as out:
-            out.write(to_dot(nbw))
-            print("written to %i"%i)
-        # input("continue?")
 
-    print('\nafter normalization', transitions)
     return transitions
 
 
@@ -167,7 +137,7 @@ def normalize_nbw_inplace(nbw:NBWAutomaton):
     , have no intersecting labels.
     """
     for n in nbw.nodes:  # type: NBWNode
-        new_transitions = normalize_nbw_transitions(nbw, n, n.transitions)
+        new_transitions = normalize_nbw_transitions(n, n.transitions)
         _assert_no_label_intersections(new_transitions)
         n._transitions = new_transitions  # FIXME: fix access to the private member
 
