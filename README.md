@@ -1,10 +1,13 @@
-# Party
+# Party (CTL-star version)
 
 SMT based Bounded Synthesis, an implementation of the approach of 
 [Schewe and Finkbeiner](https://www.react.uni-saarland.de/publications/atva07.pdf).
 
 This is README file for `star.py` --- synthesizer from CTL*
 (a prototype implementing the approach submitted to TACAS)
+
+If you are interested in experiments,
+go straight to [README.md](experiments-for-tacas/README.md).
 
 
 ## Requirements
@@ -34,7 +37,6 @@ These are the main two files that were added to support the synthesis from CTL*.
 
 ## Input format
 
-See `example.py` in the project root directoty.
-The format should adhere to python syntax,
-since instead of parsing it, I import it and let python to parse it.
+See files in `experiments-for-tacas/*.py`.
+The syntax is python (I import spec files and thus let python parse it).
 
