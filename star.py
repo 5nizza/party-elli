@@ -66,8 +66,8 @@ def check_real(spec:Spec,
                                                     dstFormPropMgr)
     logging.info('The AHT automaton size (nodes/transitions) is: %i/%i' %
                  (len(aht_nodes), len(aht_transitions)))
-    # logging.debug('(real) AHT automaton (dot) is:\n' +
-    #               aht2dot.convert(aht_automaton, shared_aht, dstFormPropMgr))
+    # print('(real) AHT automaton (dot) is:\n' +
+    #       aht2dot.convert(aht_automaton, shared_aht, dstFormPropMgr))
 
     encoder = CTLEncoder(UFLRA(),
                          aht_automaton, aht_transitions,
