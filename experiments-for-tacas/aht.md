@@ -21,7 +21,7 @@ For example, consider transitions with state label `g1`:
 ( (ForAll(r1): (r1,~n1_T0_init)) & (ForAll(r1): (r1,n2_T0_init)) )
 ```
 
-The first line corresponds to <font color="Purple">magenta</font> edges,
+The first line corresponds to <font color="Purple">purple</font> edges,
 the second line -- to <font color="Black">black</font> edges,
 the third -- to <font color="Green">green</font> edges,
 the last -- to <font color="Blue">blue</font> edges.
