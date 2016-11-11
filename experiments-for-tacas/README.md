@@ -103,5 +103,7 @@ The folder `experiments-for-tacas` contains other specifications to try out.
 They are all realizable -- on unrealizable specs the tool does not terminate
 (hangs in iterating over model sizes).
 
+If you wonder about alternating hesitant automata -- see small note in [aht.md](aht.md).
+
 
   [^1]: Kupferman, O., Vardi, M.Y., Wolper, P.: An automata-theoretic approach to branching-time model checking.
