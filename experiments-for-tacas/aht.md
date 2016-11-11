@@ -7,6 +7,15 @@ PARTY converts `AGEF(~g1~r1)` into the following alternating hesitant automaton 
 It's initial state is `~n1_T0_init` (grayed).
 Red lining means the state is "universal",
 green (like "n2_accept_all") means the state is "existential".
+Double lined states are final.
+Final "existential" states means that we need to visit
+such states infinitely often,
+final "universal" states -- avoid visiting them infinitely often.
+Reminder:
+an AHT path is accepting iff it visits some green final state infinitely often
+or it avoids visiting some red state infinitely often.
+Falling out of the red state is good,
+falling out of the green state is bad.
 
 The small rounded boxes "DNF" are used to distinct
 edges with state labels and direction labels
