@@ -21,10 +21,10 @@ For example, consider transitions with state label `g1`:
 ( (ForAll(r1): (r1,~n1_T0_init)) & (ForAll(r1): (r1,n2_T0_init)) )
 ```
 
-The first line corresponds to <font color="magenta">magenta</font> edges,
-the second line -- to <font color="black"></font> edges,
-the third -- to <font color="green"></font> edges,
-the last -- to <font color="blue"></font> edges.
+The first line corresponds to <font color="Purple">magenta</font> edges,
+the second line -- to <font color="Black">black</font> edges,
+the third -- to <font color="Green">green</font> edges,
+the last -- to <font color="Blue">blue</font> edges.
 
 Thus, edges of the same color represent "literals" from the same cube,
 where the overall formula is a disjunction of cubes.
