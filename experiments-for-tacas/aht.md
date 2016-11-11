@@ -21,7 +21,7 @@ The small rounded boxes "DNF" are used to distinct
 edges with state labels and direction labels
 -- together all edges after "DNF" describe the boolean formula
 over Directions*States.
-For example, consider transitions with state label `g1`:
+For example, consider transitions from `~n1_T0_init` with state label `g1`:
 
 ```
 ( (ForAll(r1): (r1,~n1_accept_all)) & (ForAll(r1): (r1,~n2_T0_init)) ) OR
