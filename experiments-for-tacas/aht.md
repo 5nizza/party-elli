@@ -15,8 +15,11 @@ over Directions*States.
 For example, consider transitions with state label `g1`:
 
 `( (ForAll(r1): (r1,~n1_accept_all)) & (ForAll(r1): (r1,~n2_T0_init)) ) OR ` \
+
 `( (ForAll(r1): (r1,~n1_accept_all)) & (ForAll(r1): (r1,~n1_T0_init)) ) OR ` \
+
 `( (ForAll(r1): (r1,~n2_T0_init)) & (Exists(r1): (r1,n2_T0_init)) ) OR ` \
+
 `( (ForAll(r1): (r1,~n1_T0_init)) & (ForAll(r1): (r1,n2_T0_init)) )`
 
 The first line corresponds to <font color="magenta">magenta</font> edges,
