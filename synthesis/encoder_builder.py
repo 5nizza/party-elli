@@ -5,7 +5,7 @@ from interfaces.expr import Signal
 from interfaces.func_description import FuncDesc
 from interfaces.solver_interface import SolverInterface
 from synthesis.funcs_args_types_names import ARG_MODEL_STATE, TYPE_MODEL_STATE, smt_arg_name_signal, FUNC_MODEL_TRANS
-from synthesis.encoder import Encoder
+from synthesis.cobuchi_encoder import CoBuchiEncoder
 from synthesis.smt_logic import UFLRA
 
 
@@ -43,9 +43,9 @@ def create_encoder(input_signals:Iterable[Signal],
     desc_by_output = dict((o, build_output_desc(o, is_moore, input_signals))
                           for o in output_signals)
 
-    encoder = Encoder(logic,
-                      automaton,
-                      smt_solver,
-                      tau_desc,
-                      input_signals, desc_by_output)
+    encoder = CoBuchiEncoder(logic,
+                             automaton,
+                             smt_solver,
+                             tau_desc,
+                             input_signals, desc_by_output)
     return encoder
