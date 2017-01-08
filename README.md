@@ -19,7 +19,7 @@ go straight to [README.md](experiments-for-tacas/README.md).
 
 
 ## To configure
-Modify `src/config.py` to provide absolute paths to executables `z3` and `ltl3ba`
+Modify `./config.py` to provide absolute paths to executables `z3` and `ltl3ba`
 
 
 ## To run
