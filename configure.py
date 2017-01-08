@@ -7,12 +7,22 @@ import stat
 CONFIG_PY_NAME = 'config.py'
 
 CONFIG_PY_TEXT = """
-Z3_PATH = "z3"
-LTL3BA_PATH = "/home/ayrat/projects/ltl3ba/ltl3ba-1.1.2/ltl3ba"
+Z3_PATH = 'z3'
+LTL3BA_PATH = '/home/ayrat/projects/ltl3ba/ltl3ba-1.1.2/ltl3ba'
+
+# The following are needed only by `rally.py`.
+# Ignore them if you don't need `rally.py`.
+
+ABC_PATH='/home/ayrat/projects/abc/abc'
+VL2MV_PATH='/home/ayrat/projects/vl2mv-2.4/vl2mv'
+AIGTOAIG_PATH='/home/ayrat/projects/aiger-1.9.4/aigtoaig'
+SMVTOAIG_PATH='/home/ayrat/projects/aiger-1.9.4/smvtoaig'
+COMBINEAIGER_PATH='/home/ayrat/projects/syntcomp/tools/aiger-ltl-model-checker/combine-aiger'
+SYFCO_PATH='syfco'
 
 
 if __name__ == '__main__':
-    print('open me and modify paths')
+    print("open me and modify paths")
 """
 
 
