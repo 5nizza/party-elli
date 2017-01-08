@@ -59,10 +59,10 @@ class CoBuchiEncoder(EncoderInterface):
         reach_args = {ARG_A_STATE: TYPE_A_STATE,
                       ARG_MODEL_STATE: TYPE_MODEL_STATE}
 
-        r_args = reach_args
+        rank_args = reach_args
 
         self.reach_func_desc = FuncDesc(FUNC_REACH, reach_args, 'Bool', None)
-        self.rank_func_desc = FuncDesc(FUNC_R, r_args,
+        self.rank_func_desc = FuncDesc(FUNC_R, rank_args,
                                        logic.counters_type(sys.maxsize),
                                        None)
 
