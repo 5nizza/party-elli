@@ -40,7 +40,7 @@ def negate_label(label:Label) -> Set[Label]:
         return set()
     # label==False is not possible
 
-    lbl_e = _label_to_expr(label)
+    lbl_e = label_to_expr(label)
     neg_lbl_e = ~lbl_e
 
     cubes = to_dnf_set(neg_lbl_e)  # type: List[List[Expr]]
@@ -48,13 +48,13 @@ def negate_label(label:Label) -> Set[Label]:
     result = set()  # type: Set[Label]
     for cube in cubes:
         assert len(cube)
-        neg_lbl = _cube_expr_to_label(cube)
+        neg_lbl = cube_expr_to_label(cube)
         result.add(neg_lbl)
 
     return result
 
 
-def _label_to_expr(label:Label) -> Expr:
+def label_to_expr(label:Label) -> Expr:
     result = Bool(True)
     for k in label:
         atom = BinOp('=', k, Number(1))
@@ -62,7 +62,7 @@ def _label_to_expr(label:Label) -> Expr:
     return result
 
 
-def _cube_expr_to_label(cube:List[Expr]) -> Label:
+def cube_expr_to_label(cube:List[Expr]) -> Label:
     lbl = Label()
     for e in cube:
         assert e.name in '!=', str(e)
