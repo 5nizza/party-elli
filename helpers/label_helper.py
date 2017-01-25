@@ -1,8 +1,9 @@
-from typing import List
+from typing import List, Iterable
 from typing import Set
 
 from helpers.expr_helper import get_sig_number
 from helpers.expr_to_dnf import to_dnf_set
+from helpers.python_ext import lmap
 from interfaces.automata import Label, LABEL_TRUE
 from interfaces.expr import Expr, BinOp, Bool, Number
 from interfaces.expr import Signal
@@ -40,7 +41,7 @@ def negate_label(label:Label) -> Set[Label]:
         return set()
     # label==False is not possible
 
-    lbl_e = _label_to_expr(label)
+    lbl_e = label_to_expr(label)
     neg_lbl_e = ~lbl_e
 
     cubes = to_dnf_set(neg_lbl_e)  # type: List[List[Expr]]
@@ -48,13 +49,21 @@ def negate_label(label:Label) -> Set[Label]:
     result = set()  # type: Set[Label]
     for cube in cubes:
         assert len(cube)
-        neg_lbl = _cube_expr_to_label(cube)
+        neg_lbl = cube_expr_to_label(cube)
         result.add(neg_lbl)
 
     return result
 
 
-def _label_to_expr(label:Label) -> Expr:
+def label_minus_labels(l:Label, labels:Iterable[Label]) -> List[Label]:
+    e = labels_to_dnf_expr(labels)
+    co_cubes = to_dnf_set(~e & label_to_expr(l))
+    co_labels = lmap(cube_expr_to_label, co_cubes)
+    return co_labels
+
+
+def label_to_expr(label:Label) -> Expr:
+    """ :param label: should not be 'False' """
     result = Bool(True)
     for k in label:
         atom = BinOp('=', k, Number(1))
@@ -62,14 +71,21 @@ def _label_to_expr(label:Label) -> Expr:
     return result
 
 
-def _cube_expr_to_label(cube:List[Expr]) -> Label:
+def labels_to_dnf_expr(labels:Iterable[Label]) -> Expr:
+    e = Bool(False)
+    for l in labels:
+        e |= label_to_expr(l)
+    return e
+
+
+def cube_expr_to_label(cube:List[Expr]) -> Label:
     lbl = Label()
     for e in cube:
         assert e.name in '!=', str(e)
         if e.name == '!':
             sig, num = get_sig_number(e.arg)
             assert num == Number(1)
-            lbl[sig] = False  # since negated
+            lbl[sig] = False  # since e is negation
         else:
             sig, num = get_sig_number(e)
             assert num == Number(1)

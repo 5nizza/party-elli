@@ -2,7 +2,7 @@ from itertools import combinations
 from typing import Dict, Set, Tuple, Iterable
 from typing import List
 
-from helpers.nbw_automata_helper import common_label, negate_label
+from helpers.label_helper import common_label, negate_label
 from helpers.python_ext import lfilter
 from interfaces.aht_automaton import Transition as AHTTransition
 from interfaces.automata import Automaton as NBWAutomaton

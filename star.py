@@ -14,7 +14,7 @@ from interfaces.lts import LTS
 from interfaces.spec import Spec
 from ltl3ba.ltl2automaton import LTL3BA
 from module_generation.dot import lts_to_dot
-from scripts.ctl2dot import parse_python_spec
+from parsing.python_parser import parse_python_spec
 from synthesis import model_searcher
 from synthesis.ctl_encoder import CTLEncoder
 from synthesis.encoder_builder import build_tau_desc, build_output_desc
@@ -66,8 +66,8 @@ def check_real(spec:Spec,
                                                     dstFormPropMgr)
     logging.info('The AHT automaton size (nodes/transitions) is: %i/%i' %
                  (len(aht_nodes), len(aht_transitions)))
-    # print('(real) AHT automaton (dot) is:\n' +
-    #       aht2dot.convert(aht_automaton, shared_aht, dstFormPropMgr))
+    print('(real) AHT automaton (dot) is:\n' +
+          aht2dot.convert(aht_automaton, shared_aht, dstFormPropMgr))
 
     encoder = CTLEncoder(UFLRA(),
                          aht_automaton, aht_transitions,

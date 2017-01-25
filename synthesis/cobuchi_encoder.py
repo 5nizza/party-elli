@@ -1,6 +1,7 @@
 import logging
 import sys
 from itertools import product
+from typing import Iterable, Dict
 
 from helpers.logging_helper import log_entrance
 from helpers.python_ext import lmap
@@ -35,45 +36,43 @@ def _build_signals_values(signals, label) -> (dict, list):
     return value_by_signal, free_values
 
 
-class Encoder(EncoderInterface):
+class CoBuchiEncoder(EncoderInterface):
     def __init__(self,
                  logic,
                  automaton:Automaton,
-                 underlying_solver:SolverInterface,
+                 solver:SolverInterface,
                  tau_desc:FuncDesc,
-                 inputs,
-                 descr_by_output,
+                 inputs:Iterable[Signal],
+                 descr_by_output:Dict[Signal,FuncDesc],
                  model_init_state:int=0):  # the automata alphabet is inputs+outputs
         self.logger = logging.getLogger(__name__)
 
-        self.solver = underlying_solver
         self.logic = logic
+        self.solver = solver                    # type: SolverInterface
 
         self.automaton = automaton
 
-        self.inputs = inputs
-        self.descr_by_output = descr_by_output
-        self.tau_desc = tau_desc
+        self.inputs = inputs                    # type: Iterable[Signal]
+        self.descr_by_output = descr_by_output  # type: Dict[Signal,FuncDesc]
+        self.tau_desc = tau_desc                # type: FuncDesc
 
         reach_args = {ARG_A_STATE: TYPE_A_STATE,
                       ARG_MODEL_STATE: TYPE_MODEL_STATE}
 
-        r_args = reach_args
+        rank_args = reach_args
 
         self.reach_func_desc = FuncDesc(FUNC_REACH, reach_args, 'Bool', None)
-        self.r_func_desc = FuncDesc(FUNC_R, r_args,
-                                    logic.counters_type(sys.maxsize),
-                                    None)
+        self.rank_func_desc = FuncDesc(FUNC_R, rank_args,
+                                       logic.counters_type(sys.maxsize),
+                                       None)
 
-        #: :type: int
-        self.model_init_state = model_init_state
+        self.model_init_state = model_init_state  # type: int
+        self.last_allowed_states = None           # type: range
 
-        self.last_allowed_states = None
-
-    def _smt_out(self, label:Label, smt_m:str, q:Node) -> str:
+    def _smt_out(self, label:Label, s_m:str, q:Node) -> str:
         conjuncts = []
 
-        args_dict = self._build_args_dict(smt_m, label, q)
+        args_dict = self._build_args_dict(s_m, label, q)
 
         for sig, val in label.items():
             if sig not in self.descr_by_output:
@@ -95,9 +94,9 @@ class Encoder(EncoderInterface):
         _, free_args = _build_signals_values(self.inputs, i_o)
         return free_args
 
-    def _build_args_dict(self, smt_m:str, i_o, q:Node) -> dict:
+    def _build_args_dict(self, s_m:str, i_o, q:Node) -> dict:
         args_dict = dict()
-        args_dict[ARG_MODEL_STATE] = smt_m
+        args_dict[ARG_MODEL_STATE] = s_m
         args_dict[ARG_A_STATE] = smt_name_spec(q.name, TYPE_A_STATE)
 
         if i_o is None:
@@ -110,12 +109,12 @@ class Encoder(EncoderInterface):
     ##
 
     # encoding headers
-    def encode_headers(self, model_states):
+    def encode_headers(self, model_states:Iterable[int]):
         self._encode_automata_functions()
         self._encode_model_functions(model_states)
         self._encode_counters()
 
-    def _encode_model_functions(self, model_states):
+    def _encode_model_functions(self, model_states:Iterable[int]):
         self.solver.declare_enum(TYPE_MODEL_STATE, [smt_name_m(m) for m in model_states])
         self._define_declare_functions([self.tau_desc])
         self._define_declare_functions(self.descr_by_output.values())
@@ -126,7 +125,7 @@ class Encoder(EncoderInterface):
 
     def _encode_counters(self):
         self.solver.declare_fun(self.reach_func_desc)
-        self.solver.declare_fun(self.r_func_desc)
+        self.solver.declare_fun(self.rank_func_desc)
 
     # ################## encoding rules ####################
     def encode_initialization(self):
@@ -170,7 +169,7 @@ class Encoder(EncoderInterface):
                             state_to_rejecting_scc:dict):
         # syntax sugar
         def smt_r(args):
-            return self.solver.call_func(self.r_func_desc, args)
+            return self.solver.call_func(self.rank_func_desc, args)
 
         def smt_reach(args):
             return self.solver.call_func(self.reach_func_desc, args)
@@ -209,7 +208,7 @@ class Encoder(EncoderInterface):
             self.solver.forall_bool(free_input_args,
                                     pre_implies_post))
 
-    def encode_model_bound(self, allowed_model_states):
+    def encode_model_bound(self, allowed_model_states:range):
         self.solver.comment('encoding model bound: ' + str(allowed_model_states))
 
         # all args of tau function are quantified

@@ -5,8 +5,8 @@
 # To fix the problem with imports
 # (if we run `./scripts/ctl2dot.py`, then party-elli root folder is not in sys.path),
 # we do:
-import sys
 import os
+import sys
 
 PACKAGE_PARENT = '..'
 SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
@@ -19,37 +19,16 @@ sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
 
 import argparse
 import logging
-import importlib
 from config import LTL3BA_PATH
 from ctl2aht_ import ctl2aht
 from helpers import aht2dot
 from helpers.main_helper import setup_logging
-from interfaces.aht_automaton import SharedAHT, DstFormulaPropMgr, get_reachable_from
-from interfaces.spec import Spec
+from interfaces.aht_automaton import SharedAHT, DstFormulaPropMgr
 from ltl3ba.ltl2automaton import LTL3BA
-
-
-def parse_python_spec(spec_file_name:str) -> Spec:
-    code_dir = os.path.dirname(spec_file_name)
-    code_file = os.path.basename(spec_file_name.strip('.py'))
-
-    sys.path.append(code_dir)
-
-    saved_path = sys.path   # to ensure we import the right file
-    # (imagine you want /tmp/spec.py but there is also ./spec.py,
-    # then python prioritizes to ./spec.py)
-    # To force the right version we change sys.path temporarily.
-    sys.path = [code_dir]
-    spec_module = importlib.import_module(code_file)
-    sys.path = saved_path
-
-    spec = spec_module.spec
-
-    return spec
+from parsing.python_parser import parse_python_spec
 
 
 def main(spec_file_name:str, should_print_all:bool) -> 0:
-
     ltl3ba = LTL3BA(LTL3BA_PATH)
     shared_aht, dstFormPropMgr = SharedAHT(), DstFormulaPropMgr()
     spec = parse_python_spec(spec_file_name)
