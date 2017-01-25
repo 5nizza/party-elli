@@ -36,6 +36,8 @@ def AF(arg) -> UnaryOp: return A(F(arg))
 def EF(arg) -> UnaryOp: return E(F(arg))
 def EX(arg) -> UnaryOp: return E(X(arg))
 def EG(arg) -> UnaryOp: return E(G(arg))
+def EU(a1, a2) -> UnaryOp: return E(U(a1, a2))
+def AU(a1, a2) -> UnaryOp: return A(U(a1, a2))
 
 def AGF(arg) -> UnaryOp: return A(G(F(arg)))
 def EGF(arg) -> UnaryOp: return E(G(F(arg)))

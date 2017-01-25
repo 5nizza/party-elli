@@ -5,10 +5,11 @@ from typing import Dict, Tuple, Set, Iterable, List
 from helpers import aht2dot
 from helpers.automaton2dot import to_dot
 from helpers.expr_helper import get_signal_names, Normalizer, get_sig_number
+from helpers.expr_to_dnf import to_dnf_set
 from helpers.logging_helper import log_entrance
-from helpers.nbw_automata_helper import common_label
+from helpers.label_helper import common_label, label_to_expr, labels_to_dnf_expr, cube_expr_to_label, label_minus_labels
 from helpers.normalizer import normalize_nbw_inplace, normalize_aht_transitions
-from helpers.python_ext import lfilter, to_str
+from helpers.python_ext import lfilter, to_str, lmap
 from helpers.spec_helper import prop
 from interfaces import automata
 from interfaces.aht_automaton import AHT, dualize_aht, Transition, ExtLabel, DstFormulaProp, DstFormulaPropMgr, \
@@ -87,8 +88,9 @@ def nbw_to_nbt(nbw:NBW,
                                l_outputs,
                                expr)
                 aht_transitions.add(t)
-        # end of for (n.transitions)
-    # end of for (nbw.nodes)
+            # end for (dst_acc_pairs)
+        # end for (n.transitions)
+    # end for (nbw.nodes)
 
     shared_aht.transitions.update(aht_transitions)
 
@@ -204,12 +206,12 @@ def intersect_transition_with_aux_aht_init_transitions(transition:Transition,
                                           p_init_transitions)
 
     # NB: |p_relevant_init_transitions| > 1 is possible, but they all have different labels
-    #     (thus, q-[g:True]->q' and q-[g:True,c:False]->q'' is not possible)
+    #     (thus, q-[g]->q' and q-[g,~c]->q'' is not possible)
     #     (i.e., non-det/univ transitions is expressed via Transition::dst_expr)
 
     if not p_relevant_init_transitions:
-        # We might get empty `p_relevant_init_transitions`, e.g.:
-        # (non-det automaton):
+        # We might get empty `p_relevant_init_transitions`,
+        # e.g. (non-det automaton):
         # a --[e,g]--> b
         # and universal automaton for `e` has only:
         # x --[!g]--> y
@@ -242,6 +244,25 @@ def intersect_transition_with_aux_aht_init_transitions(transition:Transition,
 
         new_t = Transition(transition.src, new_label, new_dst)
         p_induced_transitions.append(new_t)
+
+    if not p_aht.init_node.is_existential:
+        # Recall that falling out of a universal automaton is equiv to transiting to TRUE.
+        # Suppose that
+        # - (p_aht is universal because of the if)
+        # - `transition_label = g*aux` (outputs = {g,p}).
+        # - the top automaton transits src -[g*aux]-> dst
+        # - p_aht only has a transition with `p` (into `p_dst`).
+        # Then the resulting `p_induced_transitions`
+        # should have
+        # {
+        #   src -[gp]->  dst&p_dst,  <- this we added above
+        #   src -[g~p]-> dst         <- we are going to add it
+        # }
+        # (recall that `p_aht` with `g~p` goes to TRUE)
+        handled_labels = lmap(lambda p_t: p_t.state_label, p_relevant_init_transitions)
+        unhandled_labels = label_minus_labels(transition_label, handled_labels)
+        for l in unhandled_labels:
+            p_induced_transitions.append(Transition(transition.src, l, transition.dst_expr))
 
     return p_induced_transitions
 
@@ -357,6 +378,7 @@ def ctl2aht(spec:Spec,
     normalize_nbw_inplace(nbw)  # FIXME: SSA -- should be nbw = normalize_nbw(nbw)
 
     aht = nbw_to_nbt(nbw, spec.inputs, shared_aht, dstFormPropMgr)
+
     logging.info('created an NBT from the NBW: init_node = %s ' % aht.init_node)
 
     # NB: normalized nbw can become non-normalized nbt,

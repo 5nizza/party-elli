@@ -1,6 +1,6 @@
 from typing import List
 
-from sympy import Symbol, to_dnf, Not, Or, And
+from sympy import Symbol, to_dnf, Not, Or, And, simplify_logic
 from sympy import false as sympy_false
 from sympy import true as sympy_true
 
@@ -35,7 +35,13 @@ class SympyConverter(Visitor):
 
 
 def to_dnf_set(dst_expr:Expr) -> List[List[Expr]]:
-    sympy_dst_expr = SympyConverter().dispatch(dst_expr)
+    sympy_dst_expr = simplify_logic(SympyConverter().dispatch(dst_expr))  # the checks below need this `simplify`
+
+    if sympy_dst_expr == sympy_true:
+        return [[]]
+    if sympy_dst_expr == sympy_false:
+        return []
+
     dnf_sympy_dst_expr = to_dnf(sympy_dst_expr, simplify=True)
     cubes = _get_cubes(dnf_sympy_dst_expr)
     cubes_list = []
@@ -52,6 +58,7 @@ def to_dnf_set(dst_expr:Expr) -> List[List[Expr]]:
 
 
 def _get_cubes(dnf_expr) -> tuple:
+    assert dnf_expr not in (sympy_true, sympy_false)
     if isinstance(dnf_expr, Or):
         return dnf_expr.args
     return dnf_expr,
