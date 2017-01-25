@@ -4,10 +4,10 @@ SMT based Bounded Synthesis, an implementation of the approach of
 [Schewe and Finkbeiner](https://www.react.uni-saarland.de/publications/atva07.pdf).
 
 This is README file for `star.py` --- synthesizer from CTL*
-(a prototype implementing the approach submitted to TACAS)
+(a prototype implementing the approach submitted to CAV)
 
 If you are interested in experiments,
-go straight to [README.md](experiments-for-tacas/README.md).
+go straight to [README.md](experiments-for-cav/README.md).
 
 
 ## Requirements
@@ -37,6 +37,6 @@ These are the main two files that were added to support the synthesis from CTL*.
 
 ## Input format
 
-See files in `experiments-for-tacas/*.py`.
+See files in `experiments-for-cav/*.py`.
 The syntax is python (I import spec files and thus let python parse it).
 
