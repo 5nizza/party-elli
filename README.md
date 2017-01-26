@@ -19,7 +19,8 @@ go straight to [README.md](experiments-for-cav/README.md).
 
 
 ## To configure
-Modify `./config.py` to provide absolute paths to executables `z3` and `ltl3ba`
+Call `./configure.py` and then modify the created file `config.py`
+to your absolute paths to executables of `z3` and `ltl3ba`.
 
 
 ## To run
