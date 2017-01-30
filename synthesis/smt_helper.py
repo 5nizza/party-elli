@@ -92,7 +92,7 @@ def make_assert(formula):
 
 def comment(comment):
     comment_lines = str(comment).splitlines()
-    smt_str = '; '.join(comment_lines)
+    smt_str = '; ' + '; '.join(comment_lines)
     return smt_str
 
 
