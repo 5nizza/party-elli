@@ -242,6 +242,7 @@ class CoBuchiEncoder(EncoderInterface):
         unique_descs = lmap(lambda i_d: i_d[1], unique_index_descs_sorted)
 
         for desc in unique_descs:
+            self.solver.comment(str(desc))
             if desc.definition is not None:
                 self.solver.define_fun(desc)
             else:

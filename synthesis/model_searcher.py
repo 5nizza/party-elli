@@ -6,7 +6,7 @@ from interfaces.lts import LTS
 
 
 @log_entrance()
-def search(min_size:int,  max_size:int,  encoder:EncoderInterface) -> LTS:
+def search(min_size:int, max_size:int, encoder:EncoderInterface) -> LTS or None:
     max_model_states = list(range(max_size))
     encoder.encode_headers(max_model_states)
     encoder.encode_initialization()

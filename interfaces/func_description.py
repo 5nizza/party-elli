@@ -137,7 +137,7 @@ class FuncDesc:
         return smt_str
 
     def __str__(self):
-        return '<name: {name}, inputs: {inputs}, output: {output}, definition: \n{definition}>'.format(
+        return '<name: {name}, inputs: {inputs}, output: {output}, definition: {definition}>'.format(
             name=self._name,
             inputs=str(self._ordered_input_type_pairs),
             output=self._output,
