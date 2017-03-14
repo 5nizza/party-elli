@@ -42,8 +42,7 @@ def lts_to_verilog(lts:LTS) -> str:
                            filter(lambda label_value: label_value[1],
                                   value_tuples.items()))
         assign = 'assign {sig} = {true_expr};'.format(sig=out_sig.name,
-                                                      true_expr=' || '.join(map(_label_to_verilog,
-                                                                                labels_true))
+                                                      true_expr=' || '.join(map(_label_to_verilog, labels_true))
                                                                 if labels_true else '0')
         s += assign
     s.newline()
