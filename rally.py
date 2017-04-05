@@ -5,14 +5,15 @@ import subprocess
 import tempfile
 
 import elli
+from config import Z3_PATH
 from elli import REALIZABLE, UNREALIZABLE, UNKNOWN
-from helpers.main_helper import setup_logging, create_spec_converter_z3
+from helpers.main_helper import setup_logging, Z3SolverFactory
 from helpers.timer import Timer
+from ltl_to_automaton import translator_via_spot
 from module_generation.aiger import lts_to_aiger
 from module_generation.dot import lts_to_dot
 from parsing.tlsf_parser import convert_tlsf_to_acacia, get_spec_type
-from synthesis.funcs_args_types_names import ARG_MODEL_STATE
-from synthesis.smt_logic import UFLRA
+from synthesis.smt_namings import ARG_MODEL_STATE
 
 
 def main(tlsf_file_name,
@@ -23,13 +24,12 @@ def main(tlsf_file_name,
     """ :return: REALIZABLE, UNREALIZABLE, UNKNOWN (see elli) """
 
     timer = Timer()
-    logic = UFLRA()
-
-    ltl3ba, solver_factory = create_spec_converter_z3(logic,
-                                                      True,
-                                                      False,
-                                                      smt_files_prefix,
-                                                      not keep_temp_files)
+    ltl_to_atm = translator_via_spot.LTLToAtmViaSpot
+    solver_factory = Z3SolverFactory(smt_files_prefix,
+                                     Z3_PATH,
+                                     True,
+                                     False,
+                                     not keep_temp_files)
 
     ltl_text, part_text = convert_tlsf_to_acacia(tlsf_file_name)
     is_moore = get_spec_type(tlsf_file_name)
@@ -37,7 +37,7 @@ def main(tlsf_file_name,
     try:
         timer.sec_restart()
         env_model = elli.check_unreal(ltl_text, part_text, is_moore,
-                                      ltl3ba, solver_factory,
+                                      ltl_to_atm, solver_factory,
                                       1, 1,
                                       0, 200)
         logging.info('unreal check took (sec): %i' % timer.sec_restart())
@@ -50,14 +50,14 @@ def main(tlsf_file_name,
         logging.info('I aborted unreal check (>200sec). Proceed to real check.')
 
     model = elli.check_real(ltl_text, part_text, is_moore,
-                            ltl3ba, solver_factory,
+                            ltl_to_atm, solver_factory,
                             1, 40)
     logging.info('real check took (sec): %i' % timer.sec_restart())
     logging.info('sys model is {NOT} FOUND'.format(NOT='' if model else 'NOT'))
     if not model:
         logging.info('trying check_real without formula strengthening')
         model = elli.check_real(ltl_text, part_text, is_moore,
-                                ltl3ba, solver_factory,
+                                ltl_to_atm, solver_factory,
                                 1, 40, opt_level=0)
         logging.info('(without formula strengthening): real check took (sec): %i' % timer.sec_restart())
         logging.info('(without formula strengthening): sys model is {NOT} FOUND'.format(NOT='' if model else 'NOT'))
