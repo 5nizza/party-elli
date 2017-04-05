@@ -39,7 +39,7 @@ def main(tlsf_file_name,
         env_model = elli.check_unreal(ltl_text, part_text, is_moore,
                                       ltl3ba, solver_factory,
                                       1, 1,
-                                      ltl3ba_timeout_sec=200)
+                                      0, 200)
         logging.info('unreal check took (sec): %i' % timer.sec_restart())
         logging.info('env model is {NOT} FOUND'.format(NOT='' if env_model else 'NOT'))
         if env_model:

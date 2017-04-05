@@ -3,12 +3,14 @@ import logging
 from helpers.logging_helper import log_entrance
 from interfaces.LTS import LTS
 from interfaces.solver_interface import SolverInterface
-from synthesis.cobuchi_smt_encoder import CoBuchiEncoder
+from synthesis.encoder_interface import EncoderInterface
 from synthesis.smt_format import make_check_sat
 
 
 @log_entrance()
-def search(min_size:int, max_size:int, encoder:CoBuchiEncoder, solver:SolverInterface) -> LTS or None:
+def search(min_size:int, max_size:int,
+           encoder:EncoderInterface,
+           solver:SolverInterface) -> LTS or None:
     solver += encoder.encode_headers(list(range(max_size)))
     solver += encoder.encode_initialization()
 

@@ -3,23 +3,21 @@ import argparse
 import logging
 import tempfile
 
+from config import Z3_PATH
 from ctl2aht_ import ctl2aht
-from helpers import aht2dot
-from helpers.console_helpers import print_green
 from helpers.logging_helper import log_entrance
-from helpers.main_helper import setup_logging, create_spec_converter_z3, Z3SolverFactory
-from helpers.timer import Timer
+from helpers.main_helper import setup_logging, Z3SolverFactory
+from interfaces.LTL_to_automaton import LTLToAutomaton
+from interfaces.LTS import LTS
 from interfaces.aht_automaton import SharedAHT, DstFormulaPropMgr, get_reachable_from
-from interfaces.lts import LTS
 from interfaces.spec import Spec
-from ltl3ba.ltl2automaton import LTL3BA
+from ltl_to_automaton import translator_via_spot
 from module_generation.dot import lts_to_dot
 from parsing.python_parser import parse_python_spec
 from synthesis import model_searcher
-from synthesis.ctl_encoder import CTLEncoder
+from synthesis.ctl_encoder_via_aht import CTLEncoderViaAHT
 from synthesis.encoder_builder import build_tau_desc, build_output_desc
-from synthesis.funcs_args_types_names import ARG_MODEL_STATE
-from synthesis.smt_logic import UFLRA
+from synthesis.smt_namings import ARG_MODEL_STATE
 
 REALIZABLE = 10
 UNREALIZABLE = 20
@@ -55,11 +53,11 @@ UNKNOWN = 30
 @log_entrance()
 def check_real(spec:Spec,
                min_size, max_size,
-               ltl2ba:LTL3BA,
+               ltl_to_atm:LTLToAutomaton,
                solver_factory:Z3SolverFactory) -> LTS:
     shared_aht, dstFormPropMgr = SharedAHT(), DstFormulaPropMgr()
 
-    aht_automaton = ctl2aht.ctl2aht(spec, ltl2ba, shared_aht, dstFormPropMgr)
+    aht_automaton = ctl2aht.ctl2aht(spec, ltl_to_atm, shared_aht, dstFormPropMgr)
 
     aht_nodes, aht_transitions = get_reachable_from(aht_automaton.init_node,
                                                     shared_aht.transitions,
@@ -69,16 +67,14 @@ def check_real(spec:Spec,
     # print('(real) AHT automaton (dot) is:\n' +
     #       aht2dot.convert(aht_automaton, shared_aht, dstFormPropMgr))
 
-    encoder = CTLEncoder(UFLRA(),
-                         aht_automaton, aht_transitions,
-                         dstFormPropMgr,
-                         solver_factory.create(),
-                         build_tau_desc(spec.inputs),
-                         spec.inputs,
-                         dict((o, build_output_desc(o, True, spec.inputs))
-                              for o in spec.outputs))
+    encoder = CTLEncoderViaAHT(aht_automaton, aht_transitions,
+                               dstFormPropMgr,
+                               build_tau_desc(spec.inputs),
+                               spec.inputs,
+                               dict((o, build_output_desc(o, True, spec.inputs))
+                                    for o in spec.outputs))
 
-    model = model_searcher.search(min_size, max_size, encoder)
+    model = model_searcher.search(min_size, max_size, encoder, solver_factory.create())
     return model
 
 
@@ -120,18 +116,20 @@ def main():
     with tempfile.NamedTemporaryFile(dir='./') as smt_file:
         smt_files_prefix = smt_file.name
 
-    ltl3ba, solver_factory = create_spec_converter_z3(UFLRA(),
-                                                      args.incr,
-                                                      False,
-                                                      smt_files_prefix,
-                                                      not args.tmp)
+    ltl_to_atm = translator_via_spot.LTLToAtmViaSpot
+    solver_factory = Z3SolverFactory(smt_files_prefix,
+                                     Z3_PATH,
+                                     args.incr,
+                                     False,
+                                     not args.tmp)
+
     if args.size == 0:
         min_size, max_size = 1, args.bound
     else:
         min_size, max_size = args.size, args.size
 
     spec = parse_python_spec(args.spec)
-    model = check_real(spec, min_size, max_size, ltl3ba, solver_factory)
+    model = check_real(spec, min_size, max_size, ltl_to_atm, solver_factory)
 
     logging.info('{status} model for {who}'.format(status=('FOUND', 'NOT FOUND')[model is None],
                                                    who='sys'))

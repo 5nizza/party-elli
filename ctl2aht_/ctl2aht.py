@@ -4,7 +4,7 @@ from typing import Dict, Tuple, Set, Iterable, List
 
 from helpers import aht2dot
 from helpers.automaton2dot import to_dot
-from helpers.expr_helper import get_signal_names, Normalizer, get_sig_number
+from helpers.expr_helper import get_sig_number, get_signal_names, Normalizer
 from helpers.expr_to_dnf import to_dnf_set
 from helpers.logging_helper import log_entrance
 from helpers.label_helper import common_label, label_to_expr, labels_to_dnf_expr, cube_expr_to_label, label_minus_labels
@@ -12,12 +12,12 @@ from helpers.normalizer import normalize_nbw_inplace, normalize_aht_transitions
 from helpers.python_ext import lfilter, to_str, lmap
 from helpers.spec_helper import prop
 from interfaces import automata
+from interfaces.LTL_to_automaton import LTLToAutomaton
 from interfaces.aht_automaton import AHT, dualize_aht, Transition, ExtLabel, DstFormulaProp, DstFormulaPropMgr, \
     SharedAHT, Node, get_reachable_from
 from interfaces.automata import Automaton as NBW, Label
 from interfaces.expr import Expr, Signal, UnaryOp, BinOp
 from interfaces.spec import Spec
-from ltl3ba.ltl2automaton import LTL3BA
 from parsing.visitor import Visitor
 
 
@@ -55,6 +55,17 @@ def is_state_formula(formula:Expr, inputs:Iterable[Signal]) -> bool:
     return not detector.is_path_detected
 
 
+def _is_final(node:automata.Node) -> bool:
+    """ :returns true iff all outgoing transitions are final 
+                 (as modelled by SPOT)
+    """
+    for dst_fin_pairs in node.transitions.values():  # type: Tuple['Node', bool]
+        for dst,is_fin in dst_fin_pairs:
+            if is_fin == False:
+                return False
+    return True
+
+
 @log_entrance()
 def nbw_to_nbt(nbw:NBW,
                inputs:Set[Signal],
@@ -76,7 +87,7 @@ def nbw_to_nbt(nbw:NBW,
                 dst_formula_prop = DstFormulaProp(ext_label,
                                                   Node(dst_state.name,
                                                        True,
-                                                       dst_state in nbw.acc_nodes))
+                                                       _is_final(dst_state)))
 
                 # We introduce auxiliary signals for propositions '(ext_label, dst_state)'
                 # and later work with boolean expressions over such signals.
@@ -84,7 +95,7 @@ def nbw_to_nbt(nbw:NBW,
                 aux_sig_name = dst_form_prop_mgr.get_add_signal_name(dst_formula_prop)
                 expr = prop(aux_sig_name)
 
-                t = Transition(Node(n.name, True, n in nbw.acc_nodes),
+                t = Transition(Node(n.name, True, _is_final(n)),
                                l_outputs,
                                expr)
                 aht_transitions.add(t)
@@ -94,9 +105,9 @@ def nbw_to_nbt(nbw:NBW,
 
     shared_aht.transitions.update(aht_transitions)
 
-    assert len(nbw.initial_nodes) == 1
-    nbw_init_node = list(nbw.initial_nodes)[0]
-    aht_init_node = Node(nbw_init_node.name, True, nbw_init_node in nbw.acc_nodes)
+    assert len(nbw.init_nodes) == 1
+    nbw_init_node = list(nbw.init_nodes)[0]
+    aht_init_node = Node(nbw_init_node.name, True, _is_final(nbw_init_node))
     aht = AHT(aht_init_node, 'E(%s)' % nbw.name)
     return aht
 
@@ -192,7 +203,7 @@ def intersect_transition_with_aux_aht_init_transitions(transition:Transition,
                                                        aux_aht:AHT,
                                                        shared_aht:SharedAHT,
                                                        dstFormPropMgr:DstFormulaPropMgr)\
-                                                       -> Set[Transition]:
+                                                       -> List[Transition]:
     if aux_sig not in transition.state_label:
         return [transition]
 
@@ -279,7 +290,7 @@ def adapt_alphabet(nbt_transitions:Iterable[Transition],
     :param aht_by_p: must be: AHT by 'positive' proposition (signal=1)
     """
     if not aht_by_p:  # to avoid disappearing of transitions
-        return nbt_transitions
+        return set(nbt_transitions)
     all_aux_signals = set(map(lambda e: get_sig_number(e)[0], aht_by_p.keys()))
 
     nbt_transitions = set(nbt_transitions)
@@ -330,7 +341,7 @@ def adapt_alphabet(nbt_transitions:Iterable[Transition],
 
 
 def ctl2aht(spec:Spec,
-            ltl2ba:LTL3BA,
+            ltl2ba:LTLToAutomaton,
             shared_aht:SharedAHT,
             dstFormPropMgr:DstFormulaPropMgr,
             _uniq=[])\

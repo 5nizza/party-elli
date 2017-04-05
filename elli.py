@@ -27,10 +27,14 @@ UNKNOWN = 30
 def check_unreal(ltl_text, part_text, is_moore,
                  ltl_to_atm:LTLToAutomaton, solver_factory:Z3SolverFactory,
                  min_size, max_size,
-                 opt_level=0) -> LTS:
+                 opt_level=0,
+                 ltl_to_atm_timeout_sec=0) -> LTS:
     """
     :arg opt_level: Note that opt_level > 0 may introduce unsoundness (returns unrealizable while it is)
     """
+    if ltl_to_atm_timeout_sec > 0:
+        logging.warning("check_unreal: you set timeout (%i sec.) for LTL to automaton translation,"
+                        "but I don't support it now (I used to..)" % ltl_to_atm_timeout_sec)
     timer = Timer()
     spec = parse_acacia_and_build_expr(ltl_text, part_text, ltl_to_atm, opt_level)
 

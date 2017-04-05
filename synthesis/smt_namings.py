@@ -1,6 +1,7 @@
 from typing import Iterable
 
 from interfaces.automata import Node
+from interfaces.aht_automaton import Node as AHTNode
 from interfaces.expr import Signal
 
 
@@ -33,7 +34,7 @@ def smt_unname_if_signal(arg_name:str, signals:Iterable[Signal]) -> str or Signa
     return ARG_MODEL_STATE
 
 
-def smt_name_q(q:Node) -> str:
+def smt_name_q(q:Node or AHTNode) -> str:
     return '{0}_{1}'.format(TYPE_A_STATE, q.name)
 
 
