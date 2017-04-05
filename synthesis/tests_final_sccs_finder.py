@@ -1,8 +1,8 @@
 import unittest
 from itertools import chain
 
-from helpers.rejecting_states_finder import find_rejecting_sccs
-from interfaces.automata import Automaton, Node, Label
+from interfaces.automata import Automaton, Node, LABEL_TRUE
+from synthesis.final_sccs_finder import find_final_sccs
 
 
 class Test(unittest.TestCase):
@@ -13,7 +13,7 @@ class Test(unittest.TestCase):
                                             '1->2':False,
                                             '2->1':False})
 
-        rejecting_sccs = find_rejecting_sccs(automaton)
+        rejecting_sccs = find_final_sccs(automaton)
 
         assert len(rejecting_sccs) == 0, str(rejecting_sccs)
 
@@ -22,7 +22,7 @@ class Test(unittest.TestCase):
                                            'init',
                                            {'init->1':False, '1->2':False, '2->2':True})
 
-        rejecting_sccs = find_rejecting_sccs(automaton)
+        rejecting_sccs = find_final_sccs(automaton)
 
         assert len(rejecting_sccs) == 1, str(rejecting_sccs)
         assert set(map(lambda n: n.name, chain(*rejecting_sccs))) == {'2'}
@@ -32,7 +32,7 @@ class Test(unittest.TestCase):
             'init',
             {'init->1':False, '1->1':True, '1->2':False, '2->2':False})
 
-        rejecting_sccs = find_rejecting_sccs(automaton)
+        rejecting_sccs = find_final_sccs(automaton)
 
         assert len(rejecting_sccs) == 1, str(rejecting_sccs)
         assert set(map(lambda n: n.name, chain(*rejecting_sccs))) == {'1'}
@@ -42,7 +42,7 @@ class Test(unittest.TestCase):
             'init',
             {'init->1':False, '1->2':False, '2->init':False})
 
-        rejecting_sccs = find_rejecting_sccs(automaton)
+        rejecting_sccs = find_final_sccs(automaton)
         assert len(rejecting_sccs) == 0, str(rejecting_sccs)
 
     def test_rejecting_scc(self):
@@ -50,7 +50,7 @@ class Test(unittest.TestCase):
             'init',
             {'init->1':False, '1->2':False, '2->1':True})
 
-        rejecting_sccs = find_rejecting_sccs(automaton)
+        rejecting_sccs = find_final_sccs(automaton)
 
         assert len(rejecting_sccs) == 1, str(rejecting_sccs)
         assert set(map(lambda n: n.name, chain(*rejecting_sccs))) == {'1', '2'}, str(rejecting_sccs)
@@ -60,7 +60,7 @@ class Test(unittest.TestCase):
             'init',
             {'init->1':True, '1->1':True, '1->2':False, '2->1':False})
 
-        rejecting_sccs = find_rejecting_sccs(automaton)
+        rejecting_sccs = find_final_sccs(automaton)
 
         assert len(rejecting_sccs) == 1, str(rejecting_sccs)
         assert set(map(lambda n: n.name, chain(*rejecting_sccs))) == {'1', '2'}
@@ -70,7 +70,7 @@ class Test(unittest.TestCase):
             'init',
             {'init->1':False, '1->1':True, '1->2':False, '2->2':True})
 
-        rejecting_sccs = find_rejecting_sccs(automaton)
+        rejecting_sccs = find_final_sccs(automaton)
 
         assert len(rejecting_sccs) == 2, str(rejecting_sccs)
 
@@ -87,7 +87,7 @@ class Test(unittest.TestCase):
             src_node, dst_node = list(map(lambda name: name_to_node[name],
                                           trans_desc.split('->')))
 
-            src_node.add_transition(Label({}), {(dst_node,is_acc)})
+            src_node.add_transition(LABEL_TRUE, {(dst_node,is_acc)})
 
-        return Automaton({name_to_node[init_node_name]}, set(), set(name_to_node.values()))
+        return Automaton({name_to_node[init_node_name]}, set(name_to_node.values()))
 

@@ -1,4 +1,5 @@
-from typing import Iterable, Set
+from typing import Iterable
+from typing import Set
 
 from interfaces.expr import Signal, Expr
 
@@ -8,9 +9,9 @@ class Spec:
                  inputs:Iterable[Signal],
                  outputs:Iterable[Signal],
                  formula:Expr):
-        self.inputs = set(inputs)
-        self.outputs = set(outputs)
-        self.formula = formula
+        self.inputs = set(inputs)    # type: Set[Signal]
+        self.outputs = set(outputs)  # type: Set[Signal]
+        self.formula = formula       # type: Expr
 
     def __str__(self):
         return "inputs: '%s', outputs: '%s', formula: '%s''" % \

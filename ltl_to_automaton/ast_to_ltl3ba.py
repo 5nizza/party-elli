@@ -23,7 +23,7 @@ class ConverterToLtl2BaFormatVisitor(Visitor):
         if binary_op.name == '+':
             return '({arg1}) || ({arg2})'.format(arg1=arg1, arg2=arg2)
 
-        if binary_op.name in ('U', 'R', '->', '<->'):
+        if binary_op.name in ('U', 'R', '->', '<->', 'W'):
             return '({arg1}) {op} ({arg2})'.format(arg1=arg1, arg2=arg2, op=binary_op.name)
 
         assert 0, 'unknown binary operator: ' + "'" + str(binary_op.name) + "'"
@@ -41,7 +41,7 @@ class ConverterToLtl2BaFormatVisitor(Visitor):
         # if isinstance(signal, QuantifiedSignal) and len(signal.binding_indices) > 0:
         #     suffix = '_' + '_'.join(map(str, signal.binding_indices))
 
-        name = (signal.name + suffix).lower()  # ltl3ba treats upper letters wrongly
+        name = (signal.name + suffix).lower()  # ltl_to_automaton treats upper letters wrongly
         self.signal_by_name[name] = signal
 
         return name

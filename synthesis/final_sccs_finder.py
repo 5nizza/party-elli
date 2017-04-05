@@ -3,6 +3,8 @@ from collections import defaultdict
 from pygraph.algorithms.accessibility import mutual_accessibility
 from pygraph.classes.digraph import digraph
 
+from interfaces.automata import Automaton
+
 
 def _convert_to_digraph(nodes):
     g = digraph()
@@ -29,15 +31,15 @@ def _build_edges_map(g) -> dict:
     return edges
 
 
-def find_rejecting_sccs(automaton):
+def find_final_sccs(automaton):
     """
     :return: set of SCCs(set of nodes) that
-             contains a rejecting transition between two nodes of the SCC.
+             contains a final transition between two nodes of the SCC.
     """
 
     g = _convert_to_digraph(automaton.nodes)
     sccs = mutual_accessibility(g)
-    rejecting_sccs = set()
+    final_sccs = set()
     dst_nodes_by_node = _build_edges_map(g)
 
     for scc in sccs.values():
@@ -50,18 +52,18 @@ def find_rejecting_sccs(automaton):
                          for dst in n_dst_nodes_within_scc)
 
             if is_acc:
-                rejecting_sccs.add(frozenset(scc))
+                final_sccs.add(frozenset(scc))
 
-    return rejecting_sccs
+    return final_sccs
 
 
-def build_state_to_rejecting_scc(automaton):
-    """ :return: dict node->SCC """
-    rejecting_sccs = find_rejecting_sccs(automaton)
+def build_state_to_final_scc(automaton:Automaton):
+    """ :return: dict node -> final SCC """
+    final_sccs = find_final_sccs(automaton)
 
-    state_to_rejecting_scc = dict()
-    for scc in rejecting_sccs:
+    state_to_final_scc = dict()
+    for scc in final_sccs:
         for n in scc:
-            state_to_rejecting_scc[n] = scc
+            state_to_final_scc[n] = scc
 
-    return state_to_rejecting_scc
+    return state_to_final_scc

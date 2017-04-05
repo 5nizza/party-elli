@@ -2,9 +2,10 @@ import logging
 from _collections_abc import Iterable
 import os
 import shutil
+from typing import List
+
 from helpers.shell import execute_shell
-from synthesis import smt_helper
-from synthesis.smt_logic import Logic
+from synthesis import smt_format
 from synthesis.solver_with_query_storage import SmtSolverWithQueryStorageAbstract
 
 
@@ -60,16 +61,13 @@ class EmulatePushPop:
 
 
 class Z3NonInteractiveViaFiles(SmtSolverWithQueryStorageAbstract):
-    """
-    I use this solver for non-incremental solving.
-    """
+    """ I use this solver for non-incremental solving. """
     def __init__(self,
                  files_prefix:str,
                  z3_path:str,
-                 logic:Logic,
                  remove_file:bool):
         self._file_name = files_prefix + '.smt2'
-        super().__init__(TruncatableQueryStorage_ViaFile(self._file_name), logic)
+        super().__init__(TruncatableQueryStorage_ViaFile(self._file_name))
 
         self._emulate_push_pop = EmulatePushPop(self._query_storage)
         self._z3_cmd = z3_path + ' -smt2 ' + self._file_name
@@ -81,15 +79,15 @@ class Z3NonInteractiveViaFiles(SmtSolverWithQueryStorageAbstract):
             os.remove(self._file_name)
 
     def push(self):
-        return self._emulate_push_pop.push()
+        self._emulate_push_pop.push()
 
     def pop(self):
-        return self._emulate_push_pop.pop()
+        self._emulate_push_pop.pop()
 
-    def solve(self):
+    def solve(self) -> List[str] or None:
         logging.info('solving ' + self._file_name)
 
-        self._query_storage += smt_helper.make_exit()
+        self._query_storage += smt_format.make_exit()
         self._query_storage.flush()
         #change the name of file and z3_cmd if necessary
         ret, out, err = execute_shell(self._z3_cmd)
@@ -116,13 +114,13 @@ class FakeSolver(Z3NonInteractiveViaFiles):
     Always returns UNSAT.
     """
 
-    def __init__(self, smt_file_prefix, z3_path:str, logic:Logic):
-        super().__init__(smt_file_prefix, z3_path, logic, True)
+    def __init__(self, smt_file_prefix, z3_path:str):
+        super().__init__(smt_file_prefix, z3_path, True)
         self.__cur_index = 1
         self.__file_prefix = smt_file_prefix
 
-    def solve(self):
-        self._query_storage += smt_helper.make_exit()
+    def solve(self) -> List[str] or None:
+        self._query_storage += smt_format.make_exit()
         self._query_storage.flush()
 
         file_name = '{file_prefix}_{index}.smt2'.format(file_prefix=self.__file_prefix,

@@ -1,6 +1,7 @@
 import unittest
 
 from interfaces.automata import Node, get_next_states, Label
+from interfaces.expr import Signal
 
 
 class Test(unittest.TestCase):
@@ -11,26 +12,28 @@ class Test(unittest.TestCase):
 
     def test_get_next_states(self):
         state = Node('init')
-        r = Node('r')
-        rg = Node('rg')
-        nr_g = Node('!rg')
+
+        sig_r, sig_g = Signal('r'), Signal('g')
+        node_r = Node('r')
+        node_rg = Node('rg')
+        node_nr_g = Node('!rg')
 
         _ = False
-        edge_to_r = {(r, _)}
-        edge_to_rg = {(rg, _)}
-        edge_to_not_r_g = {(nr_g, _)}
+        edge_to_r = {(node_r, _)}
+        edge_to_rg = {(node_rg, _)}
+        edge_to_not_r_g = {(node_nr_g, _)}
 
-        state.add_transition({'r':True}, edge_to_r)
-        state.add_transition({'r':True, 'g':True}, edge_to_rg)
-        state.add_transition({'r':False, 'g':True}, edge_to_not_r_g)
+        state.add_transition({sig_r:True}, edge_to_r)
+        state.add_transition({sig_r:True, sig_g:True}, edge_to_rg)
+        state.add_transition({sig_r:False, sig_g:True}, edge_to_not_r_g)
 
-        next_states = get_next_states(state, Label({'r':False, 'g':False}))
+        next_states = get_next_states(state, Label({sig_r:False, sig_g:False}))
         assert len(next_states) == 0
 
-        next_states = get_next_states(state, Label({'r':False, 'g':True}))
+        next_states = get_next_states(state, Label({sig_r:False, sig_g:True}))
         assert len(next_states) == 1
-        self._are_equal_sequences({nr_g}, next_states)
+        self._are_equal_sequences({node_nr_g}, next_states)
 
-        next_states = get_next_states(state, Label({'r':True, 'g':True}))
+        next_states = get_next_states(state, Label({sig_r:True, sig_g:True}))
         assert len(next_states) == 2
-        self._are_equal_sequences({r, rg}, next_states)
+        self._are_equal_sequences({node_r, node_rg}, next_states)

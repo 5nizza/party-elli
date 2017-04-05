@@ -3,11 +3,9 @@ import os
 import sys
 from typing import List
 from logging import FileHandler
-from synthesis.smt_logic import Logic
 from synthesis.z3_via_files import Z3NonInteractiveViaFiles, FakeSolver
 from synthesis.z3_via_pipe import Z3InteractiveViaPipes
 from third_party.ansistrm import ColorizingStreamHandler
-from ltl3ba.ltl2automaton import LTL3BA
 from interfaces.solver_interface import SolverInterface
 
 
@@ -50,13 +48,12 @@ def setup_logging(verbose_level:int=0, filename:str=None):
 
 class Z3SolverFactory:
     def __init__(self,
-                 smt_tmp_files_prefix, z3_path, logic,
+                 smt_tmp_files_prefix, z3_path,
                  is_incremental,
                  generate_queries_only,
                  remove_files):
         self.smt_tmp_files_prefix = smt_tmp_files_prefix
         self.z3_path = z3_path
-        self.logic = logic
         self.is_incremental = is_incremental
         self.generate_queries = generate_queries_only
         self.remove_files = remove_files
@@ -64,18 +61,16 @@ class Z3SolverFactory:
         self.solvers = []  # type: List[SolverInterface]
         self.seed = 0
 
-    def create(self):
+    def create(self) -> SolverInterface:
         self.seed += 1
         if self.is_incremental:
-            solver = Z3InteractiveViaPipes(self.logic, self.z3_path)
+            solver = Z3InteractiveViaPipes(self.z3_path)
         elif self.generate_queries:
             solver = FakeSolver(self.smt_tmp_files_prefix+str(self.seed),
-                                self.z3_path,
-                                self.logic)
+                                self.z3_path)
         else:
             solver = Z3NonInteractiveViaFiles(self.smt_tmp_files_prefix+str(self.seed),
                                               self.z3_path,
-                                              self.logic,
                                               self.remove_files)
 
         self.solvers.append(solver)
@@ -84,22 +79,3 @@ class Z3SolverFactory:
     def down_solvers(self):
         for s in self.solvers:
             s.die()
-
-
-def create_spec_converter_z3(logic:Logic,
-                             is_incremental:bool,
-                             generate_queries_only:bool,
-                             smt_tmp_files_prefix:str,
-                             remove_tmp_files) -> (LTL3BA, Z3SolverFactory):
-    """ Return ltl to automaton converter, Z3 solver """
-    assert smt_tmp_files_prefix or is_incremental
-
-    from config import Z3_PATH, LTL3BA_PATH
-
-    converter = LTL3BA(LTL3BA_PATH)
-    solver_factory = Z3SolverFactory(smt_tmp_files_prefix, Z3_PATH, logic,
-                                     is_incremental,
-                                     generate_queries_only,
-                                     remove_tmp_files)
-
-    return converter, solver_factory

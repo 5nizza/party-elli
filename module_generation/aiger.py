@@ -8,7 +8,7 @@ import resource
 from config import VL2MV_PATH, ABC_PATH, AIGTOAIG_PATH
 from helpers.python_ext import readfile
 from helpers.shell import execute_shell, assert_exec_strict, rc_out_err_to_str
-from interfaces.lts import LTS
+from interfaces.LTS import LTS
 from module_generation.verilog import lts_to_verilog
 
 

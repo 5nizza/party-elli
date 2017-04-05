@@ -2,7 +2,7 @@ import math
 
 from helpers.python_ext import lmap, StrAwareList
 from interfaces.expr import Signal
-from interfaces.lts import LTS
+from interfaces.LTS import LTS
 
 
 def _label_to_verilog(label:dict) -> str:

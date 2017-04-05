@@ -1,85 +1,17 @@
 from abc import ABC, abstractmethod
-from typing import Dict
-
-from interfaces.func_description import FuncDesc
+from typing import List, Iterable
 
 
 class SolverInterface(ABC):
-    def TYPE_BOOL(self):
-        return 'Bool'
-
     @abstractmethod
-    def die(self):
+    def __iadd__(self, other:str or Iterable[str]):
         raise NotImplementedError()
 
     @abstractmethod
-    def declare_enum(self, enum_name:str, values):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def declare_fun(self, func_desc:FuncDesc):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def define_fun(self, func_desc:FuncDesc):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def op_not(self, e):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def op_and(self, clauses):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def op_or(self, clauses):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def op_implies(self, left, right):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def false(self):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def get_true(self):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def op_eq(self, first_arg, second_arg):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def op_ge(self, left, right):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def op_gt(self, left, right):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def forall_bool(self, ground_args, formula):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def exists_bool(self, ground_args, formula):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def forall(self, ground_arg_type_pairs, formula):
-        raise NotImplementedError()
-
-    #
-    @abstractmethod
-    def call_func(self, func_desc:FuncDesc, val_by_var:Dict[str, str]):
-        raise NotImplementedError()
-
-    #
-    @abstractmethod
-    def assert_(self, condition):
+    def solve(self) -> List[str] or None:
+        """ :returns: None if UNSAT, else (possible empty) list of string values.
+                      (excluding 'sat'/'unsat' status)
+        """
         raise NotImplementedError()
 
     @abstractmethod
@@ -91,21 +23,5 @@ class SolverInterface(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def add_check_sat(self):
-        """ This is a hack to fit incremental and usual solvers
-            into common interface.
-        """
-        raise NotImplementedError()
-
-    @abstractmethod
-    def solve(self) -> list:  # TODO: returns lines, but should return some model witness
-        raise NotImplementedError()
-
-    @abstractmethod
-    def get_value(self, expr):
-        raise NotImplementedError()
-
-    #
-    @abstractmethod
-    def comment(self, comment):
+    def die(self):
         raise NotImplementedError()

@@ -5,12 +5,8 @@ def to_dot(automaton:Automaton) -> str:
     if automaton is None:
         return ''
 
-    rej_header = []
-    for rej in automaton.acc_nodes:
-        rej_header.append('"{0}" [shape=doublecircle]'.format(rej.name))
-
     init_header = []
-    for init in automaton.initial_nodes:
+    for init in automaton.init_nodes:
         init_header.append('"{0}" [shape=box]'.format(init.name))
 
     trans_dot = []
@@ -36,7 +32,6 @@ def to_dot(automaton:Automaton) -> str:
     dot_lines = ['digraph "automaton" {'] + \
                 ['rankdir=LR;'] + \
                 init_header + ['\n'] + \
-                rej_header + ['\n'] + \
                 trans_dot + ['}']
 
     return '\n'.join(dot_lines)

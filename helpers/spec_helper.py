@@ -1,21 +1,22 @@
 from typing import Tuple
 
 from helpers.automata_classifier import is_safety_automaton
+from interfaces.LTL_to_automaton import LTLToAutomaton
 from interfaces.expr import Expr, Number
 
 from interfaces.expr import UnaryOp, BinOp, Signal
 
 
-def is_safety_ltl(expr: Expr, ltl2automaton) -> bool:
-    automaton = ltl2automaton.convert(~expr)  # !(safety ltl) has safety automaton
+def is_safety_ltl(expr:Expr, ltl_to_atm:LTLToAutomaton) -> bool:
+    automaton = ltl_to_atm.convert(~expr)  # !(safety ltl) should have safety automaton
     res = is_safety_automaton(automaton)
     return res
 
 
-def split_safety_liveness(formulas, ltl2automaton):
+def split_safety_liveness(formulas, ltl_to_atm:LTLToAutomaton):
     formulas = set(formulas)
 
-    safety = set(filter(lambda f: is_safety_ltl(f, ltl2automaton), formulas))
+    safety = set(filter(lambda f: is_safety_ltl(f, ltl_to_atm), formulas))
     liveness = formulas - safety
 
     return safety, liveness

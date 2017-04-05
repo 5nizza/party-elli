@@ -1,18 +1,17 @@
 import logging
 import shlex
 import subprocess
+from typing import List
 
 from helpers.python_ext import StrAwareList, lfilter
-from synthesis.smt_logic import Logic
 from synthesis.solver_with_query_storage import SmtSolverWithQueryStorageAbstract
 
 
 class Z3InteractiveViaPipes(SmtSolverWithQueryStorageAbstract):
-    """
-    I use this solver for incremental solving.
-    """
-    def __init__(self, logic:Logic, z3_path):
-        super().__init__(StrAwareList(), logic)
+    """ Incremental Solver """
+
+    def __init__(self, z3_path):
+        super().__init__(StrAwareList())
 
         z3_cmd = z3_path + ' -smt2 -in '
         args = shlex.split(z3_cmd)
@@ -27,7 +26,7 @@ class Z3InteractiveViaPipes(SmtSolverWithQueryStorageAbstract):
     def die(self):
         self._process.kill()
 
-    def _read_block(self) -> str:
+    def _read_block(self) -> List[str]:
         lines = []
 
         logging.debug('reading z3 output:')
@@ -51,7 +50,7 @@ class Z3InteractiveViaPipes(SmtSolverWithQueryStorageAbstract):
                                    error='\n'.join(real_error_lines))
             assert 0, msg
 
-    def solve(self):
+    def solve(self) -> List[str] or None:
         logging.info('solving the query..')
 
         self._query_storage += '(echo "done")'
