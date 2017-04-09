@@ -49,9 +49,3 @@ class LTLToAtmViaLTL3BA(LTLToAutomaton):
         atm = spotAtm_to_automaton(aut, states_prefix, signal_by_name, property_)
         atm.name = property_
         return atm
-
-        # initial_nodes, rejecting_nodes, nodes = parse_ltl2ba_ba(ba, signal_by_name, states_prefix)
-        #
-        # automaton = Automaton(initial_nodes, nodes, name=str(property_))
-        #
-        # return automaton
