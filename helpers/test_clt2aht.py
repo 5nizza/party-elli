@@ -51,7 +51,7 @@ class TestCtl2Aht(TestCase):
             # AG(r >> F(g | c) & EGF(g) & EF(c) & EF(~c) & EGF(r)),   # TODO: why those tests are so slow?
             AG(EFG(r & g)),
             # AG(EFG(r & g)) | AFEG(g),
-            # AG(~r >> F(~g)) & AG(~r >> F(~g)) & EFG(g) & AFEG(~g),
+            AG(~r >> F(~g)) & AG(~r >> F(~g)) & EFG(g) & AFEG(~g),
             A(r),
             A(r) & A(~r),
             g,

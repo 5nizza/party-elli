@@ -116,7 +116,7 @@ def main():
     with tempfile.NamedTemporaryFile(dir='./') as smt_file:
         smt_files_prefix = smt_file.name
 
-    ltl_to_atm = translator_via_spot.LTLToAtmViaSpot
+    ltl_to_atm = translator_via_spot.LTLToAtmViaSpot()
     solver_factory = Z3SolverFactory(smt_files_prefix,
                                      Z3_PATH,
                                      args.incr,

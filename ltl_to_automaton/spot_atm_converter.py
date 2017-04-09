@@ -3,11 +3,14 @@ from typing import Dict, Set, Union
 import spot
 
 from interfaces.automata import Automaton, Node
+from interfaces.expr import Signal
 from ltl_to_automaton.parse_buddy import parse_bdd
 
 
 def spotAtm_to_automaton(atm:Union[spot.twa, spot.twa_graph],
-                         states_prefix:str) -> Automaton:
+                         states_prefix:str,
+                         signal_by_name:Dict[str, Signal],
+                         atm_name:str) -> Automaton:
     def node_name(s):
         return states_prefix + str(s)
 
@@ -24,9 +27,10 @@ def spotAtm_to_automaton(atm:Union[spot.twa, spot.twa_graph],
             if e.dst not in processed:
                 queue.add(e.dst)
             dst_node = myState_by_spotState.setdefault(e.dst, Node(node_name(e.dst)))
-            labels = parse_bdd(e.cond, atm.get_dict())
+            labels = parse_bdd(e.cond, atm.get_dict(), signal_by_name)
             for l in labels:
                 src.add_transition(l, [(dst_node,e.acc.count() != 0)])
 
     return Automaton({myState_by_spotState[atm.get_init_state_number()]},
-                     myState_by_spotState.values())
+                     myState_by_spotState.values(),
+                     atm_name)

@@ -8,5 +8,5 @@ class LTLToAutomaton(ABC):
     """ Interface for the automaton. """
     @staticmethod
     @abstractmethod
-    def convert(expr:Expr, states_prefix:str='') -> Automaton:
+    def convert(expr:Expr, states_prefix:str='', timeout:int=None) -> Automaton:
         pass

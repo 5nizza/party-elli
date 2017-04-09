@@ -10,7 +10,7 @@ from helpers.python_ext import readfile
 from helpers.timer import Timer
 from interfaces.LTL_to_automaton import LTLToAutomaton
 from interfaces.LTS import LTS
-from ltl_to_automaton import translator_via_spot
+from ltl_to_automaton import translator_via_spot, translator_via_ltl3ba
 from module_generation.dot import lts_to_dot
 from parsing.acacia_parser_helper import parse_acacia_and_build_expr
 from synthesis import model_searcher
@@ -93,6 +93,14 @@ def main():
                        help='system is Mealy')
 
     group = parser.add_mutually_exclusive_group()
+    group.add_argument('--spot', action='store_true', default=True,
+                       dest='spot',
+                       help='use SPOT for translating LTL->BA')
+    group.add_argument('--ltl3ba', action='store_false', default=False,
+                       dest='spot',
+                       help='use ltl3ba for translating LTL->BA')
+
+    group = parser.add_mutually_exclusive_group()
     group.add_argument('--bound', metavar='bound', type=int, default=128, required=False,
                        help='upper bound on the size of the model (for unreal this specifies size of env model)')
     group.add_argument('--size', metavar='size', type=int, default=0, required=False,
@@ -127,7 +135,8 @@ def main():
     with tempfile.NamedTemporaryFile(dir='./') as smt_file:
         smt_files_prefix = smt_file.name
 
-    ltl_to_automaton = translator_via_spot.LTLToAtmViaSpot
+    ltl_to_automaton = (translator_via_ltl3ba.LTLToAtmViaLTL3BA,
+                        translator_via_spot.LTLToAtmViaSpot)[args.spot]()
     solver_factory = Z3SolverFactory(smt_files_prefix,
                                      Z3_PATH,
                                      args.incr,
