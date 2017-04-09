@@ -386,7 +386,7 @@ def ctl2aht(spec:Spec,
     logging.info("created an NBW for the formula: nof_nodes = %i" % len(nbw.nodes))
 
     logging.info('normalize_nbw_inplace')
-    normalize_nbw_inplace(nbw)  # FIXME: SSA -- should be nbw = normalize_nbw(nbw)
+    normalize_nbw_inplace(nbw)  # FIXME: SSA -- should be: nbw = normalize_nbw(nbw)
 
     aht = nbw_to_nbt(nbw, spec.inputs, shared_aht, dstFormPropMgr)
 
