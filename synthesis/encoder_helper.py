@@ -1,5 +1,5 @@
 from itertools import chain, product
-from typing import Iterable, List, Dict, Tuple
+from typing import Iterable, List, Dict, Tuple, Container
 
 from helpers.python_ext import lmap
 from helpers.str_utils import remove_from_str
@@ -116,7 +116,7 @@ def _get_all_possible_inputs(func_desc:FuncDesc, last_allowed_states):
     return dicts
 
 
-def encode_model_bound(allowed_model_states:range, tau_desc:FuncDesc) -> List[str]:
+def encode_model_bound(allowed_model_states:Iterable[int], tau_desc:FuncDesc) -> List[str]:
     res = [comment('encoding model bound: ' + str(allowed_model_states))]
 
     # all args of tau function are quantified
@@ -129,7 +129,7 @@ def encode_model_bound(allowed_model_states:range, tau_desc:FuncDesc) -> List[st
     smt_m_next = call_func(tau_desc, args_dict)
 
     disjuncts = []
-    for allowed_m in allowed_model_states:
+    for allowed_m in iter(allowed_model_states):
         disjuncts.append(op_eq(smt_m_next,
                                smt_name_m(allowed_m)))
 

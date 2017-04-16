@@ -44,7 +44,7 @@ class CTLEncoderViaAHT(EncoderInterface):
         self.rank_func_desc = FuncDesc(FUNC_R, r_args, real_type())
 
         self.model_init_state = model_init_state  # type: int
-        self.last_allowed_states = None           # type: range
+        self.last_allowed_states = None           # type: List[int]
 
     # encoding headers
     def encode_headers(self, model_states:Iterable[int]) -> List[str]:
@@ -156,8 +156,8 @@ class CTLEncoderViaAHT(EncoderInterface):
 
         return [assertion(s_assertion)]
 
-    def encode_model_bound(self, allowed_model_states:range) -> List[str]:
-        self.last_allowed_states = allowed_model_states
+    def encode_model_bound(self, allowed_model_states:Iterable[int]) -> List[str]:
+        self.last_allowed_states = list(allowed_model_states)
         return encode_model_bound(allowed_model_states, self.tau_desc)
 
     def encode_get_model_values(self) -> List[str]:

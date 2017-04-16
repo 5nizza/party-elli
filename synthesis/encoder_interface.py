@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Iterable, Container, Sequence
 
 from interfaces.LTS import LTS
 
@@ -14,11 +14,11 @@ class EncoderInterface(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def encode_run_graph(self, new_states) -> List[str]:
+    def encode_run_graph(self, states_to_encode:Iterable[int]) -> List[str]:
         raise NotImplementedError()
 
     @abstractmethod
-    def encode_model_bound(self, cur_all_states) -> List[str]:
+    def encode_model_bound(self, cur_all_states:Iterable[int]) -> List[str]:
         raise NotImplementedError()
 
     @abstractmethod
@@ -26,5 +26,5 @@ class EncoderInterface(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def parse_model(self, smt_model:List[str]) -> LTS:
+    def parse_model(self, smt_model:Sequence[str]) -> LTS:
         raise NotImplementedError()
