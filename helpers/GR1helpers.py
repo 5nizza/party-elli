@@ -2,7 +2,7 @@ import logging
 
 from typing import List
 
-from helpers.expr_helper import and_expr
+from helpers.nnf_normalizer import and_expr
 from interfaces.expr import Expr, UnaryOp, BinOp
 from ltl_to_automaton.ast_to_ltl3ba import ConverterToLtl2BaFormatVisitor
 

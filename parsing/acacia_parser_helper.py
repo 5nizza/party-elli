@@ -1,4 +1,4 @@
-from helpers.expr_helper import and_expr
+from helpers.nnf_normalizer import and_expr
 from helpers.GR1helpers import strengthen1, strengthen2
 from helpers.spec_helper import split_safety_liveness
 from interfaces.LTL_to_automaton import LTLToAutomaton

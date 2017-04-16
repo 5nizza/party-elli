@@ -1,14 +1,15 @@
 import logging
 from itertools import combinations
 from typing import Dict, Tuple, Set, Iterable, List
+from typing import Tuple as Pair
 
 from helpers import aht2dot
 from helpers.automaton2dot import to_dot
-from helpers.expr_helper import get_sig_number, get_signal_names, Normalizer
+from helpers.nnf_normalizer import get_sig_number, get_signal_names, NNFNormalizer
 from helpers.expr_to_dnf import to_dnf_set
 from helpers.logging_helper import log_entrance
 from helpers.label_helper import common_label, label_to_expr, labels_to_dnf_expr, cube_expr_to_label, label_minus_labels
-from helpers.normalizer import normalize_nbw_inplace, normalize_aht_transitions
+from helpers.atm_normalizer import normalize_nbw_inplace, normalize_aht_transitions
 from helpers.python_ext import lfilter, to_str, lmap
 from helpers.spec_helper import prop
 from interfaces import automata
@@ -118,7 +119,7 @@ def assert_no_name_collisions(formula:Expr, prefix_to_try:str):
 
 
 @log_entrance()
-def replace_top_AEs(formula:Expr) -> (Tuple[Tuple[Expr, Expr]], Expr):
+def replace_top_AEs(formula:Expr) -> (Tuple[Pair[Expr, Expr]], Expr):
     """
     :return: (new_proposition, formula) pairs,
              top formula with newly introduced propositions.
@@ -155,7 +156,7 @@ def replace_top_AEs(formula:Expr) -> (Tuple[Tuple[Expr, Expr]], Expr):
             if unary_op.name == 'A':
                 # if see `A(phi)`, then introduce proposition for `E~phi`,
                 # and return ~proposition
-                neg_arg = Normalizer().dispatch(~unary_op.arg)
+                neg_arg = NNFNormalizer().dispatch(~unary_op.arg)
                 prop_for_neg = self._get_add_new_prop(UnaryOp('E', neg_arg))
                 return ~prop_for_neg
             return super().visit_unary_op(unary_op)
@@ -358,7 +359,7 @@ def ctl2aht(spec:Spec,
     assert is_state_formula(spec.formula, spec.inputs), str(spec.formula)
 
     if spec.formula.name == 'A':
-        neg_spec = Spec(spec.inputs, spec.outputs, Normalizer().dispatch(~spec.formula))
+        neg_spec = Spec(spec.inputs, spec.outputs, NNFNormalizer().dispatch(~spec.formula))
         neg_aht = ctl2aht(neg_spec, ltl2ba, shared_aht, dstFormPropMgr)
         return dualize_aht(neg_aht, shared_aht, dstFormPropMgr)
 
