@@ -4,7 +4,7 @@ from sympy import Symbol, to_dnf, Not, Or, And, simplify_logic
 from sympy import false as sympy_false
 from sympy import true as sympy_true
 
-from helpers.nnf_normalizer import get_sig_number
+from helpers.pnf_normalizer import get_sig_number
 from helpers.spec_helper import prop
 from interfaces.expr import Expr, BinOp, Number, Bool, UnaryOp
 from parsing.visitor import Visitor

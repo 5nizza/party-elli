@@ -1,7 +1,7 @@
 from typing import List, Iterable
 from typing import Set
 
-from helpers.nnf_normalizer import get_sig_number
+from helpers.pnf_normalizer import get_sig_number
 from helpers.expr_to_dnf import to_dnf_set
 from helpers.python_ext import lmap
 from interfaces.automata import Label, LABEL_TRUE

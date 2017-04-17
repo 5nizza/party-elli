@@ -1,7 +1,7 @@
 from typing import Iterable, Dict, List
 from typing import Set
 
-from helpers.nnf_normalizer import get_sig_number
+from helpers.pnf_normalizer import get_sig_number
 from helpers.logging_helper import log_entrance
 from helpers.python_ext import lmap, lfilter
 from interfaces.LTS import LTS

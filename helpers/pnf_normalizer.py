@@ -43,7 +43,7 @@ def get_signal_names(e:Expr) -> Set[str]:
     return collector.names
 
 
-class NNFNormalizer(Visitor):
+class PNFNormalizer(Visitor):
     """ Translate the formula into the normalized form. """
 
     def _get_dual_op_name(self, op_name:str) -> str:

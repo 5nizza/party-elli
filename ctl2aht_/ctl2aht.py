@@ -5,7 +5,7 @@ from typing import Tuple as Pair
 
 from helpers import aht2dot
 from helpers.automaton2dot import to_dot
-from helpers.nnf_normalizer import get_sig_number, get_signal_names, NNFNormalizer
+from helpers.pnf_normalizer import get_sig_number, get_signal_names, PNFNormalizer
 from helpers.expr_to_dnf import to_dnf_set
 from helpers.logging_helper import log_entrance
 from helpers.label_helper import common_label, label_to_expr, labels_to_dnf_expr, cube_expr_to_label, label_minus_labels
@@ -129,7 +129,12 @@ def replace_top_AEs(formula:Expr) -> (Tuple[Pair[Expr, Expr]], Expr):
              NB: all introduced propositions refer to formulas of the form E(phi)
                  (no 'A's)
     """
-    class ReplacerVisitor(Visitor):
+    class NormTopAEReplacerVisitor(Visitor):
+        """ Replace top-most AE sub-formula with propositions,
+            where the propositions abbreviate E formulas
+            (thus A(..) is ~prop where prop encodes E(~..))
+        """
+
         def __init__(self, new_props_prefix:str):
             self.last = 0
             self.new_prop_by_expr = dict()  # type: Dict[Expr, Expr]
@@ -156,7 +161,7 @@ def replace_top_AEs(formula:Expr) -> (Tuple[Pair[Expr, Expr]], Expr):
             if unary_op.name == 'A':
                 # if see `A(phi)`, then introduce proposition for `E~phi`,
                 # and return ~proposition
-                neg_arg = NNFNormalizer().dispatch(~unary_op.arg)
+                neg_arg = PNFNormalizer().dispatch(~unary_op.arg)
                 prop_for_neg = self._get_add_new_prop(UnaryOp('E', neg_arg))
                 return ~prop_for_neg
             return super().visit_unary_op(unary_op)
@@ -166,7 +171,7 @@ def replace_top_AEs(formula:Expr) -> (Tuple[Pair[Expr, Expr]], Expr):
     prop_prefix = 'oxouv'  # FIXME: better name!
     assert_no_name_collisions(formula, prop_prefix)
 
-    replacer = ReplacerVisitor(prop_prefix)
+    replacer = NormTopAEReplacerVisitor(prop_prefix)
     new_f = replacer.dispatch(formula)
     return tuple(map(lambda e_p: (e_p[1],e_p[0]), replacer.new_prop_by_expr.items())),\
            new_f
@@ -359,7 +364,7 @@ def ctl2aht(spec:Spec,
     assert is_state_formula(spec.formula, spec.inputs), str(spec.formula)
 
     if spec.formula.name == 'A':
-        neg_spec = Spec(spec.inputs, spec.outputs, NNFNormalizer().dispatch(~spec.formula))
+        neg_spec = Spec(spec.inputs, spec.outputs, PNFNormalizer().dispatch(~spec.formula))
         neg_aht = ctl2aht(neg_spec, ltl2ba, shared_aht, dstFormPropMgr)
         return dualize_aht(neg_aht, shared_aht, dstFormPropMgr)
 
