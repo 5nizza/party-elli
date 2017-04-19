@@ -2,8 +2,6 @@ import os
 import tempfile
 from unittest import TestCase
 
-import logging
-
 from ctl2aht_.ctl2aht import ctl2aht, is_state_formula
 from helpers import aht2dot
 from helpers.spec_helper import A, E, G, F, sig_prop, EGF, AG, EFG, AFEG, X, EF
