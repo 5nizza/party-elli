@@ -71,10 +71,10 @@ def build_ltl_for_E(f:UnaryOp, p:BinOp, d:BinOp, i:BinOp) -> Expr:
         return G((p & d_eq_i) >> X(phi.arg))
     if phi.name == 'F':
         return G(p >> (phi.arg | (d_eq_i >> X(p)))) & \
-               G(G((p & d_eq_i) >> F(phi.arg)))
+               G(G(p & d_eq_i) >> F(phi.arg))
     if phi.name == 'U':
         return G(p >> (phi.arg2 | (phi.arg1 & (d_eq_i >> X(p))))) & \
-               G(G((p & d_eq_i) >> F(phi.arg2)))
+               G(G(p & d_eq_i) >> F(phi.arg2))
 
     assert 0, str(f)
 
