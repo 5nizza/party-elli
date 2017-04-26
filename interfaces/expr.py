@@ -92,8 +92,9 @@ class Bool(Expr):
 
 class BinOp(Expr):
     def __init__(self, name:str, arg1, arg2):
-        """ @:param name: logical (*+=), temporal (U, W(?), R(?)) """
-        assert name in '*+=UWR', name
+        """ @:param name:
+                logical (*+=), temporal (U, W(?), R(?)),
+                but sometimes other flavours appear """
         super().__init__(name)
         assert arg1
         assert arg2
