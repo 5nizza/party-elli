@@ -5,6 +5,7 @@ from typing import List, Iterable
 class SolverInterface(ABC):
     @abstractmethod
     def __iadd__(self, other:str or Iterable[str]):
+        """ add SMT assertion, or other SMT command """
         raise NotImplementedError()
 
     @abstractmethod
