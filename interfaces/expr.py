@@ -107,10 +107,6 @@ class BinOp(Expr):
         else:
             return str(self.arg1) + '=' + str(self.arg2)
 
-    @staticmethod
-    def W(arg1, arg2):
-        return BinOp('W', arg1, arg2)
-
 
 class UnaryOp(Expr):
     def __init__(self, name, arg):
@@ -124,7 +120,3 @@ class UnaryOp(Expr):
         if self.name == '!':
             return self.arg  # cancel out double negations
         return super().__invert__()
-
-    @staticmethod
-    def G(a):
-        return UnaryOp('G', a)

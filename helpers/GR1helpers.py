@@ -3,7 +3,8 @@ import logging
 from typing import List
 
 from helpers.pnf_normalizer import and_expr
-from interfaces.expr import Expr, UnaryOp, BinOp
+from helpers.spec_helper import G, W
+from interfaces.expr import Expr
 from ltl_to_automaton.ast_to_ltl3ba import ConverterToLtl2BaFormatVisitor
 
 
@@ -53,13 +54,13 @@ def strengthen2(a_inits:List[Expr], g_inits:List[Expr],
     g_non_state = and_expr(filter(lambda e: e.name!='G', g_safeties))
 
     safety_init = a_init >> g_init
-    safety_weak = (a_init & a_non_state) >> BinOp.W(g_state, ~a_state)
-    safety_other = (a_init & a_non_state & UnaryOp.G(a_state)) >> g_non_state
+    safety_weak = (a_init & a_non_state) >> W(g_state, ~a_state)
+    safety_other = (a_init & a_non_state & G(a_state)) >> g_non_state
 
     a_liveness = and_expr(a_livenesses)
     g_liveness = and_expr(g_livenesses)
 
-    liveness = (a_init & a_non_state & UnaryOp.G(a_state) & a_liveness) >> g_liveness
+    liveness = (a_init & a_non_state & G(a_state) & a_liveness) >> g_liveness
 
     logging.debug('a_state: ' + str(ConverterToLtl2BaFormatVisitor().dispatch(a_state)))
     logging.debug('g_state: ' + str(g_state))
