@@ -91,14 +91,14 @@ class Bool(Expr):
 
 
 class BinOp(Expr):
-    def __init__(self, name:str, arg1:Expr, arg2:Expr):
+    def __init__(self, name:str, arg1, arg2):
         """ @:param name: logical (*+=), temporal (U, W(?), R(?)) """
         assert name in '*+=UWR', name
         super().__init__(name)
         assert arg1
         assert arg2
-        self.arg1 = arg1  # type: Expr
-        self.arg2 = arg2  # type: Expr
+        self.arg1 = arg1
+        self.arg2 = arg2
 
     def __repr__(self):
         if self.name != '=':
