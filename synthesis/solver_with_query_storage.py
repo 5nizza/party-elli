@@ -18,3 +18,6 @@ class SmtSolverWithQueryStorageAbstract(SolverInterface):
 
     def pop(self):
         self._query_storage += smt_format.make_pop()
+
+    def __str__(self):
+        return str(self._query_storage)
