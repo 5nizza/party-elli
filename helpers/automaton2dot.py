@@ -29,7 +29,7 @@ def to_dot(automaton:Automaton) -> str:
                 trans_dot.append('"{0}" -> "{1}" [color={2}{3}, arrowhead="{4}"];'.format(
                     n.name, node.name, color, edge_label_add, ['normal', 'normalnormal'][is_rej]))
 
-    dot_lines = ['digraph "automaton" {'] + \
+    dot_lines = ['digraph "%s" {' % automaton.name] + \
                 ['rankdir=LR;'] + \
                 init_header + ['\n'] + \
                 trans_dot + ['}']

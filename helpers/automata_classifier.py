@@ -6,7 +6,7 @@ from interfaces.automata import LABEL_TRUE, Automaton, Node
 from synthesis.final_sccs_finder import build_state_to_final_scc
 
 
-def is_absorbing(node:Node):
+def is_final_sink(node:Node):
     flagged_nodes = node.transitions.get(LABEL_TRUE)
     if flagged_nodes is None:
         return False
@@ -35,6 +35,6 @@ def is_safety_automaton(automaton:Automaton):
             if is_fin and\
                     dst in node_to_final_scc and\
                     node_to_final_scc[node] == node_to_final_scc[dst] and\
-                    not is_absorbing(node):
+                    not is_final_sink(node):
                 return False
     return True

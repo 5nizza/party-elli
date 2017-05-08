@@ -13,6 +13,7 @@ def search(min_size:int, max_size:int,
            solver:SolverInterface) -> LTS or None:
     solver += encoder.encode_headers(list(range(max_size)))
     solver += encoder.encode_initialization()
+    print(solver)
 
     last_size = 0
     for size in range(min_size, max_size+1):

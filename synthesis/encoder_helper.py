@@ -184,6 +184,6 @@ def smt_out(smt_m:str,
     return op_and(conjuncts)
 
 
-def _get_free_input_args(i_o:Label, inputs:Iterable[Signal]):
+def get_free_input_args(i_o:Label, inputs:Iterable[Signal]):
     _, free_args = build_inputs_values(inputs, i_o)
     return free_args

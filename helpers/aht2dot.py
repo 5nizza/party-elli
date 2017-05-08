@@ -2,7 +2,7 @@ from collections import namedtuple
 from typing import List
 from typing import Set
 
-from helpers.pnf_normalizer import get_sig_number
+from helpers.expr_helper import get_sig_number
 from helpers.expr_to_dnf import to_dnf_set
 from helpers.python_ext import StrAwareList
 from interfaces.aht_automaton import DstFormulaPropMgr, ExtLabel, SharedAHT, get_reachable_from, AHT

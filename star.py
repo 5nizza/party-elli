@@ -5,8 +5,10 @@ import tempfile
 
 from config import Z3_PATH
 from ctl2aht_ import ctl2aht
+from helpers import automaton2dot
 from helpers.logging_helper import log_entrance
 from helpers.main_helper import setup_logging, Z3SolverFactory
+from helpers.nnf_normalizer import NNFNormalizer
 from interfaces.LTL_to_automaton import LTLToAutomaton
 from interfaces.LTS import LTS
 from interfaces.aht_automaton import SharedAHT, DstFormulaPropMgr, get_reachable_from
@@ -15,7 +17,9 @@ from ltl_to_automaton import translator_via_spot
 from module_generation.dot import lts_to_dot
 from parsing.python_parser import parse_python_spec
 from synthesis import model_searcher
-from synthesis.ctl_encoder_via_aht import CTLEncoderViaAHT
+from synthesis.ctl.ctl_encoder_direct import CTLEncoderDirect
+from synthesis.ctl.ctl_encoder_via_aht import CTLEncoderViaAHT
+from synthesis.ctl.walker import automize_ctl
 from synthesis.encoder_builder import build_tau_desc, build_output_desc
 from synthesis.smt_namings import ARG_MODEL_STATE
 
@@ -54,25 +58,38 @@ UNKNOWN = 30
 def check_real(spec:Spec,
                min_size, max_size,
                ltl_to_atm:LTLToAutomaton,
-               solver_factory:Z3SolverFactory) -> LTS:
+               solver_factory:Z3SolverFactory,
+               use_direct_encoding:bool) -> LTS:
     shared_aht, dstFormPropMgr = SharedAHT(), DstFormulaPropMgr()
 
-    aht_automaton = ctl2aht.ctl2aht(spec, ltl_to_atm, shared_aht, dstFormPropMgr)
+    # normalize formula (negations appear only in front of basic propositions)
+    spec.formula = NNFNormalizer().dispatch(spec.formula)
 
-    aht_nodes, aht_transitions = get_reachable_from(aht_automaton.init_node,
+    if use_direct_encoding:
+        top_formula, atm_by_p, UCWs = automize_ctl(spec.formula, ltl_to_atm)
+        for p, atm in atm_by_p.items():
+            logging.debug('p: ' + str(p) + ', atm: \n' + automaton2dot.to_dot(atm))
+        encoder = CTLEncoderDirect(top_formula, atm_by_p, UCWs,
+                                   build_tau_desc(spec.inputs),
+                                   spec.inputs,
+                                   dict((o, build_output_desc(o, True, spec.inputs))
+                                        for o in spec.outputs))
+    else:
+        aht_automaton = ctl2aht.ctl2aht(spec, ltl_to_atm, shared_aht, dstFormPropMgr)
+
+        aht_nodes, aht_transitions = get_reachable_from(aht_automaton.init_node,
                                                     shared_aht.transitions,
                                                     dstFormPropMgr)
-    logging.info('The AHT automaton size (nodes/transitions) is: %i/%i' %
-                 (len(aht_nodes), len(aht_transitions)))
-    # print('(real) AHT automaton (dot) is:\n' +
-    #       aht2dot.convert(aht_automaton, shared_aht, dstFormPropMgr))
-
-    encoder = CTLEncoderViaAHT(aht_automaton, aht_transitions,
-                               dstFormPropMgr,
-                               build_tau_desc(spec.inputs),
-                               spec.inputs,
-                               dict((o, build_output_desc(o, True, spec.inputs))
-                                    for o in spec.outputs))
+        logging.info('The AHT automaton size (nodes/transitions) is: %i/%i' %
+                     (len(aht_nodes), len(aht_transitions)))
+        # print('(real) AHT automaton (dot) is:\n' +
+        #       aht2dot.convert(aht_automaton, shared_aht, dstFormPropMgr))
+        encoder = CTLEncoderViaAHT(aht_automaton, aht_transitions,
+                                   dstFormPropMgr,
+                                   build_tau_desc(spec.inputs),
+                                   spec.inputs,
+                                   dict((o, build_output_desc(o, True, spec.inputs))
+                                        for o in spec.outputs))
 
     model = model_searcher.search(min_size, max_size, encoder, solver_factory.create())
     return model
@@ -80,7 +97,6 @@ def check_real(spec:Spec,
 
 def main():
     """ :return: 1 if model is found, 0 otherwise """
-
     parser = argparse.ArgumentParser(description='Bounded Synthesizer for CTL*',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
@@ -92,6 +108,15 @@ def main():
                        help='upper bound on the size of the model (for unreal this specifies size of env model)')
     group.add_argument('--size', metavar='size', type=int, default=0, required=False,
                        help='search the model of this size (for unreal this specifies size of env model)')
+
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--direct', action='store_true', default=True,
+                       dest='direct',
+                       help='use direct encoding')
+    group.add_argument('--aht', action='store_false',
+                       default=False,
+                       dest='direct',
+                       help='encode via AHT')
 
     parser.add_argument('--incr', action='store_true', required=False, default=False,
                         help='use incremental solving')
@@ -129,7 +154,7 @@ def main():
         min_size, max_size = args.size, args.size
 
     spec = parse_python_spec(args.spec)
-    model = check_real(spec, min_size, max_size, ltl_to_atm, solver_factory)
+    model = check_real(spec, min_size, max_size, ltl_to_atm, solver_factory, args.direct)
 
     logging.info('{status} model for {who}'.format(status=('FOUND', 'NOT FOUND')[model is None],
                                                    who='sys'))

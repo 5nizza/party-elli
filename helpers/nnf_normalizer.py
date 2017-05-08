@@ -1,50 +1,12 @@
-from typing import Tuple, Set
-
-from interfaces.expr import Signal, BinOp, Bool, Number, Expr, UnaryOp
+from interfaces.expr import BinOp, UnaryOp
 from parsing.visitor import Visitor
 
 
-def and_expr(conjuncts):
-    conjuncts = [c for c in conjuncts if c != Bool(True)]
-
-    if len(conjuncts) == 0:
-        return Bool(True)
-
-    if len(conjuncts) == 1:
-        return conjuncts[0]
-
-    res = conjuncts[0]
-    for c in conjuncts[1:]:
-        res &= c
-
-    return res
-
-
-def get_sig_number(binary_op:BinOp) -> Tuple[Signal, Number]:
-    assert binary_op.name == '=', str(binary_op)
-    sig_arg, number_arg = binary_op.arg1, binary_op.arg2
-    if not isinstance(sig_arg, Signal):
-        sig_arg, number_arg = number_arg, sig_arg
-    return sig_arg, number_arg
-
-
-def get_signal_names(e:Expr) -> Set[str]:
-    class NamesCollectorVisitor(Visitor):
-        def __init__(self):
-            self.names = set()
-
-        def visit_signal(self, signal:Signal):
-            self.names.add(signal.name)
-            return super().visit_signal(signal)
-    # end of NamesCollectorVisitor
-
-    collector = NamesCollectorVisitor()
-    collector.dispatch(e)
-    return collector.names
-
-
-class PNFNormalizer(Visitor):
-    """ Translate the formula into the normalized form. """
+class NNFNormalizer(Visitor):
+    """
+    Translate the formula into positive normal form.
+    Uses Release operator!
+    """
 
     def _get_dual_op_name(self, op_name:str) -> str:
         mapping = (

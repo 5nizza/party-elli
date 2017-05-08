@@ -1,42 +1,11 @@
 import logging
-from typing import Dict, List
+from typing import List
 
-from helpers.pnf_normalizer import PNFNormalizer
+from ctl2ltl_.ctl_atomizer import CTLAtomizerVisitor
+from helpers.nnf_normalizer import NNFNormalizer
 from helpers.spec_helper import prop, G, X, F
 from interfaces.expr import Expr, UnaryOp, BinOp, Number, Signal
 from interfaces.spec import Spec
-from parsing.visitor import Visitor
-
-
-class _ReplacerVisitor(Visitor):
-    def __init__(self, new_props_prefix:str):
-        self.f_by_p = dict()   # type: Dict[BinOp, UnaryOp]
-        self._p_by_f = dict()  # type: Dict[UnaryOp, BinOp]
-        self._p_prefix = new_props_prefix
-        self._last = 0
-
-    def _get_add_new_p(self, a_e_expr:UnaryOp) -> BinOp:
-        # optimization:
-        # check if we already introduced a proposition for this expression
-        # (although it is OK to introduce several propositions for the same expression)
-        if a_e_expr not in self._p_by_f:  # can miss the same Expr (e.g.: two different instances of the same Expr)
-            p = prop(self.gen_new_name())
-            self._p_by_f[a_e_expr] = p
-        return self._p_by_f[a_e_expr]
-
-    def gen_new_name(self) -> str:
-        name = '%s%i' % (self._p_prefix, self._last)
-        self._last += 1
-        return name
-
-    def visit_unary_op(self, unary_op:UnaryOp):
-        res = super().visit_unary_op(unary_op)
-        if unary_op.name in ('E', 'A'):
-            p = self._get_add_new_p(res)
-            self.f_by_p[p] = res
-            return p
-        return res
-# end of ReplacerVisitor
 
 
 def build_ltl_for_A(f:UnaryOp, p:BinOp) -> Expr:
@@ -81,12 +50,13 @@ def build_ltl_for_E(f:UnaryOp, p:BinOp, d:BinOp, i:BinOp) -> Expr:
 
 def convert(spec:Spec) -> (Expr, List[Signal]):
     """ :return LTL formula """
+    assert 0, 'not sure it works after my modifications of the Atomizer'
 
     # Running example: EG~g & AG(EF~g & EFg), inputs = {r}, outputs = {g}
 
     # get top-formula and the first bunch for A/E sub-formulas
-    pnf_formula = PNFNormalizer().dispatch(spec.formula)
-    visitor = _ReplacerVisitor('p')
+    pnf_formula = NNFNormalizer().dispatch(spec.formula)
+    visitor = CTLAtomizerVisitor('p')
     top_formula = visitor.dispatch(pnf_formula)
 
     logging.debug(visitor.f_by_p)

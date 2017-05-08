@@ -62,6 +62,7 @@ class Automaton:
                  nodes:Iterable[Node],
                  name=''):
         self.init_nodes = set(init_nodes)     # type: Set[Node]
+        assert len(self.init_nodes) == 1, 'TODO: change signature'
         self.nodes = set(nodes)               # type: Set[Node]
         self.name = name                      # type: str
 
