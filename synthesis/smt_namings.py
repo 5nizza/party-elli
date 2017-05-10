@@ -35,11 +35,11 @@ def smt_unname_if_signal(arg_name:str, signals:Iterable[Signal]) -> str or Signa
 
 
 def smt_name_q(q:Node or AHTNode) -> str:
-    return '{0}_{1}'.format(TYPE_A_STATE, q.name)
+    return '__%s%s' % (TYPE_A_STATE.lower(), q.name)
 
 
 def smt_name_m(m:int) -> str:
-    return '__m%i' % m
+    return '__%s%i' % (TYPE_MODEL_STATE.lower(), m)
 
 
 def smt_unname_m(str_m:str) -> int:
