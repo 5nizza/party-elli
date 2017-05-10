@@ -1,6 +1,17 @@
 # Tool description
 
-The synthesizer works as follows:
+There are two versions of CTL* synthesizer.
+One, called with `./star.py --direct`, parses CTL* formula
+and encodes `sys |= CTL*` directly into SMT.
+Another, called with `./star.py --aht`, first translates CTL* into AHT,
+then encodes non-emptiness of `sys * AHT` into SMT.
+Both should in theory have the same performance,
+but in practice, the direct approach is faster,
+due to my naive implementation of translation `CTL* -> AHT`.
+
+Below we focus on the `--aht` version.
+
+The synthesizer via AHTs works as follows:
 
 1) Parse the specification that describes inputs, outputs, and CTL* formula F.
    For this, we use files in python format.
