@@ -37,18 +37,20 @@ def comment(comment:str):
     return smt_str
 
 
-def declare_fun(func_desc:FuncDesc) -> str:
-    input_types = lmap(lambda i_t: i_t[1], func_desc.ordered_argname_type_pairs)
-    smt_str = '(declare-fun '
-    smt_str += func_desc.name + ' ('
+def declare_fun(func:FuncDesc) -> str:
+    s = '(declare-fun {name} ({arg_types}) {ret_type})'
+    arg_types = ' '.join(map(lambda arg_type: arg_type[1],
+                             func.ordered_argname_type_pairs))
+    return s.format(name=func.name, arg_types=arg_types, ret_type=func.output_ty)
 
-    for var in input_types:
-        smt_str += var + ' '
-    if len(input_types):
-        smt_str = smt_str[:-1]
 
-    smt_str += ') ' + str(func_desc.output_ty) + ')\n'
-    return smt_str
+def define_fun(func:FuncDesc, body:str) -> str:
+    s = '(define-fun {name} ({args}) {type}' \
+        '  ({body})' \
+        ')'
+    args = ' '.join(map(lambda arg_type: '(%s %s)'%arg_type,
+                        func.ordered_argname_type_pairs))
+    return s.format(name=func.name, args=args, type=func.output_ty, body=body)
 
 
 def _get_args_list(self, value_by_argname:Dict[str, str]) -> list:
