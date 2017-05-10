@@ -1,16 +1,15 @@
-# Party (CTL-star version)
+# PARTY
 
 SMT based Bounded Synthesis, an implementation of the approach of 
 [Schewe and Finkbeiner](https://www.react.uni-saarland.de/publications/atva07.pdf).
+that also implements two encoders for CTL* from our CAV'17 paper.
 
-This is README file for `star.py` --- synthesizer from CTL*
-(a prototype implementing the approach submitted to CAV)
-
-If you are interested in experiments,
+If you are interested in CAV experiments,
 go straight to [README.md](experiments-for-cav/README.md).
 
 
 ## Requirements
+
 - Ubuntu 16.04 (likely to work with others)
 - python3 (tested with version 3.5)
 - Z3 (tested with version 4.3.2 and 4.4.1)
@@ -24,20 +23,29 @@ to your absolute paths to executables of `z3` and `ltl3ba`.
 
 
 ## To run
-`./star.py` to run the synthesizer from CTL*
+
+LTL synthesizer:
+```
+./elli.py --help
+```
+
+CTL* synthesizer:
+```
+./star.py --help
+```
 
 
 ## Notes
 
-The encoding of `system*AHT != empty` (AHT=alternating hesitant tree automaton)
-is done in `synthesis/ctl_encoder.py`.
-The translator `CTL* -> AHT` is in `ctl2aht_/ctl2aht.py`.
+- The encoder for LTL is in `synthesis/cobuchi_smt_encoder.py` and `buchi_cobuchi_encoder.py`
 
-These are the main two files that were added to support the synthesis from CTL*.
+- Two encoders for CTL* are `synthesis/ctl/ctl_encoder_direct.py` and `synthesis/ctl/ctl_encoder_via_aht.py`.
+  The translation `CTL* -> AHT` is in `ctl2aht_/ctl2aht.py`.
 
 
 ## Input format
 
-See files in `experiments-for-cav/*.py`.
-The syntax is python (I import spec files and thus let python parse it).
+- For LTL: acacia input format (which itself is derived from lily).
+- For CTL*: python format, see examples in `benchmarks/ctl` and `experiments-for-cav`.
+- Competetion version `rally.py` also support TLSF (but it needs looots of dependencies to run!)
 
