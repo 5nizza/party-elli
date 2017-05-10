@@ -1,4 +1,4 @@
-# AHT automaton for AGEF(~g1~r1)
+# AHT automaton for `AGEF(~g1~r1)`
 
 PARTY converts `AGEF(~g1~r1)` into the following alternating hesitant automaton (AHT):
 
