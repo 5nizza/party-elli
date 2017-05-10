@@ -46,7 +46,7 @@ def declare_fun(func:FuncDesc) -> str:
 
 def define_fun(func:FuncDesc, body:str) -> str:
     s = '(define-fun {name} ({args}) {type}' \
-        '  ({body})' \
+        '  {body}' \
         ')'
     args = ' '.join(map(lambda arg_type: '(%s %s)'%arg_type,
                         func.ordered_argname_type_pairs))

@@ -13,7 +13,7 @@ def automize_ctl(formula:Expr, ltl_to_atm:LTLToAutomaton)\
     :returns  top_formula, atm_by_p, subset of automata that are UCWs
     """
 
-    atomizer = CTLAtomizerVisitor('_p')
+    atomizer = CTLAtomizerVisitor('__p')
     top_formula = atomizer.dispatch(formula)
     atm_by_p = dict()  # type: Dict[Prop, Automaton]
     # (note that all `p` are positive, and all automata are NBWs)

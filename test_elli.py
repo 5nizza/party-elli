@@ -76,7 +76,7 @@ def _get_status(b):
 
 def main():
     parser = argparse.ArgumentParser(description='_Functional_ tests runner. '
-                                                 'For _unit_ tests -- run with nosetests')
+                                                 'For _unit_ tests -- run with nosetests3')
     parser.add_argument('--nonstop', action='store_true', required=False, default=False,
                         help="don't stop on error")
 

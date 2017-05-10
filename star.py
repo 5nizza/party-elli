@@ -68,7 +68,7 @@ def check_real(spec:Spec,
     if use_direct_encoding:
         top_formula, atm_by_p, UCWs = automize_ctl(spec.formula, ltl_to_atm)
         for p, atm in atm_by_p.items():
-            logging.debug('p: ' + str(p) + ', atm: \n' + automaton2dot.to_dot(atm))
+            logging.debug(str(p) + ', atm: \n' + automaton2dot.to_dot(atm))
         encoder = CTLEncoderDirect(top_formula, atm_by_p, UCWs,
                                    build_tau_desc(spec.inputs),
                                    spec.inputs,
