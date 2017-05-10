@@ -143,8 +143,8 @@ def _encode_transitions_ucw(reach_func_desc:FuncDesc,
 
         greater_op = _get_greater_op_ucw(q, is_fin, q_next, state_to_final_scc)
         if greater_op is not None:
-            smt_post_conjuncts.append(greater_op(smt_r(smt_m_next, smt_q_next),
-                                                 smt_r(smt_m, smt_q)))
+            smt_post_conjuncts.append(greater_op(smt_r(smt_m, smt_q),
+                                                 smt_r(smt_m_next, smt_q_next)))
 
     smt_post = op_and(smt_post_conjuncts)
     pre_implies_post = op_implies(smt_pre, smt_post)
