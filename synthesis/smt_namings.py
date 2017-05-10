@@ -13,7 +13,7 @@ FUNC_REACH = '__reach'
 FUNC_R = '__rk'
 
 ARG_MODEL_STATE = '__m'
-ARG_A_STATE = '__a'   # intended to be used for the whole specification (safety and liveness)
+ARG_A_STATE = '__a'
 
 
 def smt_arg_name_signal(s:Signal) -> str:   # TODO: need better checks of no name collisions
