@@ -28,6 +28,6 @@ class LTLToAtmViaSpot(LTLToAutomaton):
 
     @staticmethod
     def convert_raw(formula:str, signal_by_name:Dict[str, Signal], states_prefix:str='') -> Automaton:
-        spot_atm = spot.translate(formula, 'BA', 'High', 'Small')  # type: Union[spot.twa, spot.twa_graph]
+        spot_atm = spot.translate(formula, 'BA', 'Medium', 'Any')  # type: Union[spot.twa, spot.twa_graph]
         automaton = spotAtm_to_automaton(spot_atm, states_prefix, signal_by_name, formula)
         return automaton
