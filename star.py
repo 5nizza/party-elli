@@ -3,18 +3,17 @@ import argparse
 import logging
 import tempfile
 
-from automata import automaton_to_dot
-from config import Z3_PATH
 from CTL_to_AHT_ import ctl2aht
-from helpers import aht2dot
+from LTL_to_atm import translator_via_spot
+from automata import automaton_to_dot, aht2dot
+from config import Z3_PATH
 from helpers.logging_helper import log_entrance
 from helpers.main_helper import setup_logging, Z3SolverFactory
 from helpers.nnf_normalizer import NNFNormalizer
+from interfaces.AHT_automaton import SharedAHT, DstFormulaPropMgr, get_reachable_from
 from interfaces.LTL_to_automaton import LTLToAutomaton
 from interfaces.LTS import LTS
-from interfaces.AHT_automaton import SharedAHT, DstFormulaPropMgr, get_reachable_from
 from interfaces.spec import Spec
-from LTL_to_atm import translator_via_spot
 from module_generation.dot import lts_to_dot
 from parsing.python_parser import parse_python_spec
 from synthesis import model_searcher

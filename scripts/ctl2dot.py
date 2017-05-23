@@ -21,7 +21,7 @@ import argparse
 import logging
 from config import LTL3BA_PATH
 from CTL_to_AHT_ import ctl2aht
-from helpers import aht2dot
+from automata import aht2dot
 from helpers.main_helper import setup_logging
 from interfaces.AHT_automaton import SharedAHT, DstFormulaPropMgr
 from ltl3ba.ltl2automaton import LTL3BA
