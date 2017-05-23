@@ -3,21 +3,18 @@ from itertools import combinations
 from typing import Dict, Tuple, Set, Iterable, List
 from typing import Tuple as Pair
 
-from helpers import aht2dot
-from helpers.automaton2dot import to_dot
-from helpers.nnf_normalizer import NNFNormalizer
+from automata.atm_normalizer import normalize_nbw_inplace, normalize_aht_transitions
 from helpers.expr_helper import get_sig_number, get_signals
-from helpers.expr_to_dnf import to_dnf_set
+from helpers.label_helper import common_label, label_minus_labels
 from helpers.logging_helper import log_entrance
-from helpers.label_helper import common_label, label_to_expr, labels_to_dnf_expr, cube_expr_to_label, label_minus_labels
-from helpers.atm_normalizer import normalize_nbw_inplace, normalize_aht_transitions
-from helpers.python_ext import lfilter, to_str, lmap
+from helpers.nnf_normalizer import NNFNormalizer
+from helpers.python_ext import lfilter, lmap
 from helpers.spec_helper import prop
-from interfaces import automata
+from interfaces import automaton
 from interfaces.LTL_to_automaton import LTLToAutomaton
-from interfaces.aht_automaton import AHT, dualize_aht, Transition, ExtLabel, DstFormulaProp, DstFormulaPropMgr, \
+from interfaces.AHT_automaton import AHT, dualize_aht, Transition, ExtLabel, DstFormulaProp, DstFormulaPropMgr, \
     SharedAHT, Node, get_reachable_from
-from interfaces.automata import Automaton as NBW, Label
+from interfaces.automaton import Automaton as NBW, Label
 from interfaces.expr import Expr, Signal, UnaryOp, BinOp
 from interfaces.spec import Spec
 from parsing.visitor import Visitor
@@ -57,7 +54,7 @@ def is_state_formula(formula:Expr, inputs:Iterable[Signal]) -> bool:
     return not detector.is_path_detected
 
 
-def _is_final(node:automata.Node) -> bool:
+def _is_final(node:automaton.Node) -> bool:
     """ :returns true iff all outgoing transitions are final 
                  (as modelled by SPOT)
     """
@@ -75,14 +72,14 @@ def nbw_to_nbt(nbw:NBW,
         -> AHT:
     # 1. create transitions
     aht_transitions = set()
-    for n in nbw.nodes:  # type: automata.Node
+    for n in nbw.nodes:  # type: automaton.Node
         for (l, dst_acc_pairs) in n.transitions.items():
             l_inputs = Label((s, l[s])
                              for s in l.keys() & inputs)
             l_outputs = Label((s, l[s])
                               for s in l.keys() - inputs)
 
-            for (dst_state, _) in dst_acc_pairs:  # type: Tuple[automata.Node, bool]
+            for (dst_state, _) in dst_acc_pairs:  # type: Tuple[automaton.Node, bool]
                 ext_label = ExtLabel(l_inputs,
                                      inputs - l_inputs.keys(),
                                      ExtLabel.EXISTS)

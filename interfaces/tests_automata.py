@@ -1,6 +1,6 @@
 import unittest
 
-from interfaces.automata import Node, get_next_states, Label
+from interfaces.automaton import Node, get_next_states, Label
 from interfaces.expr import Signal
 
 

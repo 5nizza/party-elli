@@ -1,7 +1,7 @@
 import logging
 
 from helpers.python_ext import StrAwareList, add_dicts
-from interfaces.automata import Label
+from interfaces.automaton import Label
 from interfaces.LTS import LTS
 from module_generation.edges_simplifier import simplify_edge_labels
 

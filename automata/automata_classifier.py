@@ -2,7 +2,7 @@ from itertools import chain
 from typing import Tuple
 
 from helpers.python_ext import index_of
-from interfaces.automata import LABEL_TRUE, Automaton, Node
+from interfaces.automaton import LABEL_TRUE, Automaton, Node
 from synthesis.final_sccs_finder import build_state_to_final_scc
 
 
@@ -27,7 +27,7 @@ def is_safety_automaton(automaton:Automaton):
     are the 'absorbing' ones.
     """
 
-    #ltl_to_automaton creates transitional rejecting nodes, so filter them
+    #LTL_to_atm creates transitional rejecting nodes, so filter them
     node_to_final_scc = build_state_to_final_scc(automaton)
 
     for node in node_to_final_scc.keys():

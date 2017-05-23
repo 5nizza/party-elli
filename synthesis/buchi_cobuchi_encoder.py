@@ -1,7 +1,7 @@
 from typing import List, Dict, Iterable, Set, Tuple
 
-from helpers.automata_classifier import is_final_sink
-from interfaces.automata import Node, Label, Automaton
+from automata.automata_classifier import is_final_sink
+from interfaces.automaton import Node, Label, Automaton
 from interfaces.expr import Signal
 from interfaces.func_description import FuncDesc
 from synthesis.encoder_helper import build_tau_args_dict, get_free_input_args, smt_out

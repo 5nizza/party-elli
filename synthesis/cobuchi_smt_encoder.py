@@ -3,7 +3,7 @@ from typing import Iterable, Dict, List
 
 from helpers.logging_helper import log_entrance
 from interfaces.LTS import LTS
-from interfaces.automata import Automaton
+from interfaces.automaton import Automaton
 from interfaces.expr import Signal
 from interfaces.func_description import FuncDesc
 from synthesis.buchi_cobuchi_encoder import encode_run_graph_ucw

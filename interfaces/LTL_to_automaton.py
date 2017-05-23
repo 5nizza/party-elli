@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from interfaces.automata import Automaton
+from interfaces.automaton import Automaton
 from interfaces.expr import Expr
 
 

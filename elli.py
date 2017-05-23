@@ -3,20 +3,20 @@ import argparse
 import logging
 import tempfile
 
+from automata import atm_to_dot
+from automata.k_reduction import k_reduce
 from config import Z3_PATH
-from helpers import automaton2dot
 from helpers.main_helper import setup_logging, Z3SolverFactory
 from helpers.python_ext import readfile
 from helpers.timer import Timer
 from interfaces.LTL_to_automaton import LTLToAutomaton
 from interfaces.LTS import LTS
-from ltl_to_automaton import translator_via_spot, translator_via_ltl3ba
+from LTL_to_atm import translator_via_spot, translator_via_ltl3ba
 from module_generation.dot import lts_to_dot
 from parsing.acacia_parser_helper import parse_acacia_and_build_expr
 from synthesis import model_searcher
 from synthesis.encoder_builder import create_encoder
 from synthesis.smt_namings import ARG_MODEL_STATE
-
 
 # these are tool return values acc. to SYNTCOMP conventions
 REALIZABLE = 10
@@ -30,7 +30,7 @@ def check_unreal(ltl_text, part_text, is_moore,
                  opt_level=0,
                  ltl_to_atm_timeout_sec=0) -> LTS:
     """
-    :arg opt_level: Note that opt_level > 0 may introduce unsoundness (returns unrealizable while it is)
+    Note that opt_level > 0 may introduce unsoundness (returns unrealizable while it is).
     """
     if ltl_to_atm_timeout_sec > 0:
         logging.warning("check_unreal: you set timeout (%i sec.) for LTL to automaton translation,"
@@ -41,7 +41,7 @@ def check_unreal(ltl_text, part_text, is_moore,
     timer.sec_restart()
     automaton = ltl_to_atm.convert(spec.formula)
     logging.info('(unreal) automaton size is: %i' % len(automaton.nodes))
-    logging.debug('(unreal) automaton (dot) is:\n' + automaton2dot.to_dot(automaton))
+    logging.debug('(unreal) automaton (dot) is:\n' + atm_to_dot.to_dot(automaton))
     logging.debug('(unreal) automaton translation took (sec): %i' % timer.sec_restart())
 
     encoder = create_encoder(spec.outputs, spec.inputs, not is_moore, automaton)  # note: inputs/outputs reversed order
@@ -54,10 +54,12 @@ def check_unreal(ltl_text, part_text, is_moore,
 
 def check_real(ltl_text, part_text, is_moore,
                ltl_to_atm:LTLToAutomaton, solver_factory:Z3SolverFactory,
+               klive:int,
                min_size, max_size,
                opt_level=2) -> LTS:
     """
-    :param opt_level: values > 0 introduce incompleteness (but it is sound: if returns REAL, then REAL)
+    When opt_level>0, introduce incompleteness (but it is sound: if returns REAL, then REAL)
+    When klive>0, reduce UCW to k-UCW.
     """
     timer = Timer()
     spec = parse_acacia_and_build_expr(ltl_text, part_text, ltl_to_atm, opt_level)
@@ -65,8 +67,15 @@ def check_real(ltl_text, part_text, is_moore,
     timer.sec_restart()
     automaton = ltl_to_atm.convert(~spec.formula)
     logging.info('(real) automaton size is: %i' % len(automaton.nodes))
-    logging.debug('(real) automaton (dot) is:\n' + automaton2dot.to_dot(automaton))
+    logging.debug('(real) automaton (dot) is:\n' + atm_to_dot.to_dot(automaton))
     logging.debug('(real) automaton translation took (sec): %i' % timer.sec_restart())
+
+    with open('1.dot', 'w') as f:
+        f.write(atm_to_dot.to_dot(automaton))
+    with open('2.dot', 'w') as f:
+        f.write(atm_to_dot.to_dot(k_reduce(automaton, k=2)))
+
+    exit()
 
     encoder = create_encoder(spec.inputs, spec.outputs, is_moore, automaton)
 
@@ -99,6 +108,10 @@ def main():
     group.add_argument('--ltl3ba', action='store_false', default=False,
                        dest='spot',
                        help='use ltl3ba for translating LTL->BA')
+
+    parser.add_argument('--klive', type=int, default=0,
+                        help="reduce liveness to safety using parameter k"
+                             "(k=0 means no reduction)")
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--bound', metavar='bound', type=int, default=128, required=False,
@@ -150,10 +163,15 @@ def main():
 
     ltl_text, part_text = readfile(args.spec), readfile(args.spec.replace('.ltl', '.part'))
 
-    check_call = (check_real, check_unreal)[args.unreal]
-    model = check_call(ltl_text, part_text, args.moore,
-                       ltl_to_automaton, solver_factory,
-                       min_size, max_size)
+    if args.unreal:
+        model = check_unreal(ltl_text, part_text, args.moore,
+                             ltl_to_automaton, solver_factory,
+                             min_size, max_size)
+    else:
+        model = check_real(ltl_text, part_text, args.moore,
+                           ltl_to_automaton, solver_factory,
+                           args.klive,
+                           min_size, max_size)
 
     logging.info('{status} model for {who}'.format(status=('FOUND', 'NOT FOUND')[model is None],
                                                    who=('sys', 'env')[args.unreal]))

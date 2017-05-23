@@ -4,10 +4,10 @@ from typing import List
 
 from helpers.label_helper import common_label, negate_label
 from helpers.python_ext import lfilter
-from interfaces.aht_automaton import Transition as AHTTransition
-from interfaces.automata import Automaton as NBWAutomaton
-from interfaces.automata import Node as NBWNode
-from interfaces.automata import Label
+from interfaces.AHT_automaton import Transition as AHTTransition
+from interfaces.automaton import Automaton as NBWAutomaton
+from interfaces.automaton import Node as NBWNode
+from interfaces.automaton import Label
 
 
 def _assert_no_label_intersections(transitions:Dict[Label, Set[Tuple[bool,NBWNode]]]):

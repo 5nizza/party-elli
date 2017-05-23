@@ -9,7 +9,7 @@ from config import Z3_PATH
 from elli import REALIZABLE, UNREALIZABLE, UNKNOWN
 from helpers.main_helper import setup_logging, Z3SolverFactory
 from helpers.timer import Timer
-from ltl_to_automaton import translator_via_spot
+from LTL_to_atm import translator_via_spot
 from module_generation.aiger import lts_to_aiger
 from module_generation.dot import lts_to_dot
 from parsing.tlsf_parser import convert_tlsf_to_acacia, get_spec_type

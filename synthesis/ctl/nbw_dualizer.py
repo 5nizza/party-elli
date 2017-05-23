@@ -1,6 +1,6 @@
 from typing import Tuple, Set
 
-from interfaces.automata import Automaton, Node, Label
+from interfaces.automaton import Automaton, Node, Label
 
 
 def dualize_nbw(nbw:Automaton, dual_atm_name:str, dual_node_name_pref:str) -> Automaton:

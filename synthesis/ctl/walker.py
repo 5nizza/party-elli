@@ -1,8 +1,8 @@
 from typing import Dict, Set
 
-from ctl2ltl_.ctl_atomizer import CTLAtomizerVisitor
+from CTL_to_LTL_.ctl_atomizer import CTLAtomizerVisitor
 from interfaces.LTL_to_automaton import LTLToAutomaton
-from interfaces.automata import Automaton
+from interfaces.automaton import Automaton
 from interfaces.expr import Expr
 from interfaces.expr import BinOp as Prop
 

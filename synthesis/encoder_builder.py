@@ -1,6 +1,6 @@
 from typing import Iterable
 
-from interfaces.automata import Automaton
+from interfaces.automaton import Automaton
 from interfaces.expr import Signal
 from interfaces.func_description import FuncDesc
 from synthesis.smt_namings import ARG_MODEL_STATE, TYPE_MODEL_STATE, smt_arg_name_signal, FUNC_MODEL_TRANS

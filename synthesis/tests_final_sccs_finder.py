@@ -1,7 +1,7 @@
 import unittest
 from itertools import chain
 
-from interfaces.automata import Automaton, Node, LABEL_TRUE
+from interfaces.automaton import Automaton, Node, LABEL_TRUE
 from synthesis.final_sccs_finder import find_final_sccs
 
 

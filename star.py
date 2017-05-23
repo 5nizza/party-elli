@@ -3,17 +3,18 @@ import argparse
 import logging
 import tempfile
 
+from automata import atm_to_dot
 from config import Z3_PATH
-from ctl2aht_ import ctl2aht
-from helpers import automaton2dot
+from CTL_to_AHT_ import ctl2aht
+from helpers import aht2dot
 from helpers.logging_helper import log_entrance
 from helpers.main_helper import setup_logging, Z3SolverFactory
 from helpers.nnf_normalizer import NNFNormalizer
 from interfaces.LTL_to_automaton import LTLToAutomaton
 from interfaces.LTS import LTS
-from interfaces.aht_automaton import SharedAHT, DstFormulaPropMgr, get_reachable_from
+from interfaces.AHT_automaton import SharedAHT, DstFormulaPropMgr, get_reachable_from
 from interfaces.spec import Spec
-from ltl_to_automaton import translator_via_spot
+from LTL_to_atm import translator_via_spot
 from module_generation.dot import lts_to_dot
 from parsing.python_parser import parse_python_spec
 from synthesis import model_searcher
@@ -68,7 +69,7 @@ def check_real(spec:Spec,
     if use_direct_encoding:
         top_formula, atm_by_p, UCWs = automize_ctl(spec.formula, ltl_to_atm)
         for p, atm in atm_by_p.items():
-            logging.debug(str(p) + ', atm: \n' + automaton2dot.to_dot(atm))
+            logging.debug(str(p) + ', atm: \n' + atm_to_dot.to_dot(atm))
         encoder = CTLEncoderDirect(top_formula, atm_by_p, UCWs,
                                    build_tau_desc(spec.inputs),
                                    spec.inputs,
@@ -82,8 +83,8 @@ def check_real(spec:Spec,
                                                     dstFormPropMgr)
         logging.info('The AHT automaton size (nodes/transitions) is: %i/%i' %
                      (len(aht_nodes), len(aht_transitions)))
-        # print('(real) AHT automaton (dot) is:\n' +
-        #       aht2dot.convert(aht_automaton, shared_aht, dstFormPropMgr))
+        print('(real) AHT automaton (dot) is:\n' +
+              aht2dot.convert(aht_automaton, shared_aht, dstFormPropMgr))
         encoder = CTLEncoderViaAHT(aht_automaton, aht_transitions,
                                    dstFormPropMgr,
                                    build_tau_desc(spec.inputs),

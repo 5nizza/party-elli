@@ -2,7 +2,7 @@ import logging
 from functools import lru_cache
 from typing import Set, Iterable, Tuple
 
-from interfaces.automata import Label
+from interfaces.automaton import Label
 from interfaces.expr import Expr, UnaryOp, BinOp, Bool, Number
 from interfaces.expr import Signal
 from parsing.visitor import Visitor

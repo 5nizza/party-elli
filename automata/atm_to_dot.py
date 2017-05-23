@@ -1,4 +1,4 @@
-from interfaces.automata import Automaton
+from interfaces.automaton import Automaton
 
 
 def to_dot(automaton:Automaton) -> str:

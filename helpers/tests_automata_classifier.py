@@ -1,6 +1,7 @@
 import unittest
-from helpers.automata_classifier import is_final_sink
-from interfaces.automata import Node, Label
+
+from automata.automata_classifier import is_final_sink
+from interfaces.automaton import Node, Label
 
 
 class ClassifierTest(unittest.TestCase):

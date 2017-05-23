@@ -2,13 +2,13 @@ import os
 import tempfile
 from unittest import TestCase
 
-from ctl2aht_.ctl2aht import ctl2aht, is_state_formula
+from CTL_to_AHT_.ctl2aht import ctl2aht, is_state_formula
 from helpers import aht2dot
 from helpers.spec_helper import A, E, G, F, sig_prop, EGF, AG, EFG, AFEG, X, EF
-from interfaces.aht_automaton import DstFormulaPropMgr, SharedAHT
+from interfaces.AHT_automaton import DstFormulaPropMgr, SharedAHT
 from interfaces.expr import Bool
 from interfaces.spec import Spec
-from ltl_to_automaton.translator_via_spot import LTLToAtmViaSpot
+from LTL_to_atm.translator_via_spot import LTLToAtmViaSpot
 
 
 class TestCtl2Aht(TestCase):

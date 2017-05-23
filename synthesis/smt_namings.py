@@ -1,7 +1,7 @@
 from typing import Iterable
 
-from interfaces.automata import Node
-from interfaces.aht_automaton import Node as AHTNode
+from interfaces.automaton import Node
+from interfaces.AHT_automaton import Node as AHTNode
 from interfaces.expr import Signal
 
 

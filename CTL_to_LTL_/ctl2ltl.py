@@ -1,7 +1,7 @@
 import logging
 from typing import List
 
-from ctl2ltl_.ctl_atomizer import CTLAtomizerVisitor
+from CTL_to_LTL_.ctl_atomizer import CTLAtomizerVisitor
 from helpers.nnf_normalizer import NNFNormalizer
 from helpers.spec_helper import prop, G, X, F
 from interfaces.expr import Expr, UnaryOp, BinOp, Number, Signal

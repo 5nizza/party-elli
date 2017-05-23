@@ -3,7 +3,7 @@ from collections import defaultdict
 from pygraph.algorithms.accessibility import mutual_accessibility
 from pygraph.classes.digraph import digraph
 
-from interfaces.automata import Automaton
+from interfaces.automaton import Automaton
 
 
 def _convert_to_digraph(nodes):
