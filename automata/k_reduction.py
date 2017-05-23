@@ -28,7 +28,6 @@ def k_reduce(atm:Automaton, k:int) -> Automaton:
 
     processed_nodes = set()  # type: Set[Node]
     processed_nodes.add(dead_node)
-    # TODO: do not expand absorbing nodes dead
     while nodes_to_process:
         new_src = nodes_to_process.pop()
         processed_nodes.add(new_src)

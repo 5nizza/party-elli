@@ -3,7 +3,7 @@ import argparse
 import logging
 import tempfile
 
-from automata import atm_to_dot
+from automata import automaton_to_dot
 from automata.k_reduction import k_reduce
 from config import Z3_PATH
 from helpers.main_helper import setup_logging, Z3SolverFactory
@@ -41,7 +41,7 @@ def check_unreal(ltl_text, part_text, is_moore,
     timer.sec_restart()
     automaton = ltl_to_atm.convert(spec.formula)
     logging.info('(unreal) automaton size is: %i' % len(automaton.nodes))
-    logging.debug('(unreal) automaton (dot) is:\n' + atm_to_dot.to_dot(automaton))
+    logging.debug('(unreal) automaton (dot) is:\n' + automaton_to_dot.to_dot(automaton))
     logging.debug('(unreal) automaton translation took (sec): %i' % timer.sec_restart())
 
     encoder = create_encoder(spec.outputs, spec.inputs, not is_moore, automaton)  # note: inputs/outputs reversed order
@@ -67,13 +67,13 @@ def check_real(ltl_text, part_text, is_moore,
     timer.sec_restart()
     automaton = ltl_to_atm.convert(~spec.formula)
     logging.info('(real) automaton size is: %i' % len(automaton.nodes))
-    logging.debug('(real) automaton (dot) is:\n' + atm_to_dot.to_dot(automaton))
+    logging.debug('(real) automaton (dot) is:\n' + automaton_to_dot.to_dot(automaton))
     logging.debug('(real) automaton translation took (sec): %i' % timer.sec_restart())
 
     with open('1.dot', 'w') as f:
-        f.write(atm_to_dot.to_dot(automaton))
+        f.write(automaton_to_dot.to_dot(automaton))
     with open('2.dot', 'w') as f:
-        f.write(atm_to_dot.to_dot(k_reduce(automaton, k=2)))
+        f.write(automaton_to_dot.to_dot(k_reduce(automaton, k=2)))
 
     exit()
 

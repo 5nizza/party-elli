@@ -3,7 +3,7 @@ from itertools import combinations
 from typing import Dict, Tuple, Set, Iterable, List
 from typing import Tuple as Pair
 
-from automata.atm_normalizer import normalize_nbw_inplace, normalize_aht_transitions
+from automata.automata_normalizer import normalize_nbw_inplace, normalize_aht_transitions
 from helpers.expr_helper import get_sig_number, get_signals
 from helpers.label_helper import common_label, label_minus_labels
 from helpers.logging_helper import log_entrance

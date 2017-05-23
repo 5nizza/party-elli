@@ -3,7 +3,7 @@ import argparse
 import logging
 import tempfile
 
-from automata import atm_to_dot
+from automata import automaton_to_dot
 from config import Z3_PATH
 from CTL_to_AHT_ import ctl2aht
 from helpers import aht2dot
@@ -69,7 +69,7 @@ def check_real(spec:Spec,
     if use_direct_encoding:
         top_formula, atm_by_p, UCWs = automize_ctl(spec.formula, ltl_to_atm)
         for p, atm in atm_by_p.items():
-            logging.debug(str(p) + ', atm: \n' + atm_to_dot.to_dot(atm))
+            logging.debug(str(p) + ', atm: \n' + automaton_to_dot.to_dot(atm))
         encoder = CTLEncoderDirect(top_formula, atm_by_p, UCWs,
                                    build_tau_desc(spec.inputs),
                                    spec.inputs,
