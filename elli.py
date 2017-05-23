@@ -15,7 +15,9 @@ from LTL_to_atm import translator_via_spot, translator_via_ltl3ba
 from module_generation.dot import lts_to_dot
 from parsing.acacia_parser_helper import parse_acacia_and_build_expr
 from synthesis import model_searcher
-from synthesis.encoder_builder import create_encoder
+from synthesis.cobuchi_smt_encoder import CoBuchiEncoder
+from synthesis.encoder_builder import build_tau_desc, build_output_desc
+from synthesis.safety_smt_encoder import SafetyEncoder
 from synthesis.smt_namings import ARG_MODEL_STATE
 
 # these are tool return values acc. to SYNTCOMP conventions
@@ -44,7 +46,16 @@ def check_unreal(ltl_text, part_text, is_moore,
     logging.debug('(unreal) automaton (dot) is:\n' + automaton_to_dot.to_dot(automaton))
     logging.debug('(unreal) automaton translation took (sec): %i' % timer.sec_restart())
 
-    encoder = create_encoder(spec.outputs, spec.inputs, not is_moore, automaton)  # note: inputs/outputs reversed order
+    # encoder = create_encoder(spec.outputs, spec.inputs, not is_moore, automaton)  # note: inputs/outputs reversed order
+
+    # note: inputs/outputs and machine type are reversed
+    tau_desc = build_tau_desc(spec.outputs)
+    desc_by_output = dict((i, build_output_desc(i, not is_moore, spec.outputs))
+                          for i in spec.inputs)
+    encoder = CoBuchiEncoder(automaton,
+                             tau_desc,
+                             spec.outputs,
+                             desc_by_output)
 
     model = model_searcher.search(min_size, max_size, encoder, solver_factory.create())
     logging.debug('(unreal) model_searcher.search took (sec): %i' % timer.sec_restart())
@@ -66,21 +77,30 @@ def check_real(ltl_text, part_text, is_moore,
 
     timer.sec_restart()
     automaton = ltl_to_atm.convert(~spec.formula)
-    logging.info('(real) automaton size is: %i' % len(automaton.nodes))
-    logging.debug('(real) automaton (dot) is:\n' + automaton_to_dot.to_dot(automaton))
-    logging.debug('(real) automaton translation took (sec): %i' % timer.sec_restart())
+    logging.info('automaton size is: %i' % len(automaton.nodes))
+    logging.debug('automaton (dot) is:\n' + automaton_to_dot.to_dot(automaton))
+    logging.debug('automaton translation took (sec): %i' % timer.sec_restart())
 
-    with open('1.dot', 'w') as f:
-        f.write(automaton_to_dot.to_dot(automaton))
-    with open('2.dot', 'w') as f:
-        f.write(automaton_to_dot.to_dot(k_reduce(automaton, k=2)))
-
-    exit()
-
-    encoder = create_encoder(spec.inputs, spec.outputs, is_moore, automaton)
+    tau_desc = build_tau_desc(spec.inputs)
+    desc_by_output = dict((o, build_output_desc(o, is_moore, spec.inputs))
+                          for o in spec.outputs)
+    if klive == 0:
+        logging.info("using CoBuchiEncoder")
+        encoder = CoBuchiEncoder(automaton,
+                                 tau_desc,
+                                 spec.inputs,
+                                 desc_by_output)
+    else:
+        safety_automaton = k_reduce(automaton, klive)
+        logging.info('safety automaton size is: %i' % len(safety_automaton.nodes))
+        logging.info("using SafetyEncoder")
+        encoder = SafetyEncoder(safety_automaton,
+                                tau_desc,
+                                spec.inputs,
+                                desc_by_output)
 
     model = model_searcher.search(min_size, max_size, encoder, solver_factory.create())
-    logging.debug('(real) model_searcher.search took (sec): %i' % timer.sec_restart())
+    logging.debug('model_searcher.search took (sec): %i' % timer.sec_restart())
 
     return model
 
@@ -173,8 +193,13 @@ def main():
                            args.klive,
                            min_size, max_size)
 
-    logging.info('{status} model for {who}'.format(status=('FOUND', 'NOT FOUND')[model is None],
-                                                   who=('sys', 'env')[args.unreal]))
+    if not model:
+        logging.info('model NOT FOUND')
+    else:
+        logging.info('FOUND model for {who} of size {size}'.
+            format(who=('sys', 'env')[args.unreal],
+            size=len(model.states)))
+
     if model:
         dot_model_str = lts_to_dot(model, ARG_MODEL_STATE, (not args.moore) ^ args.unreal)
         if args.dot:

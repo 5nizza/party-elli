@@ -2,9 +2,11 @@ from typing import Set, Dict
 from typing import Tuple as Pair
 
 from automata.automata_classifier import is_final_sink
+from helpers.logging_helper import log_entrance
 from interfaces.automaton import Automaton, Node, Label, LABEL_TRUE
 
 
+@log_entrance()
 def k_reduce(atm:Automaton, k:int) -> Automaton:
     assert k >= 0, k
     dead_node = Node('dead')

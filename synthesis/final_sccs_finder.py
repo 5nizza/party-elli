@@ -3,7 +3,8 @@ from collections import defaultdict
 from pygraph.algorithms.accessibility import mutual_accessibility
 from pygraph.classes.digraph import digraph
 
-from interfaces.automaton import Automaton
+from interfaces.automaton import Automaton, Node
+from typing import Set
 
 
 def _convert_to_digraph(nodes):
@@ -31,7 +32,7 @@ def _build_edges_map(g) -> dict:
     return edges
 
 
-def find_final_sccs(automaton):
+def find_final_sccs(automaton:Automaton) -> Set[Set[Node]]:
     """
     :return: set of SCCs(set of nodes) that
              contains a final transition between two nodes of the SCC.
