@@ -61,7 +61,7 @@ class Z3InteractiveViaPipes(SmtSolverWithQueryStorageAbstract):
         for l in self._query_storage._output:
             self._process.stdin.write(bytes(l + '\n', 'utf-8'))
             self._process.stdin.flush()  # just in case
-            if l == '(check-sat)':
+            if l.startswith('(check-sat'):
                 z3_response = str(self._process.stdout.readline(), 'utf-8').strip()
                 if z3_response == 'unsat':
                     self._query_storage = StrAwareList()

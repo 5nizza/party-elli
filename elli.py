@@ -20,11 +20,11 @@ from synthesis.encoder_builder import build_tau_desc, build_output_desc
 from synthesis.safety_encoder import SafetyEncoder
 from synthesis.smt_namings import ARG_MODEL_STATE
 
-# these are tool return values acc. to SYNTCOMP conventions
+
+# These are Elli's return values acc. to SYNTCOMP conventions
 REALIZABLE = 10
 UNREALIZABLE = 20
 UNKNOWN = 30
-MAX_k = 32
 
 
 def check_unreal(ltl_text, part_text, is_moore,
@@ -100,8 +100,8 @@ def check_real(ltl_text, part_text, is_moore,
         #     f.write(automaton_to_dot.to_dot(safety_automaton))
         # exit()
         logging.info("using SafetyEncoder")
-        logging.info('reachability automaton size is: %i' % len(coreach_automaton.nodes))
-        logging.debug('reachability automaton (dot) is:\n' + automaton_to_dot.to_dot(coreach_automaton))
+        logging.info('co-reachability automaton size is: %i' % len(coreach_automaton.nodes))
+        logging.debug('co-reachability automaton (dot) is:\n' + automaton_to_dot.to_dot(coreach_automaton))
         encoder = SafetyEncoder(coreach_automaton,
                                 tau_desc,
                                 spec.inputs,
@@ -112,7 +112,7 @@ def check_real(ltl_text, part_text, is_moore,
                                         max_k,
                                         encoder, solver_factory.create())
 
-    logging.debug('model_searcher.search took (sec): %i' % timer.sec_restart())
+    logging.info('searching a model took (sec): %i' % timer.sec_restart())
 
     return model
 
@@ -141,8 +141,10 @@ def main():
                        dest='spot',
                        help='use ltl3ba for translating LTL->BA')
 
-    parser.add_argument('--klive', type=int, default=0,
-                        help="reduce liveness to safety using parameter k"
+    parser.add_argument('--maxK', type=int, default=0,
+                        help="reduce liveness to co-reachability (safety)."
+                             "This sets the upper bound on the number of 'bad' visits."
+                             "We iterate over increasing k (exact value of k is set heuristically)."
                              "(k=0 means no reduction)")
 
     group = parser.add_mutually_exclusive_group()
@@ -202,7 +204,7 @@ def main():
     else:
         model = check_real(ltl_text, part_text, args.moore,
                            ltl_to_automaton, solver_factory,
-                           args.klive,
+                           args.maxK,
                            min_size, max_size)
 
     if not model:
