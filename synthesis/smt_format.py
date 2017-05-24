@@ -1,11 +1,11 @@
-from typing import Dict
+from typing import Dict, Iterable
 
-from helpers.python_ext import lmap, lfilter
+from helpers.python_ext import lfilter
 from interfaces.func_description import FuncDesc
 
 
-def make_check_sat():
-    return "(check-sat)"
+def make_check_sat(assumptions:Iterable[str]=tuple()) -> str:
+    return "(check-sat%s)" % ('' if not assumptions else ' ' + ' '.join(assumptions))
 
 
 def make_push(level=1):
@@ -42,6 +42,10 @@ def declare_fun(func:FuncDesc) -> str:
     arg_types = ' '.join(map(lambda arg_type: arg_type[1],
                              func.ordered_argname_type_pairs))
     return s.format(name=func.name, arg_types=arg_types, ret_type=func.output_ty)
+
+
+def declare_const(name:str, ty:str) -> str:
+    return '(declare-const {name} {ty})'.format_map(locals())
 
 
 def define_fun(func:FuncDesc, body:str) -> str:

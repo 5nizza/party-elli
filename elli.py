@@ -14,16 +14,17 @@ from interfaces.LTS import LTS
 from LTL_to_atm import translator_via_spot, translator_via_ltl3ba
 from module_generation.dot import lts_to_dot
 from parsing.acacia_parser_helper import parse_acacia_and_build_expr
-from synthesis import model_searcher
-from synthesis.cobuchi_smt_encoder import CoBuchiEncoder
+from synthesis import model_searcher, model_k_searcher
+from synthesis.cobuchi_encoder import CoBuchiEncoder
 from synthesis.encoder_builder import build_tau_desc, build_output_desc
-from synthesis.safety_smt_encoder import SafetyEncoder
+from synthesis.safety_encoder import SafetyEncoder
 from synthesis.smt_namings import ARG_MODEL_STATE
 
 # these are tool return values acc. to SYNTCOMP conventions
 REALIZABLE = 10
 UNREALIZABLE = 20
 UNKNOWN = 30
+MAX_k = 32
 
 
 def check_unreal(ltl_text, part_text, is_moore,
@@ -46,8 +47,6 @@ def check_unreal(ltl_text, part_text, is_moore,
     logging.debug('(unreal) automaton (dot) is:\n' + automaton_to_dot.to_dot(automaton))
     logging.debug('(unreal) automaton translation took (sec): %i' % timer.sec_restart())
 
-    # encoder = create_encoder(spec.outputs, spec.inputs, not is_moore, automaton)  # note: inputs/outputs reversed order
-
     # note: inputs/outputs and machine type are reversed
     tau_desc = build_tau_desc(spec.outputs)
     desc_by_output = dict((i, build_output_desc(i, not is_moore, spec.outputs))
@@ -55,7 +54,8 @@ def check_unreal(ltl_text, part_text, is_moore,
     encoder = CoBuchiEncoder(automaton,
                              tau_desc,
                              spec.outputs,
-                             desc_by_output)
+                             desc_by_output,
+                             range(max_size+1))
 
     model = model_searcher.search(min_size, max_size, encoder, solver_factory.create())
     logging.debug('(unreal) model_searcher.search took (sec): %i' % timer.sec_restart())
@@ -65,12 +65,12 @@ def check_unreal(ltl_text, part_text, is_moore,
 
 def check_real(ltl_text, part_text, is_moore,
                ltl_to_atm:LTLToAutomaton, solver_factory:Z3SolverFactory,
-               klive:int,
+               max_k:int,
                min_size, max_size,
                opt_level=2) -> LTS:
     """
     When opt_level>0, introduce incompleteness (but it is sound: if returns REAL, then REAL)
-    When klive>0, reduce UCW to k-UCW.
+    When max_k>0, reduce UCW to k-UCW.
     """
     timer = Timer()
     spec = parse_acacia_and_build_expr(ltl_text, part_text, ltl_to_atm, opt_level)
@@ -84,22 +84,34 @@ def check_real(ltl_text, part_text, is_moore,
     tau_desc = build_tau_desc(spec.inputs)
     desc_by_output = dict((o, build_output_desc(o, is_moore, spec.inputs))
                           for o in spec.outputs)
-    if klive == 0:
+    if max_k == 0:
         logging.info("using CoBuchiEncoder")
         encoder = CoBuchiEncoder(automaton,
                                  tau_desc,
                                  spec.inputs,
-                                 desc_by_output)
+                                 desc_by_output,
+                                 range(max_size+1))
+        model = model_searcher.search(min_size, max_size, encoder, solver_factory.create())
     else:
-        safety_automaton = k_reduce(automaton, klive)
-        logging.info('safety automaton size is: %i' % len(safety_automaton.nodes))
+        coreach_automaton = k_reduce(automaton, max_k)
+        # with open('/tmp/orig.dot', 'w') as f:
+        #     f.write(automaton_to_dot.to_dot(automaton))
+        # with open('/tmp/red.dot', 'w') as f:
+        #     f.write(automaton_to_dot.to_dot(safety_automaton))
+        # exit()
         logging.info("using SafetyEncoder")
-        encoder = SafetyEncoder(safety_automaton,
+        logging.info('reachability automaton size is: %i' % len(coreach_automaton.nodes))
+        logging.debug('reachability automaton (dot) is:\n' + automaton_to_dot.to_dot(coreach_automaton))
+        encoder = SafetyEncoder(coreach_automaton,
                                 tau_desc,
                                 spec.inputs,
-                                desc_by_output)
+                                desc_by_output,
+                                range(max_size+1),
+                                max_k)
+        model = model_k_searcher.search(min_size, max_size,
+                                        max_k,
+                                        encoder, solver_factory.create())
 
-    model = model_searcher.search(min_size, max_size, encoder, solver_factory.create())
     logging.debug('model_searcher.search took (sec): %i' % timer.sec_restart())
 
     return model
@@ -134,7 +146,7 @@ def main():
                              "(k=0 means no reduction)")
 
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('--bound', metavar='bound', type=int, default=128, required=False,
+    group.add_argument('--bound', metavar='bound', type=int, default=32, required=False,
                        help='upper bound on the size of the model (for unreal this specifies size of env model)')
     group.add_argument('--size', metavar='size', type=int, default=0, required=False,
                        help='search the model of this size (for unreal this specifies size of env model)')

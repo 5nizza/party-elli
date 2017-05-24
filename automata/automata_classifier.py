@@ -1,9 +1,9 @@
 from itertools import chain
 from typing import Tuple
 
+from automata.final_sccs_finder import build_state_to_final_scc
 from helpers.python_ext import index_of
 from interfaces.automaton import LABEL_TRUE, Automaton, Node
-from synthesis.final_sccs_finder import build_state_to_final_scc
 
 
 def is_final_sink(node:Node):

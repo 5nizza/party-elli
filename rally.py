@@ -16,6 +16,10 @@ from parsing.tlsf_parser import convert_tlsf_to_acacia, get_spec_type
 from synthesis.smt_namings import ARG_MODEL_STATE
 
 
+# TODO:
+# - edge-based acceptance
+
+
 def main(tlsf_file_name,
          output_file_name,
          dot_file_name,

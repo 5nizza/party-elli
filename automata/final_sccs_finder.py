@@ -59,7 +59,9 @@ def find_final_sccs(automaton:Automaton) -> Set[Set[Node]]:
 
 
 def build_state_to_final_scc(automaton:Automaton):
-    """ :return: dict node -> final SCC """
+    """ :return: dict node -> final SCC 
+    If a node does not belong to a final SCC, then it is _not_ in the dictionary.
+    """
     final_sccs = find_final_sccs(automaton)
 
     state_to_final_scc = dict()

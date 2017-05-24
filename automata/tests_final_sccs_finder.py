@@ -1,8 +1,8 @@
 import unittest
 from itertools import chain
 
+from automata.final_sccs_finder import find_final_sccs
 from interfaces.automaton import Automaton, Node, LABEL_TRUE
-from synthesis.final_sccs_finder import find_final_sccs
 
 
 class Test(unittest.TestCase):
