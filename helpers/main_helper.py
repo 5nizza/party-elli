@@ -48,10 +48,10 @@ def setup_logging(verbose_level:int=0, filename:str=None):
 
 class Z3SolverFactory:
     def __init__(self,
-                 smt_tmp_files_prefix, z3_path,
-                 is_incremental,
-                 generate_queries_only,
-                 remove_files):
+                 smt_tmp_files_prefix:str, z3_path:str,
+                 is_incremental:bool,
+                 generate_queries_only:bool,
+                 remove_files:bool):
         self.smt_tmp_files_prefix = smt_tmp_files_prefix
         self.z3_path = z3_path
         self.is_incremental = is_incremental
