@@ -3,14 +3,14 @@ import logging
 from helpers.logging_helper import log_entrance
 from interfaces.LTS import LTS
 from interfaces.solver_interface import SolverInterface
-from synthesis.safety_encoder import SafetyEncoder
+from synthesis.coreach_encoder import CoreachEncoder
 from synthesis.smt_format import make_check_sat
 
 
 @log_entrance()
 def search(min_size:int, max_size:int,
            max_k:int,
-           encoder:SafetyEncoder,
+           encoder:CoreachEncoder,
            solver:SolverInterface) -> LTS or None:
     solver += encoder.encode_headers()
     solver += encoder.encode_initialization()

@@ -16,7 +16,7 @@ from synthesis.smt_namings import TYPE_MODEL_STATE, ARG_MODEL_STATE, FUNC_REACH,
     smt_name_q, smt_name_m, ARG_A_STATE, TYPE_A_STATE
 
 
-class SafetyEncoder(EncoderInterface):
+class CoreachEncoder(EncoderInterface):
     def __init__(self,
                  automaton:Automaton,
                  tau_desc:FuncDesc,

@@ -17,7 +17,7 @@ from parsing.acacia_parser_helper import parse_acacia_and_build_expr
 from synthesis import model_searcher, model_k_searcher
 from synthesis.cobuchi_encoder import CoBuchiEncoder
 from synthesis.encoder_builder import build_tau_desc, build_output_desc
-from synthesis.safety_encoder import SafetyEncoder
+from synthesis.coreach_encoder import CoreachEncoder
 from synthesis.smt_namings import ARG_MODEL_STATE
 
 
@@ -97,17 +97,17 @@ def check_real(ltl_text, part_text, is_moore,
         # with open('/tmp/orig.dot', 'w') as f:
         #     f.write(automaton_to_dot.to_dot(automaton))
         # with open('/tmp/red.dot', 'w') as f:
-        #     f.write(automaton_to_dot.to_dot(safety_automaton))
+        #     f.write(automaton_to_dot.to_dot(coreach_automaton))
         # exit()
-        logging.info("using SafetyEncoder")
+        logging.info("using CoReachEncoder")
         logging.info('co-reachability automaton size is: %i' % len(coreach_automaton.nodes))
         logging.debug('co-reachability automaton (dot) is:\n' + automaton_to_dot.to_dot(coreach_automaton))
-        encoder = SafetyEncoder(coreach_automaton,
-                                tau_desc,
-                                spec.inputs,
-                                desc_by_output,
-                                range(max_size+1),
-                                max_k)
+        encoder = CoreachEncoder(coreach_automaton,
+                                 tau_desc,
+                                 spec.inputs,
+                                 desc_by_output,
+                                 range(max_size+1),
+                                 max_k)
         model = model_k_searcher.search(min_size, max_size,
                                         max_k,
                                         encoder, solver_factory.create())
