@@ -1,99 +1,179 @@
 #!/usr/bin/env python3
 import argparse
 import logging
-import subprocess
-import tempfile
+import signal
+from multiprocessing import Process, Queue
+from multiprocessing.util import log_to_stderr
+from typing import Iterable
 
 import elli
-from config import Z3_PATH
-from elli import REALIZABLE, UNREALIZABLE, UNKNOWN
-from helpers.main_helper import setup_logging, Z3SolverFactory
-from helpers.timer import Timer
 from LTL_to_atm import translator_via_spot
+from config import Z3_PATH
+from helpers.main_helper import setup_logging
+from helpers.timer import Timer
 from module_generation.aiger import lts_to_aiger
 from module_generation.dot import lts_to_dot
 from parsing.tlsf_parser import convert_tlsf_to_acacia, get_spec_type
 from synthesis.smt_namings import ARG_MODEL_STATE
+from synthesis.z3_via_pipe import Z3InteractiveViaPipes
 
 
 # TODO:
 # - edge-based acceptance
+# - last.log from many processes
+# - real check without strengthening
+
+
+class CheckRealTask:
+    def __init__(self, name, ltl_text, part_text, is_moore, min_size, max_size, max_k, opt_level):
+        self.name = name
+        self.ltl_text = ltl_text
+        self.part_text = part_text
+        self.is_moore = is_moore
+        self.min_size = min_size
+        self.max_size = max_size
+        self.max_k = max_k
+        self.opt_level = opt_level
+
+    def do(self):
+        solver = Z3InteractiveViaPipes(Z3_PATH)
+        try:
+            return elli.check_real(self.ltl_text, self.part_text,
+                                   self.is_moore,
+                                   translator_via_spot.LTLToAtmViaSpot(),
+                                   solver,
+                                   self.max_k,
+                                   self.min_size, self.max_size,
+                                   2)
+        finally:
+            solver.die()
+
+
+class CheckUnrealTask:
+    def __init__(self, name, ltl_text, part_text, is_moore, min_size, max_size, max_k, opt_level, timeout):
+        self.name = name
+        self.ltl_text = ltl_text
+        self.part_text = part_text
+        self.is_moore = is_moore
+        self.min_size = min_size
+        self.max_size = max_size
+        self.max_k = max_k
+        self.opt_level = opt_level
+        self.timeout = timeout
+
+    def do(self):
+        class TimeoutException(Exception):
+            pass
+
+        if self.timeout:
+            logging.info('CheckUnrealTask: setting timeout to %i' % self.timeout)
+            def signal_handler(sig, frame):
+                if sig == signal.SIGALRM:
+                    raise TimeoutException("CheckUnrealTask: timeout reached")
+            signal.signal(signal.SIGALRM, signal_handler)
+            signal.alarm(self.timeout)
+
+        solver = Z3InteractiveViaPipes(Z3_PATH)
+        try:
+            return elli.check_unreal(self.ltl_text, self.part_text,
+                                     self.is_moore,
+                                     translator_via_spot.LTLToAtmViaSpot(),
+                                     solver,
+                                     self.min_size, self.max_size,
+                                     0)
+        except TimeoutException:
+            return None
+        finally:
+            solver.die()
+
+
+def starter(q:Queue, task: CheckRealTask or CheckUnrealTask):
+    res = task.do()
+    q.put((task, res))
+
+
+def kill_them(processes:Iterable[Process]):
+    for p in processes:
+        p.terminate()
+        p.join()
+
+
+def print_syntcomp_unreal():
+    print('UNREALIZABLE')
+
+
+def print_syntcomp_unknown():
+    print('UNKNOWN')
+
+
+def print_syntcomp_real(aiger_model:str):
+    print('REALIZABLE')
+    print(aiger_model)
+
+
+def write_dot_result(status, lts_dot_str, dot_file_name):
+    logging.info('status ' + status)
+    if dot_file_name:
+        with open(dot_file_name, 'w') as out:
+            out.write(lts_dot_str)
+            logging.info('Model is written to {file}'.format(file=out.name))
+    else:
+        logging.info(lts_dot_str)
 
 
 def main(tlsf_file_name,
          output_file_name,
-         dot_file_name,
-         smt_files_prefix,
-         keep_temp_files) -> int:
-    """ :return: REALIZABLE, UNREALIZABLE, UNKNOWN (see elli) """
+         dot_file_name):
 
     timer = Timer()
-    ltl_to_atm = translator_via_spot.LTLToAtmViaSpot
-    solver_factory = Z3SolverFactory(smt_files_prefix,
-                                     Z3_PATH,
-                                     True,
-                                     False,
-                                     not keep_temp_files)
-
     ltl_text, part_text = convert_tlsf_to_acacia(tlsf_file_name)
     is_moore = get_spec_type(tlsf_file_name)
 
-    try:
-        timer.sec_restart()
-        env_model = elli.check_unreal(ltl_text, part_text, is_moore,
-                                      ltl_to_atm, solver_factory,
-                                      1, 1,
-                                      0, 200)
-        logging.info('unreal check took (sec): %i' % timer.sec_restart())
-        logging.info('env model is {NOT} FOUND'.format(NOT='' if env_model else 'NOT'))
-        if env_model:
-            print('UNREALIZABLE')
-            logging.debug(lts_to_dot(env_model, ARG_MODEL_STATE, is_moore))
-            return UNREALIZABLE
-    except subprocess.TimeoutExpired:
-        logging.info('I aborted unreal check (>200sec). Proceed to real check.')
+    # log_to_stderr()
 
-    model = elli.check_real(ltl_text, part_text, is_moore,
-                            ltl_to_atm, solver_factory,
-                            0,
-                            1, 40)
-    logging.info('real check took (sec): %i' % timer.sec_restart())
-    logging.info('sys model is {NOT} FOUND'.format(NOT='' if model else 'NOT'))
-    if not model:
-        logging.info('trying check_real without formula strengthening')
-        model = elli.check_real(ltl_text, part_text, is_moore,
-                                ltl_to_atm, solver_factory,
-                                0,
-                                1, 40, opt_level=0)
-        logging.info('(without formula strengthening): real check took (sec): %i' % timer.sec_restart())
-        logging.info('(without formula strengthening): sys model is {NOT} FOUND'.format(NOT='' if model else 'NOT'))
+    q = Queue()
+    p_real = Process(target=starter,
+                     args=(q, CheckRealTask('check real',
+                                            ltl_text, part_text, is_moore,
+                                            1, 20, 20, 2)))
+    p_unreal = Process(target=starter,
+                       args=(q, CheckUnrealTask('check unreal (short)',
+                                                ltl_text, part_text, is_moore,
+                                                1, 5, 20, 0, timeout=10)))
+    p_real.start()
+    p_unreal.start()
+    nof_processes = 2
+    lts, task = None, None   # .. to shut up pycharm warnings
+    for _ in range(nof_processes):
+        task, lts = q.get()  # type: (CheckRealTask or CheckUnrealTask, LTS or None)
+        if lts is None:
+            logging.info('task did not succeed: ' + task.name)
+            logging.info('waiting for others..')
+        else:
+            break
 
-    if not model:
-        return UNKNOWN
+    kill_them((p_real, p_unreal))
 
-    dot_model_str = lts_to_dot(model, ARG_MODEL_STATE, not is_moore)
+    if not lts:
+        logging.info('status unknown')
+        print_syntcomp_unknown()
+        exit()
 
-    if dot_file_name:
-        with open(dot_file_name, 'w') as out:
-            out.write(dot_model_str)
-            logging.info('{model_type} model is written to {file}'.format(
-                         model_type=['Mealy', 'Moore'][is_moore],
-                         file=out.name))
+    logging.info('finished in %i sec.' % timer.sec_restart())
+
+    if isinstance(task, CheckUnrealTask):
+        lts_str = lts_to_dot(lts, ARG_MODEL_STATE, is_moore)  # we invert machine type
+        write_dot_result('unrealizable', lts_str, dot_file_name)
+        print_syntcomp_unreal()
     else:
-        logging.info(dot_model_str)
-
-    aiger_model_str = lts_to_aiger(model)
-    logging.info('circuit size: %i' % len(model.states))
-
-    if output_file_name:
-        with open(output_file_name, 'w') as out:
-            out.write(aiger_model_str)
-    else:
-        print('REALIZABLE')
-        print(aiger_model_str)
-
-    solver_factory.down_solvers()
-    return REALIZABLE
+        lts_str = lts_to_dot(lts, ARG_MODEL_STATE, not is_moore)
+        logging.info('state machine size: %i' % len(lts.states))
+        lts_aiger = lts_to_aiger(lts)
+        write_dot_result('realizable', lts_str, dot_file_name)
+        if output_file_name:
+            with open(output_file_name, 'w') as out:
+                out.write(lts_aiger)
+        print_syntcomp_real(lts_aiger)
 
 
 if __name__ == "__main__":
@@ -107,8 +187,8 @@ if __name__ == "__main__":
 
     parser.add_argument('--dot', metavar='dot', type=str,
                         help='write the output into a dot graph file')
-    parser.add_argument('--tmp', action='store_true', default=False,
-                        help='keep temporary smt2 files')
+    # parser.add_argument('--tmp', action='store_true', default=False,
+    #                     help='keep temporary smt2 files')
     parser.add_argument('-v', '--verbose', action='count', default=-1,
                         help='verbosity level')
 
@@ -117,12 +197,4 @@ if __name__ == "__main__":
     setup_logging(args.verbose)
     logging.info(args)
 
-    with tempfile.NamedTemporaryFile(dir='./') as smt_file:
-        smt_files_prefix = smt_file.name
-
-    status = main(args.spec,
-                  args.output,
-                  args.dot,
-                  smt_files_prefix,
-                  args.tmp)
-    exit(status)
+    main(args.spec, args.output, args.dot)

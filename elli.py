@@ -2,6 +2,7 @@
 import argparse
 import logging
 import tempfile
+from time import sleep
 
 from automata import automaton_to_dot
 from automata.k_reduction import k_reduce
@@ -12,6 +13,7 @@ from helpers.timer import Timer
 from interfaces.LTL_to_automaton import LTLToAutomaton
 from interfaces.LTS import LTS
 from LTL_to_atm import translator_via_spot, translator_via_ltl3ba
+from interfaces.solver_interface import SolverInterface
 from module_generation.dot import lts_to_dot
 from parsing.acacia_parser_helper import parse_acacia_and_build_expr
 from synthesis import model_searcher, model_k_searcher
@@ -28,16 +30,13 @@ UNKNOWN = 30
 
 
 def check_unreal(ltl_text, part_text, is_moore,
-                 ltl_to_atm:LTLToAutomaton, solver_factory:Z3SolverFactory,
+                 ltl_to_atm:LTLToAutomaton,
+                 solver:SolverInterface,
                  min_size, max_size,
-                 opt_level=0,
-                 ltl_to_atm_timeout_sec=0) -> LTS:
+                 opt_level=0) -> LTS:
     """
     Note that opt_level > 0 may introduce unsoundness (returns unrealizable while it is).
     """
-    if ltl_to_atm_timeout_sec > 0:
-        logging.warning("check_unreal: you set timeout (%i sec.) for LTL to automaton translation,"
-                        "but I don't support it now (I used to..)" % ltl_to_atm_timeout_sec)
     timer = Timer()
     spec = parse_acacia_and_build_expr(ltl_text, part_text, ltl_to_atm, opt_level)
 
@@ -57,14 +56,15 @@ def check_unreal(ltl_text, part_text, is_moore,
                              desc_by_output,
                              range(max_size+1))
 
-    model = model_searcher.search(min_size, max_size, encoder, solver_factory.create())
+    model = model_searcher.search(min_size, max_size, encoder, solver)
     logging.debug('(unreal) model_searcher.search took (sec): %i' % timer.sec_restart())
 
     return model
 
 
 def check_real(ltl_text, part_text, is_moore,
-               ltl_to_atm:LTLToAutomaton, solver_factory:Z3SolverFactory,
+               ltl_to_atm:LTLToAutomaton,
+               solver:SolverInterface,
                max_k:int,
                min_size, max_size,
                opt_level=2) -> LTS:
@@ -91,7 +91,7 @@ def check_real(ltl_text, part_text, is_moore,
                                  spec.inputs,
                                  desc_by_output,
                                  range(max_size+1))
-        model = model_searcher.search(min_size, max_size, encoder, solver_factory.create())
+        model = model_searcher.search(min_size, max_size, encoder, solver)
     else:
         coreach_automaton = k_reduce(automaton, max_k)
         # with open('/tmp/orig.dot', 'w') as f:
@@ -110,7 +110,7 @@ def check_real(ltl_text, part_text, is_moore,
                                  max_k)
         model = model_k_searcher.search(min_size, max_size,
                                         max_k,
-                                        encoder, solver_factory.create())
+                                        encoder, solver)
 
     logging.info('searching a model took (sec): %i' % timer.sec_restart())
 
@@ -199,11 +199,11 @@ def main():
 
     if args.unreal:
         model = check_unreal(ltl_text, part_text, args.moore,
-                             ltl_to_automaton, solver_factory,
+                             ltl_to_automaton, solver_factory.create(),
                              min_size, max_size)
     else:
         model = check_real(ltl_text, part_text, args.moore,
-                           ltl_to_automaton, solver_factory,
+                           ltl_to_automaton, solver_factory.create(),
                            args.maxK,
                            min_size, max_size)
 

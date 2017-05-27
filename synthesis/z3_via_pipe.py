@@ -25,6 +25,7 @@ class Z3InteractiveViaPipes(SmtSolverWithQueryStorageAbstract):
 
     def die(self):
         self._process.kill()
+        self._process.wait()  # let zombie go
 
     def _read_block(self) -> List[str]:
         lines = []

@@ -115,6 +115,7 @@ def _lts_to_dot(lts:LTS, state_variable, moore_signals):
     return '\n'.join(dot_lines)
 
 
+# TODO: automatically identify type (Moore or Mealy)
 def lts_to_dot(lts:LTS, state_variable, is_mealy) -> str:
     if is_mealy:
         return _lts_to_dot(lts, state_variable, tuple())
