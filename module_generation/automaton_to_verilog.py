@@ -28,7 +28,7 @@ def atm_to_verilog(atm:Automaton,
 
     s = StrAwareList()
 
-    s += 'module model(i_clk, \n{inputs}, \n{output});'.format(
+    s += 'module model(i_clk, {inputs}, {output});'.format(
         inputs=', '.join(module_inputs),
         output=bad_output)
     s.newline()
@@ -66,12 +66,11 @@ def atm_to_verilog(atm:Automaton,
     for q in atm.nodes:
         incoming_edges = incoming_transitions(q, atm)
         if not incoming_edges:
-            continue
-        # FIXME: when a label is false
-        update_expr = ' || '.join('{src} && {lbl}'.format(
-            src=verilog_by_node[edge[0]],
-            lbl=' && '.join(verilog_by_sig[s] for s in edge[1]) or '1')
-            for edge in incoming_edges)
+            update_expr = '0'
+        else:
+            update_expr = ' || '.join('{src} && {lbl}'.format(src=verilog_by_node[edge[0]],
+                                                              lbl=lbl_to_v(edge[1]))
+                                      for edge in incoming_edges)
         s += '  {q} = {update_expr};'.format(q=verilog_by_node[q],
                                              update_expr=update_expr)
 

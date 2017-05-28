@@ -7,6 +7,8 @@ from typing import Tuple as Pair
 from elli import REALIZABLE, UNREALIZABLE, UNKNOWN
 from tests.common import run_benchmark
 
+
+# FIXME: --incr is now enabled my default, test cases without --incr
 realizable = [
     ("others/count1.ltl --moore", 2),
     ("others/count2.ltl --moore", 3),
@@ -21,17 +23,17 @@ realizable = [
     ("others/elevator2.ltl --mealy", 2),
 
     # # using --klive
-    # "others/count1.ltl --moore --size 2 --klive 1",
-    # "others/count2.ltl --moore --size 3 --klive 1",
+    ("others/count1.ltl --moore --maxK 5", 2),
+    ("others/count2.ltl --moore --maxK 5", 3),
     #
-    # "others/full_arbiter2.ltl --moore --size 4 --klive 1",
-    # "others/full_arbiter2.ltl --mealy --size 3 --klive 1",
-    #
-    # "others/pnueli_arbiter2.ltl --moore --size 3 --klive 1",
-    # "others/pnueli_arbiter2.ltl --mealy --size 3 --klive 1",
-    #
-    # "others/elevator2.ltl --moore --size 2 --klive 1",
-    # "others/elevator2.ltl --mealy --size 2 --klive 1",
+    ("others/full_arbiter2.ltl --moore --maxK 5", 4),
+    ("others/full_arbiter2.ltl --mealy --maxK 5", 3),
+
+    ("others/pnueli_arbiter2.ltl --moore --maxK 5", 3),
+    ("others/pnueli_arbiter2.ltl --mealy --maxK 5", 3),
+
+    ("others/elevator2.ltl --moore --maxK 5", 2),
+    ("others/elevator2.ltl --mealy --maxK 5", 2),
 
     # some random subset of tests with --incr
     ("others/count2.ltl --moore --incr", 3),
@@ -52,6 +54,10 @@ unrealizable = [
     ("others/immediate-arbiter-unreal.ltl --unreal --mealy", 1),
     ("others/immediate-arbiter-unreal.ltl --unreal --mealy", 1),
     ("others/immediate-arbiter-real.ltl --unreal --moore", 1),
+
+    ("others/unreal.ltl --unreal --moore --maxK 10", 1),
+    ("others/immediate-arbiter-unreal.ltl --unreal --mealy --maxK 5", 1),
+    ("others/immediate-arbiter-real.ltl --unreal --moore --maxK 5", 1),
 ]
 
 

@@ -15,7 +15,7 @@ from parsing.acacia_parser_helper import parse_acacia_and_build_expr
 
 
 def convert_spec_to_aiger(spec:Spec, k:int, ltl_to_automaton:LTLToAutomaton) -> str:
-    atm = ltl_to_automaton.convert(spec.formula)
+    atm = ltl_to_automaton.convert(~spec.formula)
     with open('/tmp/orig.dot', 'w') as f:
         f.write(to_dot(atm))
 
@@ -25,6 +25,9 @@ def convert_spec_to_aiger(spec:Spec, k:int, ltl_to_automaton:LTLToAutomaton) -> 
         f.write(to_dot(k_atm))
 
     verilog = atm_to_verilog(k_atm, spec.inputs, spec.outputs)
+    with open('/tmp/verilog.v', 'w') as f:
+        f.write(verilog)
+
     return verilog_to_aiger(verilog)
 
 
