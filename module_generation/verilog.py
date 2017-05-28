@@ -30,7 +30,7 @@ def lts_to_verilog(lts:LTS) -> str:
     s += '\n'.join(['output {sig};'.format(sig=sig.name) for sig in lts.output_signals])
     s.newline()
 
-    nof_state_bits = max(1, math.ceil(math.log2(len(lts.states))))
+    nof_state_bits = max(1., math.ceil(math.log2(len(lts.states))))
     s += 'reg [{max_bit}:0] {state};'.format(max_bit=nof_state_bits-1, state=lts.state_name)
     s.newline()
 
