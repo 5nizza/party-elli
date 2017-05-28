@@ -63,7 +63,7 @@ def k_reduce(atm:Automaton, k:int, uniform:bool=True) -> Automaton:
                 if lbl not in new_src.transitions or (new_dst, False) not in new_src.transitions[lbl]:
                     new_src.add_transition(lbl, {(new_dst, False)})
                 else:
-                    assert new_dst == dead_node, "i know only the case of repetitions of transitions into dead"
+                    assert new_dst == dead_node, "I know only the case of repetitions of transitions into dead"
                 old_by_new[new_dst] = old_dst
                 if new_dst not in processed_nodes:
                     nodes_to_process.add(new_dst)
