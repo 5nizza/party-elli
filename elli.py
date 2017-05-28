@@ -139,7 +139,7 @@ def main():
                        help='use SPOT for translating LTL->BA')
     group.add_argument('--ltl3ba', action='store_false', default=False,
                        dest='spot',
-                       help='use ltl3ba for translating LTL->BA')
+                       help='use LTL3BA for translating LTL->BA')
 
     parser.add_argument('--maxK', type=int, default=0,
                         help="reduce liveness to co-reachability (safety)."
