@@ -58,7 +58,12 @@ def k_reduce(atm:Automaton, k:int, uniform:bool=True) -> Automaton:
                     new_dst_k = new_src.k - is_fin if (not uniform or _within_same_finSCC(old_src, old_dst, finSCC_by_node))\
                                 else k
                     new_dst = _get_add_node(old_dst, new_dst_k)
-                new_src.add_transition(lbl, {(new_dst, False)})
+                # For "into dead" transitions (lbl, dead) it is possible
+                # that it is already present, so we check
+                if lbl not in new_src.transitions or (new_dst, False) not in new_src.transitions[lbl]:
+                    new_src.add_transition(lbl, {(new_dst, False)})
+                else:
+                    assert new_dst == dead_node, "i know only the case of repetitions of transitions into dead"
                 old_by_new[new_dst] = old_dst
                 if new_dst not in processed_nodes:
                     nodes_to_process.add(new_dst)
