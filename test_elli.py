@@ -8,7 +8,6 @@ from elli import REALIZABLE, UNREALIZABLE, UNKNOWN
 from tests.common import run_benchmark
 
 
-# FIXME: --incr is now enabled my default, test cases without --incr
 realizable = [
     ("others/count1.ltl --moore", 2),
     ("others/count2.ltl --moore", 3),

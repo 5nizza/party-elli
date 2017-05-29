@@ -12,6 +12,7 @@ from interfaces.spec import Spec
 from module_generation.aiger import verilog_to_aiger
 from module_generation.automaton_to_verilog import atm_to_verilog
 from parsing.acacia_parser_helper import parse_acacia_and_build_expr
+from parsing.tlsf_parser import convert_tlsf_to_acacia
 
 
 def convert_spec_to_aiger(spec:Spec, k:int, ltl_to_automaton:LTLToAutomaton) -> str:
@@ -36,7 +37,7 @@ def main():
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('spec', metavar='spec', type=str,
-                        help='input spec (in Wring format)')
+                        help='input spec (in Wring or TLSF format)')
 
     parser.add_argument('--k', '-k', default=8, required=False, type=int,
                         help='max number of visits to a bad state (within one SCC)')
@@ -60,10 +61,12 @@ def main():
     ltl_to_automaton = (translator_via_ltl3ba.LTLToAtmViaLTL3BA,
                         translator_via_spot.LTLToAtmViaSpot)[args.spot]()
 
-    spec = parse_acacia_and_build_expr(readfile(args.spec),
-                                       readfile(args.spec.replace('.ltl', '.part')),
-                                       ltl_to_automaton,
-                                       2)
+    if args.spec.endswith('.tlsf'):
+        ltl_text, part_text = convert_tlsf_to_acacia(args.spec)
+    else:
+        ltl_text, part_text = readfile(args.spec), readfile(args.spec.replace('.ltl', '.part'))
+
+    spec = parse_acacia_and_build_expr(ltl_text, part_text, ltl_to_automaton, 0)
 
     aiger_str = convert_spec_to_aiger(spec, args.k, ltl_to_automaton)
     if args.out:

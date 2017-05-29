@@ -73,7 +73,6 @@ def atm_to_verilog(atm:Automaton,
                                       for edge in incoming_edges)
         s += '  {q} = {update_expr};'.format(q=verilog_by_node[q],
                                              update_expr=update_expr)
-
     s += 'end'
     s += 'endmodule'
     return s.to_str()
