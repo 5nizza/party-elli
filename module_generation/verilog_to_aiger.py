@@ -9,7 +9,7 @@ from helpers.python_ext import readfile
 from helpers.shell import execute_shell, assert_exec_strict, rc_out_err_to_str
 
 
-def create_tmp_file(text:str="", suffix="") -> str:
+def _create_tmp_file(text:str= "", suffix="") -> str:
     (fd, file_name) = tempfile.mkstemp(text=True, suffix=suffix)
     if text:
         os.write(fd, bytes(text, sys.getdefaultencoding()))
@@ -18,10 +18,10 @@ def create_tmp_file(text:str="", suffix="") -> str:
 
 
 def verilog_to_aiger(verilog:str) -> str:
-    input_verilog_file = create_tmp_file(verilog, suffix='v')
-    file_blif_mv = create_tmp_file(suffix='.mv')
-    file_aiger_tmp = create_tmp_file(suffix='.aag')
-    file_output_aiger = create_tmp_file(suffix='.aag')
+    input_verilog_file = _create_tmp_file(verilog, suffix='v')
+    file_blif_mv = _create_tmp_file(suffix='.mv')
+    file_aiger_tmp = _create_tmp_file(suffix='.aag')
+    file_output_aiger = _create_tmp_file(suffix='.aag')
 
     files_to_remove = (input_verilog_file,
                        file_blif_mv,
