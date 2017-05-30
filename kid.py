@@ -9,7 +9,7 @@ from helpers.main_helper import setup_logging
 from helpers.python_ext import readfile
 from interfaces.LTL_to_automaton import LTLToAutomaton
 from interfaces.spec import Spec
-from module_generation.aiger import verilog_to_aiger
+from module_generation.verilog_to_aiger import verilog_to_aiger
 from module_generation.automaton_to_verilog import atm_to_verilog
 from parsing.acacia_parser_helper import parse_acacia_and_build_expr
 from parsing.tlsf_parser import convert_tlsf_to_acacia
@@ -66,7 +66,7 @@ def main():
     else:
         ltl_text, part_text = readfile(args.spec), readfile(args.spec.replace('.ltl', '.part'))
 
-    spec = parse_acacia_and_build_expr(ltl_text, part_text, ltl_to_automaton, 0)
+    spec = parse_acacia_and_build_expr(ltl_text, part_text, ltl_to_automaton, 2)
 
     aiger_str = convert_spec_to_aiger(spec, args.k, ltl_to_automaton)
     if args.out:

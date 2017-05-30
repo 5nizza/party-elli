@@ -1,15 +1,12 @@
 import logging
-import tempfile
 import os
-import sys
-
 import resource
+import sys
+import tempfile
 
 from config import VL2MV_PATH, ABC_PATH, AIGTOAIG_PATH
 from helpers.python_ext import readfile
 from helpers.shell import execute_shell, assert_exec_strict, rc_out_err_to_str
-from interfaces.LTS import LTS
-from module_generation.verilog import lts_to_verilog
 
 
 def create_tmp_file(text:str="", suffix="") -> str:
@@ -65,9 +62,3 @@ def verilog_to_aiger(verilog:str) -> str:
 
     [os.remove(f) for f in files_to_remove]
     return res
-
-
-def lts_to_aiger(lts:LTS) -> str:
-    v = lts_to_verilog(lts)
-    logging.debug('verilog output is \n' + v)
-    return verilog_to_aiger(v)

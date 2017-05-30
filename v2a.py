@@ -3,7 +3,7 @@ import argparse
 
 from helpers.main_helper import setup_logging
 from helpers.python_ext import readfile
-from module_generation.aiger import verilog_to_aiger
+from module_generation.verilog_to_aiger import verilog_to_aiger
 
 
 def main():

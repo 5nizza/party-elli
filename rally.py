@@ -11,7 +11,7 @@ from LTL_to_atm import translator_via_spot
 from config import Z3_PATH
 from helpers.main_helper import setup_logging
 from helpers.timer import Timer
-from module_generation.aiger import lts_to_aiger
+from module_generation.lts_to_aiger import lts_to_aiger
 from module_generation.dot import lts_to_dot
 from parsing.tlsf_parser import convert_tlsf_to_acacia, get_spec_type
 from synthesis.smt_namings import ARG_MODEL_STATE

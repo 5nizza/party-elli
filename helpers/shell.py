@@ -18,6 +18,8 @@ def execute_shell(cmd, input='', timeout=None):
     proc_stdin = subprocess.PIPE if input != '' else None
     proc_input = input if input != '' else None
 
+    logging.getLogger().debug("executing command:\n%s", cmd)
+
     p = subprocess.Popen(cmd,
                          stdin=proc_stdin,
                          stdout=subprocess.PIPE,
