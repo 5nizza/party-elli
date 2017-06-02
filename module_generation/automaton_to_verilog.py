@@ -28,12 +28,11 @@ def atm_to_verilog(atm:Automaton,
 
     s = StrAwareList()
 
-    s += 'module model(i_clk, {inputs}, {output});'.format(
+    s += 'module model({inputs}, {output});'.format(
         inputs=', '.join(module_inputs),
         output=bad_output)
     s.newline()
 
-    s += 'input i_clk;'
     s += '\n'.join('input %s;' % i for i in module_inputs)
     s.newline()
 
@@ -49,18 +48,15 @@ def atm_to_verilog(atm:Automaton,
                                            sink_q=verilog_by_node[sink_q])
     s.newline()
 
-    # We _have to_ to assign _zero_ to the nodes, since vl2mv does not support initializing to one!
-    # Thus, we assume that `q_init=0` means we are in state q_init.
-    # But for other states, `q=0` means we are not in that state.
     s += 'initial begin'
-    # s += '\n'.join('%s = 1;' % verilog_by_node[iq]
-    #                for iq in atm.init_nodes)
+    s += '\n'.join('%s = 1;' % verilog_by_node[iq]
+                   for iq in atm.init_nodes)
     s += '\n'.join('%s = 0;' % verilog_by_node[q]
-                   for q in atm.nodes)
+                   for q in atm.nodes-atm.init_nodes)
     s += 'end'
     s.newline()
 
-    s += 'always@(posedge i_clk)'
+    s += 'always@($global_clock)'
     s += 'begin'
 
     def lbl_to_v(lbl:Label) -> str:
@@ -71,11 +67,11 @@ def atm_to_verilog(atm:Automaton,
         if not incoming_edges:
             update_expr = '0'
         else:
-            update_expr = ' || '.join('{src} && {lbl}'.format(src=verilog_by_node[edge[0]] if edge[0] not in atm.init_nodes else '!'+verilog_by_node[edge[0]],
+            update_expr = ' || '.join('{src} && {lbl}'.format(src=verilog_by_node[edge[0]],
                                                               lbl=lbl_to_v(edge[1]))
                                       for edge in incoming_edges)
-        s += '  {q} = {update_expr};'.format(q=verilog_by_node[q],
-                                             update_expr=update_expr if q not in atm.init_nodes else '!(%s)' % update_expr)
+        s += '  {q} <= {update_expr};'.format(q=verilog_by_node[q],
+                                              update_expr=update_expr)
     s += 'end'
     s += 'endmodule'
     return s.to_str()
