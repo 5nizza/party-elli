@@ -17,7 +17,7 @@ def get_root_dir() -> str:
     return root_dir
 
 
-def setup_logging(verbose_level:int=0, filename:str=None):
+def setup_logging(verbose_level:int=0, filename:str=None, name_threads:bool=False):
     level = None
     if verbose_level == -1:
         level = logging.CRITICAL
@@ -26,7 +26,10 @@ def setup_logging(verbose_level:int=0, filename:str=None):
     elif verbose_level >= 1:
         level = logging.DEBUG
 
-    formatter = logging.Formatter(fmt="%(asctime)-10s%(message)s", datefmt="%H:%M:%S")
+    if name_threads:
+        formatter = logging.Formatter(fmt="[%(threadName)s] %(asctime)-10s%(message)s", datefmt="%H:%M:%S")
+    else:
+        formatter = logging.Formatter(fmt="%(asctime)-10s%(message)s", datefmt="%H:%M:%S")
 
     stdout_handler = ColorizingStreamHandler()
     stdout_handler.setFormatter(formatter)
