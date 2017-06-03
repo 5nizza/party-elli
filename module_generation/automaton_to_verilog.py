@@ -10,7 +10,8 @@ from interfaces.expr import Signal
 
 def atm_to_verilog(atm:Automaton,
                    sys_inputs:Iterable[Signal],
-                   sys_outputs:Iterable[Signal]) -> str:
+                   sys_outputs:Iterable[Signal],
+                   module_name:str) -> str:
     assert len(lfilter(lambda n: is_final_sink(n), atm.nodes)) == 1,\
         'for now I support only one bad state which must be a sink'
     sys_inputs = set(sys_inputs)
@@ -28,7 +29,8 @@ def atm_to_verilog(atm:Automaton,
 
     s = StrAwareList()
 
-    s += 'module model({inputs}, {output});'.format(
+    s += 'module {module_name}({inputs}, {output});'.format(
+        module_name=module_name,
         inputs=', '.join(module_inputs),
         output=bad_output)
     s.newline()

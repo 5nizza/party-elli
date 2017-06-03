@@ -11,25 +11,27 @@ from interfaces.LTL_to_automaton import LTLToAutomaton
 from interfaces.spec import Spec
 from module_generation.verilog_to_aiger import verilog_to_aiger
 from module_generation.automaton_to_verilog import atm_to_verilog
+from module_generation.verilog_to_aiger_via_yosys import verilog_to_aiger2
 from parsing.acacia_parser_helper import parse_acacia_and_build_expr
 from parsing.tlsf_parser import convert_tlsf_to_acacia
 
 
 def convert_spec_to_aiger(spec:Spec, k:int, ltl_to_automaton:LTLToAutomaton) -> str:
     atm = ltl_to_automaton.convert(~spec.formula)
-    with open('/tmp/orig.dot', 'w') as f:
-        f.write(to_dot(atm))
+    # with open('/tmp/orig.dot', 'w') as f:
+    #     f.write(to_dot(atm))
 
     k_atm = k_reduce(atm, k)
 
-    with open('/tmp/red.dot', 'w') as f:
-        f.write(to_dot(k_atm))
+    # with open('/tmp/red.dot', 'w') as f:
+    #     f.write(to_dot(k_atm))
 
-    verilog = atm_to_verilog(k_atm, spec.inputs, spec.outputs)
-    with open('/tmp/verilog.v', 'w') as f:
-        f.write(verilog)
+    module_name = 'automaton'
+    verilog = atm_to_verilog(k_atm, spec.inputs, spec.outputs, module_name)
+    # with open('/tmp/verilog.v', 'w') as f:
+    #     f.write(verilog)
 
-    return verilog_to_aiger(verilog)
+    return verilog_to_aiger2(verilog, module_name)
 
 
 def main():
