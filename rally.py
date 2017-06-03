@@ -194,7 +194,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    setup_logging(args.verbose)
+    setup_logging(args.verbose, name_threads=True)
     logging.info(args)
 
     main(args.spec, args.output, args.dot)
