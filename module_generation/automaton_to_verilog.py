@@ -11,7 +11,8 @@ from interfaces.expr import Signal
 def atm_to_verilog(atm:Automaton,
                    sys_inputs:Iterable[Signal],
                    sys_outputs:Iterable[Signal],
-                   module_name:str) -> str:
+                   module_name:str,
+                   bad_out_name:str) -> str:
     assert len(lfilter(lambda n: is_final_sink(n), atm.nodes)) == 1,\
         'for now I support only one bad state which must be a sink'
     sys_inputs = set(sys_inputs)
@@ -25,28 +26,26 @@ def atm_to_verilog(atm:Automaton,
 
     module_inputs = list(chain(map(lambda i: i.name, sys_inputs),
                                map(lambda o: 'controllable_' + o.name, sys_outputs)))
-    bad_output = 'bad'
 
     s = StrAwareList()
-
     s += 'module {module_name}({inputs}, {output});'.format(
         module_name=module_name,
         inputs=', '.join(module_inputs),
-        output=bad_output)
+        output=bad_out_name)
     s.newline()
 
     s += '\n'.join('input %s;' % i for i in module_inputs)
     s.newline()
 
-    s += 'output %s;' % bad_output
+    s += 'output %s;' % bad_out_name
     s.newline()
 
     s += '\n'.join('reg %s;' % vq
                    for vq in verilog_by_node.values())
     s.newline()
 
-    s += 'wire %s;' % bad_output
-    s += 'assign {bad} = {sink_q};'.format(bad=bad_output,
+    s += 'wire %s;' % bad_out_name
+    s += 'assign {bad} = {sink_q};'.format(bad=bad_out_name,
                                            sink_q=verilog_by_node[sink_q])
     s.newline()
 

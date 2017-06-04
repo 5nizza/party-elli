@@ -46,7 +46,7 @@ def convert_aiger_model_to_tlsf(aiger_model:str, bad_name:str) -> str:
                 wo_prefix=' '.join(l.split()[1:])[len('controllable_'):])
         if l[0] == 'c':
             break
-    return '\n'.join(new_aiger_lines)
+    return '\n'.join(new_aiger_lines) + '\n'  # some tools complain about not having this
 
 
 def main():

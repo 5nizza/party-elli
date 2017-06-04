@@ -9,4 +9,4 @@ def lts_to_aiger(lts:LTS) -> str:
     module_name = 'model'
     v = lts_to_verilog(lts, module_name)
     logging.debug('verilog output is \n' + v)
-    return verilog_to_aiger(v, module_name)
+    return verilog_to_aiger(v)

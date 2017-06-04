@@ -1,34 +1,23 @@
 import logging
 import os
-import resource
-import sys
-import tempfile
 
-from config import YOSYS_PATH, AIGTOAIG_PATH
+from config import YOSYS_PATH
+from helpers.files import create_tmp_file
 from helpers.python_ext import readfile
-from helpers.shell import execute_shell, assert_exec_strict, rc_out_err_to_str
+from helpers.shell import execute_shell, assert_exec_strict
 
 
-def _create_tmp_file(text:str= "", suffix="") -> str:
-    (fd, file_name) = tempfile.mkstemp(text=True, suffix=suffix)
-    if text:
-        os.write(fd, bytes(text, sys.getdefaultencoding()))
-    os.close(fd)
-    return file_name
-
-
-def verilog_to_aiger(verilog:str, module_name:str) -> str:
-    verilog_file_name = _create_tmp_file(verilog, suffix='.v')
-    aiger_file_name = _create_tmp_file(suffix='.aag')
+def verilog_to_aiger(verilog:str) -> str:
+    verilog_file_name = create_tmp_file(verilog, suffix='.v')
+    aiger_file_name = create_tmp_file(suffix='.aag')
 
     script = """
     read_verilog {verilog_file}
-    synth -flatten -top {module_name}
+    synth -flatten -auto-top
     abc -g AND
     write_aiger -ascii -symbols {aiger_file}""".format(aiger_file=aiger_file_name,
-                                                       module_name=module_name,
                                                        verilog_file=verilog_file_name)
-    script_file_name = _create_tmp_file(text=script, suffix='.ys')
+    script_file_name = create_tmp_file(text=script, suffix='.ys')
 
     files_to_remove = (aiger_file_name,
                        verilog_file_name,
@@ -40,8 +29,6 @@ def verilog_to_aiger(verilog:str, module_name:str) -> str:
     logging.debug('yosys stdout:\n' + out)
 
     res = readfile(aiger_file_name)
-
-    print(res)
 
     [os.remove(f) for f in files_to_remove]
     return res
