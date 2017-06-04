@@ -3,7 +3,6 @@ import argparse
 import logging
 import signal
 from multiprocessing import Process, Queue
-from multiprocessing.util import log_to_stderr
 from typing import Iterable
 
 import elli
@@ -11,9 +10,11 @@ from LTL_to_atm import translator_via_spot
 from config import Z3_PATH
 from helpers.main_helper import setup_logging
 from helpers.timer import Timer
-from module_generation.lts_to_aiger import lts_to_aiger
 from module_generation.dot import lts_to_dot
+from module_generation.lts_to_aiger import lts_to_aiger
 from parsing.tlsf_parser import convert_tlsf_to_acacia, get_spec_type
+from syntcomp.syntcomp_constants import print_syntcomp_unknown, \
+    print_syntcomp_unreal, print_syntcomp_real
 from synthesis.smt_namings import ARG_MODEL_STATE
 from synthesis.z3_via_pipe import Z3InteractiveViaPipes
 
@@ -98,19 +99,6 @@ def kill_them(processes:Iterable[Process]):
         p.join()
 
 
-def print_syntcomp_unreal():
-    print('UNREALIZABLE')
-
-
-def print_syntcomp_unknown():
-    print('UNKNOWN')
-
-
-def print_syntcomp_real(aiger_model:str):
-    print('REALIZABLE')
-    print(aiger_model)
-
-
 def write_dot_result(status, lts_dot_str, dot_file_name):
     logging.info('status ' + status)
     if dot_file_name:
@@ -124,7 +112,6 @@ def write_dot_result(status, lts_dot_str, dot_file_name):
 def main(tlsf_file_name,
          output_file_name,
          dot_file_name):
-
     timer = Timer()
     ltl_text, part_text = convert_tlsf_to_acacia(tlsf_file_name)
     is_moore = get_spec_type(tlsf_file_name)

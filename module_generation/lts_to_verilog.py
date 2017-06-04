@@ -14,16 +14,15 @@ def _label_to_verilog(label:dict) -> str:
                                     label.items()))
 
 
-def lts_to_verilog(lts:LTS) -> str:
+def lts_to_verilog(lts:LTS, module_name:str) -> str:
     s = StrAwareList()
 
-    s += 'module model(i_clk, \n{inputs}, \n{outputs});'.format(inputs=', '.join(map(lambda sig: sig.name,
-                                                                                     lts.input_signals)),
-                                                                outputs=', '.join(map(lambda sig: sig.name,
-                                                                                      lts.output_signals)))
+    s += 'module {module}({inputs}, {outputs});'.format(
+        inputs=', '.join(map(lambda sig: sig.name, lts.input_signals)),
+        outputs=', '.join(map(lambda sig: sig.name, lts.output_signals)),
+        module=module_name)
     s.newline()
 
-    s += 'input i_clk;'
     s += '\n'.join(['input {sig};'.format(sig=sig.name) for sig in lts.input_signals])
     s.newline()
 
@@ -52,17 +51,18 @@ def lts_to_verilog(lts:LTS) -> str:
     s += 'end'
     s.newline()
 
-    s += 'always@(posedge i_clk)'
+    s += 'always@($global_clock)'
     s += 'begin'
 
+    # you can also use '=' instead of '<=' here, but we will be strict
     tau_items = tuple(lts.tau_model.items())
-    s += 'if ({expr}) {state} = {next_val};'.format(expr=_label_to_verilog(tau_items[0][0]),
-                                                    state=lts.state_name,
-                                                    next_val=tau_items[0][1])
+    s += 'if ({expr}) {state} <= {next_val};'.format(expr=_label_to_verilog(tau_items[0][0]),
+                                                     state=lts.state_name,
+                                                     next_val=tau_items[0][1])
     for lbl, val in tau_items[1:]:
-        s += 'else if ({expr}) {state} = {next_val};'.format(expr=_label_to_verilog(lbl),
-                                                             state=lts.state_name,
-                                                             next_val=val)
+        s += 'else if ({expr}) {state} <= {next_val};'.format(expr=_label_to_verilog(lbl),
+                                                              state=lts.state_name,
+                                                              next_val=val)
     s += 'end'
     s += 'endmodule'
     return s.to_str()

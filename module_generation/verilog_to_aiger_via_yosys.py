@@ -17,7 +17,7 @@ def _create_tmp_file(text:str= "", suffix="") -> str:
     return file_name
 
 
-def verilog_to_aiger2(verilog:str, module_name:str) -> str:
+def verilog_to_aiger(verilog:str, module_name:str) -> str:
     verilog_file_name = _create_tmp_file(verilog, suffix='.v')
     aiger_file_name = _create_tmp_file(suffix='.aag')
 
@@ -38,13 +38,6 @@ def verilog_to_aiger2(verilog:str, module_name:str) -> str:
                                                               script=script_file_name))
     assert_exec_strict(rc, out, err)
     logging.debug('yosys stdout:\n' + out)
-    # assert rc == 0, rc_out_err_to_str(rc, out, err)
-
-    # rc, out, err = execute_shell('{aigtoaig} {file_aiger_tmp} {file_output_aiger}'.format(
-    #     aigtoaig=AIGTOAIG_PATH,
-    #     file_aiger_tmp=file_aiger_tmp,
-    #     file_output_aiger=file_output_aiger))
-    # assert_exec_strict(rc, out, err)
 
     res = readfile(aiger_file_name)
 

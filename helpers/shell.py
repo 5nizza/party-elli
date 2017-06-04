@@ -7,7 +7,7 @@ import signal
 from helpers.python_ext import is_empty_str
 
 
-def execute_shell(cmd, input='', timeout=None):
+def execute_shell(cmd, input='', timeout=None) -> (int, str, str):
     """
     :param cmd:
     :param input: sent to stdin

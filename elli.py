@@ -2,13 +2,14 @@
 import argparse
 import logging
 import tempfile
-from time import sleep
 
+from LTL_to_atm.ast_to_ltl3ba import ConverterToLtl2BaFormatVisitor
 from automata import automaton_to_dot
 from automata.k_reduction import k_reduce
 from config import Z3_PATH
 from helpers.main_helper import setup_logging, Z3SolverFactory
 from helpers.python_ext import readfile
+from helpers.shell import execute_shell
 from helpers.timer import Timer
 from interfaces.LTL_to_automaton import LTLToAutomaton
 from interfaces.LTS import LTS

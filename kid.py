@@ -11,7 +11,7 @@ from interfaces.LTL_to_automaton import LTLToAutomaton
 from interfaces.spec import Spec
 from module_generation.verilog_to_aiger import verilog_to_aiger
 from module_generation.automaton_to_verilog import atm_to_verilog
-from module_generation.verilog_to_aiger_via_yosys import verilog_to_aiger2
+from module_generation.verilog_to_aiger_via_yosys import verilog_to_aiger
 from parsing.acacia_parser_helper import parse_acacia_and_build_expr
 from parsing.tlsf_parser import convert_tlsf_to_acacia
 
@@ -31,7 +31,7 @@ def convert_spec_to_aiger(spec:Spec, k:int, ltl_to_automaton:LTLToAutomaton) -> 
     # with open('/tmp/verilog.v', 'w') as f:
     #     f.write(verilog)
 
-    return verilog_to_aiger2(verilog, module_name)
+    return verilog_to_aiger(verilog, module_name)
 
 
 def main():
