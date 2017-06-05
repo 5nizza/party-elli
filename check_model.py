@@ -2,11 +2,9 @@
 import argparse
 import logging
 import os
-import tempfile
-
-import sys
 
 from config import SYFCO_PATH, SMVTOAIG_PATH, COMBINEAIGER_PATH, IIMC_PATH
+from helpers.files import create_unique_file
 from helpers.get_nof_properties import get_nof_properties
 from helpers.main_helper import setup_logging
 from helpers.shell import execute_shell, assert_exec_strict, rc_out_err_to_str
@@ -20,11 +18,7 @@ def _create_monitor_file(tlsf_file_name) -> str:
     rc, out, err = execute_shell('{smvtoaig} -a'.format(smvtoaig=SMVTOAIG_PATH), input=out)
     assert rc == 0, rc_out_err_to_str(rc, out, err)   # it outputs the LTL into stderr
 
-    (fd, aag_file_name) = tempfile.mkstemp(text=True, suffix='.aag')
-    os.write(fd, bytes(out, encoding=sys.getdefaultencoding()))
-    os.close(fd)
-
-    return aag_file_name
+    return create_unique_file(out, suffix='.aag')
 
 
 def _create_combined(model_file_name, monitor_aiger_file_name) -> str:
@@ -33,12 +27,7 @@ def _create_combined(model_file_name, monitor_aiger_file_name) -> str:
         model_aiger=model_file_name,
         spec_aiger=monitor_aiger_file_name))
     assert_exec_strict(rc, out, err)
-
-    (fd, aag_file_name) = tempfile.mkstemp(text=True, suffix='.aag')
-    os.write(fd, bytes(out, encoding=sys.getdefaultencoding()))
-    os.close(fd)
-
-    return aag_file_name
+    return create_unique_file(out, suffix='.aag')
 
 
 def _model_check(combined_aiger_file:str) -> int:
@@ -53,7 +42,7 @@ def _model_check(combined_aiger_file:str) -> int:
         is_correct = out.splitlines()[0].strip() == '0'
         if not is_correct:
             return 1
-
+    # end of for
     return 0
 
 
