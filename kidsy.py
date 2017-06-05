@@ -7,7 +7,7 @@ from LTL_to_atm.translator_via_spot import LTLToAtmViaSpot
 from helpers.main_helper import setup_logging
 from helpers.python_ext import readfile
 from interfaces.LTL_to_automaton import LTLToAutomaton
-from kid import convert_spec_to_aiger
+from ltl_to_aiger import convert_spec_to_aiger
 from parsing.acacia_parser_helper import parse_acacia_and_build_expr
 from parsing.tlsf_parser import convert_tlsf_to_acacia, get_spec_type
 from rally import print_syntcomp_real

@@ -34,7 +34,7 @@ def convert_spec_to_aiger(spec:Spec, k:int, ltl_to_automaton:LTLToAutomaton, bad
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Translate Spec Into AIGER via k-Live Automata',
+    parser = argparse.ArgumentParser(description='Translate LTL spec Into AIGER via k-Live Automata',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('spec', metavar='spec', type=str,
