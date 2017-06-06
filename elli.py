@@ -36,12 +36,7 @@ def check_unreal(ltl_text, part_text, is_moore,
     timer = Timer()
     spec = parse_acacia_and_build_expr(ltl_text, part_text, ltl_to_atm, opt_level)
 
-    print(spec.formula)
-    exit()
-
     timer.sec_restart()
-    print(spec.formula)
-    exit()
     automaton = ltl_to_atm.convert(spec.formula)
     logging.info('(unreal) automaton size is: %i' % len(automaton.nodes))
     logging.debug('(unreal) automaton (dot) is:\n' + automaton_to_dot.to_dot(automaton))
