@@ -5,9 +5,9 @@ from typing import List
 
 import kid
 from LTL_to_atm.translator_via_spot import LTLToAtmViaSpot
-from rally_template import main_template
-from syntcomp.task_creator import TaskCreator
+from syntcomp.rally_template import main_template
 from syntcomp.task import Task
+from syntcomp.task_creator import TaskCreator
 
 
 class KidRealTask(Task):

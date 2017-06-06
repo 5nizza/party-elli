@@ -6,9 +6,9 @@ from typing import List
 import elli
 from LTL_to_atm import translator_via_spot
 from config import Z3_PATH
-from rally_template import main_template
-from syntcomp.task_creator import TaskCreator
+from syntcomp.rally_template import main_template
 from syntcomp.task import Task
+from syntcomp.task_creator import TaskCreator
 from synthesis.z3_via_pipe import Z3InteractiveViaPipes
 
 
