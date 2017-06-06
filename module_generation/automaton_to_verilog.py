@@ -3,11 +3,13 @@ from typing import Iterable
 
 from automata.automata_classifier import is_final_sink
 from automata.helper import incoming_transitions
+from helpers.logging_helper import log_entrance
 from helpers.python_ext import StrAwareList, lfilter
 from interfaces.automaton import Automaton, Label
 from interfaces.expr import Signal
 
 
+@log_entrance()
 def atm_to_verilog(atm:Automaton,
                    sys_inputs:Iterable[Signal],
                    sys_outputs:Iterable[Signal],

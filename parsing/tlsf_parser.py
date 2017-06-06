@@ -16,8 +16,7 @@ def get_spec_type(spec_file_name) -> bool:
     assert_exec_strict(rc, out, err)
     out_stripped = out.strip().lower()
     assert out_stripped in ['moore', 'mealy'], out_stripped
-    is_moore = out_stripped == 'moore'
-    return is_moore
+    return out_stripped == 'moore'
 
 
 def convert_tlsf_to_acacia(spec_file_name) -> (str, str):
@@ -29,8 +28,8 @@ def convert_tlsf_to_acacia(spec_file_name) -> (str, str):
                                                                          spec_file_name=spec_file_name))
     assert_exec_strict(rc, out, err)
     part_text += '\n.outputs ' + ' '.join(_parse_tuple_str(out.lower()))  # syfco lowers all signal names in props
-    rc, out, err = execute_shell('{syfco} -f acacia -m fully {spec_file_name}'.format(syfco=SYFCO_PATH,
-                                                                                      spec_file_name=spec_file_name))
+    rc, out, err = execute_shell('{syfco} -f acacia -m fully -os Moore {spec_file_name}'
+        .format(syfco=SYFCO_PATH, spec_file_name=spec_file_name))
     assert_exec_strict(rc, out, err)
     ltl_text = out
 

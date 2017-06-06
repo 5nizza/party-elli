@@ -44,8 +44,7 @@ class CheckRealTask:
                                    translator_via_spot.LTLToAtmViaSpot(),
                                    solver,
                                    self.max_k,
-                                   self.min_size, self.max_size,
-                                   2)
+                                   self.min_size, self.max_size)
         finally:
             solver.die()
 
@@ -80,8 +79,8 @@ class CheckUnrealTask:
                                      self.is_moore,
                                      translator_via_spot.LTLToAtmViaSpot(),
                                      solver,
-                                     self.min_size, self.max_size,
-                                     0)
+                                     self.max_k,
+                                     self.min_size, self.max_size)
         except TimeoutException:
             return None
         finally:
@@ -126,7 +125,7 @@ def main(tlsf_file_name,
     p_unreal = Process(target=starter,
                        args=(q, CheckUnrealTask('check unreal (short)',
                                                 ltl_text, part_text, is_moore,
-                                                1, 5, 20, 0, timeout=10)))
+                                                1, 10, 20, 0, timeout=600)))
     p_real.start()
     p_unreal.start()
     nof_processes = 2
@@ -181,7 +180,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    setup_logging(args.verbose, name_threads=True)
+    setup_logging(args.verbose, name_processes=True)
     logging.info(args)
 
     main(args.spec, args.output, args.dot)

@@ -11,8 +11,8 @@ from helpers.shell import execute_shell, assert_exec_strict, rc_out_err_to_str
 
 
 def _create_monitor_file(tlsf_file_name) -> str:
-    rc, out, err = execute_shell('{syfco} -f smv {tlsf_file} -m fully'.format(syfco=SYFCO_PATH,
-                                                                              tlsf_file=tlsf_file_name))
+    rc, out, err = execute_shell('{syfco} -f smv {tlsf_file} -m fully'
+                                 .format(syfco=SYFCO_PATH, tlsf_file=tlsf_file_name))
     assert_exec_strict(rc, out, err)
 
     rc, out, err = execute_shell('{smvtoaig} -a'.format(smvtoaig=SMVTOAIG_PATH), input=out)

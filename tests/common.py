@@ -4,7 +4,8 @@ from helpers.main_helper import get_root_dir
 from helpers.python_ext import is_empty_str
 from helpers.shell import execute_shell
 
-_BENCHMARKS_DIR = get_root_dir() + "benchmarks/"
+
+BENCHMARKS_DIR = get_root_dir() + "benchmarks/"
 
 
 def _get_cmd_result(result, out, err):
@@ -39,7 +40,7 @@ def _extract_model_size(out:str) -> int or None:
 
 
 def run_benchmark(python_script_relative_path, benchmark, rc_expected, size_expected) -> bool:
-    cmd_args = _BENCHMARKS_DIR + benchmark
+    cmd_args = BENCHMARKS_DIR + benchmark
     exec_cmd = '{python3} {program} {args}'.format(python3=sys.executable,
                                                    program=get_root_dir() + python_script_relative_path,
                                                    args=cmd_args)

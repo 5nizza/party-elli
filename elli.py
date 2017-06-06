@@ -3,13 +3,11 @@ import argparse
 import logging
 import tempfile
 
-from LTL_to_atm.ast_to_ltl3ba import ConverterToLtl2BaFormatVisitor
 from automata import automaton_to_dot
 from automata.k_reduction import k_reduce
 from config import Z3_PATH
 from helpers.main_helper import setup_logging, Z3SolverFactory
 from helpers.python_ext import readfile
-from helpers.shell import execute_shell
 from helpers.timer import Timer
 from interfaces.LTL_to_automaton import LTLToAutomaton
 from interfaces.LTS import LTS
@@ -17,6 +15,8 @@ from LTL_to_atm import translator_via_spot, translator_via_ltl3ba
 from interfaces.solver_interface import SolverInterface
 from module_generation.dot import lts_to_dot
 from parsing.acacia_parser_helper import parse_acacia_and_build_expr
+from parsing.tlsf_parser import get_spec_type, convert_tlsf_to_acacia
+from syntcomp.syntcomp_constants import UNREALIZABLE_RC, REALIZABLE_RC, UNKNOWN_RC
 from synthesis import model_searcher, model_k_searcher
 from synthesis.cobuchi_encoder import CoBuchiEncoder
 from synthesis.encoder_builder import build_tau_desc, build_output_desc
@@ -24,15 +24,10 @@ from synthesis.coreach_encoder import CoreachEncoder
 from synthesis.smt_namings import ARG_MODEL_STATE
 
 
-# These are Elli's return values acc. to SYNTCOMP conventions
-REALIZABLE = 10
-UNREALIZABLE = 20
-UNKNOWN = 30
-
-
 def check_unreal(ltl_text, part_text, is_moore,
                  ltl_to_atm:LTLToAutomaton,
                  solver:SolverInterface,
+                 max_k:int,
                  min_size, max_size,
                  opt_level=0) -> LTS:
     """
@@ -41,7 +36,12 @@ def check_unreal(ltl_text, part_text, is_moore,
     timer = Timer()
     spec = parse_acacia_and_build_expr(ltl_text, part_text, ltl_to_atm, opt_level)
 
+    print(spec.formula)
+    exit()
+
     timer.sec_restart()
+    print(spec.formula)
+    exit()
     automaton = ltl_to_atm.convert(spec.formula)
     logging.info('(unreal) automaton size is: %i' % len(automaton.nodes))
     logging.debug('(unreal) automaton (dot) is:\n' + automaton_to_dot.to_dot(automaton))
@@ -51,15 +51,27 @@ def check_unreal(ltl_text, part_text, is_moore,
     tau_desc = build_tau_desc(spec.outputs)
     desc_by_output = dict((i, build_output_desc(i, not is_moore, spec.outputs))
                           for i in spec.inputs)
-    encoder = CoBuchiEncoder(automaton,
-                             tau_desc,
-                             spec.outputs,
-                             desc_by_output,
-                             range(max_size+1))
+    if max_k == 0:
+        encoder = CoBuchiEncoder(automaton,
+                                 tau_desc,
+                                 spec.outputs,
+                                 desc_by_output,
+                                 range(max_size+1))
 
-    model = model_searcher.search(min_size, max_size, encoder, solver)
+        model = model_searcher.search(min_size, max_size, encoder, solver)
+    else:
+        coreach_automaton = k_reduce(automaton, max_k)
+        logging.info("(unreal) using CoReachEncoder")
+        logging.info('(unreal) co-reachability automaton size is: %i' % len(coreach_automaton.nodes))
+        logging.debug('(unreal) co-reachability automaton (dot) is:\n' + automaton_to_dot.to_dot(coreach_automaton))
+        encoder = CoreachEncoder(coreach_automaton,
+                                 tau_desc,
+                                 spec.outputs,
+                                 desc_by_output,
+                                 range(max_size+1),
+                                 max_k)
+        model = model_k_searcher.search(min_size, max_size, max_k, encoder, solver)
     logging.debug('(unreal) model_searcher.search took (sec): %i' % timer.sec_restart())
-
     return model
 
 
@@ -68,13 +80,13 @@ def check_real(ltl_text, part_text, is_moore,
                solver:SolverInterface,
                max_k:int,
                min_size, max_size,
-               opt_level=2) -> LTS:
+               opt_level=0) -> LTS:
     """
     When opt_level>0, introduce incompleteness (but it is sound: if returns REAL, then REAL)
     When max_k>0, reduce UCW to k-UCW.
     """
     timer = Timer()
-    spec = parse_acacia_and_build_expr(ltl_text, part_text, ltl_to_atm, opt_level)
+    spec = parse_acacia_and_build_expr(ltl_text, part_text, ltl_to_atm, 0)
 
     timer.sec_restart()
     automaton = ltl_to_atm.convert(~spec.formula)
@@ -123,16 +135,16 @@ def main():
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('spec', metavar='spec', type=str,
-                        help='the specification file (acacia+ format)')
+                        help='the specification file (Acacia or TLSF format)')
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--moore', action='store_true', default=True,
                        dest='moore',
-                       help='system is Moore')
+                       help='system is Moore (ignored for TLSF)')
     group.add_argument('--mealy', action='store_false',
                        default=False,
                        dest='moore',
-                       help='system is Mealy')
+                       help='system is Mealy (ignored for TLSF)')
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--spot', action='store_true', default=True,
@@ -196,14 +208,22 @@ def main():
     else:
         min_size, max_size = args.size, args.size
 
-    ltl_text, part_text = readfile(args.spec), readfile(args.spec.replace('.ltl', '.part'))
+    spec_file_name = args.spec
+    if spec_file_name.endswith('.tlsf'):
+        ltl_text, part_text = convert_tlsf_to_acacia(spec_file_name)
+        is_moore = get_spec_type(spec_file_name)
+    else:
+        assert spec_file_name.endswith('.ltl')
+        ltl_text, part_text = readfile(spec_file_name), readfile(spec_file_name.replace('.ltl', '.part'))
+        is_moore = args.moore
 
     if args.unreal:
-        model = check_unreal(ltl_text, part_text, args.moore,
+        model = check_unreal(ltl_text, part_text, is_moore,
                              ltl_to_automaton, solver_factory.create(),
+                             args.maxK,
                              min_size, max_size)
     else:
-        model = check_real(ltl_text, part_text, args.moore,
+        model = check_real(ltl_text, part_text, is_moore,
                            ltl_to_automaton, solver_factory.create(),
                            args.maxK,
                            min_size, max_size)
@@ -216,19 +236,19 @@ def main():
             size=len(model.states)))
 
     if model:
-        dot_model_str = lts_to_dot(model, ARG_MODEL_STATE, (not args.moore) ^ args.unreal)
+        dot_model_str = lts_to_dot(model, ARG_MODEL_STATE, (not is_moore) ^ args.unreal)
         if args.dot:
             with open(args.dot, 'w') as out:
                 out.write(dot_model_str)
                 logging.info('{model_type} model is written to {file}'.format(
-                             model_type=['Mealy', 'Moore'][args.moore],
+                             model_type=['Mealy', 'Moore'][is_moore],
                              file=out.name))
         else:
             logging.info(dot_model_str)
 
     solver_factory.down_solvers()
 
-    return UNKNOWN if model is None else (REALIZABLE, UNREALIZABLE)[args.unreal]
+    return UNKNOWN_RC if model is None else (REALIZABLE_RC, UNREALIZABLE_RC)[args.unreal]
 
 
 if __name__ == "__main__":

@@ -2,6 +2,8 @@
 
 import argparse
 
+import logging
+
 from LTL_to_atm import translator_via_ltl3ba, translator_via_spot
 from automata.automaton_to_dot import to_dot
 from automata.k_reduction import k_reduce
@@ -17,10 +19,12 @@ from parsing.tlsf_parser import convert_tlsf_to_acacia
 
 def convert_spec_to_aiger(spec:Spec, k:int, ltl_to_automaton:LTLToAutomaton, bad_out_name:str) -> str:
     atm = ltl_to_automaton.convert(~spec.formula)
+    logging.info("UCW automaton has %i states" % len(atm.nodes))
     # with open('/tmp/orig.dot', 'w') as f:
     #     f.write(to_dot(atm))
 
     k_atm = k_reduce(atm, k)
+    logging.info("k-LA automaton has %i states" % len(k_atm.nodes))
 
     # with open('/tmp/red.dot', 'w') as f:
     #     f.write(to_dot(k_atm))
