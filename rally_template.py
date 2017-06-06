@@ -4,6 +4,7 @@ import logging
 
 from helpers.main_helper import setup_logging
 from helpers.timer import Timer
+from interfaces.LTS import LTS
 from module_generation.dot import lts_to_dot
 from module_generation.lts_to_aiger import lts_to_aiger
 from parsing.tlsf_parser import convert_tlsf_or_acacia_to_acacia
@@ -31,25 +32,29 @@ def run_and_report(spec_file_name, is_moore_:bool,
 
     tasks = tasks_creator.create(ltl_text, part_text, is_moore)
 
-    is_real, lts = run_synth_tasks(tasks)
+    is_real, lts_or_aiger = run_synth_tasks(tasks)
 
     logging.info('finished in %i sec.' % timer.sec_restart())
 
-    if not lts:
+    if not lts_or_aiger:
         logging.info('status unknown')
         print_syntcomp_unknown()
         exit(UNKNOWN_RC)
 
     if not is_real:
-        lts_str = lts_to_dot(lts, ARG_MODEL_STATE, is_moore)  # we invert machine type
-        _write_dot_result(lts_str, dot_file_name)
+        if isinstance(lts_or_aiger, LTS):
+            lts_str = lts_to_dot(lts_or_aiger, ARG_MODEL_STATE, is_moore)  # we invert machine type
+            _write_dot_result(lts_str, dot_file_name)
         print_syntcomp_unreal()
         exit(UNREALIZABLE_RC)
     else:
-        lts_str = lts_to_dot(lts, ARG_MODEL_STATE, not is_moore)
-        logging.info('state machine size: %i' % len(lts.states))
-        lts_aiger = lts_to_aiger(lts)
-        _write_dot_result(lts_str, dot_file_name)
+        if isinstance(lts_or_aiger, LTS):
+            lts_str = lts_to_dot(lts_or_aiger, ARG_MODEL_STATE, not is_moore)
+            logging.info('state machine size: %i' % len(lts_or_aiger.states))
+            _write_dot_result(lts_str, dot_file_name)
+            lts_aiger = lts_to_aiger(lts_or_aiger)
+        else:
+            lts_aiger = lts_or_aiger
         if output_file_name:
             with open(output_file_name, 'w') as out:
                 out.write(lts_aiger)
