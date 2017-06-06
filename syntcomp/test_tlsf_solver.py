@@ -110,9 +110,8 @@ def main():
     for is_real, bench in benchmarks:
         logging.info('testing ' + BENCHMARKS_DIR + bench)
         fail_reason = _run_benchmark(args.solver, is_real==1, BENCHMARKS_DIR + bench, args.mc)
-        all_passed &= fail_reason is None
-
         if fail_reason:
+            all_passed = False
             logging.info('test failed, reason:\n' + fail_reason)
             if not args.nonstop:
                 return 1
