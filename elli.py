@@ -7,7 +7,6 @@ from automata import automaton_to_dot
 from automata.k_reduction import k_reduce
 from config import Z3_PATH
 from helpers.main_helper import setup_logging, Z3SolverFactory
-from helpers.python_ext import readfile
 from helpers.timer import Timer
 from interfaces.LTL_to_automaton import LTLToAutomaton
 from interfaces.LTS import LTS
@@ -15,7 +14,7 @@ from LTL_to_atm import translator_via_spot, translator_via_ltl3ba
 from interfaces.solver_interface import SolverInterface
 from module_generation.dot import lts_to_dot
 from parsing.acacia_parser_helper import parse_acacia_and_build_expr
-from parsing.tlsf_parser import get_spec_type, convert_tlsf_to_acacia
+from parsing.tlsf_parser import convert_tlsf_or_acacia_to_acacia
 from syntcomp.syntcomp_constants import UNREALIZABLE_RC, REALIZABLE_RC, UNKNOWN_RC
 from synthesis import model_searcher, model_k_searcher
 from synthesis.cobuchi_encoder import CoBuchiEncoder
@@ -81,7 +80,7 @@ def check_real(ltl_text, part_text, is_moore,
     When max_k>0, reduce UCW to k-UCW.
     """
     timer = Timer()
-    spec = parse_acacia_and_build_expr(ltl_text, part_text, ltl_to_atm, 0)
+    spec = parse_acacia_and_build_expr(ltl_text, part_text, ltl_to_atm, opt_level)
 
     timer.sec_restart()
     automaton = ltl_to_atm.convert(~spec.formula)
@@ -203,14 +202,7 @@ def main():
     else:
         min_size, max_size = args.size, args.size
 
-    spec_file_name = args.spec
-    if spec_file_name.endswith('.tlsf'):
-        ltl_text, part_text = convert_tlsf_to_acacia(spec_file_name)
-        is_moore = get_spec_type(spec_file_name)
-    else:
-        assert spec_file_name.endswith('.ltl')
-        ltl_text, part_text = readfile(spec_file_name), readfile(spec_file_name.replace('.ltl', '.part'))
-        is_moore = args.moore
+    ltl_text, part_text, is_moore = convert_tlsf_or_acacia_to_acacia(args.spec, args.moore)
 
     if args.unreal:
         model = check_unreal(ltl_text, part_text, is_moore,

@@ -8,7 +8,7 @@ import logging
 import check_model
 from helpers.files import create_unique_file
 from helpers.main_helper import setup_logging
-from helpers.shell import execute_shell
+from helpers.shell import execute_shell, rc_out_err_to_str
 from syntcomp.syntcomp_constants import\
     REALIZABLE_RC as R_RC, \
     UNREALIZABLE_RC as U_RC, \
@@ -18,19 +18,43 @@ from syntcomp.syntcomp_constants import\
 from tests.common import BENCHMARKS_DIR
 
 easy = (
+    (0, "tlsf/parameterized/round_robin_arbiter_unreal1.tlsf"),
+    (0, "tlsf/parameterized/round_robin_arbiter_unreal2.tlsf"),
+    (0, "tlsf/parameterized/prioritized_arbiter_unreal1.tlsf"),
+    (0, "tlsf/parameterized/prioritized_arbiter_unreal2.tlsf"),
+    (0, "tlsf/parameterized/prioritized_arbiter_unreal3.tlsf"),
+    (0, "tlsf/parameterized/load_balancer_unreal1.tlsf"),
+    (0, "tlsf/parameterized/load_balancer_unreal2.tlsf"),
+
+
+    (1, "tlsf/parameterized/simple_arbiter.tlsf"),
     (1, "tlsf/parameterized/detector.tlsf"),
     (1, "tlsf/parameterized/full_arbiter.tlsf"),
-    (1, "tlsf/parameterized/generalized_buffer.tlsf"),
     (1, "tlsf/parameterized/load_balancer.tlsf"),
-    (1, "tlsf/parameterized/prioritized_arbiter.tlsf"),
     (1, "tlsf/parameterized/round_robin_arbiter.tlsf"),
-    (1, "tlsf/parameterized/simple_arbiter.tlsf"),
-    (0, "tlsf/parameterized/full_arbiter_unreal.tlsf"),
+    (1, "tlsf/parameterized/round_robin_arbiter2.tlsf"),
+    (1, "tlsf/parameterized/prioritized_arbiter.tlsf"),
+    (1, "tlsf/mealy_moore_real.tlsf"),
+    (0, "tlsf/mealy_moore_unreal.tlsf"),
+    (0, "tlsf/parameterized/simple_arbiter_unreal1.tlsf"),
+    (0, "tlsf/parameterized/simple_arbiter_unreal2.tlsf"),
+    (0, "tlsf/parameterized/simple_arbiter_unreal3.tlsf"),
+    (0, "tlsf/parameterized/detector_unreal.tlsf"),
+    (0, "tlsf/parameterized/full_arbiter_unreal1.tlsf"),
+    (0, "tlsf/parameterized/full_arbiter_unreal2.tlsf"),
 )
 
 
 hard = (
+    (1, "tlsf/parameterized/generalized_buffer.tlsf"),
     (1, "tlsf/parameterized/amba_case_study.tlsf"),
+
+    (0, "tlsf/parameterized/generalized_buffer_unreal1.tlsf"),
+    (0, "tlsf/parameterized/generalized_buffer_unreal2.tlsf"),
+    (0, "tlsf/parameterized/amba_case_study_unreal1.tlsf"),
+    (0, "tlsf/parameterized/amba_case_study_unreal2.tlsf"),
+
+    (0, "tlsf/parameterized/full_arbiter_unreal3.tlsf"),
 )
 
 
@@ -38,6 +62,8 @@ def _run_benchmark(solver:str, is_real:bool, bench_file_name:str, mc:bool) -> st
     str_by_rc = {R_RC:'real_rc', U_RC:'unreal_rc', UNKN_RC:'unknown_rc'}
 
     rc, out, err = execute_shell('{solver} {bench}'.format(solver=solver, bench=bench_file_name))
+    if rc not in (U_RC, R_RC, UNKN_RC):
+        return rc_out_err_to_str(rc, out, err)
 
     exp_rc = (U_RC, R_RC)[is_real]
     if exp_rc != rc:
@@ -45,7 +71,7 @@ def _run_benchmark(solver:str, is_real:bool, bench_file_name:str, mc:bool) -> st
                % (str_by_rc[exp_rc], str_by_rc[rc])
 
     out_lines = out.splitlines()
-    if (is_real and out_lines[0] != R_STR) or (not is_real and out_lines != U_STR):
+    if (is_real and out_lines[0] != R_STR) or (not is_real and out_lines[0] != U_STR):
         return 'stdout first line should be %s, got instead: %s'\
                % ((U_STR, R_STR)[is_real], out_lines[0])
 
@@ -86,9 +112,10 @@ def main():
         fail_reason = _run_benchmark(args.solver, is_real==1, BENCHMARKS_DIR + bench, args.mc)
         all_passed &= fail_reason is None
 
-        if not args.nonstop and fail_reason:
+        if fail_reason:
             logging.info('test failed, reason:\n' + fail_reason)
-            return 1
+            if not args.nonstop:
+                return 1
 
     logging.info('-' * 80)
     logging.info(['SOME TESTS FAILED', 'ALL TESTS PASSED'][all_passed])

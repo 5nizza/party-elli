@@ -14,7 +14,7 @@ from module_generation.dot import lts_to_dot
 from module_generation.lts_to_aiger import lts_to_aiger
 from parsing.tlsf_parser import convert_tlsf_to_acacia, get_spec_type
 from syntcomp.syntcomp_constants import print_syntcomp_unknown, \
-    print_syntcomp_unreal, print_syntcomp_real
+    print_syntcomp_unreal, print_syntcomp_real, REALIZABLE_RC, UNREALIZABLE_RC, UNKNOWN_RC
 from synthesis.smt_namings import ARG_MODEL_STATE
 from synthesis.z3_via_pipe import Z3InteractiveViaPipes
 
@@ -143,7 +143,7 @@ def main(tlsf_file_name,
     if not lts:
         logging.info('status unknown')
         print_syntcomp_unknown()
-        exit()
+        exit(UNKNOWN_RC)
 
     logging.info('finished in %i sec.' % timer.sec_restart())
 
@@ -151,6 +151,7 @@ def main(tlsf_file_name,
         lts_str = lts_to_dot(lts, ARG_MODEL_STATE, is_moore)  # we invert machine type
         write_dot_result('unrealizable', lts_str, dot_file_name)
         print_syntcomp_unreal()
+        exit(UNREALIZABLE_RC)
     else:
         lts_str = lts_to_dot(lts, ARG_MODEL_STATE, not is_moore)
         logging.info('state machine size: %i' % len(lts.states))
@@ -160,11 +161,15 @@ def main(tlsf_file_name,
             with open(output_file_name, 'w') as out:
                 out.write(lts_aiger)
         print_syntcomp_real(lts_aiger)
+        exit(REALIZABLE_RC)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='elli trained for syntcomp rally',
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description='Elli for SYNTCOMP: '
+                    'SMT-based bounded synthesizer, '
+                    'reduces UCW to k-LA, pure Boolean encoding (+UFs)',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('spec', metavar='spec', type=str,
                         help='tlsf spec file')

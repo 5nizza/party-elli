@@ -3,7 +3,6 @@
 import argparse
 import logging
 
-from LTL_to_atm.translator_via_ltl3ba import LTLToAtmViaLTL3BA
 from LTL_to_atm.translator_via_spot import LTLToAtmViaSpot
 from helpers.main_helper import setup_logging
 from helpers.python_ext import readfile
@@ -12,7 +11,7 @@ from interfaces.spec import Spec
 from ltl_to_aiger import convert_spec_to_aiger
 from parsing.acacia_parser_helper import parse_acacia_and_build_expr
 from parsing.tlsf_parser import convert_tlsf_to_acacia, get_spec_type
-from rally import print_syntcomp_real
+from rally_int import print_syntcomp_real
 from syntcomp.aiger_synthesizer import synthesize
 from syntcomp.syntcomp_constants import REALIZABLE_RC, UNREALIZABLE_RC, print_syntcomp_unreal, print_syntcomp_unknown, \
     UNKNOWN_RC

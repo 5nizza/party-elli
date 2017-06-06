@@ -10,8 +10,8 @@ CONFIG_PY_TEXT = """
 Z3_PATH = 'z3'
 LTL3BA_PATH = '/home/ayrat/projects/ltl3ba/ltl3ba-1.1.2/ltl3ba'
 
-# The following are needed only by `rally.py`.
-# Ignore them if you don't need `rally.py`.
+# The following are needed only by `rally_int.py`.
+# Ignore them if you don't need `rally_int.py`.
 
 ABC_PATH='/home/ayrat/projects/abc/abc'
 VL2MV_PATH='/home/ayrat/projects/vl2mv-2.4/vl2mv'
