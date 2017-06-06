@@ -20,7 +20,7 @@ def get_root_dir() -> str:
 def setup_logging(verbose_level:int=0, filename:str=None, name_processes:bool=False):
     level = None
     if verbose_level == -1:
-        level = logging.CRITICAL
+        level = logging.ERROR
     if verbose_level is 0:
         level = logging.INFO
     elif verbose_level >= 1:
