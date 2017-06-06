@@ -75,7 +75,7 @@ def _run_benchmark(solver:str, is_real:bool, bench_file_name:str, mc:bool) -> st
         return 'stdout first line should be %s, got instead: %s'\
                % ((U_STR, R_STR)[is_real], out_lines[0])
 
-    if not mc:
+    if not mc or not is_real:
         return None
 
     aiger_solution = '\n'.join(out_lines[1:])

@@ -46,8 +46,8 @@ def _model_check(combined_aiger_file:str) -> int:
     return 0
 
 
-def main(model_file_name:str, tlsf_file_name:str, keep_tmp_files:bool):
-    """ :return: 0 - model is correct, 1 - model is wrong """
+def main(model_file_name:str, tlsf_file_name:str, keep_tmp_files:bool) -> bool:
+    """ :return: 'the model is correct' """
 
     monitor_aiger_file_name = _create_monitor_file(tlsf_file_name)
     logging.debug('created monitor_aiger_file_name: ' + monitor_aiger_file_name)
@@ -55,13 +55,13 @@ def main(model_file_name:str, tlsf_file_name:str, keep_tmp_files:bool):
     combined_aiger = _create_combined(model_file_name, monitor_aiger_file_name)
     logging.debug('created combined_aiger: ' + combined_aiger)
 
-    res = _model_check(combined_aiger)
-    logging.info('model is ' + ['correct', 'wrong'][res])
+    rc = _model_check(combined_aiger)   # rc is 1 when the model is wrong
+    logging.info('... model is ' + ['correct', 'wrong'][rc])
 
-    if res == 0 and not keep_tmp_files:  # keep files if the model failed model checking
+    if rc == 0 and not keep_tmp_files:  # keep files if the model failed model checking
         os.remove(monitor_aiger_file_name)
         os.remove(combined_aiger)
-    return res
+    return rc==0
 
 
 if __name__ == "__main__":
@@ -80,4 +80,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     setup_logging(args.verbose)
-    exit(main(args.model, args.spec, args.tmp))
+    main(args.model, args.spec, args.tmp)
+    exit()
