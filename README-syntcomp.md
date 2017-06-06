@@ -17,6 +17,7 @@ but it likely workas with other configurations:
   (install them for example using `pip3`)
 - SDF synthesizer, included in sub-folder `additional-tools/sdf`. See its readme, build it by calling `build.sh`.
 - yosys, included in the sub-folder `additional-tools/yosys`. See its readme on how to build it.
+- other dependencies like syfco, combine-aiger, etc. (see `config.py`)
 
 As for SPOT:
 I use it via python bindings and it is installed system-wide on my machine,
@@ -50,3 +51,9 @@ For __debugging__, provide `-v` (or `-vv`) to the tool, it will start logging in
 For more details, also run them with `--help`.
 
 For emails use gmail address: ayrat.khalimov
+
+
+## Final Notes
+
+My tools disagree on the status of `load_balancer_unreal2.tlsf`:
+they find it realizable.
