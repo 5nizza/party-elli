@@ -2,6 +2,7 @@ from typing import List, Iterable, Tuple
 from multiprocessing import Process, Queue
 
 import logging
+import psutil, os
 
 from interfaces.LTS import LTS
 from syntcomp.task import Task
@@ -23,8 +24,22 @@ def _starter(q:Queue, task: Task):
         raise e
 
 
+# def kill_proc_tree(pid, including_parent=True):
+#     parent = psutil.Process(pid)
+#     children = parent.children(recursive=True)
+#     for c in children:
+#         c.terminate()
+        # c.wait()
+    # gone, alive = psutil.wait_procs(children)
+    # assert gone == children, str(gone) + ' vs. ' + str(children)
+    # if including_parent:
+    #     parent.terminate()
+    #     parent.wait()
+
+
 def _kill_them(processes:Iterable[Process]):
     for p in processes:
+        # kill_proc_tree(p.pid)
         p.terminate()
         p.join()
 
@@ -51,5 +66,5 @@ def run_synth_tasks(tasks:List[Task]) -> Tuple[bool, LTS or str or None]:
             logging.info('%s won!' % task.name)
             break
 
-    _kill_them(processes)
+    _kill_them(processes)  # don't use the queue, it may be corrupted!
     return task.is_doing_real_check, lts_or_aiger

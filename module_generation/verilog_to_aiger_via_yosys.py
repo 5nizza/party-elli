@@ -20,7 +20,7 @@ def verilog_to_aiger(verilog:str) -> str:
     synth -flatten -auto-top
     abc -g AND
     write_aiger -ascii -symbols -zinit {aiger_file}""".format(aiger_file=aiger_file_name,
-                                                       verilog_file=verilog_file_name)
+                                                              verilog_file=verilog_file_name)
     script_file_name = create_unique_file(text=script, suffix='.ys')
 
     files_to_remove = (aiger_file_name,

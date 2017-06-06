@@ -68,8 +68,8 @@ if __name__ == "__main__":
     class KidTasksCreator(TaskCreator):
         @staticmethod
         def create(ltl_text:str, part_text:str, is_moore:bool) -> List[Task]:
-            return [KidRealTask('check real', ltl_text, part_text, is_moore, 4, 16),
-                    KidUnrealTask('check unreal (short)', ltl_text, part_text, is_moore, 2, 16, 1200)]
+            return [KidRealTask('kid.real', ltl_text, part_text, is_moore, 4, 16),
+                    KidUnrealTask('kid.unreal.short', ltl_text, part_text, is_moore, 2, 16, 1200)]
 
     main_template("LTL synthesizer via AIGER, UCW -> k-LA -> AIGER, then solve with SDF solver",
                   KidTasksCreator())

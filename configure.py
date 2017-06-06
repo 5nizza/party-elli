@@ -10,19 +10,20 @@ CONFIG_PY_TEXT = """
 Z3_PATH = 'z3'
 
 # The following are needed only for SYNTCOMP rally_* tools.
-
-ABC_PATH='/home/ayrat/projects/abc/abc'
-VL2MV_PATH='/home/ayrat/projects/vl2mv-2.4/vl2mv'
+YOSYS_PATH='/home/ayrat/projects/yosys/yosys'
+SDF_PATH='/home/ayrat/projects/sdf/binary/sdf'
 AIGTOAIG_PATH='/home/ayrat/projects/aiger-1.9.4/aigtoaig'
 SMVTOAIG_PATH='/home/ayrat/projects/aiger-1.9.4/smvtoaig'
 COMBINEAIGER_PATH='/home/ayrat/projects/syntcomp/tools/aiger-ltl-model-checker/combine-aiger'
 SYFCO_PATH='syfco'
 IIMC_PATH='/home/ayrat/projects/iimc-2.0/iimc'
-YOSYS_PATH='/home/ayrat/projects/yosys/yosys'
-SDF_PATH='/home/ayrat/projects/sdf/binary/sdf'
 
 # LTL3BA is _not_ used by default, but if you request --ltl3ba, then provide this:
 LTL3BA_PATH = '/home/ayrat/projects/ltl3ba/ltl3ba-1.1.2/ltl3ba'
+
+# these do not seem to be used anymore by default
+ABC_PATH='/home/ayrat/projects/abc/abc'
+VL2MV_PATH='/home/ayrat/projects/vl2mv-2.4/vl2mv'
 
 
 if __name__ == '__main__':

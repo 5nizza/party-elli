@@ -77,10 +77,10 @@ if __name__ == "__main__":
     class ElliBoolTasksCreator(TaskCreator):
         @staticmethod
         def create(ltl_text:str, part_text:str, is_moore:bool) -> List[Task]:
-            elli_int_real = ElliBoolRealTask('check real',
+            elli_int_real = ElliBoolRealTask('elli.bool.real',
                                              ltl_text, part_text, is_moore,
                                              1, 20, 8)
-            elli_int_unreal = ElliBoolUnrealTask('check unreal (short)',
+            elli_int_unreal = ElliBoolUnrealTask('elli.unreal.short',
                                                  ltl_text, part_text, is_moore,
                                                  1, 20, 8, timeout=1200)
             return [elli_int_real, elli_int_unreal]
