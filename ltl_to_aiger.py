@@ -3,6 +3,7 @@
 import argparse
 
 import logging
+from typing import Iterable
 
 from LTL_to_atm import translator_via_ltl3ba, translator_via_spot
 from automata.automaton_to_dot import to_dot
@@ -10,6 +11,8 @@ from automata.k_reduction import k_reduce
 from helpers.main_helper import setup_logging
 from helpers.python_ext import readfile
 from interfaces.LTL_to_automaton import LTLToAutomaton
+from interfaces.automaton import Automaton
+from interfaces.expr import Signal
 from interfaces.spec import Spec
 from module_generation.automaton_to_verilog import atm_to_verilog
 from module_generation.verilog_to_aiger_via_yosys import verilog_to_aiger
@@ -17,22 +20,16 @@ from parsing.acacia_parser_helper import parse_acacia_and_build_expr
 from parsing.tlsf_parser import convert_tlsf_to_acacia
 
 
-def convert_spec_to_aiger(spec:Spec, k:int, ltl_to_automaton:LTLToAutomaton, bad_out_name:str) -> str:
-    atm = ltl_to_automaton.convert(~spec.formula)
-    logging.info("UCW automaton has %i states" % len(atm.nodes))
-    # with open('/tmp/orig.dot', 'w') as f:
-    #     f.write(to_dot(atm))
-
-    k_atm = k_reduce(atm, k)
+# FIXME: rename
+def convert_spec_to_aiger(inputs:Iterable[Signal], outputs:Iterable[Signal],
+                          ucw_automaton:Automaton,
+                          k:int,
+                          bad_out_name:str) -> str:
+    k_atm = k_reduce(ucw_automaton, k)
     logging.info("k-LA automaton has %i states" % len(k_atm.nodes))
 
-    # with open('/tmp/red.dot', 'w') as f:
-    #     f.write(to_dot(k_atm))
-
     module_name = 'automaton'
-    verilog = atm_to_verilog(k_atm, spec.inputs, spec.outputs, module_name, bad_out_name)
-    # with open('/tmp/verilog.v', 'w') as f:
-    #     f.write(verilog)
+    verilog = atm_to_verilog(k_atm, inputs, outputs, module_name, bad_out_name)
 
     return verilog_to_aiger(verilog)
 

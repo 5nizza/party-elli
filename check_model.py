@@ -56,7 +56,6 @@ def main(model_file_name:str, tlsf_file_name:str, keep_tmp_files:bool) -> bool:
     logging.debug('created combined_aiger: ' + combined_aiger)
 
     rc = _model_check(combined_aiger)   # rc is 1 when the model is wrong
-    logging.debug('... model is ' + ['correct', 'wrong'][rc])
 
     if rc == 0 and not keep_tmp_files:  # keep files if the model failed model checking
         os.remove(monitor_aiger_file_name)
@@ -70,9 +69,9 @@ if __name__ == "__main__":
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('model', metavar='model', type=str,
-                        help='aiger model file')
+                        help='AIGER model file')
     parser.add_argument('spec', metavar='spec', type=str,
-                        help='tlsf spec file file')
+                        help='TLSF spec file file')
     parser.add_argument('--tmp', action='store_true', required=False, default=False,
                         help='keep temporary files')
     parser.add_argument('-v', '--verbose', action='count', default=0,
@@ -80,5 +79,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     setup_logging(args.verbose)
-    main(args.model, args.spec, args.tmp)
+    is_correct = main(args.model, args.spec, args.tmp)
+    logging.info('model is ' + ('wrong', 'correct')[is_correct])
     exit()

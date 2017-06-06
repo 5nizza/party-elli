@@ -1,23 +1,19 @@
-from abc import abstractmethod, ABC
 from typing import List, Iterable, Tuple
 from multiprocessing import Process, Queue
 
 import logging
 
 from interfaces.LTS import LTS
+from syntcomp.task import Task
+import logging
+from multiprocessing import Process, Queue
+from typing import List, Iterable, Tuple
+
+from interfaces.LTS import LTS
+from syntcomp.task import Task
 
 
-class Task(ABC):
-    def __init__(self, name:str, is_doing_real_check:bool):
-        self.name = name                                # type: str
-        self.is_doing_real_check = is_doing_real_check  # type: bool
-
-    @abstractmethod
-    def do(self) -> LTS:
-        pass
-
-
-def _starter(q:Queue, task:Task):
+def _starter(q:Queue, task: Task):
     try:
         res = task.do()
         q.put((task, res))
