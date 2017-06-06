@@ -32,7 +32,7 @@ def _kill_them(processes:Iterable[Process]):
 def run_synth_tasks(tasks:List[Task]) -> Tuple[bool, LTS or str or None]:
     queue = Queue()
 
-    processes = [Process(target=_starter, args=(queue, t)) for t in tasks]
+    processes = [Process(name=t.name, target=_starter, args=(queue, t)) for t in tasks]
     for p in processes:
         p.start()
 
@@ -48,6 +48,7 @@ def run_synth_tasks(tasks:List[Task]) -> Tuple[bool, LTS or str or None]:
             logging.info('task did not succeed: ' + task.name)
             logging.info('waiting for others..')
         else:
+            logging.info('%s won!' % task.name)
             break
 
     _kill_them(processes)

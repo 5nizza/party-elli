@@ -31,7 +31,7 @@ class ElliBoolRealTask(Task):
                                    translator_via_spot.LTLToAtmViaSpot(),
                                    solver,
                                    self.max_k,
-                                   self.min_size, self.max_size)
+                                   self.min_size, self.max_size, 0)
         finally:
             solver.die()
 
@@ -66,7 +66,7 @@ class ElliBoolUnrealTask(Task):
                                      translator_via_spot.LTLToAtmViaSpot(),
                                      solver,
                                      self.max_k,
-                                     self.min_size, self.max_size)
+                                     self.min_size, self.max_size, 0)
         except TimeoutException:
             return None
         finally:
@@ -82,7 +82,7 @@ if __name__ == "__main__":
                                              1, 20, 8)
             elli_int_unreal = ElliBoolUnrealTask('check unreal (short)',
                                                  ltl_text, part_text, is_moore,
-                                                 1, 10, 6, timeout=1200)
+                                                 1, 20, 8, timeout=1200)
             return [elli_int_real, elli_int_unreal]
 
     main_template("SMT-based bounded synthesizer, with UCW -> k-LA and thus no integer ranks",

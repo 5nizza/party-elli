@@ -64,7 +64,7 @@ def main(model_file_name:str, tlsf_file_name:str, keep_tmp_files:bool) -> bool:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='I model check the aiger model found by rally_int.py '
+    parser = argparse.ArgumentParser(description='I model check the aiger model found by rally_elli_int.py '
                                                  'Return: 0 if correct, 1 if model is wrong.',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 

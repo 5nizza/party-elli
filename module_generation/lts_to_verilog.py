@@ -31,7 +31,7 @@ def lts_to_verilog(lts:LTS, module_name:str) -> str:
 
     # TODO: don't use latches for state-less models
     nof_state_bits = math.ceil(math.log2(len(lts.states)))
-    s += 'reg [{max_bit}:0] {state};'.format(max_bit=int(max(1., nof_state_bits-1)),  # max_bit is at least 1
+    s += 'reg [{max_bit}:0] {state};'.format(max_bit=int(max(0., nof_state_bits-1)),  # max_bit is at least 0
                                                          state=lts.state_name)
     s.newline()
 

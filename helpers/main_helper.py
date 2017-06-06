@@ -27,7 +27,7 @@ def setup_logging(verbose_level:int=0, filename:str=None, name_processes:bool=Fa
         level = logging.DEBUG
 
     if name_processes:
-        formatter = logging.Formatter(fmt="[%(processName)s] %(asctime)-10s%(message)s", datefmt="%H:%M:%S")
+        formatter = logging.Formatter(fmt="%(processName)-16s  --  %(asctime)-10s%(message)s", datefmt="%H:%M:%S")
     else:
         formatter = logging.Formatter(fmt="%(asctime)-10s%(message)s", datefmt="%H:%M:%S")
 

@@ -10,6 +10,7 @@ from interfaces.LTL_to_automaton import LTLToAutomaton
 from interfaces.spec import Spec
 from module_generation.automaton_to_verilog import atm_to_verilog
 from module_generation.verilog_to_aiger_via_yosys import verilog_to_aiger
+from module_generation.verilog_to_aiger import verilog_to_aiger as v2a
 from parsing.acacia_parser_helper import parse_acacia_and_build_expr
 from parsing.tlsf_parser import convert_tlsf_or_acacia_to_acacia
 from syntcomp.aiger_synthesizer import synthesize
@@ -25,10 +26,14 @@ def _check_real(spec, is_moore, ltl_to_atm, min_k, max_k) -> str:
     logging.info("UCW automaton has %i states" % len(ucw_atm.nodes))
 
     model_aiger = None
-    for k in range(min_k, max_k+1):
+    for k in range(min_k, max_k+1, 2):
         logging.info("setting k to %i..." % k)
         k_atm = k_reduce(ucw_atm, k)
         logging.info("k-LA automaton has %i states" % len(k_atm.nodes))
+
+        # aiger_spec = v2a(atm_to_verilog(k_atm,
+        #                                              spec.inputs, spec.outputs,
+        #                                              'automaton', BAD_OUT_NAME))
 
         aiger_spec = verilog_to_aiger(atm_to_verilog(k_atm,
                                                      spec.inputs, spec.outputs,
