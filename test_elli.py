@@ -4,7 +4,8 @@ import sys
 import argparse
 from typing import Tuple as Pair
 
-from elli import REALIZABLE, UNREALIZABLE, UNKNOWN
+from syntcomp.syntcomp_constants import REALIZABLE_STR, UNREALIZABLE_STR, UNKNOWN_STR, UNKNOWN_RC, UNREALIZABLE_RC, \
+    REALIZABLE_RC
 from tests.common import run_benchmark
 
 
@@ -55,7 +56,7 @@ unrealizable = [
     ("others/immediate-arbiter-real.ltl --unreal --moore", 1),
 
     ("others/unreal.ltl --unreal --moore --maxK 10", 1),
-    ("others/immediate-arbiter-unreal.ltl --unreal --mealy --maxK 5", 1),
+    ("others/immediate-arbiter-unreal.ltl --unreal --mealy --maxK 5", 2),
     ("others/immediate-arbiter-real.ltl --unreal --moore --maxK 5", 1),
 ]
 
@@ -65,16 +66,6 @@ unknown = [  # no model should be found for these
     # no model should be found (iterate forever..)
     ("others/lilydemo23.ltl --mealy --unreal --bound 3", 0)
 ]
-
-
-def _get_status_size(b) -> Pair[int, int]:
-    if b in realizable:
-        return REALIZABLE
-    if b in unrealizable:
-        return UNREALIZABLE
-    if b in unknown:
-        return UNKNOWN
-    assert 0
 
 
 def main():
@@ -90,9 +81,9 @@ def main():
     for bench_size in realizable + unrealizable + unknown:
         result = run_benchmark('elli.py',
                                bench_size[0],
-                               {100:REALIZABLE,
-                                10:UNREALIZABLE,
-                                1:UNKNOWN}[(bench_size in realizable)*100 + (bench_size in unrealizable)*10 + (bench_size in unknown)],
+                               {100:REALIZABLE_RC,
+                                10:UNREALIZABLE_RC,
+                                1:UNKNOWN_RC}[(bench_size in realizable)*100 + (bench_size in unrealizable)*10 + (bench_size in unknown)],
                                bench_size[1])
         all_passed &= result
 

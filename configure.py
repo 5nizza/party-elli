@@ -16,6 +16,8 @@ AIGTOAIG_PATH='/home/ayrat/projects/aiger-1.9.4/aigtoaig'
 SMVTOAIG_PATH='/home/ayrat/projects/aiger-1.9.4/smvtoaig'
 COMBINEAIGER_PATH='/home/ayrat/projects/syntcomp/tools/aiger-ltl-model-checker/combine-aiger'
 SYFCO_PATH='syfco'
+
+# IIMC is only if you plan to model check the results (e.g. using `check_model.py`)
 IIMC_PATH='/home/ayrat/projects/iimc-2.0/iimc'
 
 # LTL3BA is _not_ used by default, but if you request --ltl3ba, then provide this:
