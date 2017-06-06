@@ -56,7 +56,7 @@ def main(model_file_name:str, tlsf_file_name:str, keep_tmp_files:bool) -> bool:
     logging.debug('created combined_aiger: ' + combined_aiger)
 
     rc = _model_check(combined_aiger)   # rc is 1 when the model is wrong
-    logging.info('... model is ' + ['correct', 'wrong'][rc])
+    logging.debug('... model is ' + ['correct', 'wrong'][rc])
 
     if rc == 0 and not keep_tmp_files:  # keep files if the model failed model checking
         os.remove(monitor_aiger_file_name)
