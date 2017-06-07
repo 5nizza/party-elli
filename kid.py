@@ -10,7 +10,6 @@ from interfaces.LTL_to_automaton import LTLToAutomaton
 from interfaces.spec import Spec
 from module_generation.automaton_to_verilog import atm_to_verilog
 from module_generation.verilog_to_aiger_via_yosys import verilog_to_aiger
-from module_generation.verilog_to_aiger import verilog_to_aiger as v2a
 from parsing.acacia_parser_helper import parse_acacia_and_build_expr
 from parsing.tlsf_parser import convert_tlsf_or_acacia_to_acacia
 from syntcomp.aiger_synthesizer import synthesize

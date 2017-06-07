@@ -30,7 +30,7 @@ def verilog_to_aiger(verilog:str) -> str:
     # on some examples yosys fails with a standard stack limit, so we raise it
     hard_limit = resource.getrlimit(resource.RLIMIT_STACK)[1]
     resource.setrlimit(resource.RLIMIT_STACK, (hard_limit, hard_limit))
-    rc, out, err = execute_shell('{yosys} -s {script}'.format(
+    rc, out, err = execute_shell('{yosys} -Q -s {script}'.format(
         yosys=YOSYS_PATH, script=script_file_name))
     assert_exec_strict(rc, out, err)
     logging.debug('yosys stdout:\n' + out)
