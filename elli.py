@@ -97,7 +97,7 @@ def check_real(ltl_text, part_text, is_moore,
                                  tau_desc,
                                  spec.inputs,
                                  desc_by_output,
-                                 range(max_size+1))
+                                 range(max_size))
         model = model_searcher.search(min_size, max_size, encoder, solver)
     else:
         coreach_automaton = k_reduce(automaton, max_k)
@@ -113,7 +113,7 @@ def check_real(ltl_text, part_text, is_moore,
                                  tau_desc,
                                  spec.inputs,
                                  desc_by_output,
-                                 range(max_size+1),
+                                 range(max_size),
                                  max_k)
         model = model_k_searcher.search(min_size, max_size,
                                         max_k,
