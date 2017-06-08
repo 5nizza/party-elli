@@ -22,7 +22,7 @@ def make_exit():
 
 def declare_enum(enum_name:str, values):
     smt_str = '(declare-datatypes () (({0} {1})))'.format(enum_name,
-                                                          ' '.join(values))
+                                                          ' '.join(map(lambda v: '(' + v + ')', values)))
     return smt_str
 
 
