@@ -76,7 +76,10 @@ class CoBuchiEncoder(EncoderInterface):
                                     self.automaton, states_to_encode)
 
     def encode_model_bound(self, allowed_model_states:Iterable[int]) -> List[str]:
-        self.last_allowed_states = list(allowed_model_states)
+        allowed_model_states = set(allowed_model_states)
+        self.last_allowed_states = allowed_model_states
+        if set(self.model_states) == set(allowed_model_states):
+            return []
         return encode_model_bound(allowed_model_states, self.tau_desc)
 
     def encode_get_model_values(self) -> List[str]:
