@@ -1,6 +1,7 @@
+from itertools import product
 from typing import Dict, Iterable
 
-from helpers.python_ext import lfilter
+from helpers.python_ext import lfilter, StrAwareList
 from interfaces.func_description import FuncDesc
 
 
@@ -170,31 +171,32 @@ def exists(free_var_type_pairs, condition):
     return '(exists ({0}) {1})'.format(forall_pre, condition)
 
 
-#def unwinding_forall_bool(free_input_vars, operation):
+# def unwinding_forall_bool(free_input_vars, operation):
 #    if not len(free_input_vars):
 #        return operation
 #
 #    values = product(*[[False, True] for _ in range(len(free_input_vars))])
 #
-#    #    print(list(values))
-#    #    print()
-#    #    print(free_input_vars)
-#    #    print()
-#
-#    res = StrAwareList()
-#    for free_vars_values in values:
-#        var_val_tuples = zip(free_input_vars, free_vars_values)
-#
-#        concrete_operation = operation
-#        for var_val in var_val_tuples:
-#            concrete_operation = concrete_operation.replace(var_val[0], str(var_val[1]).lower())
-#
-#        res += concrete_operation
-#
-#    return op_and(res)
+      # print(list(values))
+      # print()
+      # print(free_input_vars)
+      # print()
+   #
+   # res = StrAwareList()
+   # for free_vars_values in values:
+   #     var_val_tuples = zip(free_input_vars, free_vars_values)
+   #
+   #     concrete_operation = operation
+   #     for var_val in var_val_tuples:
+   #         concrete_operation = concrete_operation.replace(var_val[0], str(var_val[1]).lower())
+   #
+   #     res += concrete_operation
+   #
+   # return op_and(res)
 
 
 def forall_bool(free_input_vars, condition):
+    # return unwinding_forall_bool(free_input_vars, condition)
     return forall([(var, 'Bool') for var in free_input_vars], condition)
 
 
