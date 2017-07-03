@@ -34,6 +34,11 @@ def run_and_report(spec_file_name, is_moore_:bool,
 
     is_real, lts_or_aiger = run_synth_tasks(tasks)
 
+    if is_real is None:
+        logging.warning('Either crashed or did not succeed')
+        print_syntcomp_unknown()
+        exit(UNKNOWN_RC)
+
     logging.info('finished in %i sec.' % timer.sec_restart())
 
     if not lts_or_aiger:
