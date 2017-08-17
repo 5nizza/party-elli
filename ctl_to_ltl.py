@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 import argparse
-
 import logging
-from pprint import pprint
+from pprint import pformat
 
 from ctl2ltl_ import ctl2ltl
 from helpers.converter_to_wring import ConverterToWringVisitor
@@ -10,9 +9,7 @@ from helpers.main_helper import setup_logging
 from parsing.python_parser import parse_python_spec
 
 
-def main():
-    """ :return: 1 if model is found, 0 otherwise """
-
+def main() -> None:
     parser = argparse.ArgumentParser(description='CTL to LTL converter',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
@@ -32,11 +29,10 @@ def main():
 
     spec = parse_python_spec(args.spec)
 
-    logging.debug('Input CTL spec:\n' + str(spec))
+    logging.info('Input CTL spec:\n' + str(spec))
     ltl, new_outputs = ctl2ltl.convert(spec)
-    print('introduced outputs:\n')
-    pprint(new_outputs)
-    print('ltl\n', ConverterToWringVisitor().dispatch(ltl))
+    logging.info('introduced outputs:\n%s', pformat(new_outputs))
+    logging.info('LTL\n', ConverterToWringVisitor().dispatch(ltl))
 
 
 if __name__ == "__main__":
