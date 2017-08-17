@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
-from typing import List, Iterable, Container, Sequence
+from typing import List, Iterable, Sequence
 
 from interfaces.LTS import LTS
 
 
 class EncoderInterface(ABC):
     @abstractmethod
-    def encode_headers(self, max_model_states) -> List[str]:
+    def encode_headers(self) -> List[str]:
         raise NotImplementedError()
 
     @abstractmethod

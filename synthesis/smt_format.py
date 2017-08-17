@@ -1,11 +1,12 @@
-from typing import Dict
+from itertools import product
+from typing import Dict, Iterable
 
-from helpers.python_ext import lmap, lfilter
+from helpers.python_ext import lfilter, StrAwareList
 from interfaces.func_description import FuncDesc
 
 
-def make_check_sat():
-    return "(check-sat)"
+def make_check_sat(assumptions:Iterable[str]=tuple()) -> str:
+    return "(check-sat%s)" % ('' if not assumptions else ' ' + ' '.join(assumptions))
 
 
 def make_push(level=1):
@@ -22,7 +23,7 @@ def make_exit():
 
 def declare_enum(enum_name:str, values):
     smt_str = '(declare-datatypes () (({0} {1})))'.format(enum_name,
-                                                          ' '.join(values))
+                                                          ' '.join(map(lambda v: '(' + v + ')', values)))
     return smt_str
 
 
@@ -42,6 +43,10 @@ def declare_fun(func:FuncDesc) -> str:
     arg_types = ' '.join(map(lambda arg_type: arg_type[1],
                              func.ordered_argname_type_pairs))
     return s.format(name=func.name, arg_types=arg_types, ret_type=func.output_ty)
+
+
+def declare_const(name:str, ty:str) -> str:
+    return '(declare-const {name} {ty})'.format_map(locals())
 
 
 def define_fun(func:FuncDesc, body:str) -> str:
@@ -166,31 +171,32 @@ def exists(free_var_type_pairs, condition):
     return '(exists ({0}) {1})'.format(forall_pre, condition)
 
 
-#def unwinding_forall_bool(free_input_vars, operation):
+# def unwinding_forall_bool(free_input_vars, operation):
 #    if not len(free_input_vars):
 #        return operation
 #
 #    values = product(*[[False, True] for _ in range(len(free_input_vars))])
 #
-#    #    print(list(values))
-#    #    print()
-#    #    print(free_input_vars)
-#    #    print()
-#
-#    res = StrAwareList()
-#    for free_vars_values in values:
-#        var_val_tuples = zip(free_input_vars, free_vars_values)
-#
-#        concrete_operation = operation
-#        for var_val in var_val_tuples:
-#            concrete_operation = concrete_operation.replace(var_val[0], str(var_val[1]).lower())
-#
-#        res += concrete_operation
-#
-#    return op_and(res)
+      # print(list(values))
+      # print()
+      # print(free_input_vars)
+      # print()
+   #
+   # res = StrAwareList()
+   # for free_vars_values in values:
+   #     var_val_tuples = zip(free_input_vars, free_vars_values)
+   #
+   #     concrete_operation = operation
+   #     for var_val in var_val_tuples:
+   #         concrete_operation = concrete_operation.replace(var_val[0], str(var_val[1]).lower())
+   #
+   #     res += concrete_operation
+   #
+   # return op_and(res)
 
 
 def forall_bool(free_input_vars, condition):
+    # return unwinding_forall_bool(free_input_vars, condition)
     return forall([(var, 'Bool') for var in free_input_vars], condition)
 
 

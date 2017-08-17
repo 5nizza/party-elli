@@ -3,7 +3,7 @@ from typing import Iterable, Dict, List, Set
 
 from helpers.python_ext import lmap
 from interfaces.LTS import LTS
-from interfaces.automata import Automaton, Label
+from interfaces.automaton import Automaton, Label
 from interfaces.expr import BinOp as Prop, Bool
 from interfaces.expr import Signal, Expr, BinOp, UnaryOp, Number
 from interfaces.func_description import FuncDesc

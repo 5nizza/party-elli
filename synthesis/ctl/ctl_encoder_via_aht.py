@@ -5,8 +5,8 @@ from helpers.expr_helper import get_sig_number
 from helpers.logging_helper import log_entrance
 from helpers.python_ext import lmap, lfilter
 from interfaces.LTS import LTS
-from interfaces.aht_automaton import AHT, Node, get_reachable_from, Transition, ExtLabel
-from interfaces.aht_automaton import DstFormulaPropMgr
+from interfaces.AHT_automaton import AHT, Node, get_reachable_from, Transition, ExtLabel
+from interfaces.AHT_automaton import DstFormulaPropMgr
 from interfaces.expr import Signal, BinOp, UnaryOp, Expr, Number
 from interfaces.func_description import FuncDesc
 from parsing.visitor import Visitor

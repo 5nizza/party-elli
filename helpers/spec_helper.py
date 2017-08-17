@@ -1,9 +1,8 @@
 from typing import Tuple
 
-from helpers.automata_classifier import is_safety_automaton
+from automata.automata_classifier import is_safety_automaton
 from interfaces.LTL_to_automaton import LTLToAutomaton
 from interfaces.expr import Expr, Number
-
 from interfaces.expr import UnaryOp, BinOp, Signal
 
 

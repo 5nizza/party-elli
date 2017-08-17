@@ -17,16 +17,19 @@ def get_root_dir() -> str:
     return root_dir
 
 
-def setup_logging(verbose_level:int=0, filename:str=None):
+def setup_logging(verbose_level:int=0, filename:str=None, name_processes:bool=False):
     level = None
     if verbose_level == -1:
-        level = logging.CRITICAL
+        level = logging.ERROR
     if verbose_level is 0:
         level = logging.INFO
     elif verbose_level >= 1:
         level = logging.DEBUG
 
-    formatter = logging.Formatter(fmt="%(asctime)-10s%(message)s", datefmt="%H:%M:%S")
+    if name_processes:
+        formatter = logging.Formatter(fmt="%(processName)-16s  --  %(asctime)-10s%(message)s", datefmt="%H:%M:%S")
+    else:
+        formatter = logging.Formatter(fmt="%(asctime)-10s%(message)s", datefmt="%H:%M:%S")
 
     stdout_handler = ColorizingStreamHandler()
     stdout_handler.setFormatter(formatter)
@@ -48,10 +51,10 @@ def setup_logging(verbose_level:int=0, filename:str=None):
 
 class Z3SolverFactory:
     def __init__(self,
-                 smt_tmp_files_prefix, z3_path,
-                 is_incremental,
-                 generate_queries_only,
-                 remove_files):
+                 smt_tmp_files_prefix:str, z3_path:str,
+                 is_incremental:bool,
+                 generate_queries_only:bool,
+                 remove_files:bool):
         self.smt_tmp_files_prefix = smt_tmp_files_prefix
         self.z3_path = z3_path
         self.is_incremental = is_incremental

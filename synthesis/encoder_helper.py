@@ -4,7 +4,7 @@ from typing import Iterable, List, Dict, Tuple, Container
 from helpers.python_ext import lmap
 from helpers.str_utils import remove_from_str
 from interfaces.LTS import LTS
-from interfaces.automata import Label
+from interfaces.automaton import Label
 from interfaces.expr import Signal
 from interfaces.func_description import FuncDesc
 from interfaces.labels_map import LabelsMap

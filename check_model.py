@@ -2,29 +2,23 @@
 import argparse
 import logging
 import os
-import tempfile
-
-import sys
 
 from config import SYFCO_PATH, SMVTOAIG_PATH, COMBINEAIGER_PATH, IIMC_PATH
+from helpers.files import create_unique_file
 from helpers.get_nof_properties import get_nof_properties
 from helpers.main_helper import setup_logging
 from helpers.shell import execute_shell, assert_exec_strict, rc_out_err_to_str
 
 
 def _create_monitor_file(tlsf_file_name) -> str:
-    rc, out, err = execute_shell('{syfco} -f smv {tlsf_file} -m fully'.format(syfco=SYFCO_PATH,
-                                                                              tlsf_file=tlsf_file_name))
+    rc, out, err = execute_shell('{syfco} -f smv {tlsf_file} -m fully'
+                                 .format(syfco=SYFCO_PATH, tlsf_file=tlsf_file_name))
     assert_exec_strict(rc, out, err)
 
     rc, out, err = execute_shell('{smvtoaig} -a'.format(smvtoaig=SMVTOAIG_PATH), input=out)
     assert rc == 0, rc_out_err_to_str(rc, out, err)   # it outputs the LTL into stderr
 
-    (fd, aag_file_name) = tempfile.mkstemp(text=True, suffix='.aag')
-    os.write(fd, bytes(out, encoding=sys.getdefaultencoding()))
-    os.close(fd)
-
-    return aag_file_name
+    return create_unique_file(out, suffix='.aag')
 
 
 def _create_combined(model_file_name, monitor_aiger_file_name) -> str:
@@ -33,12 +27,7 @@ def _create_combined(model_file_name, monitor_aiger_file_name) -> str:
         model_aiger=model_file_name,
         spec_aiger=monitor_aiger_file_name))
     assert_exec_strict(rc, out, err)
-
-    (fd, aag_file_name) = tempfile.mkstemp(text=True, suffix='.aag')
-    os.write(fd, bytes(out, encoding=sys.getdefaultencoding()))
-    os.close(fd)
-
-    return aag_file_name
+    return create_unique_file(out, suffix='.aag')
 
 
 def _model_check(combined_aiger_file:str) -> int:
@@ -53,12 +42,12 @@ def _model_check(combined_aiger_file:str) -> int:
         is_correct = out.splitlines()[0].strip() == '0'
         if not is_correct:
             return 1
-
+    # end of for
     return 0
 
 
-def main(model_file_name:str, tlsf_file_name:str, keep_tmp_files:bool):
-    """ :return: 0 - model is correct, 1 - model is wrong """
+def main(model_file_name:str, tlsf_file_name:str, keep_tmp_files:bool) -> bool:
+    """ :return: 'the model is correct' """
 
     monitor_aiger_file_name = _create_monitor_file(tlsf_file_name)
     logging.debug('created monitor_aiger_file_name: ' + monitor_aiger_file_name)
@@ -66,24 +55,23 @@ def main(model_file_name:str, tlsf_file_name:str, keep_tmp_files:bool):
     combined_aiger = _create_combined(model_file_name, monitor_aiger_file_name)
     logging.debug('created combined_aiger: ' + combined_aiger)
 
-    res = _model_check(combined_aiger)
-    logging.info('model is ' + ['correct', 'wrong'][res])
+    rc = _model_check(combined_aiger)   # rc is 1 when the model is wrong
 
-    if res == 0 and not keep_tmp_files:  # keep files if the model failed model checking
+    if rc == 0 and not keep_tmp_files:  # keep files if the model failed model checking
         os.remove(monitor_aiger_file_name)
         os.remove(combined_aiger)
-    return res
+    return rc==0
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='I model check the aiger model found by rally.py '
+    parser = argparse.ArgumentParser(description='I model check the aiger model found by rally_elli_int.py '
                                                  'Return: 0 if correct, 1 if model is wrong.',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('model', metavar='model', type=str,
-                        help='aiger model file')
+                        help='AIGER model file')
     parser.add_argument('spec', metavar='spec', type=str,
-                        help='tlsf spec file file')
+                        help='TLSF spec file file')
     parser.add_argument('--tmp', action='store_true', required=False, default=False,
                         help='keep temporary files')
     parser.add_argument('-v', '--verbose', action='count', default=0,
@@ -91,4 +79,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     setup_logging(args.verbose)
-    exit(main(args.model, args.spec, args.tmp))
+    is_correct = main(args.model, args.spec, args.tmp)
+    logging.info('model is ' + ('wrong', 'correct')[is_correct])
+    exit()

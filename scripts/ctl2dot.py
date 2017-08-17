@@ -20,10 +20,10 @@ sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
 import argparse
 import logging
 from config import LTL3BA_PATH
-from ctl2aht_ import ctl2aht
-from helpers import aht2dot
+from CTL_to_AHT_ import ctl2aht
+from automata import aht2dot
 from helpers.main_helper import setup_logging
-from interfaces.aht_automaton import SharedAHT, DstFormulaPropMgr
+from interfaces.AHT_automaton import SharedAHT, DstFormulaPropMgr
 from ltl3ba.ltl2automaton import LTL3BA
 from parsing.python_parser import parse_python_spec
 

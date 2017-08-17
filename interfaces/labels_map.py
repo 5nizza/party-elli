@@ -1,4 +1,4 @@
-from interfaces.automata import Label
+from interfaces.automaton import Label
 
 
 class LabelsMap:

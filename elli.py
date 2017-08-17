@@ -3,75 +3,123 @@ import argparse
 import logging
 import tempfile
 
+from automata import automaton_to_dot
+from automata.k_reduction import k_reduce
 from config import Z3_PATH
-from helpers import automaton2dot
 from helpers.main_helper import setup_logging, Z3SolverFactory
-from helpers.python_ext import readfile
 from helpers.timer import Timer
 from interfaces.LTL_to_automaton import LTLToAutomaton
 from interfaces.LTS import LTS
-from ltl_to_automaton import translator_via_spot, translator_via_ltl3ba
+from LTL_to_atm import translator_via_spot, translator_via_ltl3ba
+from interfaces.solver_interface import SolverInterface
 from module_generation.dot import lts_to_dot
 from parsing.acacia_parser_helper import parse_acacia_and_build_expr
-from synthesis import model_searcher
-from synthesis.encoder_builder import create_encoder
+from parsing.tlsf_parser import convert_tlsf_or_acacia_to_acacia
+from syntcomp.syntcomp_constants import UNREALIZABLE_RC, REALIZABLE_RC, UNKNOWN_RC
+from synthesis import model_searcher, model_k_searcher
+from synthesis.cobuchi_encoder import CoBuchiEncoder
+from synthesis.encoder_builder import build_tau_desc, build_output_desc
+from synthesis.coreach_encoder import CoreachEncoder
 from synthesis.smt_namings import ARG_MODEL_STATE
 
 
-# these are tool return values acc. to SYNTCOMP conventions
-REALIZABLE = 10
-UNREALIZABLE = 20
-UNKNOWN = 30
-
-
 def check_unreal(ltl_text, part_text, is_moore,
-                 ltl_to_atm:LTLToAutomaton, solver_factory:Z3SolverFactory,
+                 ltl_to_atm:LTLToAutomaton,
+                 solver:SolverInterface,
+                 max_k:int,
                  min_size, max_size,
-                 opt_level=0,
-                 ltl_to_atm_timeout_sec=0) -> LTS:
+                 opt_level=0) -> LTS:
     """
-    :arg opt_level: Note that opt_level > 0 may introduce unsoundness (returns unrealizable while it is)
+    Note that opt_level > 0 may introduce unsoundness (returns unrealizable while it is).
     """
-    if ltl_to_atm_timeout_sec > 0:
-        logging.warning("check_unreal: you set timeout (%i sec.) for LTL to automaton translation,"
-                        "but I don't support it now (I used to..)" % ltl_to_atm_timeout_sec)
     timer = Timer()
     spec = parse_acacia_and_build_expr(ltl_text, part_text, ltl_to_atm, opt_level)
 
     timer.sec_restart()
     automaton = ltl_to_atm.convert(spec.formula)
     logging.info('(unreal) automaton size is: %i' % len(automaton.nodes))
-    logging.debug('(unreal) automaton (dot) is:\n' + automaton2dot.to_dot(automaton))
+    logging.debug('(unreal) automaton (dot) is:\n' + automaton_to_dot.to_dot(automaton))
     logging.debug('(unreal) automaton translation took (sec): %i' % timer.sec_restart())
 
-    encoder = create_encoder(spec.outputs, spec.inputs, not is_moore, automaton)  # note: inputs/outputs reversed order
+    # note: inputs/outputs and machine type are reversed
+    tau_desc = build_tau_desc(spec.outputs)
+    desc_by_output = dict((i, build_output_desc(i, not is_moore, spec.outputs))
+                          for i in spec.inputs)
+    if max_k == 0:
+        encoder = CoBuchiEncoder(automaton,
+                                 tau_desc,
+                                 spec.outputs,
+                                 desc_by_output,
+                                 range(max_size))
 
-    model = model_searcher.search(min_size, max_size, encoder, solver_factory.create())
+        model = model_searcher.search(min_size, max_size, encoder, solver)
+    else:
+        coreach_automaton = k_reduce(automaton, max_k)
+        logging.info("(unreal) using CoReachEncoder")
+        logging.info('(unreal) co-reachability automaton size is: %i' % len(coreach_automaton.nodes))
+        logging.debug('(unreal) co-reachability automaton (dot) is:\n' + automaton_to_dot.to_dot(coreach_automaton))
+        encoder = CoreachEncoder(coreach_automaton,
+                                 tau_desc,
+                                 spec.outputs,
+                                 desc_by_output,
+                                 range(max_size),
+                                 max_k)
+        model = model_k_searcher.search(min_size, max_size, max_k, encoder, solver)
     logging.debug('(unreal) model_searcher.search took (sec): %i' % timer.sec_restart())
-
     return model
 
 
 def check_real(ltl_text, part_text, is_moore,
-               ltl_to_atm:LTLToAutomaton, solver_factory:Z3SolverFactory,
+               ltl_to_atm:LTLToAutomaton,
+               solver:SolverInterface,
+               max_k:int,
                min_size, max_size,
-               opt_level=2) -> LTS:
+               opt_level=0) -> LTS:
     """
-    :param opt_level: values > 0 introduce incompleteness (but it is sound: if returns REAL, then REAL)
+    When opt_level>0, introduce incompleteness (but it is sound: if returns REAL, then REAL)
+    When max_k>0, reduce UCW to k-UCW.
     """
     timer = Timer()
     spec = parse_acacia_and_build_expr(ltl_text, part_text, ltl_to_atm, opt_level)
 
     timer.sec_restart()
     automaton = ltl_to_atm.convert(~spec.formula)
-    logging.info('(real) automaton size is: %i' % len(automaton.nodes))
-    logging.debug('(real) automaton (dot) is:\n' + automaton2dot.to_dot(automaton))
-    logging.debug('(real) automaton translation took (sec): %i' % timer.sec_restart())
+    logging.info('automaton size is: %i' % len(automaton.nodes))
+    logging.debug('automaton (dot) is:\n' + automaton_to_dot.to_dot(automaton))
+    logging.debug('automaton translation took (sec): %i' % timer.sec_restart())
 
-    encoder = create_encoder(spec.inputs, spec.outputs, is_moore, automaton)
+    tau_desc = build_tau_desc(spec.inputs)
+    desc_by_output = dict((o, build_output_desc(o, is_moore, spec.inputs))
+                          for o in spec.outputs)
+    if max_k == 0:
+        logging.info("using CoBuchiEncoder")
+        encoder = CoBuchiEncoder(automaton,
+                                 tau_desc,
+                                 spec.inputs,
+                                 desc_by_output,
+                                 range(max_size))
+        model = model_searcher.search(min_size, max_size, encoder, solver)
+    else:
+        coreach_automaton = k_reduce(automaton, max_k)
+        # with open('/tmp/orig.dot', 'w') as f:
+        #     f.write(automaton_to_dot.to_dot(automaton))
+        # with open('/tmp/red.dot', 'w') as f:
+        #     f.write(automaton_to_dot.to_dot(coreach_automaton))
+        # exit()
+        logging.info("using CoReachEncoder")
+        logging.info('co-reachability automaton size is: %i' % len(coreach_automaton.nodes))
+        logging.debug('co-reachability automaton (dot) is:\n' + automaton_to_dot.to_dot(coreach_automaton))
+        encoder = CoreachEncoder(coreach_automaton,
+                                 tau_desc,
+                                 spec.inputs,
+                                 desc_by_output,
+                                 range(max_size),
+                                 max_k)
+        model = model_k_searcher.search(min_size, max_size,
+                                        max_k,
+                                        encoder, solver)
 
-    model = model_searcher.search(min_size, max_size, encoder, solver_factory.create())
-    logging.debug('(real) model_searcher.search took (sec): %i' % timer.sec_restart())
+    logging.info('searching a model took (sec): %i' % timer.sec_restart())
 
     return model
 
@@ -81,16 +129,16 @@ def main():
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('spec', metavar='spec', type=str,
-                        help='the specification file (acacia+ format)')
+                        help='the specification file (Acacia or TLSF format)')
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--moore', action='store_true', default=True,
                        dest='moore',
-                       help='system is Moore')
+                       help='system is Moore (ignored for TLSF)')
     group.add_argument('--mealy', action='store_false',
                        default=False,
                        dest='moore',
-                       help='system is Mealy')
+                       help='system is Mealy (ignored for TLSF)')
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--spot', action='store_true', default=True,
@@ -98,10 +146,16 @@ def main():
                        help='use SPOT for translating LTL->BA')
     group.add_argument('--ltl3ba', action='store_false', default=False,
                        dest='spot',
-                       help='use ltl3ba for translating LTL->BA')
+                       help='use LTL3BA for translating LTL->BA')
+
+    parser.add_argument('--maxK', type=int, default=0,
+                        help="reduce liveness to co-reachability (safety)."
+                             "This sets the upper bound on the number of 'bad' visits."
+                             "We iterate over increasing k (exact value of k is set heuristically)."
+                             "(k=0 means no reduction)")
 
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('--bound', metavar='bound', type=int, default=128, required=False,
+    group.add_argument('--bound', metavar='bound', type=int, default=32, required=False,
                        help='upper bound on the size of the model (for unreal this specifies size of env model)')
     group.add_argument('--size', metavar='size', type=int, default=0, required=False,
                        help='search the model of this size (for unreal this specifies size of env model)')
@@ -148,29 +202,40 @@ def main():
     else:
         min_size, max_size = args.size, args.size
 
-    ltl_text, part_text = readfile(args.spec), readfile(args.spec.replace('.ltl', '.part'))
+    ltl_text, part_text, is_moore = convert_tlsf_or_acacia_to_acacia(args.spec, args.moore)
 
-    check_call = (check_real, check_unreal)[args.unreal]
-    model = check_call(ltl_text, part_text, args.moore,
-                       ltl_to_automaton, solver_factory,
-                       min_size, max_size)
+    if args.unreal:
+        model = check_unreal(ltl_text, part_text, is_moore,
+                             ltl_to_automaton, solver_factory.create(),
+                             args.maxK,
+                             min_size, max_size)
+    else:
+        model = check_real(ltl_text, part_text, is_moore,
+                           ltl_to_automaton, solver_factory.create(),
+                           args.maxK,
+                           min_size, max_size)
 
-    logging.info('{status} model for {who}'.format(status=('FOUND', 'NOT FOUND')[model is None],
-                                                   who=('sys', 'env')[args.unreal]))
+    if not model:
+        logging.info('model NOT FOUND')
+    else:
+        logging.info('FOUND model for {who} of size {size}'.
+            format(who=('sys', 'env')[args.unreal],
+            size=len(model.states)))
+
     if model:
-        dot_model_str = lts_to_dot(model, ARG_MODEL_STATE, (not args.moore) ^ args.unreal)
+        dot_model_str = lts_to_dot(model, ARG_MODEL_STATE, (not is_moore) ^ args.unreal)
         if args.dot:
             with open(args.dot, 'w') as out:
                 out.write(dot_model_str)
                 logging.info('{model_type} model is written to {file}'.format(
-                             model_type=['Mealy', 'Moore'][args.moore],
+                             model_type=['Mealy', 'Moore'][is_moore],
                              file=out.name))
         else:
             logging.info(dot_model_str)
 
     solver_factory.down_solvers()
 
-    return UNKNOWN if model is None else (REALIZABLE, UNREALIZABLE)[args.unreal]
+    return UNKNOWN_RC if model is None else (REALIZABLE_RC, UNREALIZABLE_RC)[args.unreal]
 
 
 if __name__ == "__main__":

@@ -1,0 +1,472 @@
+13:19:37  Namespace(dot=None, output=None, spec='./full_arbiter_unreal.tlsf', tmp=False, verbose=3)
+13:19:37  check_unreal: you set timeout (200 sec.) for LTL to automaton translation,but I don't support it now (I used to..)
+13:19:37  ltl_to_automaton: converting:
+!(G((r_0) -> (F((g_0) && (X(g_0))))))
+13:19:37  ltl_to_automaton: converting:
+(!(r_1)) U (!(!g_1))
+13:19:37  ltl_to_automaton: converting:
+(!(r_0)) U (!(!g_0))
+13:19:37  ltl_to_automaton: converting:
+!(G((r_1) -> (F((g_1) && (X(g_1))))))
+13:19:37  ltl_to_automaton: converting:
+!(G(((g_0) && (G(!r_0))) -> (F(!g_0))))
+13:19:37  ltl_to_automaton: converting:
+!(G(((!g_0) && (true)) || ((true) && (!g_1))))
+13:19:37  ltl_to_automaton: converting:
+!(G(((g_1) && (G(!r_1))) -> (F(!g_1))))
+13:19:37  ltl_to_automaton: converting:
+!(G(((g_1) && (X((!r_1) && (!g_1)))) -> (X(!((!(r_1)) U (!(!g_1)))))))
+13:19:37  ltl_to_automaton: converting:
+!(G(((g_0) && (X((!r_0) && (!g_0)))) -> (X(!((!(r_0)) U (!(!g_0)))))))
+13:19:37  ltl_to_automaton: converting:
+((((((((G(((!g_0) && (true)) || ((true) && (!g_1)))) && (!((!(r_0)) U (!(!g_0))))) && (G(((g_1) && (X((!r_1) && (!g_1)))) -> (X(!((!(r_1)) U (!(!g_1)))))))) && (G(((g_0) && (X((!r_0) && (!g_0)))) -> (X(!((!(r_0)) U (!(!g_0)))))))) && (!((!(r_1)) U (!(!g_1))))) && (G(((g_1) && (G(!r_1))) -> (F(!g_1))))) && (G((r_0) -> (F((g_0) && (X(g_0))))))) && (G((r_1) -> (F((g_1) && (X(g_1))))))) && (G(((g_0) && (G(!r_0))) -> (F(!g_0))))
+13:19:37  (unreal) automaton size is: 40
+13:19:37  (unreal) automaton (dot) is:
+digraph "((((((((G(((!g_0) && (true)) || ((true) && (!g_1)))) && (!((!(r_0)) U (!(!g_0))))) && (G(((g_1) && (X((!r_1) && (!g_1)))) -> (X(!((!(r_1)) U (!(!g_1)))))))) && (G(((g_0) && (X((!r_0) && (!g_0)))) -> (X(!((!(r_0)) U (!(!g_0)))))))) && (!((!(r_1)) U (!(!g_1))))) && (G(((g_1) && (G(!r_1))) -> (F(!g_1))))) && (G((r_0) -> (F((g_0) && (X(g_0))))))) && (G((r_1) -> (F((g_1) && (X(g_1))))))) && (G(((g_0) && (G(!r_0))) -> (F(!g_0))))" {
+rankdir=LR;
+"0" [shape=box]
+
+
+"0" -> "0" [color=black, label="!r_1.!g_1.!r_0.!g_0", arrowhead="normalnormal"];
+"0" -> "7" [color=purple, label="r_1.!g_1.r_0.!g_0", arrowhead="normalnormal"];
+"0" -> "9" [color=green, label="!r_1.!g_1.r_0.!g_0", arrowhead="normalnormal"];
+"0" -> "8" [color=yellow, label="r_1.!g_1.!r_0.!g_0", arrowhead="normalnormal"];
+"13" -> "10" [color=black, label="!r_1.g_1.r_0.!g_0", arrowhead="normal"];
+"13" -> "11" [color=black, arrowhead="normal"];
+"13" -> "26" [color=purple, label="!r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"13" -> "13" [color=green, label="!r_1.g_1.!r_0.!g_0", arrowhead="normal"];
+"13" -> "1" [color=green, arrowhead="normal"];
+"13" -> "7" [color=yellow, label="r_1.!g_1.r_0.!g_0", arrowhead="normal"];
+"13" -> "19" [color=blue, label="!r_1.!g_1.r_0.!g_0", arrowhead="normal"];
+"13" -> "8" [color=orange, label="r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"4" -> "20" [color=black, label="!r_1.!g_1.r_0.g_0", arrowhead="normalnormal"];
+"4" -> "28" [color=purple, label="r_1.!g_1.!r_0.g_0", arrowhead="normalnormal"];
+"4" -> "39" [color=green, label="!r_1.!g_1.!r_0.g_0", arrowhead="normalnormal"];
+"4" -> "12" [color=yellow, label="r_1.!g_1.r_0.g_0", arrowhead="normalnormal"];
+"31" -> "10" [color=black, label="!r_1.g_1.r_0.!g_0", arrowhead="normal"];
+"31" -> "17" [color=black, arrowhead="normal"];
+"31" -> "38" [color=purple, label="!r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"31" -> "31" [color=green, label="!r_1.g_1.!r_0.!g_0", arrowhead="normal"];
+"31" -> "21" [color=green, arrowhead="normal"];
+"31" -> "15" [color=yellow, label="r_1.!g_1.r_0.!g_0", arrowhead="normal"];
+"31" -> "32" [color=blue, label="!r_1.!g_1.r_0.!g_0", arrowhead="normal"];
+"31" -> "29" [color=orange, label="r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"5" -> "26" [color=black, label="!r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"5" -> "8" [color=purple, label="r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"7" -> "7" [color=black, label="!g_1.!g_0", arrowhead="normal"];
+"7" -> "10" [color=purple, label="g_1.!g_0", arrowhead="normal"];
+"7" -> "11" [color=purple, arrowhead="normal"];
+"7" -> "12" [color=green, label="!g_1.g_0", arrowhead="normal"];
+"20" -> "6" [color=black, label="r_1.!g_1.!r_0.g_0", arrowhead="normal"];
+"20" -> "12" [color=purple, label="r_1.!g_1.g_0", arrowhead="normal"];
+"20" -> "23" [color=green, label="r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"20" -> "5" [color=yellow, label="!r_1.!g_1.!r_0.g_0", arrowhead="normal"];
+"20" -> "7" [color=blue, label="r_1.!g_1.r_0.!g_0", arrowhead="normal"];
+"20" -> "20" [color=orange, label="!r_1.!g_1.g_0", arrowhead="normal"];
+"20" -> "34" [color=red, label="!r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"20" -> "19" [color=brown, label="!r_1.!g_1.r_0.!g_0", arrowhead="normal"];
+"1" -> "13" [color=black, label="r_1.g_1.!r_0.!g_0", arrowhead="normalnormal"];
+"1" -> "1" [color=black, arrowhead="normalnormal"];
+"1" -> "25" [color=purple, label="!r_1.g_1.r_0.!g_0", arrowhead="normalnormal"];
+"1" -> "24" [color=green, label="!r_1.g_1.!r_0.!g_0", arrowhead="normalnormal"];
+"1" -> "10" [color=yellow, label="r_1.g_1.r_0.!g_0", arrowhead="normalnormal"];
+"1" -> "11" [color=yellow, arrowhead="normalnormal"];
+"3" -> "28" [color=black, label="!g_1.!r_0.g_0", arrowhead="normalnormal"];
+"3" -> "12" [color=purple, label="!g_1.r_0.g_0", arrowhead="normalnormal"];
+"19" -> "12" [color=black, label="r_1.!g_1.g_0", arrowhead="normal"];
+"19" -> "19" [color=purple, label="!r_1.!g_1.!g_0", arrowhead="normal"];
+"19" -> "20" [color=green, label="!r_1.!g_1.g_0", arrowhead="normal"];
+"19" -> "7" [color=yellow, label="r_1.!g_1.!g_0", arrowhead="normal"];
+"25" -> "10" [color=black, label="r_1.g_1.!g_0", arrowhead="normal"];
+"25" -> "11" [color=black, arrowhead="normal"];
+"25" -> "12" [color=purple, label="r_1.!g_1.g_0", arrowhead="normal"];
+"25" -> "2" [color=green, label="!r_1.!g_1.g_0", arrowhead="normal"];
+"25" -> "14" [color=green, arrowhead="normal"];
+"25" -> "9" [color=yellow, label="!r_1.!g_1.!g_0", arrowhead="normal"];
+"25" -> "25" [color=blue, label="!r_1.g_1.!g_0", arrowhead="normal"];
+"25" -> "7" [color=orange, label="r_1.!g_1.!g_0", arrowhead="normal"];
+"33" -> "16" [color=black, label="r_1.!g_1.!r_0.g_0", arrowhead="normal"];
+"33" -> "3" [color=black, arrowhead="normal"];
+"33" -> "38" [color=purple, label="!r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"33" -> "33" [color=green, label="!r_1.!g_1.!r_0.g_0", arrowhead="normal"];
+"33" -> "4" [color=green, arrowhead="normal"];
+"33" -> "15" [color=yellow, label="r_1.!g_1.r_0.!g_0", arrowhead="normal"];
+"33" -> "32" [color=blue, label="!r_1.!g_1.r_0.!g_0", arrowhead="normal"];
+"33" -> "29" [color=orange, label="r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"21" -> "18" [color=black, label="!r_1.g_1.r_0.!g_0", arrowhead="normal"];
+"21" -> "31" [color=purple, label="r_1.g_1.!r_0.!g_0", arrowhead="normal"];
+"21" -> "21" [color=purple, arrowhead="normal"];
+"21" -> "35" [color=green, label="!r_1.g_1.!r_0.!g_0", arrowhead="normal"];
+"21" -> "10" [color=yellow, label="r_1.g_1.r_0.!g_0", arrowhead="normal"];
+"21" -> "17" [color=yellow, arrowhead="normal"];
+"17" -> "16" [color=black, label="r_1.!g_1.g_0", arrowhead="normal"];
+"17" -> "3" [color=black, arrowhead="normal"];
+"17" -> "32" [color=purple, label="!r_1.!g_1.!g_0", arrowhead="normal"];
+"17" -> "15" [color=green, label="r_1.!g_1.!g_0", arrowhead="normal"];
+"17" -> "10" [color=yellow, label="!r_1.g_1.!g_0", arrowhead="normal"];
+"17" -> "17" [color=yellow, arrowhead="normal"];
+"17" -> "33" [color=blue, label="!r_1.!g_1.g_0", arrowhead="normal"];
+"17" -> "4" [color=blue, arrowhead="normal"];
+"9" -> "16" [color=black, label="r_1.!g_1.g_0", arrowhead="normal"];
+"9" -> "3" [color=black, arrowhead="normal"];
+"9" -> "9" [color=purple, label="!r_1.!g_1.!g_0", arrowhead="normal"];
+"9" -> "15" [color=green, label="r_1.!g_1.!g_0", arrowhead="normal"];
+"9" -> "2" [color=yellow, label="!r_1.!g_1.g_0", arrowhead="normal"];
+"9" -> "14" [color=yellow, arrowhead="normal"];
+"18" -> "16" [color=black, label="r_1.!g_1.g_0", arrowhead="normal"];
+"18" -> "3" [color=black, arrowhead="normal"];
+"18" -> "10" [color=purple, label="r_1.g_1.!g_0", arrowhead="normal"];
+"18" -> "17" [color=purple, arrowhead="normal"];
+"18" -> "2" [color=green, label="!r_1.!g_1.g_0", arrowhead="normal"];
+"18" -> "14" [color=green, arrowhead="normal"];
+"18" -> "9" [color=yellow, label="!r_1.!g_1.!g_0", arrowhead="normal"];
+"18" -> "18" [color=blue, label="!r_1.g_1.!g_0", arrowhead="normal"];
+"18" -> "15" [color=orange, label="r_1.!g_1.!g_0", arrowhead="normal"];
+"8" -> "13" [color=black, label="g_1.!r_0.!g_0", arrowhead="normal"];
+"8" -> "1" [color=black, arrowhead="normal"];
+"8" -> "7" [color=purple, label="!g_1.r_0.!g_0", arrowhead="normal"];
+"8" -> "10" [color=green, label="g_1.r_0.!g_0", arrowhead="normal"];
+"8" -> "11" [color=green, arrowhead="normal"];
+"8" -> "8" [color=yellow, label="!g_1.!r_0.!g_0", arrowhead="normal"];
+"39" -> "20" [color=black, label="!r_1.!g_1.r_0.g_0", arrowhead="normal"];
+"39" -> "26" [color=purple, label="!r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"39" -> "39" [color=green, label="!r_1.!g_1.!r_0.g_0", arrowhead="normal"];
+"39" -> "12" [color=yellow, label="r_1.!g_1.r_0.g_0", arrowhead="normal"];
+"39" -> "7" [color=blue, label="r_1.!g_1.r_0.!g_0", arrowhead="normal"];
+"39" -> "8" [color=orange, label="r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"39" -> "28" [color=red, label="r_1.!g_1.!r_0.g_0", arrowhead="normal"];
+"39" -> "19" [color=brown, label="!r_1.!g_1.r_0.!g_0", arrowhead="normal"];
+"2" -> "2" [color=black, label="!r_1.!g_1.r_0.g_0", arrowhead="normalnormal"];
+"2" -> "14" [color=black, arrowhead="normalnormal"];
+"2" -> "28" [color=purple, label="r_1.!g_1.!r_0.g_0", arrowhead="normalnormal"];
+"2" -> "27" [color=green, label="!r_1.!g_1.!r_0.g_0", arrowhead="normalnormal"];
+"2" -> "12" [color=yellow, label="r_1.!g_1.r_0.g_0", arrowhead="normalnormal"];
+"6" -> "13" [color=black, label="g_1.!r_0.!g_0", arrowhead="normal"];
+"6" -> "1" [color=black, arrowhead="normal"];
+"6" -> "8" [color=purple, label="!g_1.!r_0.!g_0", arrowhead="normal"];
+"14" -> "16" [color=black, label="r_1.!g_1.!r_0.g_0", arrowhead="normal"];
+"14" -> "3" [color=black, arrowhead="normal"];
+"14" -> "30" [color=purple, label="!r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"14" -> "2" [color=green, label="!r_1.!g_1.!r_0.g_0", arrowhead="normal"];
+"14" -> "14" [color=green, arrowhead="normal"];
+"14" -> "15" [color=yellow, label="r_1.!g_1.r_0.!g_0", arrowhead="normal"];
+"14" -> "29" [color=blue, label="r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"14" -> "9" [color=orange, label="!r_1.!g_1.r_0.!g_0", arrowhead="normal"];
+"34" -> "7" [color=black, label="r_1.!g_1.r_0.!g_0", arrowhead="normal"];
+"34" -> "34" [color=purple, label="!r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"34" -> "23" [color=green, label="r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"34" -> "19" [color=yellow, label="!r_1.!g_1.r_0.!g_0", arrowhead="normal"];
+"27" -> "2" [color=black, label="!r_1.!g_1.r_0.g_0", arrowhead="normal"];
+"27" -> "14" [color=black, arrowhead="normal"];
+"27" -> "7" [color=purple, label="r_1.!g_1.r_0.!g_0", arrowhead="normal"];
+"27" -> "27" [color=green, label="!r_1.!g_1.!r_0.g_0", arrowhead="normal"];
+"27" -> "12" [color=yellow, label="r_1.!g_1.r_0.g_0", arrowhead="normal"];
+"27" -> "0" [color=blue, label="!r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"27" -> "8" [color=orange, label="r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"27" -> "28" [color=red, label="r_1.!g_1.!r_0.g_0", arrowhead="normal"];
+"27" -> "9" [color=brown, label="!r_1.!g_1.r_0.!g_0", arrowhead="normal"];
+"22" -> "10" [color=black, label="!r_1.g_1.r_0.!g_0", arrowhead="normal"];
+"22" -> "11" [color=black, arrowhead="normal"];
+"22" -> "34" [color=purple, label="!r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"22" -> "22" [color=green, label="!r_1.g_1.!r_0.!g_0", arrowhead="normal"];
+"22" -> "21" [color=green, arrowhead="normal"];
+"22" -> "7" [color=yellow, label="r_1.!g_1.r_0.!g_0", arrowhead="normal"];
+"22" -> "19" [color=blue, label="!r_1.!g_1.r_0.!g_0", arrowhead="normal"];
+"22" -> "23" [color=orange, label="r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"16" -> "16" [color=black, label="!g_1.!r_0.g_0", arrowhead="normal"];
+"16" -> "3" [color=black, arrowhead="normal"];
+"16" -> "15" [color=purple, label="!g_1.r_0.!g_0", arrowhead="normal"];
+"16" -> "29" [color=green, label="!g_1.!r_0.!g_0", arrowhead="normal"];
+"16" -> "31" [color=yellow, label="g_1.!r_0.!g_0", arrowhead="normal"];
+"16" -> "21" [color=yellow, arrowhead="normal"];
+"16" -> "10" [color=blue, label="g_1.r_0.!g_0", arrowhead="normal"];
+"16" -> "17" [color=blue, arrowhead="normal"];
+"35" -> "18" [color=black, label="!r_1.g_1.r_0.!g_0", arrowhead="normal"];
+"35" -> "31" [color=purple, label="r_1.g_1.!r_0.!g_0", arrowhead="normal"];
+"35" -> "21" [color=purple, arrowhead="normal"];
+"35" -> "10" [color=green, label="r_1.g_1.r_0.!g_0", arrowhead="normal"];
+"35" -> "17" [color=green, arrowhead="normal"];
+"35" -> "15" [color=yellow, label="r_1.!g_1.r_0.!g_0", arrowhead="normal"];
+"35" -> "29" [color=blue, label="r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"35" -> "35" [color=orange, label="!r_1.g_1.!r_0.!g_0", arrowhead="normal"];
+"35" -> "30" [color=red, label="!r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"35" -> "9" [color=brown, label="!r_1.!g_1.r_0.!g_0", arrowhead="normal"];
+"26" -> "7" [color=black, label="r_1.!g_1.r_0.!g_0", arrowhead="normal"];
+"26" -> "26" [color=purple, label="!r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"26" -> "19" [color=green, label="!r_1.!g_1.r_0.!g_0", arrowhead="normal"];
+"26" -> "8" [color=yellow, label="r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"23" -> "7" [color=black, label="!g_1.r_0.!g_0", arrowhead="normal"];
+"23" -> "22" [color=purple, label="g_1.!r_0.!g_0", arrowhead="normal"];
+"23" -> "21" [color=purple, arrowhead="normal"];
+"23" -> "23" [color=green, label="!g_1.!r_0.!g_0", arrowhead="normal"];
+"23" -> "10" [color=yellow, label="g_1.r_0.!g_0", arrowhead="normal"];
+"23" -> "11" [color=yellow, arrowhead="normal"];
+"15" -> "10" [color=black, label="g_1.!g_0", arrowhead="normal"];
+"15" -> "17" [color=black, arrowhead="normal"];
+"15" -> "16" [color=purple, label="!g_1.g_0", arrowhead="normal"];
+"15" -> "3" [color=purple, arrowhead="normal"];
+"15" -> "15" [color=green, label="!g_1.!g_0", arrowhead="normal"];
+"12" -> "6" [color=black, label="!g_1.!r_0.g_0", arrowhead="normal"];
+"12" -> "22" [color=purple, label="g_1.!r_0.!g_0", arrowhead="normal"];
+"12" -> "21" [color=purple, arrowhead="normal"];
+"12" -> "10" [color=green, label="g_1.r_0.!g_0", arrowhead="normal"];
+"12" -> "11" [color=green, arrowhead="normal"];
+"12" -> "7" [color=yellow, label="!g_1.r_0.!g_0", arrowhead="normal"];
+"12" -> "12" [color=blue, label="!g_1.g_0", arrowhead="normal"];
+"12" -> "23" [color=orange, label="!g_1.!r_0.!g_0", arrowhead="normal"];
+"36" -> "13" [color=black, label="r_1.g_1.!r_0.!g_0", arrowhead="normal"];
+"36" -> "1" [color=black, arrowhead="normal"];
+"36" -> "25" [color=purple, label="!r_1.g_1.r_0.!g_0", arrowhead="normal"];
+"36" -> "37" [color=purple, arrowhead="normal"];
+"36" -> "10" [color=green, label="r_1.g_1.r_0.!g_0", arrowhead="normal"];
+"36" -> "11" [color=green, arrowhead="normal"];
+"36" -> "7" [color=yellow, label="r_1.!g_1.r_0.!g_0", arrowhead="normal"];
+"36" -> "8" [color=blue, label="r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"36" -> "36" [color=orange, label="!r_1.g_1.!r_0.!g_0", arrowhead="normal"];
+"36" -> "24" [color=orange, arrowhead="normal"];
+"36" -> "26" [color=red, label="!r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"36" -> "19" [color=brown, label="!r_1.!g_1.r_0.!g_0", arrowhead="normal"];
+"30" -> "15" [color=black, label="r_1.!g_1.r_0.!g_0", arrowhead="normal"];
+"30" -> "30" [color=purple, label="!r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"30" -> "29" [color=green, label="r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"30" -> "9" [color=yellow, label="!r_1.!g_1.r_0.!g_0", arrowhead="normal"];
+"37" -> "10" [color=black, label="r_1.g_1.!g_0", arrowhead="normal"];
+"37" -> "11" [color=black, arrowhead="normal"];
+"37" -> "12" [color=purple, label="r_1.!g_1.g_0", arrowhead="normal"];
+"37" -> "20" [color=green, label="!r_1.!g_1.g_0", arrowhead="normal"];
+"37" -> "19" [color=yellow, label="!r_1.!g_1.!g_0", arrowhead="normal"];
+"37" -> "25" [color=blue, label="!r_1.g_1.!g_0", arrowhead="normal"];
+"37" -> "37" [color=blue, arrowhead="normal"];
+"37" -> "7" [color=orange, label="r_1.!g_1.!g_0", arrowhead="normal"];
+"24" -> "13" [color=black, label="r_1.g_1.!r_0.!g_0", arrowhead="normal"];
+"24" -> "1" [color=black, arrowhead="normal"];
+"24" -> "7" [color=purple, label="r_1.!g_1.r_0.!g_0", arrowhead="normal"];
+"24" -> "10" [color=green, label="r_1.g_1.r_0.!g_0", arrowhead="normal"];
+"24" -> "11" [color=green, arrowhead="normal"];
+"24" -> "0" [color=yellow, label="!r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"24" -> "8" [color=blue, label="r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"24" -> "24" [color=orange, label="!r_1.g_1.!r_0.!g_0", arrowhead="normal"];
+"24" -> "25" [color=red, label="!r_1.g_1.r_0.!g_0", arrowhead="normal"];
+"24" -> "9" [color=brown, label="!r_1.!g_1.r_0.!g_0", arrowhead="normal"];
+"10" -> "10" [color=black, label="r_1.g_1.!g_0", arrowhead="normal"];
+"10" -> "17" [color=black, arrowhead="normal"];
+"10" -> "18" [color=purple, label="!r_1.g_1.!g_0", arrowhead="normal"];
+"38" -> "15" [color=black, label="r_1.!g_1.r_0.!g_0", arrowhead="normal"];
+"38" -> "38" [color=purple, label="!r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"38" -> "32" [color=green, label="!r_1.!g_1.r_0.!g_0", arrowhead="normal"];
+"38" -> "29" [color=yellow, label="r_1.!g_1.!r_0.!g_0", arrowhead="normal"];
+"11" -> "12" [color=black, label="r_1.!g_1.g_0", arrowhead="normal"];
+"11" -> "19" [color=purple, label="!r_1.!g_1.!g_0", arrowhead="normal"];
+"11" -> "10" [color=green, label="!r_1.g_1.!g_0", arrowhead="normal"];
+"11" -> "11" [color=green, arrowhead="normal"];
+"11" -> "20" [color=yellow, label="!r_1.!g_1.g_0", arrowhead="normal"];
+"11" -> "7" [color=blue, label="r_1.!g_1.!g_0", arrowhead="normal"];
+"28" -> "13" [color=black, label="r_1.g_1.!r_0.!g_0", arrowhead="normal"];
+"28" -> "1" [color=black, arrowhead="normal"];
+"28" -> "28" [color=purple, label="!g_1.!r_0.g_0", arrowhead="normal"];
+"28" -> "10" [color=green, label="r_1.g_1.r_0.!g_0", arrowhead="normal"];
+"28" -> "11" [color=green, arrowhead="normal"];
+"28" -> "7" [color=yellow, label="!g_1.r_0.!g_0", arrowhead="normal"];
+"28" -> "12" [color=blue, label="!g_1.r_0.g_0", arrowhead="normal"];
+"28" -> "36" [color=orange, label="!r_1.g_1.!r_0.!g_0", arrowhead="normal"];
+"28" -> "37" [color=red, label="!r_1.g_1.r_0.!g_0", arrowhead="normal"];
+"28" -> "8" [color=brown, label="!g_1.!r_0.!g_0", arrowhead="normal"];
+"32" -> "16" [color=black, label="r_1.!g_1.g_0", arrowhead="normal"];
+"32" -> "3" [color=black, arrowhead="normal"];
+"32" -> "32" [color=purple, label="!r_1.!g_1.!g_0", arrowhead="normal"];
+"32" -> "15" [color=green, label="r_1.!g_1.!g_0", arrowhead="normal"];
+"32" -> "33" [color=yellow, label="!r_1.!g_1.g_0", arrowhead="normal"];
+"32" -> "4" [color=yellow, arrowhead="normal"];
+"29" -> "15" [color=black, label="!g_1.r_0.!g_0", arrowhead="normal"];
+"29" -> "31" [color=purple, label="g_1.!r_0.!g_0", arrowhead="normal"];
+"29" -> "21" [color=purple, arrowhead="normal"];
+"29" -> "29" [color=green, label="!g_1.!r_0.!g_0", arrowhead="normal"];
+"29" -> "10" [color=yellow, label="g_1.r_0.!g_0", arrowhead="normal"];
+"29" -> "17" [color=yellow, arrowhead="normal"];
+}
+13:19:37  (unreal) automaton translation took (sec): 0
+13:19:37  created z3 process: 22874
+13:19:37  search
+13:19:37  searching a model of size 1..
+13:19:37  solving the query..
+13:19:37  (unreal) model_searcher.search took (sec): 0
+13:19:37  unreal check took (sec): 0
+13:19:37  env model is NOT FOUND
+13:19:37  a_state: true
+13:19:37  g_state: g_0=0 * True + True * g_1=0 * g_1=1 * X(r_1=0 * g_1=0) -> X(!(!(r_1=1) U !(g_1=0))) * g_0=1 * X(r_0=0 * g_0=0) -> X(!(!(r_0=1) U !(g_0=0)))
+13:19:37  a_non_state: True
+13:19:37  g_non_state: !(!(r_0=1) U !(g_0=0)) * !(!(r_1=1) U !(g_1=0))
+13:19:37  a_liveness: True
+13:19:37  g_liveness: G(g_1=1 * G(r_1=0) -> F(g_1=0)) * G(r_0=1 -> F(g_0=1 * X(g_0=1))) * G(r_1=1 -> F(g_1=1 * X(g_1=1))) * G(g_0=1 * G(r_0=0) -> F(g_0=0))
+13:19:37  ltl_to_automaton: converting:
+!((((((((!g_0) && (true)) || ((true) && (!g_1))) && (((g_1) && (X((!r_1) && (!g_1)))) -> (X(!((!(r_1)) U (!(!g_1))))))) && (((g_0) && (X((!r_0) && (!g_0)))) -> (X(!((!(r_0)) U (!(!g_0))))))) W (false)) && ((!(G(true))) || ((!((!(r_0)) U (!(!g_0)))) && (!((!(r_1)) U (!(!g_1))))))) && ((!(G(true))) || ((((G(((g_1) && (G(!r_1))) -> (F(!g_1)))) && (G((r_0) -> (F((g_0) && (X(g_0))))))) && (G((r_1) -> (F((g_1) && (X(g_1))))))) && (G(((g_0) && (G(!r_0))) -> (F(!g_0)))))))
+13:19:37  (real) automaton size is: 13
+13:19:37  (real) automaton (dot) is:
+digraph "!((((((((!g_0) && (true)) || ((true) && (!g_1))) && (((g_1) && (X((!r_1) && (!g_1)))) -> (X(!((!(r_1)) U (!(!g_1))))))) && (((g_0) && (X((!r_0) && (!g_0)))) -> (X(!((!(r_0)) U (!(!g_0))))))) W (false)) && ((!(G(true))) || ((!((!(r_0)) U (!(!g_0)))) && (!((!(r_1)) U (!(!g_1))))))) && ((!(G(true))) || ((((G(((g_1) && (G(!r_1))) -> (F(!g_1)))) && (G((r_0) -> (F((g_0) && (X(g_0))))))) && (G((r_1) -> (F((g_1) && (X(g_1))))))) && (G(((g_0) && (G(!r_0))) -> (F(!g_0)))))))" {
+rankdir=LR;
+"0" [shape=box]
+
+
+"4" -> "7" [color=black, label="!r_0.!g_0", arrowhead="normal"];
+"6" -> "3" [color=black, label="r_1.g_1.!g_0", arrowhead="normal"];
+"6" -> "11" [color=purple, label="!g_1.!r_0.g_0", arrowhead="normal"];
+"6" -> "6" [color=green, label="!g_1", arrowhead="normal"];
+"6" -> "1" [color=yellow, label="g_1.g_0", arrowhead="normal"];
+"6" -> "4" [color=blue, label="!g_1.g_0", arrowhead="normal"];
+"6" -> "9" [color=orange, label="r_0.!g_0", arrowhead="normal"];
+"6" -> "12" [color=red, label="!r_1.g_1.!g_0", arrowhead="normal"];
+"6" -> "2" [color=brown, label="!g_1.r_0.g_0", arrowhead="normal"];
+"6" -> "10" [color=pink, label="r_1.!g_1", arrowhead="normal"];
+"6" -> "5" [color=gray, label="g_1.!g_0", arrowhead="normal"];
+"6" -> "6" [color=gray, arrowhead="normal"];
+"9" -> "9" [color=black, label="!g_0", arrowhead="normalnormal"];
+"9" -> "2" [color=purple, label="g_0", arrowhead="normalnormal"];
+"0" -> "9" [color=black, label="!g_1.r_0.!g_0", arrowhead="normal"];
+"0" -> "6" [color=purple, label="!g_1.!g_0", arrowhead="normal"];
+"0" -> "8" [color=green, label="!r_1.!g_1.!g_0", arrowhead="normal"];
+"0" -> "10" [color=yellow, label="r_1.!g_1.!g_0", arrowhead="normal"];
+"0" -> "1" [color=blue, label="g_1", arrowhead="normal"];
+"0" -> "1" [color=orange, label="!g_1.g_0", arrowhead="normal"];
+"0" -> "7" [color=red, label="!g_1.!r_0.!g_0", arrowhead="normal"];
+"12" -> "12" [color=black, label="!r_1.g_1", arrowhead="normalnormal"];
+"2" -> "9" [color=black, label="!g_0", arrowhead="normalnormal"];
+"8" -> "8" [color=black, label="!r_1.!g_1", arrowhead="normal"];
+"8" -> "1" [color=purple, label="g_1.!g_0", arrowhead="normal"];
+"11" -> "11" [color=black, label="!r_0.g_0", arrowhead="normalnormal"];
+"10" -> "3" [color=black, label="g_1", arrowhead="normalnormal"];
+"10" -> "10" [color=purple, label="!g_1", arrowhead="normalnormal"];
+"5" -> "8" [color=black, label="!r_1.!g_1", arrowhead="normal"];
+"7" -> "7" [color=black, label="!r_0.!g_0", arrowhead="normal"];
+"7" -> "1" [color=purple, label="!g_1.g_0", arrowhead="normal"];
+"1" -> "1" [color=black, label="1", arrowhead="normalnormal"];
+"3" -> "10" [color=black, label="!g_1", arrowhead="normalnormal"];
+}
+13:19:37  (real) automaton translation took (sec): 0
+13:19:37  created z3 process: 22875
+13:19:37  search
+13:19:37  searching a model of size 1..
+13:19:37  solving the query..
+13:19:38  searching a model of size 2..
+13:19:38  solving the query..
+13:19:38  searching a model of size 3..
+13:19:38  solving the query..
+13:19:38  searching a model of size 4..
+13:19:38  solving the query..
+13:19:38  searching a model of size 5..
+13:19:38  solving the query..
+13:19:38  searching a model of size 6..
+13:19:38  solving the query..
+13:19:40  searching a model of size 7..
+13:19:40  solving the query..
+13:20:25  searching a model of size 8..
+13:20:25  solving the query..
+13:39:11  searching a model of size 9..
+13:39:11  solving the query..
+13:39:18  z3 returned sat, extracting the model
+13:39:18  parse_model
+13:39:18  (real) model_searcher.search took (sec): 1180
+13:39:18  real check took (sec): 1180
+13:39:18  sys model is  FOUND
+13:39:18  non-simplified model: 
+{(6, 4): [{r_1: True, g_1: True, r_0: True, g_0: False}], (4, 7): [{r_1: True, g_1: False, r_0: True, g_0: True}, {r_1: True, g_1: False, r_0: False, g_0: True}], (1, 3): [{r_1: False, g_1: True, r_0: True, g_0: False}, {r_1: True, g_1: True, r_0: True, g_0: False}], (8, 2): [{r_1: False, g_1: False, r_0: False, g_0: True}, {r_1: False, g_1: False, r_0: True, g_0: True}], (6, 6): [{r_1: True, g_1: True, r_0: False, g_0: False}], (5, 6): [{r_1: True, g_1: True, r_0: False, g_0: False}, {r_1: False, g_1: True, r_0: False, g_0: False}], (6, 0): [{r_1: False, g_1: True, r_0: False, g_0: False}], (7, 1): [{r_1: True, g_1: False, r_0: False, g_0: True}, {r_1: False, g_1: False, r_0: False, g_0: True}, {r_1: True, g_1: False, r_0: True, g_0: True}, {r_1: False, g_1: False, r_0: True, g_0: True}], (0, 0): [{r_1: False, g_1: False, r_0: False, g_0: False}], (0, 5): [{r_1: True, g_1: False, r_0: False, g_0: False}], (2, 1): [{r_1: True, g_1: False, r_0: True, g_0: True}], (8, 7): [{r_1: True, g_1: False, r_0: False, g_0: True}, {r_1: True, g_1: False, r_0: True, g_0: True}], (0, 8): [{r_1: False, g_1: False, r_0: True, g_0: False}], (5, 3): [{r_1: True, g_1: True, r_0: True, g_0: False}, {r_1: False, g_1: True, r_0: True, g_0: False}], (2, 7): [{r_1: True, g_1: False, r_0: False, g_0: True}], (6, 8): [{r_1: False, g_1: True, r_0: True, g_0: False}], (2, 0): [{r_1: False, g_1: False, r_0: False, g_0: True}], (4, 8): [{r_1: False, g_1: True, r_0: False, g_0: False}, {r_1: False, g_1: True, r_0: True, g_0: False}], (3, 8): [{r_1: False, g_1: True, r_0: False, g_0: False}, {r_1: False, g_1: True, r_0: True, g_0: False}], (1, 5): [{r_1: True, g_1: False, r_0: False, g_0: True}, {r_1: False, g_1: False, r_0: False, g_0: True}], (2, 2): [{r_1: False, g_1: False, r_0: True, g_0: True}], (0, 7): [{r_1: True, g_1: False, r_0: True, g_0: False}], (3, 4): [{r_1: True, g_1: True, r_0: True, g_0: False}, {r_1: True, g_1: True, r_0: False, g_0: False}]}
+13:39:18  digraph module {
+ rankdir=LR;
+
+"0" [label="0", fillcolor="green", style=filled]
+"1" [label="1"]
+"2" [label="2"]
+"3" [label="3"]
+"4" [label="4"]
+"5" [label="5"]
+"6" [label="6"]
+"7" [label="7"]
+"8" [label="8"]
+"6" -> "4" [label="r_1 r_0/\ng_1 -g_0"]
+"4" -> "7" [label="r_1/\n-g_1 g_0"]
+"1" -> "3" [label="r_0/\ng_1 -g_0"]
+"8" -> "2" [label="-r_1/\n-g_1 g_0"]
+"6" -> "6" [label="r_1 -r_0/\ng_1 -g_0"]
+"5" -> "6" [label="-r_0/\ng_1 -g_0"]
+"6" -> "0" [label="-r_1 -r_0/\ng_1 -g_0"]
+"2" -> "1" [label="r_1 r_0/\n-g_1 g_0"]
+"0" -> "0" [label="-r_1 -r_0/\n-g_1 -g_0"]
+"0" -> "5" [label="r_1 -r_0/\n-g_1 -g_0"]
+"0" -> "7" [label="r_1 r_0/\n-g_1 -g_0"]
+"8" -> "7" [label="r_1/\n-g_1 g_0"]
+"0" -> "8" [label="-r_1 r_0/\n-g_1 -g_0"]
+"5" -> "3" [label="r_0/\ng_1 -g_0"]
+"2" -> "7" [label="r_1 -r_0/\n-g_1 g_0"]
+"3" -> "8" [label="-r_1/\ng_1 -g_0"]
+"6" -> "8" [label="-r_1 r_0/\ng_1 -g_0"]
+"1" -> "5" [label="-r_0/\n-g_1 g_0"]
+"7" -> "1" [label="1/\n-g_1 g_0"]
+"4" -> "8" [label="-r_1/\ng_1 -g_0"]
+"2" -> "0" [label="-r_1 -r_0/\n-g_1 g_0"]
+"2" -> "2" [label="-r_1 r_0/\n-g_1 g_0"]
+"3" -> "4" [label="r_1/\ng_1 -g_0"]
+}
+13:39:18  verilog output is 
+module model(i_clk, 
+r_1, r_0, 
+g_1, g_0);
+
+input i_clk;
+input r_1;
+input r_0;
+
+output g_1;
+output g_0;
+
+reg [3:0] __m;
+
+wire g_1;
+wire g_0;
+
+assign g_1 = ((r_1==0) && (__m==1) && (r_0==1)) || ((r_1==0) && (__m==4) && (r_0==0)) || ((r_1==1) && (__m==5) && (r_0==0)) || ((r_1==1) && (__m==6) && (r_0==1)) || ((r_1==1) && (__m==3) && (r_0==1)) || ((r_1==1) && (__m==1) && (r_0==1)) || ((r_1==0) && (__m==4) && (r_0==1)) || ((r_1==1) && (__m==6) && (r_0==0)) || ((r_1==0) && (__m==5) && (r_0==0)) || ((r_1==0) && (__m==6) && (r_0==0)) || ((r_1==0) && (__m==3) && (r_0==0)) || ((r_1==1) && (__m==5) && (r_0==1)) || ((r_1==0) && (__m==3) && (r_0==1)) || ((r_1==0) && (__m==6) && (r_0==1)) || ((r_1==1) && (__m==3) && (r_0==0)) || ((r_1==0) && (__m==5) && (r_0==1));
+assign g_0 = ((r_1==1) && (__m==7) && (r_0==0)) || ((r_1==1) && (__m==1) && (r_0==0)) || ((r_1==0) && (__m==7) && (r_0==0)) || ((r_1==1) && (__m==2) && (r_0==1)) || ((r_1==1) && (__m==7) && (r_0==1)) || ((r_1==1) && (__m==8) && (r_0==0)) || ((r_1==0) && (__m==8) && (r_0==0)) || ((r_1==1) && (__m==4) && (r_0==1)) || ((r_1==0) && (__m==2) && (r_0==1)) || ((r_1==1) && (__m==4) && (r_0==0)) || ((r_1==0) && (__m==2) && (r_0==0)) || ((r_1==0) && (__m==7) && (r_0==1)) || ((r_1==1) && (__m==2) && (r_0==0)) || ((r_1==1) && (__m==8) && (r_0==1)) || ((r_1==0) && (__m==1) && (r_0==0)) || ((r_1==0) && (__m==8) && (r_0==1));
+
+initial begin
+__m = 0;
+end
+
+always@(posedge i_clk)
+begin
+if (((r_1==0) && (__m==1) && (r_0==1))) __m = 3;
+else if (((r_1==1) && (__m==7) && (r_0==0))) __m = 1;
+else if (((r_1==0) && (__m==4) && (r_0==0))) __m = 8;
+else if (((r_1==1) && (__m==1) && (r_0==0))) __m = 5;
+else if (((r_1==0) && (__m==7) && (r_0==0))) __m = 1;
+else if (((r_1==1) && (__m==2) && (r_0==1))) __m = 1;
+else if (((r_1==1) && (__m==7) && (r_0==1))) __m = 1;
+else if (((r_1==1) && (__m==0) && (r_0==0))) __m = 5;
+else if (((r_1==1) && (__m==5) && (r_0==0))) __m = 6;
+else if (((r_1==1) && (__m==8) && (r_0==0))) __m = 7;
+else if (((r_1==1) && (__m==6) && (r_0==1))) __m = 4;
+else if (((r_1==1) && (__m==3) && (r_0==1))) __m = 4;
+else if (((r_1==0) && (__m==8) && (r_0==0))) __m = 2;
+else if (((r_1==1) && (__m==1) && (r_0==1))) __m = 3;
+else if (((r_1==1) && (__m==4) && (r_0==1))) __m = 7;
+else if (((r_1==0) && (__m==2) && (r_0==1))) __m = 2;
+else if (((r_1==0) && (__m==0) && (r_0==1))) __m = 8;
+else if (((r_1==1) && (__m==4) && (r_0==0))) __m = 7;
+else if (((r_1==0) && (__m==4) && (r_0==1))) __m = 8;
+else if (((r_1==0) && (__m==2) && (r_0==0))) __m = 0;
+else if (((r_1==0) && (__m==0) && (r_0==0))) __m = 0;
+else if (((r_1==1) && (__m==0) && (r_0==1))) __m = 7;
+else if (((r_1==0) && (__m==7) && (r_0==1))) __m = 1;
+else if (((r_1==1) && (__m==6) && (r_0==0))) __m = 6;
+else if (((r_1==0) && (__m==5) && (r_0==0))) __m = 6;
+else if (((r_1==1) && (__m==2) && (r_0==0))) __m = 7;
+else if (((r_1==1) && (__m==8) && (r_0==1))) __m = 7;
+else if (((r_1==0) && (__m==6) && (r_0==0))) __m = 0;
+else if (((r_1==0) && (__m==3) && (r_0==0))) __m = 8;
+else if (((r_1==1) && (__m==5) && (r_0==1))) __m = 3;
+else if (((r_1==0) && (__m==3) && (r_0==1))) __m = 8;
+else if (((r_1==0) && (__m==6) && (r_0==1))) __m = 8;
+else if (((r_1==0) && (__m==1) && (r_0==0))) __m = 5;
+else if (((r_1==1) && (__m==3) && (r_0==0))) __m = 4;
+else if (((r_1==0) && (__m==8) && (r_0==1))) __m = 2;
+else if (((r_1==0) && (__m==5) && (r_0==1))) __m = 3;
+end
+endmodule
+13:39:18  circuit size: 9

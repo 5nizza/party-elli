@@ -1,7 +1,7 @@
 import logging
 
 from helpers.python_ext import StrAwareList, add_dicts
-from interfaces.automata import Label
+from interfaces.automaton import Label
 from interfaces.LTS import LTS
 from module_generation.edges_simplifier import simplify_edge_labels
 
@@ -115,6 +115,7 @@ def _lts_to_dot(lts:LTS, state_variable, moore_signals):
     return '\n'.join(dot_lines)
 
 
+# TODO: automatically identify type (Moore or Mealy)
 def lts_to_dot(lts:LTS, state_variable, is_mealy) -> str:
     if is_mealy:
         return _lts_to_dot(lts, state_variable, tuple())

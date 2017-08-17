@@ -12,9 +12,11 @@ go straight to [README.md](experiments-for-cav/README.md).
 
 - Ubuntu 16.04 (likely to work with others)
 - python3 (tested with version 3.5)
-- Z3 (tested with version 4.3.2 and 4.4.1)
+- Z3 (tested with version 4.5.0)
+- spot
 - ltl3ba (tested with versions 1.1.2 and 1.0.2)
-- python packages: sympy, python3-pygraph, typing
+- python packages: sympy, python-graph-core, python-graph-dot, typing
+  (install them for example using `pip3`)
 
 
 ## To configure

@@ -1,11 +1,11 @@
 from typing import List, Dict, Iterable, Set, Tuple
 
-from helpers.automata_classifier import is_final_sink
-from interfaces.automata import Node, Label, Automaton
+from automata.automata_classifier import is_final_sink
+from automata.final_sccs_finder import build_state_to_final_scc
+from interfaces.automaton import Node, Label, Automaton
 from interfaces.expr import Signal
 from interfaces.func_description import FuncDesc
 from synthesis.encoder_helper import build_tau_args_dict, get_free_input_args, smt_out
-from synthesis.final_sccs_finder import build_state_to_final_scc
 from synthesis.smt_format import comment, call_func, op_and, false, assertion, forall_bool, op_implies, op_ge, op_gt, \
     op_or, true, exists_bool
 from synthesis.smt_namings import smt_name_q, ARG_MODEL_STATE, ARG_A_STATE, smt_name_m

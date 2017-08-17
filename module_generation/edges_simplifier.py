@@ -2,7 +2,7 @@ from unittest import TestCase
 import sympy
 from sympy.logic.boolalg import Or
 from sympy.logic.boolalg import simplify_logic
-from interfaces.automata import LABEL_TRUE, Label
+from interfaces.automaton import LABEL_TRUE, Label
 from interfaces.expr import Signal
 
 

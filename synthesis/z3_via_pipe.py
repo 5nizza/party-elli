@@ -25,6 +25,7 @@ class Z3InteractiveViaPipes(SmtSolverWithQueryStorageAbstract):
 
     def die(self):
         self._process.kill()
+        self._process.wait()  # let zombie go
 
     def _read_block(self) -> List[str]:
         lines = []
@@ -61,7 +62,7 @@ class Z3InteractiveViaPipes(SmtSolverWithQueryStorageAbstract):
         for l in self._query_storage._output:
             self._process.stdin.write(bytes(l + '\n', 'utf-8'))
             self._process.stdin.flush()  # just in case
-            if l == '(check-sat)':
+            if l.strip().startswith('(check-sat'):
                 z3_response = str(self._process.stdout.readline(), 'utf-8').strip()
                 if z3_response == 'unsat':
                     self._query_storage = StrAwareList()

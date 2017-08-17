@@ -4,7 +4,7 @@ from typing import Set
 from helpers.expr_helper import get_sig_number
 from helpers.expr_to_dnf import to_dnf_set
 from helpers.python_ext import lmap
-from interfaces.automata import Label, LABEL_TRUE
+from interfaces.automaton import Label, LABEL_TRUE
 from interfaces.expr import Expr, BinOp, Bool, Number
 from interfaces.expr import Signal
 

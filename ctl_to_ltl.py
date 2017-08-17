@@ -3,7 +3,7 @@ import argparse
 import logging
 from pprint import pformat
 
-from ctl2ltl_ import ctl2ltl
+from CTL_to_LTL_ import ctl2ltl
 from helpers.converter_to_wring import ConverterToWringVisitor
 from helpers.main_helper import setup_logging
 from parsing.python_parser import parse_python_spec
