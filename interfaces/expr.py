@@ -77,7 +77,12 @@ class Expr:
         return UnaryOp('!', self)
 
     def __rshift__(self, other) -> 'Expr':
+        """ Used for right implication: careful with priorities!"""
         return ~self | other
+
+    def __lshift__(self, other) -> 'Expr':
+        """ Used for left implication: careful with priorities!"""
+        return ~other | self
 
 
 class Bool(Expr):
