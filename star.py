@@ -59,7 +59,7 @@ def check_real(spec:Spec,
                min_size, max_size,
                ltl_to_atm:LTLToAutomaton,
                solver_factory:Z3SolverFactory,
-               use_direct_encoding:bool) -> LTS:
+               use_direct_encoding:bool) -> LTS or None:
     shared_aht, dstFormPropMgr = SharedAHT(), DstFormulaPropMgr()
 
     # normalize formula (negations appear only in front of basic propositions)
@@ -73,23 +73,28 @@ def check_real(spec:Spec,
                                    build_tau_desc(spec.inputs),
                                    spec.inputs,
                                    dict((o, build_output_desc(o, True, spec.inputs))
-                                        for o in spec.outputs))
+                                        for o in spec.outputs),
+                                   range(max_size))
     else:
         aht_automaton = ctl2aht.ctl2aht(spec, ltl_to_atm, shared_aht, dstFormPropMgr)
 
         aht_nodes, aht_transitions = get_reachable_from(aht_automaton.init_node,
-                                                    shared_aht.transitions,
-                                                    dstFormPropMgr)
+                                                        shared_aht.transitions,
+                                                        dstFormPropMgr)
         logging.info('The AHT automaton size (nodes/transitions) is: %i/%i' %
                      (len(aht_nodes), len(aht_transitions)))
-        print('(real) AHT automaton (dot) is:\n' +
+        if not aht_transitions:
+            logging.info('AHT is empty => the spec is unrealizable!')
+            return None
+        logging.info('(real) AHT automaton (dot) is:\n' +
               aht2dot.convert(aht_automaton, shared_aht, dstFormPropMgr))
         encoder = CTLEncoderViaAHT(aht_automaton, aht_transitions,
                                    dstFormPropMgr,
                                    build_tau_desc(spec.inputs),
                                    spec.inputs,
                                    dict((o, build_output_desc(o, True, spec.inputs))
-                                        for o in spec.outputs))
+                                        for o in spec.outputs),
+                                   range(max_size))
 
     model = model_searcher.search(min_size, max_size, encoder, solver_factory.create())
     return model
