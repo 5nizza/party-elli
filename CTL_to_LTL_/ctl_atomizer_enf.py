@@ -6,6 +6,7 @@ from interfaces.expr import UnaryOp, BinOp
 from parsing.visitor import Visitor
 
 
+# TODO: remove me
 class CTLAtomizerENFVisitor(Visitor):
     """
     All propositions refer to E-expressions,
@@ -13,7 +14,6 @@ class CTLAtomizerENFVisitor(Visitor):
     it has no restriction on its form (can have ~p).
     For ~p we use !(sig=Number(1)) (rather than `sig=Number(0)`).
     """
-
 
     def __init__(self, new_props_prefix:str):
         self.f_by_p = dict()   # type: Dict[BinOp, UnaryOp]

@@ -56,3 +56,4 @@ def prop(name:str) -> BinOp: return BinOp('=', Signal(name), Number(1))
 def sig_prop(name:str) -> Tuple[Signal, BinOp]:
     return Signal(name),\
            BinOp('=', Signal(name), Number(1))
+def prop2(sig:Signal) -> BinOp: return BinOp('=', sig, Number(1))
