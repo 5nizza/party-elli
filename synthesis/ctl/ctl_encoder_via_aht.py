@@ -26,6 +26,7 @@ class CTLEncoderViaAHT(EncoderInterface):
                  tau_desc:FuncDesc,
                  inputs:Iterable[Signal],
                  descr_by_output:Dict[Signal,FuncDesc],
+                 all_model_states:Iterable[int],
                  model_init_state:int=0):  # the automata alphabet is inputs+outputs
         self.aht = aht                          # type: AHT
         self.aht_transitions = aht_transitions  # type: Iterable[Transition]
@@ -34,6 +35,7 @@ class CTLEncoderViaAHT(EncoderInterface):
         self.inputs = inputs                    # type: Iterable[Signal]
         self.descr_by_output = descr_by_output  # type: Dict[Signal,FuncDesc]
         self.tau_desc = tau_desc                # type: FuncDesc
+        self.model_states = list(all_model_states)
 
         reach_args = {ARG_A_STATE: TYPE_A_STATE,
                       ARG_MODEL_STATE: TYPE_MODEL_STATE}
@@ -47,14 +49,14 @@ class CTLEncoderViaAHT(EncoderInterface):
         self.last_allowed_states = None           # type: List[int]
 
     # encoding headers
-    def encode_headers(self, model_states:Iterable[int]) -> List[str]:
+    def encode_headers(self) -> List[str]:
         res = self._encode_automata_functions() +\
-              self._encode_model_functions(model_states) +\
+              self._encode_model_functions() +\
               self._encode_counters()
         return res
 
-    def _encode_model_functions(self, model_states:Iterable[int]) -> List[str]:
-        return [declare_enum(TYPE_MODEL_STATE, map(smt_name_m, model_states))] + \
+    def _encode_model_functions(self) -> List[str]:
+        return [declare_enum(TYPE_MODEL_STATE, map(smt_name_m, self.model_states))] + \
                [declare_fun(self.tau_desc)] + \
                [declare_fun(d) for d in self.descr_by_output.values()]
 

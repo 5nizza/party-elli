@@ -3,13 +3,13 @@ from typing import Iterable, Dict, List, Set
 
 from helpers.python_ext import lmap
 from interfaces.LTS import LTS
-from interfaces.automaton import Automaton, Label
-from interfaces.expr import BinOp as Prop, Bool
+from interfaces.automaton import Automaton
+from interfaces.expr import BinOp as Prop
 from interfaces.expr import Signal, Expr, BinOp, UnaryOp, Number
 from interfaces.func_description import FuncDesc
 from parsing.visitor import Visitor
 from synthesis.buchi_cobuchi_encoder import encode_run_graph_ucw, encode_run_graph_nbw
-from synthesis.encoder_helper import parse_model, encode_model_bound, encode_get_model_values, smt_out
+from synthesis.encoder_helper import parse_model, encode_model_bound, encode_get_model_values
 from synthesis.encoder_interface import EncoderInterface
 from synthesis.smt_format import real_type, bool_type, declare_enum, declare_fun, call_func, op_and, op_or, assertion, \
     op_not, define_fun
@@ -25,6 +25,7 @@ class CTLEncoderDirect(EncoderInterface):
                  tau_desc:FuncDesc,
                  inputs:Iterable[Signal],
                  desc_by_output:Dict[Signal, FuncDesc],
+                 all_model_states:Iterable[int],
                  model_init_state:int=0):
 
         self.top_formula = top_formula    # type:Expr
@@ -53,6 +54,7 @@ class CTLEncoderDirect(EncoderInterface):
             .isdisjoint(set(map(lambda prop_func:prop_func.name, self.desc_by_pSig.values()))),\
             "output and prop func names should not collide"
 
+        self.model_states = list(all_model_states)
         self.model_init_state = model_init_state  # type: int
         self.last_allowed_states = None           # type: List[int]
 
@@ -64,9 +66,9 @@ class CTLEncoderDirect(EncoderInterface):
         self.reach_func_desc = FuncDesc(FUNC_REACH, reach_args, bool_type())
         self.rank_func_desc = FuncDesc(FUNC_R, r_args, real_type())
 
-    def encode_headers(self, all_model_states:Iterable[int]) -> List[str]:
+    def encode_headers(self) -> List[str]:
         return self._encode_automata_functions() + \
-               self._encode_model_functions(all_model_states) + \
+               self._encode_model_functions() + \
                self._encode_counters() + \
                self._encode_prop_outputs()
 
@@ -75,8 +77,8 @@ class CTLEncoderDirect(EncoderInterface):
         return [declare_enum(TYPE_A_STATE,
                              map(smt_name_q, atm_states))]
 
-    def _encode_model_functions(self, model_states:Iterable[int]) -> List[str]:
-        return [declare_enum(TYPE_MODEL_STATE, map(smt_name_m, model_states))] + \
+    def _encode_model_functions(self) -> List[str]:
+        return [declare_enum(TYPE_MODEL_STATE, map(smt_name_m, self.model_states))] + \
                [declare_fun(self.tau_desc)] + \
                [declare_fun(d) for d in self.desc_by_outSig.values()]
 
