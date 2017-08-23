@@ -58,6 +58,5 @@ def main() -> None:
         logging.info("output TLSF is written to: " + args.out)
 
 
-
 if __name__ == "__main__":
     exit(main())
