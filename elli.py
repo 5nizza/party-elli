@@ -173,7 +173,6 @@ def main():
                         help='simple check of unrealizability: '
                              'invert the spec, system type, (in/out)puts, '
                              'and synthesize the model for env '
-                             '(a more sophisticated check could search for env that disproves systems of given size)'
                              '(note that the inverted spec will NOT be strengthened)')
     parser.add_argument('-v', '--verbose', action='count', default=0)
 
