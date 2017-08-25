@@ -6,9 +6,10 @@ from pprint import pprint, pformat
 from typing import List, Tuple, Dict
 
 from CTL_to_LTL_.ctl_atomizer import CTLAtomizerVisitor
+from helpers.nnf_normalizer import NNFNormalizer
 from helpers.spec_helper import G, prop2
 from interfaces.LTL_to_automaton import LTLToAutomaton
-from interfaces.expr import Expr, Signal, Bool, BinOp, Number
+from interfaces.expr import Expr, Signal, Bool, BinOp, Number, UnaryOp
 from interfaces.spec import Spec
 from parsing.visitor import Visitor
 
@@ -18,10 +19,6 @@ SignalsTuple = Tuple[Signal]
 
 def conjunction(iterable) -> Expr:
     return reduce(lambda x,y: x&y, iterable, Bool(True))
-
-
-def create_LTL_for_A_formula(p:Expr, path_formula:Expr) -> Expr:
-    return G(p >> path_formula)
 
 
 def create_LTL_for_E_formula(v_bits:SignalsTuple,  # v_bits[0] will correspond to j_bits[0] (left-most bit)
@@ -72,6 +69,17 @@ def _replace_exist_propositions(ltl_formula:Expr,
     return Replacer().dispatch(ltl_formula)
 
 
+def _inline_univ_p(ltl_formula:Expr, f_by_univ_p:Dict[BinOp, UnaryOp]) -> Expr:
+    class Replacer(Visitor):
+        def visit_binary_op(self, binary_op:BinOp):
+            if binary_op.name != '=' or binary_op not in f_by_univ_p:
+                return super().visit_binary_op(binary_op)
+            return self.dispatch(f_by_univ_p[binary_op].arg)
+    #
+    new_ltl = Replacer().dispatch(ltl_formula)
+    return new_ltl
+
+
 def convert(spec:Spec,
             nof_IDs:int or None,
             ltl_to_atm:LTLToAutomaton) -> Spec:
@@ -88,11 +96,13 @@ def convert(spec:Spec,
     #     introduce p-variable
     #   for each unique E-subformula:
     #     create an LTL formula         (1)
-    #   for each unique A-subformula:
-    #     create an LTL formula         (2)
-    #   create the top-level formula    (3)
-    #   create the conjunction (1) & (2) & (3)
-    #   replace in the conjunction existential propositions by 'v != 0'.
+    #   create the top-level formula    (2)
+    #   create the conjunction (1) & (2)
+    #   inline back A-subformulas (replace their p by the path formulas (without 'A'))
+    #   replace existential propositions by 'v != 0'
+    #   return the result
+
+    spec = Spec(spec.inputs, spec.outputs, NNFNormalizer().dispatch(spec.formula))
 
     atomizer = CTLAtomizerVisitor('__p')
     top_formula = atomizer.dispatch(spec.formula)
@@ -118,15 +128,15 @@ def convert(spec:Spec,
                                                         dTuple_by_id,
                                                         ordered_inputs)
                                for p in exist_props)
-    ltl_formula &= conjunction(create_LTL_for_A_formula(p, atomizer.f_by_p[p].arg)
-                               for p in set(atomizer.f_by_p)-set(exist_props))
+
+    ltl_formula = _inline_univ_p(ltl_formula,
+                                 dict((p, f) for p,f in atomizer.f_by_p.items() if f.name == 'A'))
     ltl_formula = _replace_exist_propositions(ltl_formula, v_bits_by_exist_p, nof_IDs)
 
     logging.debug("exist propositions: \n%s", pformat([ep.arg1 for ep in v_bits_by_exist_p]))
 
     new_outputs = list(chain(*v_bits_by_exist_p.values())) + \
-                  list(chain(*dTuple_by_id.values())) + \
-                  [p.arg1 for p in (atomizer.f_by_p.keys() - set(exist_props))]
+                  list(chain(*dTuple_by_id.values()))
 
     return Spec(spec.inputs,
                 set(new_outputs) | spec.outputs,
