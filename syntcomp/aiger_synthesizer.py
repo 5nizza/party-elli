@@ -25,6 +25,7 @@ def synthesize(aiger_spec:str, is_moore:bool, bad_out_name:str) -> str or None:
     assert is_empty_str(err), rc_out_err_to_str(rc, out, err)
     assert rc in (REALIZABLE_RC, UNREALIZABLE_RC), rc_out_err_to_str(rc, out, err)
 
+    logging.info('sdf completed')
     logging.debug('sdf returned:\n' + out)
 
     out_split = out.splitlines()
