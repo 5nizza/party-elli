@@ -1,4 +1,5 @@
-The translator is implemented in `ctl_to_ltl.py`.
+The translator from CTL* synthesis problem to LTL synthesis problem
+is implemented in `ctl_to_ltl.py`.
 It accepts CTL* in python format and outputs LTL in the TLSF format.
 This folder `experiments-for-synt` contains some python benchmarks (CTL*),
 as well as already translated LTL variants.
@@ -94,7 +95,7 @@ Notice that the model contains additional outputs not mentioned in the original 
 
 Below is what the CTL* synthesiser `star.py` produced (using command `../star.py --incr ./simple_res_arb_3.py`):
  
- ![simpler_arb3_star.png](simpler_arb3_star.png)
+ ![simple_arb3_star.png](simple_arb3_star.png)
 
 The folder `experiments-for-synt/logs/` contains the logs
 of running my synthesisers on the CTL* specs and on the translated TLSF specs.
