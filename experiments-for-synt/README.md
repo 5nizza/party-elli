@@ -1,3 +1,5 @@
+# CTL* synthesis via LTL synthesis
+
 The translator from CTL* synthesis problem to LTL synthesis problem
 is implemented in `ctl_to_ltl.py`.
 It accepts CTL* in python format and outputs LTL in the TLSF format.

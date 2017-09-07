@@ -1,4 +1,4 @@
-# Tool description
+# Bounded Synthesis For Streett, Rabin, and CTL*
 
 There are two versions of CTL* synthesizer.
 One, called with `./star.py --direct`, parses CTL* formula
