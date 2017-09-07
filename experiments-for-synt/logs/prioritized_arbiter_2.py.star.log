@@ -1,0 +1,40 @@
+09:49:47  Namespace(bound=128, direct=True, dot=None, incr=True, log=None, size=0, spec='./experiments-for-synt/prioritized_arbiter_2.py', tmp=False, verbose=0)
+09:49:47  check_real
+09:49:47  created z3 process: 14424
+09:49:47  search
+09:49:47  searching a model of size 1..
+09:49:47  solving the query..
+09:49:47  searching a model of size 2..
+09:49:47  solving the query..
+09:49:47  searching a model of size 3..
+09:49:47  solving the query..
+09:49:47  searching a model of size 4..
+09:49:47  solving the query..
+09:49:53  searching a model of size 5..
+09:49:53  solving the query..
+09:50:47  FOUND model for sys
+09:50:47  digraph module {
+ rankdir=LR;
+
+"0" [label="-g_0 -g_1 gm\n0", fillcolor="green", style=filled]
+"1" [label="-g_0 -g_1 -gm\n1"]
+"2" [label="-g_0 g_1 -gm\n2"]
+"3" [label="g_0 -g_1 -gm\n3"]
+"4" [label="-g_0 -g_1 gm\n4"]
+"2" -> "0" [label="r_1 rm"]
+"2" -> "0" [label="-r_1 -r_0"]
+"3" -> "2" [label="r_0 -rm"]
+"3" -> "2" [label="-r_1 -rm"]
+"0" -> "0" [label="rm"]
+"4" -> "2" [label="-rm"]
+"0" -> "3" [label="-rm"]
+"4" -> "4" [label="rm"]
+"3" -> "4" [label="rm"]
+"3" -> "4" [label="r_1 -r_0"]
+"1" -> "0" [label="r_1"]
+"1" -> "0" [label="-r_0"]
+"1" -> "0" [label="-rm"]
+"2" -> "1" [label="-r_1 r_0"]
+"2" -> "1" [label="r_1 -rm"]
+"1" -> "1" [label="-r_1 r_0 rm"]
+}

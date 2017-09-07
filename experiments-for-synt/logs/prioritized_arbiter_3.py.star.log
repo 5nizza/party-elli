@@ -1,0 +1,18 @@
+09:49:43  Namespace(bound=128, direct=True, dot=None, incr=True, log=None, size=0, spec='./experiments-for-synt/prioritized_arbiter_3.py', tmp=False, verbose=0)
+09:49:43  check_real
+09:49:43  created z3 process: 14379
+09:49:43  search
+09:49:43  searching a model of size 1..
+09:49:43  solving the query..
+09:49:43  searching a model of size 2..
+09:49:43  solving the query..
+09:49:44  searching a model of size 3..
+09:49:44  solving the query..
+09:49:44  searching a model of size 4..
+09:49:44  solving the query..
+09:49:47  searching a model of size 5..
+09:49:47  solving the query..
+09:52:28  searching a model of size 6..
+09:52:28  solving the query..
+11:44:25  searching a model of size 7..
+11:44:25  solving the query..

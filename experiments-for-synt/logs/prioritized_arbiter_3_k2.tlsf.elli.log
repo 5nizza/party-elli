@@ -1,0 +1,17 @@
+14:08:44  Namespace(bound=32, dot=None, incr=True, log=None, maxK=0, moore=True, size=0, spec='./experiments-for-synt/prioritized_arbiter_3_k2.tlsf', spot=True, tmp=False, unreal=False, verbose=0)
+14:08:45  created z3 process: 23274
+14:08:45  automaton size is: 18
+14:08:45  using CoBuchiEncoder
+14:08:45  search
+14:08:45  searching a model of size 1..
+14:08:45  solving the query..
+14:08:45  searching a model of size 2..
+14:08:45  solving the query..
+14:08:45  searching a model of size 3..
+14:08:46  solving the query..
+14:08:46  searching a model of size 4..
+14:08:46  solving the query..
+14:08:51  searching a model of size 5..
+14:08:51  solving the query..
+14:09:26  searching a model of size 6..
+14:09:26  solving the query..

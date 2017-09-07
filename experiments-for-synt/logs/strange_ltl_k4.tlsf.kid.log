@@ -1,0 +1,25 @@
+09:27:17  Namespace(maxK=8, minK=2, moore=False, output=None, spec='./experiments-for-synt/strange_ltl_k4.tlsf', unreal=False, verbose=0)
+09:27:20  UCW automaton has 91 states
+09:27:20  setting k to 2...
+09:27:20  k_reduce
+09:27:21  k-LA automaton has 163 states
+09:27:21  atm_to_verilog
+09:27:23  verilog_to_aiger
+09:34:53  synthesize
+09:34:53  executing sdf...
+09:35:08  sdf completed
+09:35:08  setting k to 4...
+09:35:08  k_reduce
+09:35:09  k-LA automaton has 311 states
+09:35:09  atm_to_verilog
+09:35:14  verilog_to_aiger
+09:44:12  synthesize
+09:44:12  executing sdf...
+10:14:02  sdf completed
+10:14:02  setting k to 6...
+10:14:02  k_reduce
+10:14:03  k-LA automaton has 463 states
+10:14:03  atm_to_verilog
+10:14:10  verilog_to_aiger
+10:24:43  synthesize
+10:24:43  executing sdf...

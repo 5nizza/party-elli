@@ -97,7 +97,8 @@ Below is what the CTL* synthesiser `star.py` produced (using command `../star.py
  
  ![simple_arb3_star.png](simple_arb3_star.png)
 
-The folder `experiments-for-synt/logs/` contains the logs
+
+Finally, the folder `experiments-for-synt/logs/` contains the logs
 of running my synthesisers on the CTL* specs and on the translated TLSF specs.
 The paper's table uses the information from those logs.
 

@@ -1,0 +1,43 @@
+11:59:43  Namespace(bound=32, dot=None, incr=True, log=None, maxK=0, moore=True, size=0, spec='./experiments-for-synt/user_arb_k8.tlsf', spot=True, tmp=False, unreal=False, verbose=0)
+11:59:44  created z3 process: 22064
+12:04:24  automaton size is: 179
+12:04:27  using CoBuchiEncoder
+12:04:27  search
+12:04:27  searching a model of size 1..
+12:04:45  solving the query..
+12:05:32  searching a model of size 2..
+12:05:48  solving the query..
+12:10:09  searching a model of size 3..
+12:10:27  solving the query..
+12:30:40  searching a model of size 4..
+12:30:58  solving the query..
+14:58:17  searching a model of size 5..
+14:58:22  solving the query..
+15:09:27  parse_model
+15:09:27  searching a model took (sec): 11100
+15:09:27  FOUND model for sys of size 5
+15:09:27  digraph module {
+ rankdir=LR;
+
+"0" [label="-__vp1_1 __d6_r __d8_u -__vp2_0 __vp1_2 -__vp3_3 __d5_r -__vp2_3 __d2_r -__d4_r -__d1_u -__vp7_0 -__d4_u -__d2_u -__vp5_0 -g -__vp2_2 __vp1_0 __vp5_2 -__vp7_1 __vp7_3 -__d8_r -__vp3_2 -__d7_r -__vp5_1 -__vp7_2 -__vp5_3 -__d6_u -__d3_u __d1_r -__d5_u __vp2_1 -__vp1_3 -__vp3_1 __vp3_0 -__d3_r -__d7_u\n0", fillcolor="green", style=filled]
+"1" [label="-__vp1_1 __d6_r -__d8_u -__vp2_0 -__vp1_2 -__vp3_3 __d5_r -__vp2_3 __d2_r -__d4_r -__d1_u -__vp7_0 __d4_u __d2_u -__vp5_0 g -__vp2_2 -__vp1_0 -__vp5_2 -__vp7_1 -__vp7_3 -__d8_r -__vp3_2 -__d7_r -__vp5_1 -__vp7_2 -__vp5_3 -__d6_u -__d3_u -__d1_r __d5_u -__vp2_1 -__vp1_3 -__vp3_1 -__vp3_0 -__d3_r -__d7_u\n1"]
+"2" [label="-__vp1_1 -__d6_r -__d8_u -__vp2_0 -__vp1_2 -__vp3_3 -__d5_r -__vp2_3 -__d2_r -__d4_r -__d1_u -__vp7_0 -__d4_u -__d2_u -__vp5_0 g -__vp2_2 -__vp1_0 -__vp5_2 -__vp7_1 -__vp7_3 -__d8_r -__vp3_2 -__d7_r -__vp5_1 -__vp7_2 -__vp5_3 -__d6_u -__d3_u -__d1_r __d5_u -__vp2_1 -__vp1_3 -__vp3_1 -__vp3_0 -__d3_r -__d7_u\n2"]
+"3" [label="-__vp1_1 -__d6_r -__d8_u -__vp2_0 -__vp1_2 -__vp3_3 -__d5_r -__vp2_3 -__d2_r -__d4_r -__d1_u -__vp7_0 -__d4_u -__d2_u -__vp5_0 g -__vp2_2 -__vp1_0 -__vp5_2 -__vp7_1 -__vp7_3 -__d8_r -__vp3_2 -__d7_r -__vp5_1 -__vp7_2 -__vp5_3 -__d6_u -__d3_u -__d1_r -__d5_u -__vp2_1 -__vp1_3 -__vp3_1 -__vp3_0 -__d3_r -__d7_u\n3"]
+"4" [label="-__vp1_1 __d6_r -__d8_u -__vp2_0 -__vp1_2 -__vp3_3 __d5_r -__vp2_3 -__d2_r -__d4_r -__d1_u -__vp7_0 -__d4_u -__d2_u -__vp5_0 g -__vp2_2 -__vp1_0 -__vp5_2 -__vp7_1 -__vp7_3 -__d8_r -__vp3_2 -__d7_r -__vp5_1 -__vp7_2 -__vp5_3 __d6_u -__d3_u -__d1_r __d5_u -__vp2_1 -__vp1_3 -__vp3_1 -__vp3_0 -__d3_r -__d7_u\n4"]
+"1" -> "2" [label="-u -r"]
+"3" -> "2" [label="u r"]
+"1" -> "3" [label="-u r"]
+"1" -> "3" [label="u -r"]
+"3" -> "0" [label="-u r"]
+"3" -> "4" [label="-r"]
+"2" -> "1" [label="u"]
+"2" -> "0" [label="-u -r"]
+"0" -> "0" [label="u -r"]
+"2" -> "3" [label="-u r"]
+"0" -> "4" [label="u r"]
+"1" -> "0" [label="u r"]
+"4" -> "1" [label="-r"]
+"4" -> "1" [label="-u"]
+"0" -> "3" [label="-u"]
+"4" -> "0" [label="u r"]
+}

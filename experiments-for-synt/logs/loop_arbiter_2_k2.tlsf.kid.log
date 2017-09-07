@@ -1,0 +1,35 @@
+09:27:17  Namespace(maxK=8, minK=2, moore=False, output=None, spec='./experiments-for-synt/loop_arbiter_2_k2.tlsf', unreal=False, verbose=0)
+09:27:17  UCW automaton has 17 states
+09:27:17  setting k to 2...
+09:27:17  k_reduce
+09:27:17  k-LA automaton has 39 states
+09:27:17  atm_to_verilog
+09:27:17  verilog_to_aiger
+09:27:26  synthesize
+09:27:26  executing sdf...
+09:27:26  sdf completed
+09:27:26  setting k to 4...
+09:27:26  k_reduce
+09:27:26  k-LA automaton has 67 states
+09:27:26  atm_to_verilog
+09:27:26  verilog_to_aiger
+09:27:38  synthesize
+09:27:38  executing sdf...
+09:27:39  sdf completed
+09:27:39  setting k to 6...
+09:27:39  k_reduce
+09:27:39  k-LA automaton has 95 states
+09:27:39  atm_to_verilog
+09:27:39  verilog_to_aiger
+09:27:53  synthesize
+09:27:53  executing sdf...
+09:28:05  sdf completed
+09:28:05  setting k to 8...
+09:28:05  k_reduce
+09:28:05  k-LA automaton has 123 states
+09:28:05  atm_to_verilog
+09:28:05  verilog_to_aiger
+09:28:22  synthesize
+09:28:22  executing sdf...
+09:30:01  sdf completed
+UNKNOWN

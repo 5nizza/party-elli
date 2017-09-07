@@ -1,0 +1,17 @@
+09:27:17  Namespace(maxK=8, minK=2, moore=False, output=None, spec='./experiments-for-synt/postponed_arbiter_3_k4.tlsf', unreal=False, verbose=0)
+09:27:18  UCW automaton has 42 states
+09:27:18  setting k to 2...
+09:27:18  k_reduce
+09:27:19  k-LA automaton has 108 states
+09:27:19  atm_to_verilog
+09:27:19  verilog_to_aiger
+09:30:42  synthesize
+09:30:42  executing sdf...
+09:31:15  sdf completed
+09:31:15  setting k to 4...
+09:31:15  k_reduce
+09:31:15  k-LA automaton has 186 states
+09:31:15  atm_to_verilog
+09:31:16  verilog_to_aiger
+09:35:08  synthesize
+09:35:08  executing sdf...

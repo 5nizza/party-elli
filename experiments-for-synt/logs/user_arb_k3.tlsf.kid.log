@@ -1,0 +1,25 @@
+09:28:17  Namespace(maxK=8, minK=2, moore=False, output=None, spec='./experiments-for-synt/user_arb_k3.tlsf', unreal=False, verbose=0)
+09:28:18  UCW automaton has 69 states
+09:28:18  setting k to 2...
+09:28:18  k_reduce
+09:28:18  k-LA automaton has 123 states
+09:28:18  atm_to_verilog
+09:28:18  verilog_to_aiger
+09:29:03  synthesize
+09:29:03  executing sdf...
+09:29:04  sdf completed
+09:29:04  setting k to 4...
+09:29:04  k_reduce
+09:29:05  k-LA automaton has 234 states
+09:29:05  atm_to_verilog
+09:29:05  verilog_to_aiger
+09:29:44  synthesize
+09:29:44  executing sdf...
+09:32:21  sdf completed
+09:32:21  setting k to 6...
+09:32:21  k_reduce
+09:32:21  k-LA automaton has 348 states
+09:32:21  atm_to_verilog
+09:32:22  verilog_to_aiger
+09:33:02  synthesize
+09:33:02  executing sdf...

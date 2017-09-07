@@ -1,0 +1,15 @@
+15:59:44  Namespace(bound=32, dot=None, incr=True, log=None, maxK=0, moore=True, size=0, spec='./experiments-for-synt/user_arb_k4.tlsf', spot=True, tmp=False, unreal=False, verbose=0)
+15:59:45  created z3 process: 26284
+15:59:48  automaton size is: 91
+15:59:48  using CoBuchiEncoder
+15:59:48  search
+15:59:48  searching a model of size 1..
+15:59:50  solving the query..
+15:59:51  searching a model of size 2..
+15:59:53  solving the query..
+16:00:05  searching a model of size 3..
+16:00:06  solving the query..
+16:00:52  searching a model of size 4..
+16:00:53  solving the query..
+16:21:11  searching a model of size 5..
+16:21:13  solving the query..

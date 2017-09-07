@@ -1,0 +1,41 @@
+15:59:44  Namespace(bound=32, dot=None, incr=True, log=None, maxK=0, moore=True, size=0, spec='./experiments-for-synt/prioritized_arbiter_2_kmax.tlsf', spot=True, tmp=False, unreal=False, verbose=0)
+15:59:44  created z3 process: 26217
+15:59:44  automaton size is: 16
+15:59:44  using CoBuchiEncoder
+15:59:44  search
+15:59:44  searching a model of size 1..
+15:59:44  solving the query..
+15:59:44  searching a model of size 2..
+15:59:44  solving the query..
+15:59:45  searching a model of size 3..
+15:59:45  solving the query..
+15:59:45  searching a model of size 4..
+15:59:45  solving the query..
+15:59:54  searching a model of size 5..
+15:59:54  solving the query..
+16:00:04  parse_model
+16:00:04  searching a model took (sec): 19
+16:00:04  FOUND model for sys of size 5
+16:00:04  digraph module {
+ rankdir=LR;
+
+"0" [label="-__d1_r_1 -__d2_r_0 __vp1_1 -__vp1_0 -__d1_rm -__d1_r_0 -g_1 gm -g_0 -__d2_r_1 -__d2_rm\n0", fillcolor="green", style=filled]
+"1" [label="-__d1_r_1 -__d2_r_0 __vp1_1 -__vp1_0 -__d1_rm -__d1_r_0 g_1 -gm -g_0 -__d2_r_1 -__d2_rm\n1"]
+"2" [label="-__d1_r_1 -__d2_r_0 __vp1_1 -__vp1_0 __d1_rm -__d1_r_0 -g_1 gm -g_0 -__d2_r_1 -__d2_rm\n2"]
+"3" [label="-__d1_r_1 -__d2_r_0 __vp1_1 -__vp1_0 -__d1_rm __d1_r_0 -g_1 -gm -g_0 __d2_r_1 __d2_rm\n3"]
+"4" [label="-__d1_r_1 __d2_r_0 __vp1_1 -__vp1_0 -__d1_rm -__d1_r_0 -g_1 -gm g_0 __d2_r_1 -__d2_rm\n4"]
+"3" -> "2" [label="r_0"]
+"3" -> "2" [label="-r_1"]
+"3" -> "2" [label="-rm"]
+"0" -> "0" [label="rm"]
+"1" -> "4" [label="-rm"]
+"4" -> "3" [label="r_0 r_1"]
+"4" -> "3" [label="r_1 rm"]
+"2" -> "2" [label="rm"]
+"4" -> "2" [label="-r_1"]
+"4" -> "2" [label="-r_0 -rm"]
+"1" -> "0" [label="rm"]
+"0" -> "4" [label="-rm"]
+"2" -> "1" [label="-rm"]
+"3" -> "3" [label="-r_0 r_1 rm"]
+}

@@ -1,0 +1,2 @@
+15:59:44  Namespace(bound=32, dot=None, incr=True, log=None, maxK=0, moore=True, size=0, spec='./experiments-for-synt/user_arb_kmax.tlsf', spot=True, tmp=False, unreal=False, verbose=0)
+15:59:46  created z3 process: 26304

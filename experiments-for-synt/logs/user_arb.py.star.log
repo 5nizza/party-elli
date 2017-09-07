@@ -1,0 +1,37 @@
+09:49:54  Namespace(bound=128, direct=True, dot=None, incr=True, log=None, size=0, spec='./experiments-for-synt/user_arb.py', tmp=False, verbose=0)
+09:49:54  check_real
+09:49:54  created z3 process: 14444
+09:49:54  search
+09:49:54  searching a model of size 1..
+09:49:54  solving the query..
+09:49:54  searching a model of size 2..
+09:49:54  solving the query..
+09:49:54  searching a model of size 3..
+09:49:54  solving the query..
+09:49:54  searching a model of size 4..
+09:49:54  solving the query..
+09:49:55  searching a model of size 5..
+09:49:55  solving the query..
+09:49:57  FOUND model for sys
+09:49:57  digraph module {
+ rankdir=LR;
+
+"0" [label="-g\n0", fillcolor="green", style=filled]
+"1" [label="g\n1"]
+"2" [label="g\n2"]
+"3" [label="-g\n3"]
+"4" [label="g\n4"]
+"0" -> "1" [label="-r u"]
+"1" -> "3" [label="r -u"]
+"1" -> "3" [label="-r u"]
+"3" -> "3" [label="1"]
+"0" -> "4" [label="-u"]
+"4" -> "2" [label="r -u"]
+"1" -> "0" [label="r u"]
+"1" -> "0" [label="-r -u"]
+"2" -> "2" [label="1"]
+"4" -> "1" [label="-r u"]
+"4" -> "4" [label="-r -u"]
+"0" -> "3" [label="r u"]
+"4" -> "0" [label="r u"]
+}

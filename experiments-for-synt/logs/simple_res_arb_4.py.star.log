@@ -1,0 +1,63 @@
+09:49:43  Namespace(bound=128, direct=True, dot=None, incr=True, log=None, size=0, spec='./experiments-for-synt/simple_res_arb_4.py', tmp=False, verbose=0)
+09:49:43  check_real
+09:49:43  created z3 process: 14382
+09:49:43  search
+09:49:43  searching a model of size 1..
+09:49:43  solving the query..
+09:49:43  searching a model of size 2..
+09:49:43  solving the query..
+09:49:43  searching a model of size 3..
+09:49:43  solving the query..
+09:49:44  searching a model of size 4..
+09:49:44  solving the query..
+09:49:44  searching a model of size 5..
+09:49:44  solving the query..
+09:50:24  searching a model of size 6..
+09:50:24  solving the query..
+11:06:21  searching a model of size 7..
+11:06:21  solving the query..
+11:52:47  FOUND model for sys
+11:52:48  digraph module {
+ rankdir=LR;
+
+"0" [label="-g_3 -g_2 -g_0 g_1\n0", fillcolor="green", style=filled]
+"1" [label="g_3 -g_2 -g_0 -g_1\n1"]
+"2" [label="-g_3 -g_2 g_0 -g_1\n2"]
+"3" [label="-g_3 g_2 -g_0 -g_1\n3"]
+"4" [label="g_3 -g_2 -g_0 -g_1\n4"]
+"5" [label="-g_3 g_2 -g_0 -g_1\n5"]
+"6" [label="-g_3 -g_2 -g_0 -g_1\n6"]
+"6" -> "4" [label="-r_1 -r_2 r_3 -r_0"]
+"4" -> "6" [label="-r_1 -r_2 -r_0"]
+"6" -> "6" [label="-r_1 -r_2 -r_3 -r_0"]
+"4" -> "5" [label="r_1 r_2 r_3"]
+"4" -> "5" [label="r_2 -r_3 r_0"]
+"3" -> "4" [label="-r_1 -r_3 -r_0"]
+"6" -> "1" [label="r_1 r_3"]
+"6" -> "1" [label="r_1 -r_0"]
+"3" -> "1" [label="r_0"]
+"3" -> "1" [label="r_1"]
+"3" -> "1" [label="r_3"]
+"6" -> "0" [label="r_1 -r_2 -r_3 r_0"]
+"2" -> "1" [label="r_1"]
+"2" -> "1" [label="r_2 r_0"]
+"2" -> "1" [label="r_3 -r_0"]
+"6" -> "3" [label="-r_1 r_2 r_3 -r_0"]
+"1" -> "5" [label="1"]
+"6" -> "2" [label="-r_1 r_2 r_0"]
+"6" -> "2" [label="-r_1 r_3 r_0"]
+"2" -> "3" [label="-r_1 -r_2 r_0"]
+"2" -> "3" [label="-r_1 -r_3 -r_0"]
+"5" -> "0" [label="1"]
+"4" -> "2" [label="-r_1 r_2 r_3"]
+"4" -> "2" [label="-r_1 -r_2 r_0"]
+"4" -> "2" [label="-r_1 r_2 -r_0"]
+"4" -> "1" [label="r_1 -r_2 r_0"]
+"4" -> "1" [label="r_1 -r_2 r_3"]
+"4" -> "1" [label="r_1 r_2 -r_3 -r_0"]
+"0" -> "2" [label="1"]
+"6" -> "5" [label="r_1 r_2 -r_3 r_0"]
+"6" -> "5" [label="-r_1 -r_2 -r_3 r_0"]
+"6" -> "5" [label="-r_1 r_2 -r_3 -r_0"]
+"4" -> "0" [label="r_1 -r_2 -r_3 -r_0"]
+}

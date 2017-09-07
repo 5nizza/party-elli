@@ -1,0 +1,39 @@
+12:02:08  Namespace(bound=32, dot=None, incr=True, log=None, maxK=0, moore=True, size=0, spec='./experiments-for-synt/postponed_arbiter_4_k4.tlsf', spot=True, tmp=False, unreal=False, verbose=0)
+12:02:08  created z3 process: 19148
+12:02:22  automaton size is: 55
+12:02:24  using CoBuchiEncoder
+12:02:24  search
+12:02:24  searching a model of size 1..
+12:02:40  solving the query..
+12:02:56  searching a model of size 2..
+12:03:12  solving the query..
+12:03:43  searching a model of size 3..
+12:03:54  solving the query..
+12:07:04  searching a model of size 4..
+12:07:20  solving the query..
+12:13:25  searching a model of size 5..
+12:13:41  solving the query..
+14:08:41  parse_model
+14:08:42  searching a model took (sec): 7577
+14:08:42  FOUND model for sys of size 5
+14:08:42  digraph module {
+ rankdir=LR;
+
+"0" [label="-__vp2_2 __vp4_1 -__vp4_0 -__d4_r_3 __d2_r_2 -__d3_r_2 -__vp3_2 __vp3_1 -__vp1_1 __d2_r_0 -__d1_r_1 -__d1_r_2 -__d1_r_3 -__d2_r_3 -__d3_r_3 -__d4_r_2 __d2_r_1 -g_0 -g_2 __vp2_1 -__vp3_0 __d3_r_0 -__vp4_2 -g_1 __d4_r_1 -__d1_r_0 -__vp1_0 __d4_r_0 __vp1_2 -g_3 __d3_r_1 __vp2_0\n0", fillcolor="green", style=filled]
+"1" [label="-__vp2_2 -__vp4_1 __vp4_0 -__d4_r_3 __d2_r_2 -__d3_r_2 -__vp3_2 -__vp3_1 -__vp1_1 -__d2_r_0 -__d1_r_1 __d1_r_2 -__d1_r_3 __d2_r_3 __d3_r_3 -__d4_r_2 -__d2_r_1 -g_0 -g_2 -__vp2_1 __vp3_0 -__d3_r_0 -__vp4_2 g_1 -__d4_r_1 __d1_r_0 __vp1_0 -__d4_r_0 -__vp1_2 -g_3 -__d3_r_1 __vp2_0\n1"]
+"2" [label="-__vp2_2 __vp4_1 -__vp4_0 -__d4_r_3 -__d2_r_2 -__d3_r_2 -__vp3_2 __vp3_1 __vp1_1 -__d2_r_0 __d1_r_1 -__d1_r_2 -__d1_r_3 -__d2_r_3 -__d3_r_3 -__d4_r_2 -__d2_r_1 -g_0 -g_2 __vp2_1 -__vp3_0 __d3_r_0 -__vp4_2 -g_1 __d4_r_1 __d1_r_0 __vp1_0 __d4_r_0 -__vp1_2 g_3 __d3_r_1 __vp2_0\n2"]
+"3" [label="__vp2_2 __vp4_1 -__vp4_0 -__d4_r_3 -__d2_r_2 -__d3_r_2 -__vp3_2 __vp3_1 -__vp1_1 -__d2_r_0 __d1_r_1 -__d1_r_2 __d1_r_3 -__d2_r_3 -__d3_r_3 -__d4_r_2 __d2_r_1 -g_0 g_2 -__vp2_1 -__vp3_0 -__d3_r_0 -__vp4_2 -g_1 __d4_r_1 __d1_r_0 -__vp1_0 __d4_r_0 __vp1_2 -g_3 -__d3_r_1 -__vp2_0\n3"]
+"4" [label="-__vp2_2 __vp4_1 -__vp4_0 -__d4_r_3 -__d2_r_2 -__d3_r_2 -__vp3_2 __vp3_1 -__vp1_1 -__d2_r_0 __d1_r_1 __d1_r_2 __d1_r_3 __d2_r_3 -__d3_r_3 __d4_r_2 -__d2_r_1 g_0 -g_2 __vp2_1 -__vp3_0 -__d3_r_0 -__vp4_2 -g_1 __d4_r_1 -__d1_r_0 -__vp1_0 -__d4_r_0 __vp1_2 -g_3 __d3_r_1 __vp2_0\n4"]
+"1" -> "2" [label="r_0"]
+"1" -> "2" [label="-r_2 r_1 r_3"]
+"1" -> "2" [label="r_2 -r_1 -r_3"]
+"2" -> "3" [label="1"]
+"4" -> "1" [label="1"]
+"1" -> "0" [label="r_2 r_3 -r_0"]
+"1" -> "0" [label="-r_0 r_1 -r_3"]
+"1" -> "0" [label="r_3 -r_1 -r_0"]
+"1" -> "0" [label="-r_2 -r_0 -r_1"]
+"1" -> "0" [label="-r_2 -r_0 -r_3"]
+"3" -> "4" [label="1"]
+"0" -> "2" [label="1"]
+}

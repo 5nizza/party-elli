@@ -1,0 +1,13 @@
+12:02:08  Namespace(bound=32, dot=None, incr=True, log=None, maxK=0, moore=True, size=0, spec='./experiments-for-synt/loop_arbiter_3_k6.tlsf', spot=True, tmp=False, unreal=False, verbose=0)
+12:02:09  created z3 process: 19151
+12:02:33  automaton size is: 54
+12:02:35  using CoBuchiEncoder
+12:02:35  search
+12:02:35  searching a model of size 1..
+12:02:50  solving the query..
+12:03:09  searching a model of size 2..
+12:03:22  solving the query..
+12:04:49  searching a model of size 3..
+12:05:04  solving the query..
+12:14:52  searching a model of size 4..
+12:15:07  solving the query..
