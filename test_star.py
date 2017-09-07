@@ -10,7 +10,7 @@ from tests.common import run_benchmark
 realizable = [
     # "ctl/prolonged_full_arb.py --direct --size 7",
     "ctl/resettable_arbiter.py --direct --size 3",
-    "ctl/self_loop_arbiter.py --direct --size 4",
+    "ctl/loop_arbiter.py --direct --size 4",
     "ctl/full_arb.py --direct --size 4",
     "ctl/non_det_arb.py --direct --size 4",
     "ctl/delayed_full_arb.py --direct --size 5",
@@ -18,7 +18,7 @@ realizable = [
 
 unknown = [  # no model should be found for these
     "ctl/resettable_arbiter.py --direct --size 2",
-    "ctl/self_loop_arbiter.py --direct --size 3",
+    "ctl/loop_arbiter.py --direct --size 3",
     "ctl/full_arb.py --direct --size 3",
     "ctl/non_det_arb.py --direct --size 3",
     "ctl/delayed_full_arb.py --direct --size 4",

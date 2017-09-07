@@ -117,4 +117,13 @@ They are all realizable -- on unrealizable specs the tool does not terminate
 If you wonder about alternating hesitant automata -- see small note in [aht.md](aht.md).
 
 
+## Notes
+
+- Two encoders for CTL* are `synthesis/ctl/ctl_encoder_direct.py` and `synthesis/ctl/ctl_encoder_via_aht.py`.
+  The translation `CTL* -> AHT` is in `ctl2aht_/ctl2aht.py`.
+- The encoder for LTL is in `synthesis/cobuchi_smt_encoder.py` and `buchi_cobuchi_encoder.py`
+- The input format for CTL* is python format, see examples in `benchmarks/ctl` and `experiments-for-cav`.
+
+
+
   [^1]: Kupferman, O., Vardi, M.Y., Wolper, P.: An automata-theoretic approach to branching-time model checking.

@@ -1,53 +1,56 @@
-# PARTY
+# PARTY: CAV17 edition
 
-SMT based Bounded Synthesis, an implementation of the approach of 
-[Schewe and Finkbeiner](https://www.react.uni-saarland.de/publications/atva07.pdf).
-that also implements two encoders for CTL* from our CAV'17 paper.
+This branch has two CTL* solvers implemented for CAV'17 paper
+"Bounded Synthesis Streett, Rabin, and CTL*"
+and a translator from CTL* to LTL for SYNT'17 paper
+"CTL* synthesis via LTL synthesis".
 
-If you are interested in CAV experiments,
-go straight to [README.md](experiments-for-cav/README.md).
+This readme has some general information on how to install the tool etc.
+CAV- and SYNT- specific information is in [CAV-readme](experiments-for-cav/README.md) and [SYNT-readme](experiments-for-synt/README.md).
 
 
-## Requirements
+## System Requirements
+
+I tested on the following machine,
+but it likely workas with other configurations:
 
 - Ubuntu 16.04 (likely to work with others)
 - python3 (tested with version 3.5)
-- Z3 (tested with version 4.5.0)
-- spot
-- ltl3ba (tested with versions 1.1.2 and 1.0.2)
+- Z3 (version 4.5.0: [downlink](https://github.com/Z3Prover/z3/releases))
+- SPOT (version 2.3.2: [downlink](https://www.lrde.epita.fr/dload/spot/spot-2.3.2.tar.gz))
 - python packages: sympy, python-graph-core, python-graph-dot, typing
   (install them for example using `pip3`)
 
+As for SPOT:
+I use it via python bindings and it is installed system-wide on my machine,
+but it can also be installed locally (would need some path tweakings).
 
-## To configure
-Call `./configure.py` and then modify the created file `config.py`
-to your absolute paths to executables of `z3` and `ltl3ba`.
+Once you installed all dependencies, configure PARTY.
 
 
-## To run
+## To Configure
+Call `./configure.py` and then modify the created file `config.py` with necessary paths.
 
-LTL synthesizer:
+
+## To Run
+
+This depends on what you want to run.
+
+To run an LTL synthesizer (which implementats Schewe/Finkbeiner bounded synthesis approach):
 ```
 ./elli.py --help
 ```
 
-CTL* synthesizer:
-```
-./star.py --help
-```
+There are many other runnable tools (depends on your version).
+Check out the root directory and see executable scripts.
 
 
 ## Notes
 
 - The encoder for LTL is in `synthesis/cobuchi_smt_encoder.py` and `buchi_cobuchi_encoder.py`
 
-- Two encoders for CTL* are `synthesis/ctl/ctl_encoder_direct.py` and `synthesis/ctl/ctl_encoder_via_aht.py`.
-  The translation `CTL* -> AHT` is in `ctl2aht_/ctl2aht.py`.
 
+## Input Format
 
-## Input format
-
-- For LTL: acacia input format (which itself is derived from lily).
-- For CTL*: python format, see examples in `benchmarks/ctl` and `experiments-for-cav`.
-- Competetion version `rally.py` also support TLSF (but it needs looots of dependencies to run!)
-
+For LTL: acacia input format (which itself is derived from lily).
+`elli.py` also supports TLSF input format.

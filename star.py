@@ -2,6 +2,7 @@
 import argparse
 import logging
 import tempfile
+from pprint import pformat
 
 from CTL_to_AHT_ import ctl2aht
 from LTL_to_atm import translator_via_spot
@@ -9,6 +10,7 @@ from automata import automaton_to_dot, aht2dot
 from config import Z3_PATH
 from helpers.logging_helper import log_entrance
 from helpers.main_helper import setup_logging, Z3SolverFactory
+from helpers.measure_expr_size import expr_size
 from helpers.nnf_normalizer import NNFNormalizer
 from interfaces.AHT_automaton import SharedAHT, DstFormulaPropMgr, get_reachable_from
 from interfaces.LTL_to_automaton import LTLToAutomaton
@@ -64,9 +66,11 @@ def check_real(spec:Spec,
 
     # normalize formula (negations appear only in front of basic propositions)
     spec.formula = NNFNormalizer().dispatch(spec.formula)
+    logging.info("CTL* formula size: %i", expr_size(spec.formula))
 
     if use_direct_encoding:
         top_formula, atm_by_p, UCWs = automize_ctl(spec.formula, ltl_to_atm)
+        logging.info("Total number of states in sub-automata: %i", sum([len(a.nodes) for a in atm_by_p.values()]))
         for p, atm in atm_by_p.items():
             logging.debug(str(p) + ', atm: \n' + automaton_to_dot.to_dot(atm))
         encoder = CTLEncoderDirect(top_formula, atm_by_p, UCWs,
@@ -86,7 +90,7 @@ def check_real(spec:Spec,
         if not aht_transitions:
             logging.info('AHT is empty => the spec is unrealizable!')
             return None
-        logging.info('(real) AHT automaton (dot) is:\n' +
+        logging.debug('(real) AHT automaton (dot) is:\n' +    # sometimes this logging takes long time
               aht2dot.convert(aht_automaton, shared_aht, dstFormPropMgr))
         encoder = CTLEncoderViaAHT(aht_automaton, aht_transitions,
                                    dstFormPropMgr,

@@ -7,6 +7,7 @@ from automata import automaton_to_dot
 from automata.k_reduction import k_reduce
 from config import Z3_PATH
 from helpers.main_helper import setup_logging, Z3SolverFactory
+from helpers.measure_expr_size import expr_size
 from helpers.timer import Timer
 from interfaces.LTL_to_automaton import LTLToAutomaton
 from interfaces.LTS import LTS
@@ -34,6 +35,8 @@ def check_unreal(ltl_text, part_text, is_moore,
     """
     timer = Timer()
     spec = parse_acacia_and_build_expr(ltl_text, part_text, ltl_to_atm, opt_level)
+
+    logging.info("LTL formula size: %i", expr_size(spec.formula))
 
     timer.sec_restart()
     automaton = ltl_to_atm.convert(spec.formula)
@@ -81,6 +84,8 @@ def check_real(ltl_text, part_text, is_moore,
     """
     timer = Timer()
     spec = parse_acacia_and_build_expr(ltl_text, part_text, ltl_to_atm, opt_level)
+
+    logging.info("LTL formula size: %i", expr_size(spec.formula))
 
     timer.sec_restart()
     automaton = ltl_to_atm.convert(~spec.formula)

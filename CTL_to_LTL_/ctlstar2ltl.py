@@ -114,6 +114,8 @@ def convert(spec:Spec,
                               for p in exist_props)
         nof_IDs = sum(len(atm.nodes) for atm in atm_by_exist_p.values())
 
+    logging.info("k = %i", nof_IDs)
+
     v_bits_by_exist_p = dict((p, tuple(reversed([Signal('__v%s_%i'%(p.arg1.name.replace('_',''),i))
                                                  for i in range(ceil(log(nof_IDs+1, 2)) or 1)]))  # NB: +1 to account for 0
                               )
