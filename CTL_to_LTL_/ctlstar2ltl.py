@@ -3,7 +3,7 @@ from functools import reduce
 from itertools import chain
 from math import ceil, log
 from pprint import pformat, pprint
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Set
 
 from CTL_to_LTL_.ctl_atomizer import CTLAtomizerVisitor
 from helpers.nnf_normalizer import NNFNormalizer
@@ -84,6 +84,33 @@ def _inline_univ_p(ltl_formula:Expr, f_by_univ_p:Dict[BinOp, UnaryOp]) -> Expr:
     return new_ltl
 
 
+def _calc_nested_props(f_by_p:Dict[BinOp, UnaryOp]) -> Set[BinOp]:
+    # assumes that propositions are mentioned positively
+    class SearchMentions(Visitor):
+        def __init__(self, which_prop:BinOp):
+            self.which_prop = which_prop
+            self.found = False
+
+        def visit_binary_op(self, binary_op:BinOp):
+            if binary_op.arg1 == self.which_prop or binary_op.arg2 == self.which_prop:
+                self.found = True
+            return super().visit_binary_op(binary_op)
+
+        def visit_unary_op(self, unary_op:UnaryOp):
+            if unary_op.arg == self.which_prop:
+                self.found = True
+            return super().visit_unary_op(unary_op)
+
+    mentioned_props = set()
+    for p in f_by_p.keys():
+        for f in f_by_p.values():
+            searcher = SearchMentions(p)
+            searcher.dispatch(f)
+            if searcher.found:
+                mentioned_props.add(p)
+    return mentioned_props
+
+
 def convert(spec:Spec,
             nof_IDs:int or None,
             ltl_to_atm:LTLToAutomaton) -> Spec:
@@ -130,9 +157,15 @@ def convert(spec:Spec,
     dTuple_by_id = dict((j, tuple(Signal('__d%i_%s'%(j,i)) for i in ordered_inputs))
                         for j in range(1, nof_IDs+1))  # type: Dict[int, SignalsTuple]
 
+    univ_props_to_inline = set(atomizer.f_by_p.keys()) - \
+                           _calc_nested_props(atomizer.f_by_p) - \
+                           set(exist_props)
+
     ltl_formula = top_formula
+    # such props can only be mentioned in the top_formula
+    ltl_formula = _inline_univ_p(ltl_formula, dict((p,atomizer.f_by_p[p]) for p in univ_props_to_inline))
     ltl_formula &= _conjunction(_create_LTL_for_A_formula(p, atomizer.f_by_p[p].arg)
-                                for p in set(atomizer.f_by_p) - set(exist_props))
+                                for p in set(atomizer.f_by_p) - set(exist_props) - univ_props_to_inline)
     ltl_formula &= _conjunction(_create_LTL_for_E_formula(v_bits_by_exist_p[p],
                                                           atomizer.f_by_p[p].arg,
                                                           dTuple_by_id,
@@ -145,7 +178,7 @@ def convert(spec:Spec,
 
     new_outputs = list(chain(*v_bits_by_exist_p.values())) + \
                   list(chain(*dTuple_by_id.values())) + \
-                  list(p.arg1 for p in set(atomizer.f_by_p) - set(exist_props))
+                  list(p.arg1 for p in set(atomizer.f_by_p) - set(exist_props) - univ_props_to_inline)
 
     spec = Spec(spec.inputs,
                 set(new_outputs) | spec.outputs,
