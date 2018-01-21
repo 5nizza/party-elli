@@ -2,8 +2,8 @@ import logging
 from functools import reduce
 from itertools import chain
 from math import ceil, log
-from pprint import pprint, pformat
-from typing import List, Tuple, Dict
+from pprint import pformat
+from typing import Tuple, Dict
 
 from CTL_to_LTL_.ctl_atomizer import CTLAtomizerVisitor
 from helpers.nnf_normalizer import NNFNormalizer
@@ -17,14 +17,14 @@ from parsing.visitor import Visitor
 SignalsTuple = Tuple[Signal]
 
 
-def conjunction(iterable) -> Expr:
+def _conjunction(iterable) -> Expr:
     return reduce(lambda x,y: x&y, iterable, Bool(True))
 
 
-def create_LTL_for_E_formula(v_bits:SignalsTuple,  # v_bits[0] will correspond to j_bits[0] (left-most bit)
-                             path_formula:Expr,
-                             d:Dict[int,SignalsTuple],
-                             ordered_inputs:Tuple[Signal]) -> Expr:
+def _create_LTL_for_E_formula(v_bits:SignalsTuple,  # v_bits[0] will correspond to j_bits[0] (left-most bit)
+                              path_formula:Expr,
+                              d:Dict[int,SignalsTuple],
+                              ordered_inputs:Tuple[Signal]) -> Expr:
     # TODO: what if we |v_bits| = 3 but not all bit valuations are used?
     # We create the conjunction:
     # for each j:
@@ -42,18 +42,18 @@ def create_LTL_for_E_formula(v_bits:SignalsTuple,  # v_bits[0] will correspond t
     result = Bool(True)
     nof_IDs = len(d)
     for j in range(1,nof_IDs+1):
-        v_eq_j = make_v_eq_j(j, v_bits)
-        d_j_expr = conjunction([(prop2(d[j][idx])>>prop2(inp)) &
-                                (prop2(d[j][idx])<<prop2(inp))
-                                for idx,inp in enumerate(ordered_inputs)])
+        v_eq_j = _make_v_eq_j(j, v_bits)
+        d_j_expr = _conjunction([(prop2(d[j][idx]) >> prop2(inp)) &
+                                 (prop2(d[j][idx])<<prop2(inp))
+                                 for idx,inp in enumerate(ordered_inputs)])
         result &= G(v_eq_j >> (G(d_j_expr) >> path_formula))
     return result
 
 
-def make_v_eq_j(j:int, v_bits:SignalsTuple) -> Expr:
+def _make_v_eq_j(j:int, v_bits:SignalsTuple) -> Expr:
     j_bits = '0' * (len(v_bits) - len(bin(j)[2:])) + bin(j)[2:]
-    v_eq_j = conjunction([BinOp('=', v_bits[idx], Number(1)) if j_bit=='1' else ~BinOp('=', v_bits[idx], Number(1))
-                          for idx, j_bit in enumerate(j_bits)])
+    v_eq_j = _conjunction([BinOp('=', v_bits[idx], Number(1)) if j_bit == '1' else ~BinOp('=', v_bits[idx], Number(1))
+                           for idx, j_bit in enumerate(j_bits)])
     return v_eq_j
 
 
@@ -65,7 +65,7 @@ def _replace_exist_propositions(ltl_formula:Expr,
             if binary_op.name != '=' or binary_op not in v_bits_by_exist_p:
                 return super().visit_binary_op(binary_op)
             return reduce(lambda x,y: x|y,
-                          [make_v_eq_j(j, v_bits_by_exist_p[binary_op]) for j in range(1,nof_IDs+1)])
+                          [_make_v_eq_j(j, v_bits_by_exist_p[binary_op]) for j in range(1, nof_IDs + 1)])
     return Replacer().dispatch(ltl_formula)
 
 
@@ -119,17 +119,17 @@ def convert(spec:Spec,
     v_bits_by_exist_p = dict((p, tuple(reversed([Signal('__v%s_%i'%(p.arg1.name.replace('_',''),i))
                                                  for i in range(ceil(log(nof_IDs+1, 2)) or 1)]))  # NB: +1 to account for 0
                               )
-                             for p in exist_props)
-    ordered_inputs = tuple(spec.inputs)
+                             for p in exist_props)  # type: Dict[BinOp, SignalsTuple]
+    ordered_inputs = tuple(spec.inputs)  # type: SignalsTuple
     dTuple_by_id = dict((j, tuple(Signal('__d%i_%s'%(j,i)) for i in ordered_inputs))
-                        for j in range(1, nof_IDs+1))
+                        for j in range(1, nof_IDs+1))  # type: Dict[int, SignalsTuple]
 
     ltl_formula = top_formula
-    ltl_formula &= conjunction(create_LTL_for_E_formula(v_bits_by_exist_p[p],
-                                                        atomizer.f_by_p[p].arg,
-                                                        dTuple_by_id,
-                                                        ordered_inputs)
-                               for p in exist_props)
+    ltl_formula &= _conjunction(_create_LTL_for_E_formula(v_bits_by_exist_p[p],
+                                                          atomizer.f_by_p[p].arg,
+                                                          dTuple_by_id,
+                                                          ordered_inputs)
+                                for p in exist_props)
 
     ltl_formula = _inline_univ_p(ltl_formula,
                                  dict((p, f) for p,f in atomizer.f_by_p.items() if f.name == 'A'))
@@ -143,32 +143,3 @@ def convert(spec:Spec,
     return Spec(spec.inputs,
                 set(new_outputs) | spec.outputs,
                 ltl_formula)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
