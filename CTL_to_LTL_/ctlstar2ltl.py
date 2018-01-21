@@ -2,7 +2,7 @@ import logging
 from functools import reduce
 from itertools import chain
 from math import ceil, log
-from pprint import pformat
+from pprint import pformat, pprint
 from typing import Tuple, Dict
 
 from CTL_to_LTL_.ctl_atomizer import CTLAtomizerVisitor
@@ -19,6 +19,10 @@ SignalsTuple = Tuple[Signal]
 
 def _conjunction(iterable) -> Expr:
     return reduce(lambda x,y: x&y, iterable, Bool(True))
+
+
+def _create_LTL_for_A_formula(p:Expr, path_formula:Expr) -> Expr:
+    return G(p >> path_formula)
 
 
 def _create_LTL_for_E_formula(v_bits:SignalsTuple,  # v_bits[0] will correspond to j_bits[0] (left-most bit)
@@ -94,11 +98,13 @@ def convert(spec:Spec,
     #   introduce nof_IDs d-variables (each is a valuation of all inputs)
     #   for each unique A-subformula:
     #     introduce p-variable
+    #   for each unique A-subformula:
+    #     create an LTL formula         (0)
     #   for each unique E-subformula:
     #     create an LTL formula         (1)
     #   create the top-level formula    (2)
-    #   create the conjunction (1) & (2)
-    #   inline back A-subformulas (replace their p by the path formulas (without 'A'))
+    #   create the conjunction (0) & (1) & (2)
+    #   //(nope, we don't do this) inline back A-subformulas (replace their p by the path formulas (without 'A'))
     #   replace existential propositions by 'v != 0'
     #   return the result
 
@@ -125,21 +131,23 @@ def convert(spec:Spec,
                         for j in range(1, nof_IDs+1))  # type: Dict[int, SignalsTuple]
 
     ltl_formula = top_formula
+    ltl_formula &= _conjunction(_create_LTL_for_A_formula(p, atomizer.f_by_p[p].arg)
+                                for p in set(atomizer.f_by_p) - set(exist_props))
     ltl_formula &= _conjunction(_create_LTL_for_E_formula(v_bits_by_exist_p[p],
                                                           atomizer.f_by_p[p].arg,
                                                           dTuple_by_id,
                                                           ordered_inputs)
                                 for p in exist_props)
 
-    ltl_formula = _inline_univ_p(ltl_formula,
-                                 dict((p, f) for p,f in atomizer.f_by_p.items() if f.name == 'A'))
     ltl_formula = _replace_exist_propositions(ltl_formula, v_bits_by_exist_p, nof_IDs)
 
     logging.debug("exist propositions: \n%s", pformat([ep.arg1 for ep in v_bits_by_exist_p]))
 
     new_outputs = list(chain(*v_bits_by_exist_p.values())) + \
-                  list(chain(*dTuple_by_id.values()))
+                  list(chain(*dTuple_by_id.values())) + \
+                  list(p.arg1 for p in set(atomizer.f_by_p) - set(exist_props))
 
-    return Spec(spec.inputs,
+    spec = Spec(spec.inputs,
                 set(new_outputs) | spec.outputs,
                 ltl_formula)
+    return spec
