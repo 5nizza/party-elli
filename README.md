@@ -44,6 +44,9 @@ To run an LTL synthesizer (which implementats Schewe/Finkbeiner bounded synthesi
 There are many other runnable tools (depends on your version).
 Check out the root directory and see executable scripts.
 
+For the CAV'17 and SYNT'17 experiments,
+see folders `experiments-for-synt` and `experiments-for-cav`.
+
 
 ## Notes
 
