@@ -7,6 +7,8 @@ from syntcomp.syntcomp_constants import REALIZABLE_RC, UNKNOWN_RC
 from tests.common import run_benchmark
 
 
+# TODO: test the "--aht" version
+
 realizable = [
     # "ctl/prolonged_full_arb.py --direct --size 7",
     "ctl/resettable_arbiter.py --direct --size 3",
