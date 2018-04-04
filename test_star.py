@@ -3,14 +3,14 @@
 import sys
 import argparse
 
-from elli import REALIZABLE, UNREALIZABLE, UNKNOWN
+from syntcomp.syntcomp_constants import REALIZABLE_RC, UNKNOWN_RC
 from tests.common import run_benchmark
 
 
 realizable = [
     # "ctl/prolonged_full_arb.py --direct --size 7",
     "ctl/resettable_arbiter.py --direct --size 3",
-    "ctl/loop_arbiter.py --direct --size 4",
+    "ctl/self_loop_arbiter.py --direct --size 4",
     "ctl/full_arb.py --direct --size 4",
     "ctl/non_det_arb.py --direct --size 4",
     "ctl/delayed_full_arb.py --direct --size 5",
@@ -18,7 +18,7 @@ realizable = [
 
 unknown = [  # no model should be found for these
     "ctl/resettable_arbiter.py --direct --size 2",
-    "ctl/loop_arbiter.py --direct --size 3",
+    "ctl/self_loop_arbiter.py --direct --size 3",
     "ctl/full_arb.py --direct --size 3",
     "ctl/non_det_arb.py --direct --size 3",
     "ctl/delayed_full_arb.py --direct --size 4",
@@ -27,9 +27,9 @@ unknown = [  # no model should be found for these
 
 def _get_status(b):
     if b in realizable:
-        return REALIZABLE
+        return REALIZABLE_RC
     if b in unknown:
-        return UNKNOWN
+        return UNKNOWN_RC
     assert 0
 
 
@@ -44,7 +44,7 @@ def main():
 
     all_passed = True
     for benchmark in realizable + unknown:
-        result = run_benchmark('star.py', benchmark, _get_status(benchmark))
+        result = run_benchmark('star.py', benchmark, _get_status(benchmark), None)
         all_passed &= result
 
         if not args.nonstop and result is False:
