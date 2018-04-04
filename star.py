@@ -17,6 +17,7 @@ from interfaces.LTL_to_automaton import LTLToAutomaton
 from interfaces.LTS import LTS
 from interfaces.spec import Spec
 from module_generation.dot import lts_to_dot
+from module_generation.lts_to_aiger import lts_to_aiger
 from parsing.python_parser import parse_python_spec
 from synthesis import model_searcher
 from synthesis.ctl.ctl_encoder_direct import CTLEncoderDirect
@@ -133,6 +134,8 @@ def main():
                         help='keep temporary smt2 files')
     parser.add_argument('--dot', metavar='dot', type=str, required=False,
                         help='write the output into a dot graph file')
+    parser.add_argument('--aiger', metavar='aiger', type=str, required=False,
+                        help='write the output into an AIGER format')
     parser.add_argument('--log', metavar='log', type=str, required=False,
                         default=None,
                         help='name of the log file')
@@ -176,6 +179,10 @@ def main():
                 logging.info('Moore model is written to {file}'.format(file=out.name))
         else:
             logging.info(dot_model_str)
+
+        if args.aiger:
+            with open(args.aiger, 'w') as aiger_out:
+                aiger_out.write(lts_to_aiger(model))
 
     solver_factory.down_solvers()
 
