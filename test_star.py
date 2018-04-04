@@ -44,6 +44,9 @@ def main():
 
     all_passed = True
     for benchmark in realizable + unknown:
+        # TODO: should be separated into two separate loops,
+        #       for realizable benchmarks: set size_expected
+        #       for unknown: use None
         result = run_benchmark('star.py', benchmark, _get_status(benchmark), None)
         all_passed &= result
 
