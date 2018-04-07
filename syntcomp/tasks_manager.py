@@ -1,11 +1,3 @@
-from typing import List, Iterable, Tuple
-from multiprocessing import Process, Queue
-
-import logging
-import psutil, os
-
-from interfaces.LTS import LTS
-from syntcomp.task import Task
 import logging
 from multiprocessing import Process, Queue
 from typing import List, Iterable, Tuple
@@ -54,7 +46,7 @@ def run_synth_tasks(tasks:List[Task]) -> Tuple[bool, LTS or str or None] or Tupl
     task, lts_or_aiger = None, None   # .. to shut up pycharm warnings
 
     for trial_num in range(len(processes)):
-        task, lts_or_aiger = queue.get()  # type: Tuple[Task, LTS or None or str]
+        task, lts_or_aiger = queue.get()  # type: Task, LTS or None or str
         if isinstance(lts_or_aiger, Exception):
             logging.error('='*10 + 'Task crashed. This should never happen.' + '='*10)
             logging.error('I continue though..')

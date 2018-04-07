@@ -8,6 +8,7 @@
 import os
 import sys
 
+
 PACKAGE_PARENT = '..'
 SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
 sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
@@ -19,17 +20,16 @@ sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
 
 import argparse
 import logging
-from config import LTL3BA_PATH
 from CTL_to_AHT_ import ctl2aht
 from automata import aht2dot
+from LTL_to_atm.translator_via_spot import LTLToAtmViaSpot
 from helpers.main_helper import setup_logging
 from interfaces.AHT_automaton import SharedAHT, DstFormulaPropMgr
-from ltl3ba.ltl2automaton import LTL3BA
 from parsing.python_parser import parse_python_spec
 
 
 def main(spec_file_name:str, should_print_all:bool) -> 0:
-    ltl3ba = LTL3BA(LTL3BA_PATH)
+    ltl3ba = LTLToAtmViaSpot()
     shared_aht, dstFormPropMgr = SharedAHT(), DstFormulaPropMgr()
     spec = parse_python_spec(spec_file_name)
     aht = ctl2aht.ctl2aht(spec, ltl3ba, shared_aht, dstFormPropMgr)
