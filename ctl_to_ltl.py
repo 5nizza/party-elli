@@ -3,7 +3,7 @@ import argparse
 import logging
 from pprint import pformat
 
-from CTL_to_LTL_ import ctl2ltl, ctlstar2ltl
+from CTL_to_LTL_ import ctlstar2ltl
 from LTL_to_atm.ast_to_ltl3ba import ConverterToLtl2BaFormatVisitor
 from LTL_to_atm.translator_via_spot import LTLToAtmViaSpot
 from helpers.main_helper import setup_logging
@@ -12,15 +12,11 @@ from parsing.python_parser import parse_python_spec
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description='CTL to LTL converter',
+    parser = argparse.ArgumentParser(description='CTL* to LTL converter for synthesis',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('spec', metavar='spec', type=str,
                         help='the specification file (in python format)')
-
-    parser.add_argument('--star', action='store_true', default=False,
-                        dest='star',
-                        help='force using CTL* to LTL translation for CTL formulas')
 
     parser.add_argument('--k', default=None, type=int,
                         help='force the value of parameter k (the number of IDs)')
@@ -43,10 +39,7 @@ def main() -> None:
 
     logging.info('Input spec:\n' + str(spec))
 
-    if args.star or not is_ctl_formula(spec):
-        new_spec = ctlstar2ltl.convert(spec, args.k, LTLToAtmViaSpot())
-    else:
-        new_spec = ctl2ltl.convert(spec)
+    new_spec = ctlstar2ltl.convert(spec, args.k, LTLToAtmViaSpot())
 
     logging.info('introduced outputs:\n%s', pformat(new_spec.outputs - spec.outputs))
     logging.info('LTL\n%s', ConverterToLtl2BaFormatVisitor().dispatch(new_spec.formula))
