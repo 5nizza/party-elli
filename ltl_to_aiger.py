@@ -6,21 +6,20 @@ import logging
 from typing import Iterable
 
 from LTL_to_atm import translator_via_ltl3ba, translator_via_spot
-from automata.automaton_to_dot import to_dot
 from automata.k_reduction import k_reduce
 from helpers.main_helper import setup_logging
-from helpers.python_ext import readfile
 from interfaces.LTL_to_automaton import LTLToAutomaton
 from interfaces.automaton import Automaton
 from interfaces.expr import Signal
-from interfaces.spec import Spec
 from module_generation.automaton_to_verilog import atm_to_verilog
 from module_generation.verilog_to_aiger_via_yosys import verilog_to_aiger
 from parsing.acacia_parser_helper import parse_acacia_and_build_expr
-from parsing.tlsf_parser import convert_tlsf_to_acacia
 
 
 # FIXME: rename
+from parsing.tlsf_parser import convert_tlsf_or_acacia_to_acacia
+
+
 def convert_spec_to_aiger(inputs:Iterable[Signal], outputs:Iterable[Signal],
                           ucw_automaton:Automaton,
                           k:int,
@@ -35,7 +34,7 @@ def convert_spec_to_aiger(inputs:Iterable[Signal], outputs:Iterable[Signal],
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Translate LTL spec Into AIGER via k-Live Automata',
+    parser = argparse.ArgumentParser(description='Translate LTL spec (TLSF or Acacia format) into AIGER via k-Live automata.',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('spec', metavar='spec', type=str,
@@ -51,6 +50,13 @@ def main():
     group.add_argument('--ltl3ba', action='store_false', default=False,
                        dest='spot',
                        help='use LTL3BA for translating LTL->BA')
+    group.add_argument('--mealy', action='store_true', default=False,
+                       dest='acacia_mealy',
+                       help='(for Acacia only) force Mealy machines')
+
+    group.add_argument('--noopt', action='store_true', default=False,
+                       dest='noopt',
+                       help='Do not strengthen the specification (using the separation into safety-liveness)')
 
     parser.add_argument('--out', '-o', required=False, type=str,
                         help='output AIGER file')
@@ -61,16 +67,18 @@ def main():
     setup_logging(args.verbose)
 
     ltl_to_automaton = (translator_via_ltl3ba.LTLToAtmViaLTL3BA,
-                        translator_via_spot.LTLToAtmViaSpot)[args.spot]()
+                        translator_via_spot.LTLToAtmViaSpot)[args.spot]()  # type: LTLToAutomaton
 
-    if args.spec.endswith('.tlsf'):
-        ltl_text, part_text = convert_tlsf_to_acacia(args.spec)
-    else:
-        ltl_text, part_text = readfile(args.spec), readfile(args.spec.replace('.ltl', '.part'))
+    ltl_text, part_text, is_moore = convert_tlsf_or_acacia_to_acacia(args.spec,
+                                                                     not args.acacia_mealy)
 
-    spec = parse_acacia_and_build_expr(ltl_text, part_text, ltl_to_automaton, 2)
+    spec = parse_acacia_and_build_expr(ltl_text, part_text,
+                                       ltl_to_automaton,
+                                       0 if args.noopt else 2)
 
-    aiger_str = convert_spec_to_aiger(spec, args.k, ltl_to_automaton)
+    ucw_automaton = ltl_to_automaton.convert(spec.formula)
+
+    aiger_str = convert_spec_to_aiger(spec.inputs, spec.outputs, ucw_automaton, args.k, 'bad')
     if args.out:
         with open(args.out, 'w') as f:
             f.write(aiger_str)

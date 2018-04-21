@@ -1,4 +1,4 @@
-from typing import Iterable, Tuple
+from typing import Iterable
 
 from config import SYFCO_PATH
 from helpers.python_ext import readfile
@@ -18,7 +18,7 @@ def get_spec_type(spec_file_name) -> bool:
     return out_stripped == 'moore'
 
 
-def convert_tlsf_or_acacia_to_acacia(spec_file_name:str, is_moore_=None) -> Tuple[str, str, bool]:
+def convert_tlsf_or_acacia_to_acacia(spec_file_name:str, is_moore_=None) -> (str, str, bool):
     if spec_file_name.endswith('.ltl'):
         ltl_text, part_text = readfile(spec_file_name), readfile(spec_file_name.replace('.ltl', '.part'))
         return ltl_text, part_text, is_moore_
