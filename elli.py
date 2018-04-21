@@ -136,22 +136,22 @@ def main():
     parser.add_argument('spec', metavar='spec', type=str,
                         help='the specification file (Acacia or TLSF format)')
 
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument('--moore', action='store_true', default=True,
-                       dest='moore',
-                       help='system is Moore (ignored for TLSF)')
-    group.add_argument('--mealy', action='store_false',
-                       default=False,
-                       dest='moore',
-                       help='system is Mealy (ignored for TLSF)')
+    gr = parser.add_mutually_exclusive_group()
+    gr.add_argument('--moore', action='store_true', default=True,
+                    dest='moore',
+                    help='system is Moore (ignored for TLSF)')
+    gr.add_argument('--mealy', action='store_false',
+                    default=False,
+                    dest='moore',
+                    help='system is Mealy (ignored for TLSF)')
 
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument('--spot', action='store_true', default=True,
-                       dest='spot',
-                       help='use SPOT for translating LTL->BA')
-    group.add_argument('--ltl3ba', action='store_false', default=False,
-                       dest='spot',
-                       help='use LTL3BA for translating LTL->BA')
+    gr = parser.add_mutually_exclusive_group()
+    gr.add_argument('--spot', action='store_true', default=True,
+                    dest='spot',
+                    help='use SPOT for translating LTL->BA')
+    gr.add_argument('--ltl3ba', action='store_false', default=False,
+                    dest='spot',
+                    help='use LTL3BA for translating LTL->BA')
 
     parser.add_argument('--maxK', type=int, default=0,
                         help="reduce liveness to co-reachability (safety)."
@@ -159,11 +159,11 @@ def main():
                              "We iterate over increasing k (exact value of k is set heuristically)."
                              "(k=0 means no reduction)")
 
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument('--bound', metavar='bound', type=int, default=32, required=False,
-                       help='upper bound on the size of the model (for unreal this specifies size of env model)')
-    group.add_argument('--size', metavar='size', type=int, default=0, required=False,
-                       help='search the model of this size (for unreal this specifies size of env model)')
+    gr = parser.add_mutually_exclusive_group()
+    gr.add_argument('--bound', metavar='bound', type=int, default=32, required=False,
+                    help='upper bound on the size of the model (for unreal this specifies size of env model)')
+    gr.add_argument('--size', metavar='size', type=int, default=0, required=False,
+                    help='search the model of this size (for unreal this specifies size of env model)')
 
     parser.add_argument('--incr', action='store_true', required=False, default=False,
                         help='use incremental solving')

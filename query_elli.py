@@ -4,9 +4,10 @@ import argparse
 import tempfile
 
 import elli
-from helpers.main_helper import setup_logging, create_spec_converter_z3
+from LTL_to_atm import translator_via_spot
+from config import Z3_PATH
+from helpers.main_helper import setup_logging, Z3SolverFactory
 from helpers.python_ext import readfile
-from synthesis.smt_logic import UFLRA
 
 
 if __name__ == "__main__":
@@ -14,15 +15,15 @@ if __name__ == "__main__":
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('spec', metavar='spec', type=str,
-                        help='the specification file (anzu, acacia+, or python format)')
+                        help='the specification file (Acacia+ format)')
 
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument('--moore', action='store_true', required=False,
-                       default=False,
-                       help='assume a Moore model')
-    group.add_argument('--mealy', action='store_true', required=False,
-                       default=True,
-                       help='assume a Mealy model')
+    gr = parser.add_mutually_exclusive_group()
+    gr.add_argument('--moore', action='store_true', required=False,
+                    default=False,
+                    help='assume a Moore model')
+    gr.add_argument('--mealy', action='store_true', required=False,
+                    default=True,
+                    help='assume a Mealy model')
 
     parser.add_argument('--minsize', metavar='minsize', type=int, default=1, required=False,
                         help='start from size')
@@ -40,15 +41,19 @@ if __name__ == "__main__":
     with tempfile.NamedTemporaryFile(dir='./') as smt_file:
         smt_files_prefix = smt_file.name
 
-    ltl3ba, solver_factory = create_spec_converter_z3(UFLRA(),
-                                                      False,
-                                                      True,
-                                                      smt_files_prefix,
-                                                      True)
+    ltl_to_automaton = translator_via_spot.LTLToAtmViaSpot()
+
+    solver_factory = Z3SolverFactory(smt_files_prefix,
+                                     Z3_PATH,  # we don't really need this
+                                     False,
+                                     True,
+                                     True)
+
     elli.check_real(readfile(args.spec),
                     readfile(args.spec.replace('.ltl', '.part')),
                     args.moore,
-                    ltl3ba, solver_factory,
+                    ltl_to_automaton, solver_factory.create(),
+                    0,
                     args.minsize, args.maxsize)
     solver_factory.down_solvers()
     exit(0)
