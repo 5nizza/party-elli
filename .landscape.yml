@@ -1,0 +1,10 @@
+max-line-length: 120
+autodetect: true
+
+ignore-paths:
+  - src/third_party/
+
+
+python-targets:
+  - 3
+
