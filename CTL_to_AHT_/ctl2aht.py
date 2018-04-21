@@ -194,7 +194,7 @@ def _assert_no_label_intersections_in_node(node_transitions:Iterable[Transition]
     Checks that there exists no state that has two transitions with 'intersecting' state labels.
     """
     n_labels = map(lambda t: t.state_label, node_transitions)
-    for l1,l2 in combinations(n_labels, 2):  # type: Tuple[Label, Label]
+    for l1,l2 in combinations(n_labels, 2):  # type: (Label, Label)
         l1_l2 = common_label(l1, l2)
         assert l1_l2 is None, \
             "Transition labels should not intersect, but I found two intersecting labels: \n" + \

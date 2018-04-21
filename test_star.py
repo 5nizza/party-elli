@@ -7,8 +7,6 @@ from syntcomp.syntcomp_constants import REALIZABLE_RC, UNKNOWN_RC
 from tests.common import run_benchmark
 
 
-# TODO: test the "--aht" version
-
 realizable = [
     # "ctl/prolonged_full_arb.py --direct --size 7",
     "ctl/resettable_arbiter.py --direct --size 3",
@@ -16,6 +14,13 @@ realizable = [
     "ctl/full_arb.py --direct --size 4",
     "ctl/non_det_arb.py --direct --size 4",
     "ctl/delayed_full_arb.py --direct --size 5",
+
+    # "ctl/prolonged_full_arb.py --aht --size 7",  # takes too much time
+    "ctl/resettable_arbiter.py --aht --size 3",
+    "ctl/self_loop_arbiter.py --aht --size 4",
+    "ctl/full_arb.py --aht --size 4",
+    "ctl/non_det_arb.py --aht --size 4",
+    # "ctl/delayed_full_arb.py --aht --size 5",   # takes too much time
 ]
 
 unknown = [  # no model should be found for these
@@ -24,6 +29,12 @@ unknown = [  # no model should be found for these
     "ctl/full_arb.py --direct --size 3",
     "ctl/non_det_arb.py --direct --size 3",
     "ctl/delayed_full_arb.py --direct --size 4",
+
+    "ctl/resettable_arbiter.py --aht --size 2",
+    "ctl/self_loop_arbiter.py --aht --size 3",
+    "ctl/full_arb.py --aht --size 3",
+    "ctl/non_det_arb.py --aht --size 3",
+    # "ctl/delayed_full_arb.py --aht --size 4",
 ]
 
 
@@ -49,6 +60,7 @@ def main():
         # TODO: should be separated into two separate loops,
         #       for realizable benchmarks: set size_expected
         #       for unknown: use None
+        print('testing ' + benchmark)
         result = run_benchmark('star.py', benchmark, _get_status(benchmark), None)
         all_passed &= result
 
