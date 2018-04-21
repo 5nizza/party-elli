@@ -31,32 +31,6 @@ UNREALIZABLE = 20
 UNKNOWN = 30
 
 
-# def check_unreal(spec:Spec,
-#                  is_moore,
-#                  min_size, max_size,
-#                  ctl_to_aht, solver_factory:Z3SolverFactory,
-#                  atm_timeout_sec=None,
-#                  opt_level=0) -> LTS:
-#     """
-#     :raise: subprocess.TimeoutException
-#     :arg opt_level: Note that opt_level > 0 may introduce unsoundness (returns unrealizable while it is)
-#     """
-#     timer = Timer()
-#     automaton = ctl_to_aht.convert(spec, timeout=atm_timeout_sec)  # note no negation
-#     logging.info('(unreal) automaton size is: %i' % len(automaton.nodes))
-#     logging.debug('(unreal) automaton (dot) is:\n' + automaton2dot.to_dot(automaton))
-#     logging.debug('(unreal) automaton translation took (sec): %i' % timer.sec_restart())
-#
-#     encoder = create_encoder(inputs, outputs,
-#                              not is_moore,
-#                              automaton,
-#                              solver_factory.create())
-#
-#     model = model_searcher.search(min_size, max_size, encoder)
-#     logging.debug('(unreal) model_searcher.search took (sec): %i' % timer.sec_restart())
-#
-#     return model
-
 @log_entrance()
 def check_real(spec:Spec,
                min_size, max_size,
@@ -91,8 +65,11 @@ def check_real(spec:Spec,
         if not aht_transitions:
             logging.info('AHT is empty => the spec is unrealizable!')
             return None
-        logging.debug('(real) AHT automaton (dot) is:\n' +    # sometimes this logging takes long time
-              aht2dot.convert(aht_automaton, shared_aht, dstFormPropMgr))
+
+        if logging.getLogger().isEnabledFor(logging.DEBUG):  # aht2dot takes long time
+            logging.debug('AHT automaton (dot) is...\n')
+            logging.debug(aht2dot.convert(aht_automaton, shared_aht, dstFormPropMgr))
+
         encoder = CTLEncoderViaAHT(aht_automaton, aht_transitions,
                                    dstFormPropMgr,
                                    build_tau_desc(spec.inputs),
