@@ -20,7 +20,7 @@ def _get_bad_line_indices(aiger_lines:List[str], bad_name:str) -> (int, int, int
     assert 0, 'name of the bad output was not found'
 
 
-def convert_aiger_model_to_tlsf(aiger_model:str, bad_name:str) -> str:
+def convert_aiger_model_to_tlsf_model(aiger_model:str, bad_name:str) -> str:
     """ :returns AIGER string with bad output removed and
                  outputs have prefix 'controllable_' removed.
                  The header is adapted.
@@ -51,7 +51,8 @@ def convert_aiger_model_to_tlsf(aiger_model:str, bad_name:str) -> str:
 
 def main():
     parser = argparse.ArgumentParser(description='I remove `bad` output and '
-                                                 'remove prefix `controllable` from output names',
+                                                 'remove prefix `controllable` from output names,'
+                                                 'Such models are produced by tool `sdf`.',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('aiger', metavar='aiger', type=str,
@@ -62,7 +63,7 @@ def main():
     args = parser.parse_args()
     file = args.aiger
     bad = args.bad
-    print(convert_aiger_model_to_tlsf(readfile(file), bad))
+    print(convert_aiger_model_to_tlsf_model(readfile(file), bad))
 
 
 if __name__ == '__main__':

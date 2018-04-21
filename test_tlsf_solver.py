@@ -23,9 +23,8 @@ easy = (
     (0, "tlsf/parameterized/prioritized_arbiter_unreal2.tlsf"),
     (0, "tlsf/parameterized/prioritized_arbiter_unreal3.tlsf"),
     (0, "tlsf/parameterized/load_balancer_unreal1.tlsf"),
-    (0, "tlsf/parameterized/load_balancer_unreal2.tlsf"),
 
-
+    (1, "tlsf/parameterized/load_balancer_unreal2.tlsf"),  # it _is_ realizable despite the name
     (1, "tlsf/parameterized/simple_arbiter.tlsf"),
     (1, "tlsf/parameterized/detector.tlsf"),
     (1, "tlsf/parameterized/full_arbiter.tlsf"),

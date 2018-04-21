@@ -9,13 +9,14 @@ CONFIG_PY_NAME = 'config.py'
 CONFIG_PY_TEXT = """
 Z3_PATH = 'z3'
 
-# The following are needed only for SYNTCOMP rally_* tools.
+# The following are needed for SYNTCOMP rally_* and related tools.
 YOSYS_PATH='/home/ayrat/projects/yosys/yosys'
 SDF_PATH='/home/ayrat/projects/sdf/binary/sdf'
 AIGTOAIG_PATH='/home/ayrat/projects/aiger-1.9.4/aigtoaig'
 SMVTOAIG_PATH='/home/ayrat/projects/aiger-1.9.4/smvtoaig'
 COMBINEAIGER_PATH='/home/ayrat/projects/syntcomp/tools/aiger-ltl-model-checker/combine-aiger'
 SYFCO_PATH='syfco'
+LTL2SMV_PATH='/home/ayrat/projects/NuSMV-2.6.0-Linux/bin/ltl2smv'  # used by smvtoaig
 
 # IIMC is only if you plan to model check the results (e.g. using `check_model.py`)
 IIMC_PATH='/home/ayrat/projects/iimc-2.0/iimc'
@@ -24,7 +25,6 @@ IIMC_PATH='/home/ayrat/projects/iimc-2.0/iimc'
 LTL3BA_PATH = '/home/ayrat/projects/ltl3ba/ltl3ba-1.1.2/ltl3ba'
 
 # these do not seem to be used anymore by default
-ABC_PATH='/home/ayrat/projects/abc/abc'
 VL2MV_PATH='/home/ayrat/projects/vl2mv-2.4/vl2mv'
 
 

@@ -3,7 +3,7 @@ import argparse
 import logging
 import os
 
-from config import SYFCO_PATH, SMVTOAIG_PATH, COMBINEAIGER_PATH, IIMC_PATH
+from config import SYFCO_PATH, SMVTOAIG_PATH, COMBINEAIGER_PATH, IIMC_PATH, LTL2SMV_PATH
 from helpers.files import create_unique_file
 from helpers.get_nof_properties import get_nof_properties
 from helpers.main_helper import setup_logging
@@ -15,7 +15,9 @@ def _create_monitor_file(tlsf_file_name) -> str:
                                  .format(syfco=SYFCO_PATH, tlsf_file=tlsf_file_name))
     assert_exec_strict(rc, out, err)
 
-    rc, out, err = execute_shell('{smvtoaig} -a'.format(smvtoaig=SMVTOAIG_PATH), input=out)
+    rc, out, err = execute_shell('{smvtoaig} -a -L "{ltl2smv}"'.format(smvtoaig=SMVTOAIG_PATH,
+                                                                       ltl2smv=LTL2SMV_PATH),
+                                 input=out)
     assert rc == 0, rc_out_err_to_str(rc, out, err)   # it outputs the LTL into stderr
 
     return create_unique_file(out, suffix='.aag')
@@ -64,7 +66,7 @@ def main(model_file_name:str, tlsf_file_name:str, keep_tmp_files:bool) -> bool:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='I model check the aiger model found by rally_elli_int.py '
+    parser = argparse.ArgumentParser(description='I model check the aiger model found by rally_elli_int.py or other tools. '
                                                  'Return: 0 if correct, 1 if model is wrong.',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
