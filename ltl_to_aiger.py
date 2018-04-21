@@ -50,11 +50,12 @@ def main():
     group.add_argument('--ltl3ba', action='store_false', default=False,
                        dest='spot',
                        help='use LTL3BA for translating LTL->BA')
-    group.add_argument('--mealy', action='store_true', default=False,
+
+    parser.add_argument('--mealy', action='store_true', default=False,
                        dest='acacia_mealy',
                        help='(for Acacia only) force Mealy machines')
 
-    group.add_argument('--noopt', action='store_true', default=False,
+    parser.add_argument('--noopt', action='store_true', default=False,
                        dest='noopt',
                        help='Do not strengthen the specification (using the separation into safety-liveness)')
 
@@ -65,6 +66,7 @@ def main():
 
     args = parser.parse_args()
     setup_logging(args.verbose)
+    print(args)
 
     ltl_to_automaton = (translator_via_ltl3ba.LTLToAtmViaLTL3BA,
                         translator_via_spot.LTLToAtmViaSpot)[args.spot]()  # type: LTLToAutomaton
