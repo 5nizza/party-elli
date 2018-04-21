@@ -2,7 +2,6 @@
 
 import argparse
 import os
-import stat
 
 CONFIG_PY_NAME = 'config.py'
 

@@ -50,7 +50,7 @@ def k_reduce(atm:Automaton, k:int, uniform:bool=True) -> Automaton:
         new_src = nodes_to_process.pop()
         processed_nodes.add(new_src)
         old_src = old_by_new[new_src]
-        for lbl, node_flag_pairs in old_by_new[new_src].transitions.items():  # type: Pair[Label, Set[Pair[Node, bool]]]
+        for lbl, node_flag_pairs in old_by_new[new_src].transitions.items():  # type: (Label, Set[Pair[Node, bool]])
             for old_dst, is_fin in node_flag_pairs:
                 if is_final_sink(old_dst):
                     new_dst = dead_node

@@ -15,7 +15,7 @@ def _to_expr(l:Label, sig_by_name:dict):
     return expr
 
 
-def _to_label(cube, sig_by_name:dict) -> Label:
+def _to_label(cube, sig_by_name:dict) -> Label or None:
     if cube == sympy.true:
         return LABEL_TRUE
     if cube == sympy.false:
@@ -30,7 +30,7 @@ def _to_label(cube, sig_by_name:dict) -> Label:
             assert len(l.atoms()) == 1, str(l.atoms())
             sig_name = tuple(l.atoms())[0].name
             label[sig_by_name[sig_name]] = not isinstance(l, sympy.Not)
-    return label
+    return Label(label)
 
 
 def _clauses(dnf_expr) -> tuple:

@@ -1,4 +1,4 @@
-from typing import Iterable, Dict, List
+from typing import Iterable, Dict, List, Tuple
 from typing import Set
 
 from helpers.expr_helper import get_sig_number
@@ -138,7 +138,7 @@ class CTLEncoderViaAHT(EncoderInterface):
                                                      ARG_A_STATE: s_q})
 
         # build s_conclusion `exists`
-        s_conclusion_out_sExpr_pairs = set()   # type: Set[str, str]
+        s_conclusion_out_sExpr_pairs = set()   # type: Set[Tuple[str, str]]
         for t in q_transitions:  # type: Transition
             s_t_state_label = smt_out(s_m, t.state_label, self.inputs, self.descr_by_output)
             s_dst_expr = self._translate_dst_expr_into_smt(t.dst_expr, q, m)

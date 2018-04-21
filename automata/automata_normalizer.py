@@ -65,7 +65,7 @@ def normalize_nbw_transitions(node:NBWNode,
 
 
 def pick_two_intersecting_transitions(transitions:Iterable[AHTTransition])\
-        -> Tuple[AHTTransition, AHTTransition]:
+        -> (AHTTransition, AHTTransition):
     """"""
     for t1,t2 in combinations(transitions, 2):
         assert t1.src == t2.src

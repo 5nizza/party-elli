@@ -2,7 +2,6 @@
 import argparse
 import logging
 import tempfile
-from pprint import pformat
 
 from CTL_to_AHT_ import ctl2aht
 from LTL_to_atm import translator_via_spot

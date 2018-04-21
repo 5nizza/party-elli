@@ -1,5 +1,5 @@
 from itertools import chain, product
-from typing import Iterable, List, Dict, Tuple, Container
+from typing import Iterable, List, Dict, Tuple
 
 from helpers.python_ext import lmap
 from helpers.str_utils import remove_from_str

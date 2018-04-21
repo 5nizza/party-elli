@@ -7,7 +7,7 @@ from helpers.expr_to_dnf import to_dnf_set
 from helpers.python_ext import StrAwareList
 from interfaces.AHT_automaton import DstFormulaPropMgr, ExtLabel, SharedAHT, get_reachable_from, AHT
 from interfaces.AHT_automaton import Transition
-from interfaces.expr import Expr
+from interfaces.expr import Expr, BinOp
 
 
 def convert(aht:AHT or None, shared_aht:SharedAHT, dstFormPropMgr:DstFormulaPropMgr)\
@@ -40,7 +40,7 @@ def convert(aht:AHT or None, shared_aht:SharedAHT, dstFormPropMgr:DstFormulaProp
         for cube in cubes:  # type: List[Expr]
             # each cube gets its own color
             color = colors.pop(0) if len(colors) else 'gray'
-            for lit in cube:  # type: Expr
+            for lit in cube:  # type: BinOp
                 assert lit.name == '=', "should be prop of the form sig=1; and not negated"
                 dstFormProp = dstFormPropMgr.get_dst_form_prop(get_sig_number(lit)[0].name)
 

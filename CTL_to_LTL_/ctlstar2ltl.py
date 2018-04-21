@@ -2,7 +2,7 @@ import logging
 from functools import reduce
 from itertools import chain
 from math import ceil, log
-from pprint import pformat, pprint
+from pprint import pformat
 from typing import Tuple, Dict, Set
 
 from CTL_to_LTL_.ctl_atomizer import CTLAtomizerVisitor

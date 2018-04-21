@@ -1,18 +1,12 @@
 #!/usr/bin/env python3
-import logging
-import signal
 from typing import List
 
-import elli
-from LTL_to_atm import translator_via_spot
-from config import Z3_PATH
 from rally_kid_aiger import KidRealTask, KidUnrealTask
-from rally_elli_bool import ElliBoolRealTask, ElliBoolUnrealTask
-from rally_elli_int import ElliIntRealTask, ElliIntUnrealTask
+from rally_elli_bool import ElliBoolRealTask
+from rally_elli_int import ElliIntRealTask
 from syntcomp.rally_template import main_template
 from syntcomp.task import Task
 from syntcomp.task_creator import TaskCreator
-from synthesis.z3_via_pipe import Z3InteractiveViaPipes
 
 
 # TODO:

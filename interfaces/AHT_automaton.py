@@ -1,5 +1,4 @@
 import logging
-from functools import lru_cache
 from typing import Set, Iterable, Tuple
 
 from interfaces.automaton import Label
@@ -183,16 +182,6 @@ class DualizerVisitor(Visitor):
         dual_signal = Signal(self.dstFormPropManager.get_add_signal_name(dual_dst_form_prop))
         return dual_signal
 # end of Dualizer
-
-
-class RenamerVisitor(Visitor):
-    def __init__(self, mapper):
-        self.mapper = mapper
-
-    def visit_signal(self, signal:Signal):
-        assert 0, "wrong since propositions are tuples"
-        return super().visit_signal(Signal(self.mapper(signal.name)))
-# end of Renamer
 
 
 class NodesCollector(Visitor):

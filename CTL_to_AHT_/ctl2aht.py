@@ -58,9 +58,9 @@ def _is_final(node:automaton.Node) -> bool:
     """ :returns true iff all outgoing transitions are final 
                  (as modelled by SPOT)
     """
-    for dst_fin_pairs in node.transitions.values():  # type: Tuple['Node', bool]
+    for dst_fin_pairs in node.transitions.values():  # type: (Node, bool)
         for dst,is_fin in dst_fin_pairs:
-            if is_fin == False:
+            if not is_fin:
                 return False
     return True
 
@@ -79,7 +79,7 @@ def nbw_to_nbt(nbw:NBW,
             l_outputs = Label((s, l[s])
                               for s in l.keys() - inputs)
 
-            for (dst_state, _) in dst_acc_pairs:  # type: Tuple[automaton.Node, bool]
+            for (dst_state, _) in dst_acc_pairs:  # type: (automaton.Node, bool)
                 ext_label = ExtLabel(l_inputs,
                                      inputs - l_inputs.keys(),
                                      ExtLabel.EXISTS)

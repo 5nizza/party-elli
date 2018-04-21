@@ -55,7 +55,7 @@ def _encode_transitions_nbw(m:int, q:Node,
     s_pre = smt_reach(s_m, s_q)
 
     s_disjuncts = list()   # type: List[str]
-    for lbl, qn_flag_pairs in q.transitions.items():  # type: Tuple[Label, Set[Tuple[Node, bool]]]
+    for lbl, qn_flag_pairs in q.transitions.items():  # type: (Label, Set[Tuple[Node, bool]])
         s_m_next = smt_tau(s_m, lbl)
         s_out = smt_out(s_m, lbl, inputs, desc_by_output)
         free_inputs = get_free_input_args(lbl, inputs)

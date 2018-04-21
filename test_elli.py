@@ -2,9 +2,8 @@
 
 import sys
 import argparse
-from typing import Tuple as Pair
 
-from syntcomp.syntcomp_constants import REALIZABLE_STR, UNREALIZABLE_STR, UNKNOWN_STR, UNKNOWN_RC, UNREALIZABLE_RC, \
+from syntcomp.syntcomp_constants import UNKNOWN_RC, UNREALIZABLE_RC, \
     REALIZABLE_RC
 from tests.common import run_benchmark
 

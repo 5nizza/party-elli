@@ -16,7 +16,7 @@ def _has_common_label(label1:Label, label2:Label) -> bool:
     return True
 
 
-def common_label(label1:Label, label2:Label) -> Label:
+def common_label(label1:Label, label2:Label) -> Label or None:
     if not _has_common_label(label1, label2):
         return None
 
