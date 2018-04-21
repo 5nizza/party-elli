@@ -43,11 +43,11 @@ def main():
     parser.add_argument('--k', '-k', default=8, required=False, type=int,
                         help='max number of visits to a bad state (within one SCC)')
 
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument('--spot', action='store_true', default=True,
+    gr = parser.add_mutually_exclusive_group()
+    gr.add_argument('--spot', action='store_true', default=True,
                        dest='spot',
                        help='use SPOT for translating LTL->BA')
-    group.add_argument('--ltl3ba', action='store_false', default=False,
+    gr.add_argument('--ltl3ba', action='store_false', default=False,
                        dest='spot',
                        help='use LTL3BA for translating LTL->BA')
 
