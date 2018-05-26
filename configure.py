@@ -6,9 +6,12 @@ import os
 CONFIG_PY_NAME = 'config.py'
 
 CONFIG_PY_TEXT = """
+from helpers.main_helper import get_root_dir
+
 Z3_PATH = 'z3'
 
 # The following are needed for SYNTCOMP rally_* and related tools.
+SDF_HOA_PATH=get_root_dir() + '/additional-tools/sdf-hoa/binary/sdf-hoa'
 YOSYS_PATH='/home/ayrat/projects/yosys/yosys'
 SDF_PATH='/home/ayrat/projects/sdf/binary/sdf'
 AIGTOAIG_PATH='/home/ayrat/projects/aiger-1.9.4/aigtoaig'
