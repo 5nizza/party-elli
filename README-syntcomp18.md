@@ -30,7 +30,10 @@ at that moment it was the easiest way to implement the approach.
 As experiments showed, the translation via verilog, namely tool `yosys`, takes much time.
 Thus, the tool `kid_hoa` avoids this unnecessary step and passes the safety automaton
 directly to a game solver that converts it into BDD representation (with one variable per state),
-and then solves the game using adapted [`sdf`](https://github.com/5nizza/sdf-hoa).
+and then solves the game using [`sdf-hoa`](https://github.com/5nizza/sdf-hoa).
+
+Actually, this python framework does not do much,
+the main code---reduction UCW->safety automaton and game solving---is inside [`sdf-hoa`](https://github.com/5nizza/sdf-hoa).
 
 
 ## System Requirements
