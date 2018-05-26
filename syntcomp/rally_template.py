@@ -10,7 +10,7 @@ from parsing.tlsf_parser import convert_tlsf_or_acacia_to_acacia
 from syntcomp.syntcomp_constants import print_syntcomp_unknown, \
     print_syntcomp_unreal, print_syntcomp_real, REALIZABLE_RC, UNREALIZABLE_RC, UNKNOWN_RC
 from syntcomp.task_creator import TaskCreator
-from syntcomp.tasks_manager import run_synth_tasks
+from syntcomp.tasks_manager import run_tasks
 from synthesis.smt_namings import ARG_MODEL_STATE
 
 
@@ -31,39 +31,38 @@ def run_and_report(spec_file_name, is_moore_:bool,
 
     tasks = tasks_creator.create(ltl_text, part_text, is_moore)
 
-    is_real, lts_or_aiger = run_synth_tasks(tasks)
+    task = run_tasks(tasks)
 
-    if is_real is None:
-        logging.warning('Either crashed or did not succeed')
+    if task is None:
+        logging.warning('None of the tasks succeeded')
         print_syntcomp_unknown()
         exit(UNKNOWN_RC)
 
     logging.info('finished in %i sec.' % timer.sec_restart())
 
-    if not lts_or_aiger:
-        logging.info('status unknown')
-        print_syntcomp_unknown()
-        exit(UNKNOWN_RC)
-
-    if not is_real:
-        if isinstance(lts_or_aiger, LTS):
-            lts_str = lts_to_dot(lts_or_aiger, ARG_MODEL_STATE, is_moore)  # we invert machine type
+    if not task.is_realizable():
+        if isinstance(task.model, LTS):
+            lts_str = lts_to_dot(task.model, ARG_MODEL_STATE, is_moore)  # we invert machine type
             _write_dot_result(lts_str, dot_file_name)
         print_syntcomp_unreal()
         exit(UNREALIZABLE_RC)
+
+    # task is realizable
+
+    if isinstance(task.model, LTS):
+        logging.info('state machine size: %i' % len(task.model.states))
+        _write_dot_result(lts_to_dot(task.model, ARG_MODEL_STATE, not is_moore),
+                          dot_file_name)
+        lts_aiger = lts_to_aiger(task.model)
     else:
-        if isinstance(lts_or_aiger, LTS):
-            lts_str = lts_to_dot(lts_or_aiger, ARG_MODEL_STATE, not is_moore)
-            logging.info('state machine size: %i' % len(lts_or_aiger.states))
-            _write_dot_result(lts_str, dot_file_name)
-            lts_aiger = lts_to_aiger(lts_or_aiger)
-        else:
-            lts_aiger = lts_or_aiger
-        if output_file_name:
-            with open(output_file_name, 'w') as out:
-                out.write(lts_aiger)
-        print_syntcomp_real(lts_aiger)
-        exit(REALIZABLE_RC)
+        lts_aiger = task.model
+
+    if output_file_name:
+        with open(output_file_name, 'w') as out:
+            out.write(lts_aiger)
+
+    print_syntcomp_real(lts_aiger)
+    exit(REALIZABLE_RC)
 
 
 def main_template(tool_desc:str, tasks_creator:TaskCreator):

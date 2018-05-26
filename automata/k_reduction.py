@@ -1,5 +1,4 @@
 from typing import Set, Dict
-from typing import Tuple as Pair
 
 from automata.automata_classifier import is_final_sink
 from automata.final_sccs_finder import build_state_to_final_scc
@@ -27,7 +26,7 @@ def k_reduce(atm:Automaton, k:int, uniform:bool=True) -> Automaton:
     dead_node.add_transition(LABEL_TRUE, {(dead_node, True)})
     dead_node.k = 0
 
-    new_by_old_k = dict()       # type: Dict[Pair[Node, int], Node]
+    new_by_old_k = dict()       # type: Dict[(Node, int), Node]
 
     def _get_add_node(old_n:Node, k:int) -> Node:
         if k < 0:
@@ -50,7 +49,7 @@ def k_reduce(atm:Automaton, k:int, uniform:bool=True) -> Automaton:
         new_src = nodes_to_process.pop()
         processed_nodes.add(new_src)
         old_src = old_by_new[new_src]
-        for lbl, node_flag_pairs in old_by_new[new_src].transitions.items():  # type: (Label, Set[Pair[Node, bool]])
+        for lbl, node_flag_pairs in old_by_new[new_src].transitions.items():  # type: (Label, Set[(Node, bool)])
             for old_dst, is_fin in node_flag_pairs:
                 if is_final_sink(old_dst):
                     new_dst = dead_node

@@ -49,11 +49,11 @@ if __name__ == "__main__":
                                      True,
                                      True)
 
-    elli.check_real(readfile(args.spec),
-                    readfile(args.spec.replace('.ltl', '.part')),
-                    args.moore,
-                    ltl_to_automaton, solver_factory.create(),
-                    0,
-                    args.minsize, args.maxsize)
+    elli.synthesize_real(readfile(args.spec),
+                         readfile(args.spec.replace('.ltl', '.part')),
+                         args.moore,
+                         ltl_to_automaton, solver_factory.create(),
+                         0,
+                         args.minsize, args.maxsize)
     solver_factory.down_solvers()
     exit(0)

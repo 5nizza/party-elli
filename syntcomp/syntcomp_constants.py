@@ -16,7 +16,8 @@ def print_syntcomp_unknown():
     print(UNKNOWN_STR)
 
 
-def print_syntcomp_real(aiger_model:str):
+def print_syntcomp_real(aiger_model:str or None):
     print(REALIZABLE_STR)
-    print(aiger_model)
+    if aiger_model:
+        print(aiger_model)
 

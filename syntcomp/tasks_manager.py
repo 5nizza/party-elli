@@ -1,19 +1,20 @@
 import logging
 from multiprocessing import Process, Queue
-from typing import List, Iterable, Tuple
+from typing import List, Iterable
 
 from interfaces.LTS import LTS
 from syntcomp.task import Task
 
 
-def _starter(q:Queue, task: Task):
+def _starter(q:Queue, task:Task):
     try:
-        res = task.do()
-        q.put((task, res))
+        task.do()
+        q.put(task)
     except Exception as e:
         logging.info("Task '%s' crashed!" % task.name)
-        q.put((task, e))
-        raise e
+        task.err_msg = str(e)
+        q.put(task)
+        raise e  # we raise e, in order to print the crash on the output (hm..)
 
 
 # def kill_proc_tree(pid, including_parent=True):
@@ -36,29 +37,33 @@ def _kill_them(processes:Iterable[Process]):
         p.join()
 
 
-def run_synth_tasks(tasks:List[Task]) -> Tuple[bool, LTS or str or None] or Tuple[None, None]:
+def run_tasks(tasks:List[Task]) -> Task or None:
+    """
+    :return: the returned Task does not equal to any of the input tasks, because of multi-thread sharing
+    """
     queue = Queue()
 
     processes = [Process(name=t.name, target=_starter, args=(queue, t)) for t in tasks]
     for p in processes:
         p.start()
 
-    task, lts_or_aiger = None, None   # .. to shut up pycharm warnings
+    try:
+        for trial_num in range(len(processes)):
+            task = queue.get()                      # type: Task
 
-    for trial_num in range(len(processes)):
-        task, lts_or_aiger = queue.get()  # type: Task, LTS or None or str
-        if isinstance(lts_or_aiger, Exception):
-            logging.error('='*10 + 'Task crashed. This should never happen.' + '='*10)
-            logging.error('I continue though..')
-            if trial_num == len(processes) - 1:
-                return None, None
-            continue
-        if lts_or_aiger is None:
-            logging.info('task did not succeed: ' + task.name)
-            logging.info('waiting for others..')
-        else:
-            logging.info('%s won!' % task.name)
-            break
+            if task.err_msg is not None:
+                logging.error('='*10 + 'Task crashed. This should never happen.' + '='*10)
+                logging.error('I continue though..')
+                continue
 
-    _kill_them(processes)  # don't use the queue, it may be corrupted!
-    return task.is_doing_real_check, lts_or_aiger
+            assert task.answer in [False, True], str(task)
+            if task.answer is False:
+                logging.info('Task %s finished, but did not succeed in proving (un)realizability.' % task.name)
+            else:
+                logging.info('%s won!' % task.name)
+                return task
+
+        return None
+    finally:
+        _kill_them(processes)
+        # note: don't use the queue, it may be corrupted

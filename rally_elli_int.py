@@ -29,12 +29,13 @@ class ElliIntRealTask(Task):
     def do(self):
         solver = Z3InteractiveViaPipes(Z3_PATH)
         try:
-            return elli.check_real(self.ltl_text, self.part_text,
-                                   self.is_moore,
-                                   translator_via_spot.LTLToAtmViaSpot(),
-                                   solver,
-                                   0,
-                                   self.min_size, self.max_size)
+            self.model = elli.synthesize_real(self.ltl_text, self.part_text,
+                                              self.is_moore,
+                                              translator_via_spot.LTLToAtmViaSpot(),
+                                              solver,
+                                              0,
+                                              self.min_size, self.max_size)
+            self.answer = self.model is not None
         finally:
             solver.die()
 
@@ -63,14 +64,16 @@ class ElliIntUnrealTask(Task):
 
         solver = Z3InteractiveViaPipes(Z3_PATH)
         try:
-            return elli.check_unreal(self.ltl_text, self.part_text,
-                                     self.is_moore,
-                                     translator_via_spot.LTLToAtmViaSpot(),
-                                     solver,
-                                     0,
-                                     self.min_size, self.max_size)
+            self.model = elli.synthesize_unreal(self.ltl_text, self.part_text,
+                                                self.is_moore,
+                                                translator_via_spot.LTLToAtmViaSpot(),
+                                                solver,
+                                                0,
+                                                self.min_size, self.max_size)
+            self.answer = self.model is not None
         except TimeoutException:
-            return None
+            logging.debug("timeout reached")
+            self.answer = False
         finally:
             solver.die()
 

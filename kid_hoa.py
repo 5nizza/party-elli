@@ -2,53 +2,53 @@
 
 import argparse
 import logging
+import os
 
 from LTL_to_atm.translator_via_spot import LTLToAtmViaSpot
-from automata.k_reduction import k_reduce
+from automata.atm_to_spot import convert_to_spot_automaton
+from helpers.files import create_unique_file
 from helpers.main_helper import setup_logging
 from interfaces.LTL_to_automaton import LTLToAutomaton
 from interfaces.spec import Spec
-from module_generation.automaton_to_verilog import atm_to_verilog
-from module_generation.verilog_to_aiger_via_yosys import verilog_to_aiger
 from parsing.acacia_parser_helper import parse_acacia_and_build_expr
 from parsing.tlsf_parser import convert_tlsf_or_acacia_to_acacia
-from syntcomp.aiger_synthesizer import synthesize
+from syntcomp.safety_hoa_synthesizer import run_safety_hoa_synthesizer
 from syntcomp.syntcomp_constants import REALIZABLE_RC, UNREALIZABLE_RC, print_syntcomp_unreal, print_syntcomp_unknown, \
     UNKNOWN_RC, print_syntcomp_real
 
 
-BAD_OUT_NAME = '__bad'
-
-
-def _check_real(spec, is_moore, ltl_to_atm, min_k, max_k) -> str:
+def _check_real(spec, is_moore, ltl_to_atm, min_k, max_k) -> bool:
     ucw_atm = ltl_to_atm.convert(~spec.formula)
     logging.info("UCW automaton has %i states" % len(ucw_atm.nodes))
 
-    model_aiger = None
+    spot_ucw_atm = convert_to_spot_automaton(ucw_atm)
+    spot_ucw_atm = spot_ucw_atm.postprocess('SBAcc')
+
+    hoa_file = create_unique_file(spot_ucw_atm.to_str('hoa'), '.hoa')
+    part_file = create_unique_file(".inputs {inputs}\n"
+                                   ".outputs {outputs}".format(inputs=' '.join(map(str, spec.inputs)),
+                                                               outputs=' '.join(map(str, spec.outputs))),
+                                   '.hoa')
+
     for k in range(min_k, max_k+1, 2):
-        logging.info("setting k to %i..." % k)
-        k_atm = k_reduce(ucw_atm, k)
-        logging.info("k-LA automaton has %i states" % len(k_atm.nodes))
+        logging.info("trying k=%i..." % k)
 
-        # aiger_spec = v2a(atm_to_verilog(k_atm,
-        #                                              spec.inputs, spec.outputs,
-        #                                              'automaton', BAD_OUT_NAME))
+        is_realizable = run_safety_hoa_synthesizer(hoa_file, part_file, k, is_moore)
+        if is_realizable:
+            break
 
-        aiger_spec = verilog_to_aiger(atm_to_verilog(k_atm,
-                                                     spec.inputs, spec.outputs,
-                                                     'automaton', BAD_OUT_NAME))
-        model_aiger = synthesize(aiger_spec, is_moore, BAD_OUT_NAME)
-        if model_aiger:
-            return model_aiger
-    return model_aiger
+    os.remove(hoa_file)
+    os.remove(part_file)
+
+    # noinspection PyUnboundLocalVariable
+    return is_realizable
 
 
 def check_unreal(ltl_text:str, part_text:str, is_moore:bool,
                  ltl_to_atm:LTLToAutomaton,
                  min_k, max_k,
-                 opt_level:int) -> str or None:
+                 opt_level:int) -> bool:
     spec = parse_acacia_and_build_expr(ltl_text, part_text, ltl_to_atm, opt_level)
-    assert BAD_OUT_NAME not in (spec.inputs | spec.outputs), 'name collision'
     neg_spec = Spec(spec.outputs, spec.inputs, ~spec.formula)
     neg_is_moore = not is_moore
     return _check_real(neg_spec, neg_is_moore, ltl_to_atm, min_k, max_k)
@@ -58,14 +58,13 @@ def check_real(ltl_text:str, part_text:str, is_moore:bool,
                ltl_to_atm:LTLToAutomaton,
                min_k:int,
                max_k:int,
-               opt_level:int) -> str or None:
+               opt_level:int) -> bool:
     spec = parse_acacia_and_build_expr(ltl_text, part_text, ltl_to_atm, opt_level)
-    assert BAD_OUT_NAME not in (spec.inputs | spec.outputs), 'name collision'
     return _check_real(spec, is_moore, ltl_to_atm, min_k, max_k)
 
 
 def main():
-    parser = argparse.ArgumentParser(description='LTL synthesizer via k-reduction to AIGER',
+    parser = argparse.ArgumentParser(description='LTL synthesizer via reduction to safety games (avoiding AIGER)',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('spec', metavar='spec', type=str,
                         help='TLSF or Wring (Acacia) spec file')
@@ -73,8 +72,6 @@ def main():
                         help='min max number of visits to a bad state (within one SCC)')
     parser.add_argument('--maxK', default=8, required=False, type=int,
                         help='max max number of visits to a bad state (within one SCC)')
-    parser.add_argument('-o', '--output', metavar='output', type=str,
-                        help='output file for a model in the AIGER format (if not given -- print to stdout)')
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--moore', action='store_true', default=False,
                        dest='moore',
@@ -101,22 +98,16 @@ def main():
     ltl_to_atm = LTLToAtmViaSpot()
 
     if not args.unreal:
-        aiger_str = check_real(ltl_text, part_text, is_moore, ltl_to_atm, args.minK, args.maxK, 0)
-        if aiger_str is None:
+        is_real = check_real(ltl_text, part_text, is_moore, ltl_to_atm, args.minK, args.maxK, 0)
+        if not is_real:
             print_syntcomp_unknown()
             return UNKNOWN_RC
 
-        if args.output:
-            with open(args.output, 'w') as out:
-                out.write(aiger_str)
-        print_syntcomp_real(aiger_str)
+        print_syntcomp_real(None)
         return REALIZABLE_RC
     else:
-        aiger_str = check_unreal(ltl_text, part_text, is_moore, ltl_to_atm, args.minK, args.maxK, 0)
-        if aiger_str:
-            logging.info('found model for env (not going to print it)')
-            # with open('/tmp/env.aag', 'w') as out:
-            #     out.write(aiger_str)
+        is_unreal = check_unreal(ltl_text, part_text, is_moore, ltl_to_atm, args.minK, args.maxK, 0)
+        if is_unreal:
             print_syntcomp_unreal()
             return UNREALIZABLE_RC
         else:

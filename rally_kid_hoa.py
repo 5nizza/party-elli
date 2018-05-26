@@ -3,14 +3,14 @@ import logging
 import signal
 from typing import List
 
-import kid_aiger
+import kid_hoa
 from LTL_to_atm.translator_via_spot import LTLToAtmViaSpot
 from syntcomp.rally_template import main_template
 from syntcomp.task import Task
 from syntcomp.task_creator import TaskCreator
 
 
-class KidRealTask(Task):
+class KidHoaRealTask(Task):
     def __init__(self, name,
                  ltl_text, part_text, is_moore,
                  min_k:int,
@@ -26,14 +26,13 @@ class KidRealTask(Task):
         self.formula_opt = formula_opt
 
     def do(self):
-        self.model = kid_aiger.synthesize_real(self.ltl_text, self.part_text, self.is_moore,
-                                               LTLToAtmViaSpot(),
-                                               self.min_k, self.max_k,
-                                               self.formula_opt)
-        self.answer = self.model is not None
+        self.answer = kid_hoa.check_real(self.ltl_text, self.part_text, self.is_moore,
+                                         LTLToAtmViaSpot(),
+                                         self.min_k, self.max_k,
+                                         self.formula_opt)
 
 
-class KidUnrealTask(Task):
+class KidHoaUnrealTask(Task):
     def __init__(self, name, ltl_text, part_text, is_moore,
                  min_k:int, max_k:int,
                  timeout):
@@ -57,21 +56,20 @@ class KidUnrealTask(Task):
             signal.signal(signal.SIGALRM, signal_handler)
             signal.alarm(self.timeout)
         try:
-            self.model = kid_aiger.synthesize_unreal(self.ltl_text, self.part_text, self.is_moore,
-                                                     LTLToAtmViaSpot(),
-                                                     self.min_k, self.max_k, 0)
-            self.answer = self.model is not None
+            self.answer = kid_hoa.check_unreal(self.ltl_text, self.part_text, self.is_moore,
+                                               LTLToAtmViaSpot(),
+                                               self.min_k, self.max_k, 0)
         except TimeoutException:
-            logging.debug('KidUnrealTask: timeout reached')
+            logging.debug('JoyUnrealTask: timeout reached')
             self.answer = False
 
 
 if __name__ == "__main__":
-    class KidTasksCreator(TaskCreator):
+    class JoyTasksCreator(TaskCreator):
         @staticmethod
         def create(ltl_text:str, part_text:str, is_moore:bool) -> List[Task]:
-            return [KidRealTask('kid.real', ltl_text, part_text, is_moore, 4, 16),
-                    KidUnrealTask('kid.unreal.short', ltl_text, part_text, is_moore, 2, 16, 1200)]
+            return [KidHoaRealTask('kid_hoa.real', ltl_text, part_text, is_moore, 4, 16),
+                    KidHoaUnrealTask('kid_hoa.unreal.short', ltl_text, part_text, is_moore, 2, 16, 1200)]
 
-    main_template("LTL synthesizer via AIGER, UCW -> k-LA -> AIGER, then solve with SDF solver",
-                  KidTasksCreator())
+    main_template("LTL synthesizer via reduction to safety, UCW -> k-LA -> solve the game with adapted sdf",
+                  JoyTasksCreator())

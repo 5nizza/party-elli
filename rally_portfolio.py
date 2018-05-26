@@ -25,5 +25,5 @@ if __name__ == "__main__":
                 KidUnrealTask('kid.unreal', ltl_text, part_text, is_moore, 2, 16, timeout=None),
             ]
 
-    main_template("Portfolio",
+    main_template("Portfolio: KidRealTask, KidRealTask (spec strengthening), ElliBoolRealTask, ElliIntRealTask, KidUnrealTask",
                   PortfolioTasksCreator())

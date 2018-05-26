@@ -24,12 +24,12 @@ from synthesis.coreach_encoder import CoreachEncoder
 from synthesis.smt_namings import ARG_MODEL_STATE
 
 
-def check_unreal(ltl_text, part_text, is_moore,
-                 ltl_to_atm:LTLToAutomaton,
-                 solver:SolverInterface,
-                 max_k:int,
-                 min_size, max_size,
-                 opt_level=0) -> LTS:
+def synthesize_unreal(ltl_text, part_text, is_moore,
+                      ltl_to_atm:LTLToAutomaton,
+                      solver:SolverInterface,
+                      max_k:int,
+                      min_size, max_size,
+                      opt_level=0) -> LTS:
     """
     Note that opt_level > 0 may introduce unsoundness (returns unrealizable while it is).
     """
@@ -72,12 +72,12 @@ def check_unreal(ltl_text, part_text, is_moore,
     return model
 
 
-def check_real(ltl_text, part_text, is_moore,
-               ltl_to_atm:LTLToAutomaton,
-               solver:SolverInterface,
-               max_k:int,
-               min_size, max_size,
-               opt_level=0) -> LTS:
+def synthesize_real(ltl_text, part_text, is_moore,
+                    ltl_to_atm:LTLToAutomaton,
+                    solver:SolverInterface,
+                    max_k:int,
+                    min_size, max_size,
+                    opt_level=0) -> LTS:
     """
     When opt_level>0, introduce incompleteness (but it is sound: if returns REAL, then REAL)
     When max_k>0, reduce UCW to k-UCW.
@@ -209,15 +209,15 @@ def main():
     ltl_text, part_text, is_moore = convert_tlsf_or_acacia_to_acacia(args.spec, args.moore)
 
     if args.unreal:
-        model = check_unreal(ltl_text, part_text, is_moore,
-                             ltl_to_automaton, solver_factory.create(),
-                             args.maxK,
-                             min_size, max_size)
+        model = synthesize_unreal(ltl_text, part_text, is_moore,
+                                  ltl_to_automaton, solver_factory.create(),
+                                  args.maxK,
+                                  min_size, max_size)
     else:
-        model = check_real(ltl_text, part_text, is_moore,
-                           ltl_to_automaton, solver_factory.create(),
-                           args.maxK,
-                           min_size, max_size)
+        model = synthesize_real(ltl_text, part_text, is_moore,
+                                ltl_to_automaton, solver_factory.create(),
+                                args.maxK,
+                                min_size, max_size)
 
     if not model:
         logging.info('model NOT FOUND')
