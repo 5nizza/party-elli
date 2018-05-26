@@ -77,11 +77,11 @@ def main_template(tool_desc:str, tasks_creator:TaskCreator):
     parser.add_argument('--dot', metavar='dot', type=str,
                         help='write the output into a dot graph file')
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('--moore', action='store_true', default=True,
+    group.add_argument('--moore', action='store_true', default=False,
                        dest='moore',
                        help='system is Moore (ignored for TLSF)')
     group.add_argument('--mealy', action='store_false',
-                       default=False,
+                       default=True,
                        dest='moore',
                        help='system is Mealy (ignored for TLSF)')
     parser.add_argument('-v', '--verbose', action='count', default=-1,
