@@ -28,7 +28,7 @@ def _check_real(spec, is_moore, ltl_to_atm, min_k, max_k) -> bool:
     part_file = create_unique_file(".inputs {inputs}\n"
                                    ".outputs {outputs}".format(inputs=' '.join(map(str, spec.inputs)),
                                                                outputs=' '.join(map(str, spec.outputs))),
-                                   '.hoa')
+                                   '.part')
 
     for k in range(min_k, max_k+1, 2):
         logging.info("trying k=%i..." % k)
