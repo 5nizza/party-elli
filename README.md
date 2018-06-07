@@ -26,7 +26,7 @@ but it likely works with other configurations:
 - python 3 (version 3.5)
 - Z3 (version 4.5.1: [link](https://github.com/Z3Prover/z3/releases))
 - SPOT (version 2.5.1: [link](https://spot.lrde.epita.fr/install.html))
-- python packages: sympy, python-graph-core, python-graph-dot, typing
+- python packages: `sympy`, `python-graph-core`, `python-graph-dot`
   (install them for example using `pip3`)
 - There are many other dependencies, they will become clear later.
 
