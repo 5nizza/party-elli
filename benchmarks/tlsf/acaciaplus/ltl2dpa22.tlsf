@@ -13,7 +13,7 @@ MAIN {
     a3;
     a4;
     a5;
-    b
+    b;
   }
 
   OUTPUTS {
